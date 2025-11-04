@@ -4,6 +4,7 @@ resolver = "2"
 rust-version = "1.90.0"
 
 [workspace.dependencies]
+bytemuck = "1.21.0"
 egui = "0.33.0"
 egui_extras = { version = "0.33.0", features = ["all_loaders"] }
 egui-winit = "0.33.0"
