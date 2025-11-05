@@ -4,6 +4,8 @@ members = [
     "crates/ecs/*/components",
     "crates/ecs/*/resources",
     "crates/ecs/*/systems",
+    "crates/ecs/*/queries",
+    "crates/ecs/*/commands",
     "crates/ecs/world",
     "crates/render/*",
     "crates/engine"
