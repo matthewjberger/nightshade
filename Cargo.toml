@@ -5,9 +5,7 @@ members = [
     "crates/ecs/*/resources",
     "crates/ecs/*/systems",
     "crates/ecs/world",
-    "crates/render_vulkan",
-    "crates/render_wgpu",
-    "crates/renderer",
+    "crates/render/*",
     "crates/engine"
 ]
 resolver = "2"
