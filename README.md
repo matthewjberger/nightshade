@@ -1,22 +1,27 @@
-# Nightshade 
+# Nightshade
 
 `Nightshade` is a data-oriented game engine written in rust 🦀
 
 ## Quickstart
 
-### Desktop
-
 ```bash
-cargo run -r -p editor
-```
-
-### Justfile
-
-If you have [just](https://github.com/casey/just) installed:
-
-```bash
+# native (vulkan)
 just run
+
+# webgpu
+just run-webgpu
+
+# webgl
+just run-webgl
 ```
+
+> All chromium-based browsers like Brave, Vivaldi, Chrome, etc support wgpu.
+> Firefox also [supports wgpu](https://mozillagfx.wordpress.com/2025/07/15/shipping-webgpu-on-windows-in-firefox-141/) now starting with version `141`.
+
+## Prerequisites
+
+* [just](https://github.com/casey/just)
+* [trunk](https://trunkrs.dev/) (for web builds)
 
 > Run `just` with no arguments to list all commands
 
