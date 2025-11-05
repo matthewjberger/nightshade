@@ -52,6 +52,10 @@ lint:
 run $project="editor": compile-shaders
     cargo run -r -p {{project}}
 
+# Runs the specified project with wgpu backend on native
+run-wgpu $project="editor":
+    cargo run -r -p {{project}} --no-default-features --features webgpu
+
 # Build the app with wgpu + WebGL
 build-webgl $project="editor":
     trunk build --features webgl --config apps/{{project}}/Trunk.toml

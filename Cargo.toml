@@ -31,6 +31,7 @@ nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = "0.20.0"
 raw-window-handle = "0.6.2"
 serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
 web-time = "1.1.0"
 wgpu = { version = "27.0.1", default-features = false }
 winit = { version = "0.30.12", features = ["serde"] }
