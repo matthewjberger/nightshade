@@ -39,6 +39,11 @@ fix:
 format:
     cargo fmt --all
 
+# Install wasm tooling
+init-wasm:
+    rustup target add wasm32-unknown-unknown
+    cargo install --locked trunk
+
 # Runs linter and displays warnings
 lint:
     cargo clippy --all --tests -- -D warnings
@@ -46,6 +51,22 @@ lint:
 # Runs the specified project
 run $project="editor": compile-shaders
     cargo run -r -p {{project}}
+
+# Build the app with wgpu + WebGL
+build-webgl $project="editor":
+    trunk build --features webgl --config apps/{{project}}/Trunk.toml
+
+# Build the app with wgpu + WebGPU
+build-webgpu $project="editor":
+    trunk build --features webgpu --config apps/{{project}}/Trunk.toml
+
+# Serve the app with wgpu + WebGL
+run-webgl $project="editor":
+    trunk serve --features webgl --config apps/{{project}}/Trunk.toml
+
+# Serve the app with wgpu + WebGPU
+run-webgpu $project="editor":
+    trunk serve --features webgpu --open --config apps/{{project}}/Trunk.toml
 
 # Runs all tests
 test:
