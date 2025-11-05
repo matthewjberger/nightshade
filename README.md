@@ -5,8 +5,11 @@
 ## Quickstart
 
 ```bash
-# native (vulkan)
+# native (vulkan by default)
 just run
+
+# native (wgpu)
+just run-wgpu
 
 # webgpu
 just run-webgpu

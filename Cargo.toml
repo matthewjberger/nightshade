@@ -6,6 +6,7 @@ members = [
     "crates/ecs/*/systems",
     "crates/ecs/*/queries",
     "crates/ecs/*/commands",
+    "crates/ecs/*/events",
     "crates/ecs/world",
     "crates/render/*",
     "crates/engine"
