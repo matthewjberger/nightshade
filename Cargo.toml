@@ -5,6 +5,7 @@ members = [
     "crates/ecs/*/resources",
     "crates/ecs/*/systems",
     "crates/ecs/world",
+    "crates/render_vulkan",
     "crates/renderer",
     "crates/engine"
 ]
