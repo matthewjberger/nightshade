@@ -40,6 +40,10 @@ lint:
 publish:
     cargo publish -p nightshade
 
+# Dry run of publishing the nightshade crate
+publish-dry:
+    cargo publish -p nightshade --dry-run
+
 # Runs the specified project
 run $project="editor":
     cargo run -r -p {{project}}

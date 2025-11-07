@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "apps/*",
-    "crates/nightshade"
+    "crates/*"
 ]
 resolver = "2"
 
