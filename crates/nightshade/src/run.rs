@@ -257,7 +257,10 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             let mut renderer_received = false;
             if let Some(receiver) = self.renderer_receiver.as_mut() {
-                if let Ok(Some(renderer)) = receiver.try_recv() {
+                if let Ok(Some(mut renderer)) = receiver.try_recv() {
+                    if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
+                        log::error!("Failed to configure renderer with state: {error}");
+                    }
                     self.renderer = Some(renderer);
                     initialize_user_interface(&mut self.world);
                     self.state.initialize(&mut self.world);
