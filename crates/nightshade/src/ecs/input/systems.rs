@@ -62,3 +62,14 @@ pub fn gamepad_input_system(world: &mut World) {
         }
     }
 }
+
+pub fn escape_key_exit_system(world: &mut World) {
+    if world
+        .resources
+        .input
+        .keyboard
+        .is_key_pressed(winit::keyboard::KeyCode::Escape)
+    {
+        world.resources.window.should_exit = true;
+    }
+}

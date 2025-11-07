@@ -14,6 +14,7 @@ pub mod prelude {
     pub use web_time::{Duration, Instant, SystemTime};
 
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
+    pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use egui;
     pub use freecs;
     pub use log;
