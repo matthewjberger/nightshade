@@ -48,6 +48,10 @@ init-wasm:
 lint:
     cargo clippy --all --tests -- -D warnings
 
+# Publishes the nightshade crate to crates.io
+publish:
+    cargo publish -p nightshade
+
 # Runs the specified project (defaults to wgpu)
 run $project="editor":
     cargo run -r -p {{project}}
