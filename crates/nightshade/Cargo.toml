@@ -2,9 +2,7 @@
 name = "nightshade"
 version = "0.1.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
-description = """
-A high-performance game engine built on top of freecs ECS with support for WebGPU rendering.
-"""
+description = "A cross-platform data-oriented game engine."
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
 keywords = ["gamedev", "engine", "ecs", "wgpu", "webgpu"]
