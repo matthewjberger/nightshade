@@ -5,11 +5,8 @@
 ## Quickstart
 
 ```bash
-# native (wgpu by default)
+# native
 just run
-
-# native (vulkan)
-just run-vulkan
 
 # webgpu
 just run-webgpu
@@ -18,8 +15,8 @@ just run-webgpu
 just run-webgl
 ```
 
-> All chromium-based browsers like Brave, Vivaldi, Chrome, etc support wgpu.
-> Firefox also [supports wgpu](https://mozillagfx.wordpress.com/2025/07/15/shipping-webgpu-on-windows-in-firefox-141/) now starting with version `141`.
+> All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
+> Firefox also [supports WebGPU](https://mozillagfx.wordpress.com/2025/07/15/shipping-webgpu-on-windows-in-firefox-141/) now starting with version `141`.
 
 ## Prerequisites
 

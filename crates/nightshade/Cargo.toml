@@ -3,18 +3,17 @@ name = "nightshade"
 version = "0.1.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 description = """
-A high-performance game engine built on top of freecs ECS with support for Vulkan, WebGPU, and WebGL rendering backends.
+A high-performance game engine built on top of freecs ECS with support for WebGPU and WebGL rendering backends.
 """
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
-keywords = ["gamedev", "engine", "ecs", "vulkan", "wgpu"]
+keywords = ["gamedev", "engine", "ecs", "wgpu", "webgpu"]
 license = "MIT"
 edition = "2024"
 rust-version = "1.90"
 
 [features]
 default = ["wgpu"]
-vulkan = ["dep:ash", "dep:ash-window", "dep:egui-ash-renderer", "dep:gpu-allocator"]
 wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan"]
 webgl = ["dep:wgpu", "dep:egui-wgpu", "wgpu/webgl"]
 webgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/webgpu"]
@@ -38,11 +37,7 @@ thiserror = { workspace = true }
 web-time = { workspace = true }
 winit = { workspace = true }
 
-ash = { workspace = true, optional = true }
-ash-window = { workspace = true, optional = true }
-egui-ash-renderer = { workspace = true, optional = true }
 egui-wgpu = { workspace = true, optional = true }
-gpu-allocator = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

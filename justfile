@@ -2,8 +2,6 @@ set windows-shell := ["powershell.exe"]
 export RUST_LOG := "info,wgpu_core=off"
 export RUST_BACKTRACE := "1"
 
-alias cs := compile-shaders
-
 # Displays the list of available commands
 @just:
     just --list
@@ -16,16 +14,6 @@ build:
 check:
     cargo check --all --tests
     cargo fmt --all -- --check
-
-# Compile glsl shaders to spir-v
-[windows]
-compile-shaders:
-    powershell -Command "Get-ChildItem -Path ./crates/nightshade/src/render/vulkan/shaders/ -File -Recurse -Exclude *.spv | ForEach-Object { `$sourcePath = `$_.FullName; `$targetPath = `$_.FullName + '.spv'; glslangValidator -V -o `$targetPath `$sourcePath }"
-
-# Compile glsl shaders to spir-v
-[unix]
-compile-shaders:
-    find ./crates/nightshade/src/render/vulkan/shaders/ -type f ! -name "*.spv" -exec sh -c 'glslangValidator -V -o "${1}.spv" "$1"' _ {} \;
 
 # Generates and opens documentation for a specific project
 docs $project="nightshade":
@@ -55,10 +43,6 @@ publish:
 # Runs the specified project (defaults to wgpu)
 run $project="editor":
     cargo run -r -p {{project}}
-
-# Runs the specified project with vulkan backend on native
-run-vulkan $project="editor": compile-shaders
-    cargo run -r -p {{project}} --no-default-features --features vulkan
 
 # Runs the specified project with wgpu backend on native
 run-wgpu $project="editor":
