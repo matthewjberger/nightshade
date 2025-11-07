@@ -1,6 +1,6 @@
 [package]
 name = "nightshade"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 description = "A cross-platform data-oriented game engine."
 readme = "README.md"
