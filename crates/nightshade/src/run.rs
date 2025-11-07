@@ -109,6 +109,22 @@ pub trait State {
         "Nightshade"
     }
     fn initialize(&mut self, _world: &mut World) {}
+    fn configure_render_graph(
+        &mut self,
+        graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        device: &wgpu::Device,
+        surface_format: wgpu::TextureFormat,
+        scene_color: crate::render::wgpu::rendergraph::ResourceId,
+        _compute_output: crate::render::wgpu::rendergraph::ResourceId,
+        swapchain: crate::render::wgpu::rendergraph::ResourceId,
+    ) {
+        let blit_pass = crate::render::wgpu::passes::BlitPass::new(device, surface_format);
+
+        let _ = graph.add_pass(
+            Box::new(blit_pass),
+            &[("input", scene_color), ("output", swapchain)],
+        );
+    }
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
     fn run_systems(&mut self, _world: &mut World) {}
     fn handle_event(&mut self, _world: &mut World, _message: &crate::ecs::world::events::Message) {}
@@ -175,7 +191,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 dimension.width,
                 dimension.height,
             )) {
-                Ok(renderer) => {
+                Ok(mut renderer) => {
+                    if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
+                        log::error!("Failed to configure renderer with state: {error}");
+                    }
                     self.renderer = Some(renderer);
                 }
                 Err(error) => {

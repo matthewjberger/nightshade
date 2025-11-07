@@ -24,4 +24,13 @@ pub mod prelude {
         event::{ElementState as KeyState, WindowEvent},
         keyboard::KeyCode,
     };
+
+    #[cfg(feature = "wgpu")]
+    pub use crate::render::wgpu::passes;
+    #[cfg(feature = "wgpu")]
+    pub use crate::render::wgpu::rendergraph::{
+        PassExecutionContext, PassNode, RenderGraph, ResourceId,
+    };
+    pub use nalgebra_glm;
+    pub use wgpu;
 }
