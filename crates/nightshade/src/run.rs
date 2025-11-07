@@ -63,6 +63,10 @@ pub(crate) fn step(
             let should_render =
                 window_handle.inner_size().width > 0 && window_handle.inner_size().height > 0;
             if should_render {
+                if let Err(error) = renderer.update_with_state(state.as_mut(), world) {
+                    log::error!("Failed to update render graph: {error}");
+                }
+
                 let (ui_output, ui_primitives) = match ui_frame_output {
                     Some((output, primitives)) => (Some(output), Some(primitives)),
                     None => (None, None),
@@ -127,6 +131,12 @@ pub trait State {
     }
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
     fn run_systems(&mut self, _world: &mut World) {}
+    fn update_render_graph(
+        &mut self,
+        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        _world: &World,
+    ) {
+    }
     fn handle_event(&mut self, _world: &mut World, _message: &crate::ecs::world::events::Message) {}
     fn on_keyboard_input(
         &mut self,
