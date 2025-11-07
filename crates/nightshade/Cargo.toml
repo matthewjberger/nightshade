@@ -3,7 +3,7 @@ name = "nightshade"
 version = "0.1.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 description = """
-A high-performance game engine built on top of freecs ECS with support for WebGPU and WebGL rendering backends.
+A high-performance game engine built on top of freecs ECS with support for WebGPU rendering.
 """
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
@@ -14,9 +14,7 @@ rust-version = "1.90"
 
 [features]
 default = ["wgpu"]
-wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan"]
-webgl = ["dep:wgpu", "dep:egui-wgpu", "wgpu/webgl"]
-webgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/webgpu"]
+wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 
 [dependencies]
 bitflags = { workspace = true }
