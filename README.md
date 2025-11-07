@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-Use the [nightshade-template](https://github.com/matthewjberger/nightshade-template) to create a new project.
+The fastest way to get started is with the [nightshade-template](https://github.com/matthewjberger/nightshade-template).
 
 ## Quickstart
 
