@@ -48,9 +48,13 @@ init-wasm:
 lint:
     cargo clippy --all --tests -- -D warnings
 
-# Runs the specified project
-run $project="editor": compile-shaders
+# Runs the specified project (defaults to wgpu)
+run $project="editor":
     cargo run -r -p {{project}}
+
+# Runs the specified project with vulkan backend on native
+run-vulkan $project="editor": compile-shaders
+    cargo run -r -p {{project}} --no-default-features --features vulkan
 
 # Runs the specified project with wgpu backend on native
 run-wgpu $project="editor":
