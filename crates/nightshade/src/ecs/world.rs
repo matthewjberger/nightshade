@@ -6,6 +6,9 @@ pub mod components {
     pub use crate::ecs::material::components::Material;
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
+    pub use crate::ecs::text::components::{
+        Text, TextAlignment, TextProperties, VerticalAlignment,
+    };
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent,
     };
@@ -15,6 +18,7 @@ pub mod resources {
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{Window, WindowTiming};
 }
@@ -43,12 +47,15 @@ freecs::ecs! {
         lines: crate::ecs::lines::components::Lines => LINES,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material: crate::ecs::material::components::Material => MATERIAL,
+        text: crate::ecs::text::components::Text => TEXT,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
         user_interface: crate::ecs::ui::resources::UserInterface,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
+        text_cache: crate::ecs::text::resources::TextCache,
+        pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,
         active_camera: Option<freecs::Entity>,
         event_bus: crate::ecs::event_bus::resources::EventBus,
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,

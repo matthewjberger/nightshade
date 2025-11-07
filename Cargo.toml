@@ -21,7 +21,7 @@ gilrs = "0.11.0"
 gpu-allocator = { version = "0.28.0", features = ["vulkan", "std"], default-features = false }
 log = "0.4.28"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
-nalgebra-glm = "0.20.0"
+nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
 petgraph = "0.6"
 raw-window-handle = "0.6.2"
 thiserror = "2.0"

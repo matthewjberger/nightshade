@@ -20,6 +20,7 @@ bitflags = { workspace = true }
 bytemuck = { workspace = true }
 egui = { workspace = true }
 egui_extras = { workspace = true }
+fontdue = "0.8"
 freecs = { workspace = true }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 gilrs = { workspace = true }

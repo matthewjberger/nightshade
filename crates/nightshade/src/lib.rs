@@ -15,6 +15,7 @@ pub mod prelude {
 
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
+    pub use crate::ecs::text::commands::load_font_from_bytes;
     pub use egui;
     pub use freecs;
     pub use log;
