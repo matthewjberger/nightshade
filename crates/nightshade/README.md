@@ -4,11 +4,11 @@ A cross-platform data-oriented game engine built with wgpu.
 
 ## Getting Started
 
-Add nightshade to your `Cargo.toml`:
+Use the [nightshade-template](https://github.com/matthewjberger/nightshade-template) to create a new project, or add nightshade to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-nightshade = "0.1.2"
+nightshade = "0.1.3"
 ```
 
 ### Basic Example

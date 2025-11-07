@@ -2,6 +2,10 @@
 
 `Nightshade` is a data-oriented game engine written in rust 🦀
 
+## Getting Started
+
+Use the [nightshade-template](https://github.com/matthewjberger/nightshade-template) to create a new project.
+
 ## Quickstart
 
 ```bash
