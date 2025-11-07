@@ -1,9 +1,9 @@
 [package]
 name = "nightshade"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 description = "A cross-platform data-oriented game engine."
-readme = "../../README.md"
+readme = "README.md"
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
 keywords = ["gamedev", "engine", "ecs", "wgpu", "webgpu"]

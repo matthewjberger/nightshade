@@ -8,11 +8,8 @@
 # native
 just run
 
-# webgpu
-just run-webgpu
-
-# webgl
-just run-webgl
+# wasm (webgpu)
+just run-wasm
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
