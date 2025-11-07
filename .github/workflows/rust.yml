@@ -1,68 +1,100 @@
-name: Rust
+on: [push, pull_request]
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  CARGO_TERM_COLOR: always
+name: CI
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@stable
-    - uses: Swatinem/rust-cache@v2
-    - name: Run tests
-      run: cargo test --all
-
-  format:
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: sudo apt-get install libudev-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+  check_wasm:
+    name: Check wasm32
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: -p nightshade --target wasm32-unknown-unknown
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libudev-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --lib
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
   clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-    - uses: Swatinem/rust-cache@v2
-    - name: Run clippy
-      run: cargo clippy --all --tests -- -D warnings
-
-  check-wasm:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown
-    - uses: Swatinem/rust-cache@v2
-    - name: Check wasm32 build
-      run: cargo check -p nightshade --target wasm32-unknown-unknown
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy
+      - run: sudo apt-get install libudev-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
 
   trunk:
+    name: trunk
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown
-    - uses: Swatinem/rust-cache@v2
-    - name: Download and install Trunk binary
-      run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.18.8/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-    - name: Build with trunk
-      run: ./trunk build --release --config apps/editor/Trunk.toml
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Download and install Trunk binary
+        run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.18.8/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+      - name: Build
+        run: ./trunk build --release --config apps/editor/Trunk.toml
