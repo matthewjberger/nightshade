@@ -20,15 +20,15 @@ check:
 # Compile glsl shaders to spir-v
 [windows]
 compile-shaders:
-    powershell -Command "Get-ChildItem -Path ./crates/render/vulkan/src/shaders/ -File -Recurse -Exclude *.spv | ForEach-Object { `$sourcePath = `$_.FullName; `$targetPath = `$_.FullName + '.spv'; glslangValidator -V -o `$targetPath `$sourcePath }"
+    powershell -Command "Get-ChildItem -Path ./crates/nightshade/src/render/vulkan/shaders/ -File -Recurse -Exclude *.spv | ForEach-Object { `$sourcePath = `$_.FullName; `$targetPath = `$_.FullName + '.spv'; glslangValidator -V -o `$targetPath `$sourcePath }"
 
 # Compile glsl shaders to spir-v
 [unix]
 compile-shaders:
-    find ./crates/render/vulkan/src/shaders/ -type f ! -name "*.spv" -exec sh -c 'glslangValidator -V -o "${1}.spv" "$1"' _ {} \;
+    find ./crates/nightshade/src/render/vulkan/shaders/ -type f ! -name "*.spv" -exec sh -c 'glslangValidator -V -o "${1}.spv" "$1"' _ {} \;
 
 # Generates and opens documentation for a specific project
-docs $project="engine":
+docs $project="nightshade":
     cargo doc --open -p {{project}}
 
 # Fixes linting issues automatically

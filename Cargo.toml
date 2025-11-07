@@ -1,15 +1,7 @@
 [workspace]
 members = [
     "apps/*",
-    "crates/ecs/*/components",
-    "crates/ecs/*/resources",
-    "crates/ecs/*/systems",
-    "crates/ecs/*/queries",
-    "crates/ecs/*/commands",
-    "crates/ecs/*/events",
-    "crates/ecs/world",
-    "crates/render/*",
-    "crates/engine"
+    "crates/nightshade"
 ]
 resolver = "2"
 
