@@ -8,7 +8,7 @@ Use the [nightshade-template](https://github.com/matthewjberger/nightshade-templ
 
 ```toml
 [dependencies]
-nightshade = "0.1.3"
+nightshade = "0.1.4"
 ```
 
 ### Basic Example
