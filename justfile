@@ -39,17 +39,11 @@ lint:
 # Publishes the nightshade crate to crates.io
 publish:
     cargo publish -p nightshade
-
-# Publishes the nightshade-editor crate to crates.io
-publish-editor:
     cargo publish -p nightshade-editor
 
 # Dry run of publishing the nightshade crate
 publish-dry:
     cargo publish -p nightshade --dry-run
-
-# Dry run of publishing the nightshade-editor crate
-publish-editor-dry:
     cargo publish -p nightshade-editor --dry-run
 
 # Runs the specified project
