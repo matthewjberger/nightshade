@@ -39,7 +39,7 @@ lint:
 
 # Runs linter for wasm32 target
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown -- -D warnings -A clippy::arc-with-non-send-sync
+    cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
 # Publishes the nightshade crate to crates.io
 publish:

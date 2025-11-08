@@ -18,6 +18,9 @@ just run
 
 # wasm (webgpu)
 just run-wasm
+
+# site
+cd site && just serve
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
