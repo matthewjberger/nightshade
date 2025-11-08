@@ -3,6 +3,9 @@ members = [
     "apps/*",
     "crates/*"
 ]
+exclude = [
+    "site"
+]
 resolver = "2"
 
 [workspace.package]

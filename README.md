@@ -19,7 +19,7 @@ just run
 # wasm (webgpu)
 just run-wasm
 
-# site
+# serve site
 cd site && just serve
 ```
 
