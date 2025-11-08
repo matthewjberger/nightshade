@@ -1,15 +1,21 @@
 use crate::ecs::world::{
-    GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME, Quat, RENDER_MESH,
-    Vec3, World,
+    BOUNDING_VOLUME, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
+    Quat, RENDER_MESH, Vec3, World,
     components::{
-        GlobalTransform, LocalTransform, LocalTransformDirty, Material, Name, RenderMesh,
+        BoundingVolume, GlobalTransform, LocalTransform, LocalTransformDirty, Material, Name,
+        RenderMesh,
     },
 };
 use freecs::Entity;
 
 pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec3) -> Entity {
     let entity = world.spawn_entities(
-        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | RENDER_MESH | MATERIAL,
+        NAME | LOCAL_TRANSFORM
+            | GLOBAL_TRANSFORM
+            | LOCAL_TRANSFORM_DIRTY
+            | RENDER_MESH
+            | MATERIAL
+            | BOUNDING_VOLUME,
         1,
     )[0];
 
@@ -31,6 +37,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         },
     );
     world.set_material(entity, Material::default());
+    world.set_bounding_volume(entity, BoundingVolume::from_mesh_type(mesh_name));
 
     entity
 }

@@ -1,4 +1,5 @@
 pub mod components {
+    pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PerspectiveCamera, Projection, Smoothing,
     };
@@ -6,6 +7,7 @@ pub mod components {
     pub use crate::ecs::material::components::Material;
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
+    pub use crate::ecs::picking::components::Hovered;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
     };
@@ -51,6 +53,8 @@ freecs::ecs! {
         material: crate::ecs::material::components::Material => MATERIAL,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
+        bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
+        hovered: crate::ecs::picking::components::Hovered => HOVERED,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

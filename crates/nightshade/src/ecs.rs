@@ -1,3 +1,4 @@
+pub mod bounding_volume;
 pub mod camera;
 pub mod event_bus;
 pub mod graphics;
@@ -6,6 +7,7 @@ pub mod lines;
 pub mod material;
 pub mod mesh;
 pub mod name;
+pub mod picking;
 pub mod text;
 pub mod transform;
 pub mod ui;
