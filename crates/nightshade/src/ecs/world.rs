@@ -4,7 +4,7 @@ pub mod components {
         Camera, OrthographicCamera, PerspectiveCamera, Projection, Smoothing,
     };
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
-    pub use crate::ecs::material::components::Material;
+    pub use crate::ecs::material::components::{AlphaMode, Material};
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::picking::components::Hovered;
