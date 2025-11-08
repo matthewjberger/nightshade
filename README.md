@@ -1,4 +1,4 @@
-<img width="2000" height="2000" alt="nightshade" src="https://github.com/user-attachments/assets/bafa51c8-a698-4247-8ba7-89a146244492" />
+![nightshade](images/logo.png)
 
 [<img alt="github" src="https://img.shields.io/badge/github-matthewjberger/nightshade-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/matthewjberger/nightshade)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/nightshade.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/nightshade)

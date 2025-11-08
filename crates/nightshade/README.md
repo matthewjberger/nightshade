@@ -1,3 +1,5 @@
+![nightshade](../../images/logo.png)
+
 # Nightshade
 
 A cross-platform data-oriented game engine built with wgpu.

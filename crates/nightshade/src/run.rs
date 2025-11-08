@@ -163,6 +163,17 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             attributes = attributes.with_title(self.state.title());
+
+            let icon_bytes = include_bytes!("../../../images/icon.png");
+            if let Ok(icon_image) = image::load_from_memory(icon_bytes) {
+                let icon_rgba = icon_image.to_rgba8();
+                let (width, height) = icon_rgba.dimensions();
+                if let Ok(icon) =
+                    winit::window::Icon::from_rgba(icon_rgba.into_raw(), width, height)
+                {
+                    attributes = attributes.with_window_icon(Some(icon));
+                }
+            }
         }
 
         #[cfg(target_arch = "wasm32")]

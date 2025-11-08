@@ -1,16 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AlphaMode {
+    #[default]
     Opaque,
     Mask,
     Blend,
-}
-
-impl Default for AlphaMode {
-    fn default() -> Self {
-        Self::Opaque
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
