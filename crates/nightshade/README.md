@@ -1,4 +1,4 @@
-![nightshade](../../images/logo.png)
+![nightshade](images/logo.png)
 
 # Nightshade
 
@@ -48,6 +48,29 @@ impl State for MyGame {
         fly_camera_system(world);
     }
 }
+```
+
+### Custom Window Icon
+
+To use a custom icon for your application window (native) and favicon (WASM):
+
+**Native:** Override the `icon_bytes()` method in your `State` implementation:
+
+```rust
+impl State for MyGame {
+    fn icon_bytes(&self) -> Option<&'static [u8]> {
+        Some(include_bytes!("path/to/your/icon.png"))
+    }
+
+    // ... other methods
+}
+```
+
+**WASM:** Update your `index.html` to reference your icon:
+
+```html
+<link data-trunk rel="copy-file" href="path/to/your/icon.png" />
+<link rel="icon" type="image/png" href="icon.png" />
 ```
 
 ## Browser Support

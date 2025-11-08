@@ -112,6 +112,9 @@ pub trait State {
     fn title(&self) -> &str {
         "Nightshade"
     }
+    fn icon_bytes(&self) -> Option<&'static [u8]> {
+        Some(include_bytes!("../images/icon.png"))
+    }
     fn initialize(&mut self, _world: &mut World) {}
     fn configure_render_graph(
         &mut self,
@@ -164,8 +167,9 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             attributes = attributes.with_title(self.state.title());
 
-            let icon_bytes = include_bytes!("../../../images/icon.png");
-            if let Ok(icon_image) = image::load_from_memory(icon_bytes) {
+            if let Some(icon_bytes) = self.state.icon_bytes()
+                && let Ok(icon_image) = image::load_from_memory(icon_bytes)
+            {
                 let icon_rgba = icon_image.to_rgba8();
                 let (width, height) = icon_rgba.dimensions();
                 if let Ok(icon) =
