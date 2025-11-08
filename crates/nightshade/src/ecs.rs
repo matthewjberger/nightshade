@@ -9,6 +9,7 @@ pub mod name;
 pub mod text;
 pub mod transform;
 pub mod ui;
+pub mod visibility;
 pub mod window;
 pub mod world;
 

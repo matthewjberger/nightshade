@@ -12,6 +12,7 @@ pub mod components {
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent,
     };
+    pub use crate::ecs::visibility::components::Visibility;
 }
 
 pub mod resources {
@@ -45,6 +46,7 @@ freecs::ecs! {
         parent: crate::ecs::transform::components::Parent => PARENT,
         camera: crate::ecs::camera::components::Camera => CAMERA,
         lines: crate::ecs::lines::components::Lines => LINES,
+        visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material: crate::ecs::material::components::Material => MATERIAL,
         text: crate::ecs::text::components::Text => TEXT,
