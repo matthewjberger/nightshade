@@ -35,6 +35,11 @@ init-wasm:
 # Runs linter and displays warnings
 lint:
     cargo clippy --all --tests -- -D warnings
+    just lint-wasm
+
+# Runs linter for wasm32 target
+lint-wasm:
+    cargo clippy --target wasm32-unknown-unknown -- -D warnings -A clippy::arc-with-non-send-sync
 
 # Publishes the nightshade crate to crates.io
 publish:
