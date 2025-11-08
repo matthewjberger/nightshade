@@ -8,6 +8,7 @@ pub mod components {
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::picking::components::Hovered;
+    pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
     };
@@ -51,6 +52,7 @@ freecs::ecs! {
         visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material: crate::ecs::material::components::Material => MATERIAL,
+        sprite: crate::ecs::sprite::components::Sprite => SPRITE,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,

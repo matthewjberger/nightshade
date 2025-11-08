@@ -4,7 +4,15 @@ pub type CommandQueue = Vec<WorldCommand>;
 
 #[derive(Debug, Clone)]
 pub enum WorldCommand {
-    DespawnRecursive { entity: Entity },
+    DespawnRecursive {
+        entity: Entity,
+    },
+    UploadSpriteTexture {
+        slot: u32,
+        rgba_data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
 }
 
 impl World {
@@ -15,9 +23,23 @@ impl World {
 
 pub fn process_commands_system(world: &mut World) {
     let commands = world.resources.command_queue.drain(..).collect::<Vec<_>>();
+    let mut sprite_texture_commands = Vec::new();
+
     for command in commands {
-        process_command(world, command);
+        match &command {
+            WorldCommand::UploadSpriteTexture { .. } => {
+                sprite_texture_commands.push(command);
+            }
+            _ => {
+                process_command(world, command);
+            }
+        }
     }
+
+    world
+        .resources
+        .command_queue
+        .extend(sprite_texture_commands);
 }
 
 fn process_command(world: &mut World, command: WorldCommand) {
@@ -26,6 +48,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
             let descendents = query_descendents(world, entity);
             despawn_entities_with_cache_cleanup(world, &descendents);
         }
+        WorldCommand::UploadSpriteTexture { .. } => {}
     }
 }
 
