@@ -7,7 +7,7 @@ pub mod components {
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::text::components::{
-        Text, TextAlignment, TextProperties, VerticalAlignment,
+        HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
     };
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent,
@@ -48,6 +48,7 @@ freecs::ecs! {
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material: crate::ecs::material::components::Material => MATERIAL,
         text: crate::ecs::text::components::Text => TEXT,
+        hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
