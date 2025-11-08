@@ -1,10 +1,12 @@
 mod local_transform;
 mod local_transform_dirty;
 mod parent;
+mod rotation;
 
 pub use local_transform::*;
 pub use local_transform_dirty::*;
 pub use parent::*;
+pub use rotation::*;
 
 use nalgebra_glm::{Mat4, Vec3};
 

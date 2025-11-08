@@ -46,6 +46,7 @@ impl std::fmt::Display for GeometryPrimitive {
 pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
+    pub tex_coords: [f32; 2],
 }
 
 impl Vertex {
@@ -53,6 +54,15 @@ impl Vertex {
         Self {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
+            tex_coords: [0.0, 0.0],
+        }
+    }
+
+    pub fn with_tex_coords(position: Vec3, normal: Vec3, tex_coords: [f32; 2]) -> Self {
+        Self {
+            position: [position.x, position.y, position.z],
+            normal: [normal.x, normal.y, normal.z],
+            tex_coords,
         }
     }
 }

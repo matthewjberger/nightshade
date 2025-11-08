@@ -12,7 +12,7 @@ pub mod components {
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
     };
     pub use crate::ecs::transform::components::{
-        GlobalTransform, LocalTransform, LocalTransformDirty, Parent,
+        GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
     pub use crate::ecs::visibility::components::Visibility;
 }
@@ -55,6 +55,7 @@ freecs::ecs! {
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
         hovered: crate::ecs::picking::components::Hovered => HOVERED,
+        rotation: crate::ecs::transform::components::Rotation => ROTATION,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
