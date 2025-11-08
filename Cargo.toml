@@ -5,6 +5,15 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+version = "0.1.7"
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+homepage = "https://github.com/matthewjberger/nightshade"
+repository = "https://github.com/matthewjberger/nightshade"
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+
 [workspace.dependencies]
 ash = "0.38.0"
 ash-window = "0.13.0"

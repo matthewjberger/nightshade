@@ -1,15 +1,15 @@
 [package]
 name = "nightshade"
-version = "0.1.7"
-authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+version.workspace = true
+authors.workspace = true
 description = "A cross-platform data-oriented game engine."
 readme = "README.md"
-homepage = "https://github.com/matthewjberger/nightshade"
-repository = "https://github.com/matthewjberger/nightshade"
+homepage.workspace = true
+repository.workspace = true
 keywords = ["gamedev", "engine", "ecs", "wgpu", "webgpu"]
-license = "MIT"
-edition = "2024"
-rust-version = "1.90"
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [features]
 default = ["wgpu"]

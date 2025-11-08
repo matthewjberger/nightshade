@@ -40,12 +40,20 @@ lint:
 publish:
     cargo publish -p nightshade
 
+# Publishes the nightshade-editor crate to crates.io
+publish-editor:
+    cargo publish -p nightshade-editor
+
 # Dry run of publishing the nightshade crate
 publish-dry:
     cargo publish -p nightshade --dry-run
 
+# Dry run of publishing the nightshade-editor crate
+publish-editor-dry:
+    cargo publish -p nightshade-editor --dry-run
+
 # Runs the specified project
-run $project="editor":
+run $project="nightshade-editor":
     cargo run -r -p {{project}}
 
 # Build the app for WASM
@@ -71,5 +79,5 @@ udeps:
     cargo clippy -- --version
 
 # Watches for changes and runs the specified project
-watch $project="editor":
+watch $project="nightshade-editor":
     cargo watch -x 'run -r -p {{project}}'

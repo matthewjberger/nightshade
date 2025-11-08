@@ -2,3 +2,4 @@
 dist/
 **/dist/
 /Cargo.lock
+!apps/editor/Cargo.lock
