@@ -6,7 +6,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
@@ -31,7 +31,7 @@ gpu-allocator = { version = "0.28.0", features = ["vulkan", "std"], default-feat
 log = "0.4.28"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
-nightshade = { version = "0.1.8", path = "crates/nightshade" }
+nightshade = { version = "0.1.9", path = "crates/nightshade" }
 petgraph = "0.6"
 raw-window-handle = "0.6.2"
 thiserror = "2.0"
