@@ -41,7 +41,7 @@ cd site && just serve
 
 ## Contributing
 
-Nightshade is currently in its early stages of development. The project is not accepting external contributions at this time as the architecture and core systems are still being established. Once the engine reaches a more mature and stable state, we will open up contributions and provide contributor guidelines.
+Nightshade is currently in its early stages of development. The project is not accepting external contributions at this time as the architecture and core systems are still being established. Once the engine reaches a more mature and stable state, I will open up contributions and provide contributor guidelines.
 
 ## License
 
