@@ -43,41 +43,7 @@ cd site && just serve
 
 ### Release Workflow
 
-This project uses [git-cliff](https://git-cliff.org/) for automated changelog generation. The changelog is maintained in [CHANGELOG.md](CHANGELOG.md).
-
-**To create a new release:**
-
-1. Bump the version (patch version):
-   ```bash
-   just bump-minor-version
-   ```
-   Or for a major version bump:
-   ```bash
-   just bump-major-version
-   ```
-   This will:
-   - Update version in `Cargo.toml` and `crates/nightshade/README.md`
-   - Create a commit with the version bump
-   - Create a git tag `vX.Y.Z`
-   - Generate/update `CHANGELOG.md`
-   - Create a commit with the changelog
-
-2. Push the tag and commits:
-   ```bash
-   just push-version vX.Y.Z
-   ```
-
-3. Create a GitHub release:
-   ```bash
-   just publish-release
-   ```
-   This creates a GitHub release titled `nightshade-vX.Y.Z` with the full changelog as release notes.
-
-**Utility commands:**
-- `just show-version` - Display current version
-- `just show-tags` - Show tags for current commit
-- `just strip-tag vX.Y.Z` - Delete a tag locally and remotely
-- `just changelog` - Manually generate/update changelog
+See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for the release process.
 
 ## License
 

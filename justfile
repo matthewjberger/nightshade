@@ -6,16 +6,6 @@ export RUST_BACKTRACE := "1"
 @just:
     just --list
 
-# Displays release workflow help (Windows)
-[windows]
-@help:
-    if (Get-Command bat -ErrorAction SilentlyContinue) { bat Help.md } else { Get-Content Help.md }
-
-# Displays release workflow help (Unix)
-[unix]
-@help:
-    @command -v bat >/dev/null 2>&1 && bat Help.md || cat Help.md
-
 # Builds the project in release mode
 build:
     cargo build -r
