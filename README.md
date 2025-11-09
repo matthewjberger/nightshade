@@ -39,12 +39,6 @@ cd site && just serve
 
 > Run `just` with no arguments to list all commands
 
-## Developer Notes
-
-### Release Workflow
-
-See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for the release process.
-
 ## Contributing
 
 Nightshade is currently in its early stages of development. The project is not accepting external contributions at this time as the architecture and core systems are still being established. Once the engine reaches a more mature and stable state, we will open up contributions and provide contributor guidelines.
