@@ -13,7 +13,7 @@ version = "0.6.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 edition = "2024"
 rust-version = "1.90"
 
