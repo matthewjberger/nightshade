@@ -6,6 +6,16 @@ export RUST_BACKTRACE := "1"
 @just:
     just --list
 
+# Displays release workflow help (Windows)
+[windows]
+@help:
+    if (Get-Command bat -ErrorAction SilentlyContinue) { bat Help.md } else { Get-Content Help.md }
+
+# Displays release workflow help (Unix)
+[unix]
+@help:
+    @command -v bat >/dev/null 2>&1 && bat Help.md || cat Help.md
+
 # Builds the project in release mode
 build:
     cargo build -r
@@ -108,6 +118,36 @@ strip-tag tag:
 push-version version:
     git push origin {{version}}
     git push
+
+# Creates a GitHub release for the current version (Windows)
+[windows]
+publish-release:
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; gh release create "v$version" --title "nightshade-v$version" --notes-file CHANGELOG.md
+
+# Creates a GitHub release for the current version (Unix)
+[unix]
+publish-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+    gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file CHANGELOG.md
+
+# Shows the GitHub release for the current version (Windows)
+[windows]
+show-release:
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; gh release view "v$version"
+
+# Shows the GitHub release for the current version (Unix)
+[unix]
+show-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+    gh release view "v$VERSION"
+
+# Deletes a GitHub release
+strip-release version:
+    gh release delete {{version}} --yes
 
 # Bumps the minor version, updates changelog, and creates a git tag (Windows)
 [windows]

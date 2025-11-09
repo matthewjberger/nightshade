@@ -35,22 +35,49 @@ cd site && just serve
 * [just](https://github.com/casey/just)
 * [trunk](https://trunkrs.dev/) (for web builds)
 * [git-cliff](https://git-cliff.org/) (for changelog generation)
+* [gh](https://cli.github.com/) (GitHub CLI, for creating releases)
 
 > Run `just` with no arguments to list all commands
 
-## Changelog
+## Developer Notes
+
+### Release Workflow
 
 This project uses [git-cliff](https://git-cliff.org/) for automated changelog generation. The changelog is maintained in [CHANGELOG.md](CHANGELOG.md).
 
-To generate/update the changelog:
-```bash
-just changelog
-```
+**To create a new release:**
 
-To create a new release tag (automatically updates changelog, creates tag, and pushes):
-```bash
-just tag
-```
+1. Bump the version (patch version):
+   ```bash
+   just bump-minor-version
+   ```
+   Or for a major version bump:
+   ```bash
+   just bump-major-version
+   ```
+   This will:
+   - Update version in `Cargo.toml` and `crates/nightshade/README.md`
+   - Create a commit with the version bump
+   - Create a git tag `vX.Y.Z`
+   - Generate/update `CHANGELOG.md`
+   - Create a commit with the changelog
+
+2. Push the tag and commits:
+   ```bash
+   just push-version vX.Y.Z
+   ```
+
+3. Create a GitHub release:
+   ```bash
+   just publish-release
+   ```
+   This creates a GitHub release titled `nightshade-vX.Y.Z` with the full changelog as release notes.
+
+**Utility commands:**
+- `just show-version` - Display current version
+- `just show-tags` - Show tags for current commit
+- `just strip-tag vX.Y.Z` - Delete a tag locally and remotely
+- `just changelog` - Manually generate/update changelog
 
 ## License
 
