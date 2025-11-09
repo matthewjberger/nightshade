@@ -145,9 +145,9 @@ show-release:
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
     gh release view "v$VERSION"
 
-# Deletes a GitHub release
-strip-release version:
-    gh release delete {{version}} --yes
+# Deletes a GitHub release (by tag, e.g. v0.1.11)
+strip-release tag:
+    gh release delete {{tag}} --yes
 
 # Bumps the minor version, updates changelog, and creates a git tag (Windows)
 [windows]
