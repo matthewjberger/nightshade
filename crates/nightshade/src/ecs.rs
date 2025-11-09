@@ -8,6 +8,7 @@ pub mod material;
 pub mod mesh;
 pub mod name;
 pub mod picking;
+pub mod render_layer;
 pub mod sprite;
 pub mod text;
 pub mod transform;
