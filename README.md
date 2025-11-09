@@ -30,14 +30,14 @@ cd site && just serve
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
 > Firefox also [supports WebGPU](https://mozillagfx.wordpress.com/2025/07/15/shipping-webgpu-on-windows-in-firefox-141/) now starting with version `141`.
 
+> Run `just` with no arguments to list all commands
+
 ## Prerequisites
 
 * [just](https://github.com/casey/just)
 * [trunk](https://trunkrs.dev/) (for web builds)
 * [git-cliff](https://git-cliff.org/) (for changelog generation)
 * [gh](https://cli.github.com/) (GitHub CLI, for creating releases)
-
-> Run `just` with no arguments to list all commands
 
 ## Contributing
 
