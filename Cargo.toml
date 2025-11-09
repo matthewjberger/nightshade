@@ -35,7 +35,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 log = "0.4.28"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
-nightshade = { version = "0.1.9", path = "crates/nightshade" }
+nightshade = { version = "0.2.0", path = "crates/nightshade" }
 petgraph = "0.6"
 raw-window-handle = "0.6.2"
 thiserror = "2.0"
