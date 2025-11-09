@@ -146,7 +146,7 @@ impl State for PickingDemoState {
                 "Torus",
                 "Torus",
                 nalgebra_glm::vec3(4.0, 0.0, 0.0),
-                nalgebra_glm::vec4(0.8, 0.8, 0.2, 1.0),
+                nalgebra_glm::vec4(0.2, 0.8, 0.8, 1.0),
             ),
             (
                 "Cone",

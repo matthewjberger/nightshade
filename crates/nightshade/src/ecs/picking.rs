@@ -15,6 +15,7 @@ impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
         let window = &world.resources.window;
         let window_handle = window.handle.as_ref()?;
+        let scale_factor = window_handle.scale_factor() as f32;
         let window_size = window_handle.inner_size();
 
         let camera_entity = world.resources.active_camera?;
@@ -22,8 +23,11 @@ impl PickingRay {
         let camera = world.get_camera(camera_entity)?;
         let global_transform = world.get_global_transform(camera_entity)?;
 
-        let ndc_x = (2.0 * screen_pos.x) / window_size.width as f32 - 1.0;
-        let ndc_y = 1.0 - (2.0 * screen_pos.y) / window_size.height as f32;
+        let physical_x = screen_pos.x * scale_factor;
+        let physical_y = screen_pos.y * scale_factor;
+
+        let ndc_x = (2.0 * physical_x) / window_size.width as f32 - 1.0;
+        let ndc_y = 1.0 - (2.0 * physical_y) / window_size.height as f32;
 
         let view_matrix = global_transform.0.try_inverse()?;
         let projection_matrix = camera.projection.matrix();
