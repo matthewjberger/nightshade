@@ -80,3 +80,19 @@ udeps:
 # Watches for changes and runs the specified project
 watch $project="nightshade-editor":
     cargo watch -x 'run -r -p {{project}}'
+
+# Generates changelog using git-cliff
+changelog:
+    git cliff -o CHANGELOG.md
+
+# Creates a git tag using the version from Cargo.toml and updates changelog
+tag:
+    #!/usr/bin/env bash
+    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+    echo "Creating tag v$VERSION"
+    git cliff --tag "v$VERSION" -o CHANGELOG.md
+    git add CHANGELOG.md
+    git commit -m "chore(release): prepare for v$VERSION"
+    git tag "v$VERSION"
+    git push origin "v$VERSION"
+    git push
