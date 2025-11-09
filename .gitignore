@@ -5,3 +5,4 @@ public/
 **/public/
 /Cargo.lock
 !apps/editor/Cargo.lock
+.tagmsg
