@@ -243,3 +243,63 @@ bump-patch-version:
     echo ""
     echo "Version bumped and tagged! To push, run:"
     echo "  just push-version"
+
+# Bumps patch version, pushes, and publishes to crates.io (Windows)
+[windows]
+publish-patch:
+    just bump-patch-version
+    just push-version
+    just publish-crate
+    Write-Host ""
+    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
+
+# Bumps patch version, pushes, and publishes to crates.io (Unix)
+[unix]
+publish-patch:
+    just bump-patch-version
+    just push-version
+    just publish-crate
+    @echo ""
+    @echo "To publish a GitHub release for this version, run:"
+    @echo "  just publish-release"
+
+# Bumps minor version, pushes, and publishes to crates.io (Windows)
+[windows]
+publish-minor:
+    just bump-minor-version
+    just push-version
+    just publish-crate
+    Write-Host ""
+    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
+
+# Bumps minor version, pushes, and publishes to crates.io (Unix)
+[unix]
+publish-minor:
+    just bump-minor-version
+    just push-version
+    just publish-crate
+    @echo ""
+    @echo "To publish a GitHub release for this version, run:"
+    @echo "  just publish-release"
+
+# Bumps major version, pushes, and publishes to crates.io (Windows)
+[windows]
+publish-major:
+    just bump-major-version
+    just push-version
+    just publish-crate
+    Write-Host ""
+    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
+
+# Bumps major version, pushes, and publishes to crates.io (Unix)
+[unix]
+publish-major:
+    just bump-major-version
+    just push-version
+    just publish-crate
+    @echo ""
+    @echo "To publish a GitHub release for this version, run:"
+    @echo "  just publish-release"
