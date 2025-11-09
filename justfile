@@ -85,14 +85,41 @@ watch $project="nightshade-editor":
 changelog:
     git cliff -o CHANGELOG.md
 
-# Creates a git tag using the version from Cargo.toml and updates changelog
+# Shows all git tags
+show-tags:
+    git tag -l --sort=-v:refname
+
+# Shows the current version from Cargo.toml (Windows)
+[windows]
+show-version:
+    "v" + (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
+
+# Shows the current version from Cargo.toml (Unix)
+[unix]
+show-version:
+    @echo "v$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
+
+# Deletes a git tag locally and remotely
+strip-tag tag:
+    git tag -d {{tag}}
+    git push origin :refs/tags/{{tag}}
+
+# Creates a git tag using the version from Cargo.toml and updates changelog (Windows)
+[windows]
+tag:
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; Write-Host "Creating tag v$version"; git cliff --tag "v$version" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore(release): prepare for v$version"; git tag "v$version"; Write-Host ""; Write-Host "Tag created! To push, run:"; Write-Host "  git push origin v$version && git push" -ForegroundColor Green
+
+# Creates a git tag using the version from Cargo.toml and updates changelog (Unix)
+[unix]
 tag:
     #!/usr/bin/env bash
+    set -euo pipefail
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
     echo "Creating tag v$VERSION"
     git cliff --tag "v$VERSION" -o CHANGELOG.md
     git add CHANGELOG.md
     git commit -m "chore(release): prepare for v$VERSION"
     git tag "v$VERSION"
-    git push origin "v$VERSION"
-    git push
+    echo ""
+    echo "Tag created! To push, run:"
+    echo "  git push origin v$VERSION && git push"
