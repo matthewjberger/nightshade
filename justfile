@@ -164,7 +164,7 @@ strip-release tag:
 # Bumps the minor version, updates changelog, and creates a git tag (Windows)
 [windows]
 bump-minor-version:
-    $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newPatch = [int]$parts[2] + 1; $newVersion = "$($parts[0]).$($parts[1]).$newPatch"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; git add Cargo.toml crates/nightshade/README.md; git commit -m "chore: bump version to v$newVersion"; git tag "v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version v$newVersion" -ForegroundColor Green
+    $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMinor = [int]$parts[1] + 1; $newVersion = "$($parts[0]).$newMinor.0"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; git add Cargo.toml crates/nightshade/README.md; git commit -m "chore: bump version to v$newVersion"; git tag "v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version v$newVersion" -ForegroundColor Green
 
 # Bumps the minor version, updates changelog, and creates a git tag (Unix)
 [unix]
@@ -173,8 +173,8 @@ bump-minor-version:
     set -euo pipefail
     CURRENT_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
     IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
-    NEW_PATCH=$((PARTS[2] + 1))
-    NEW_VERSION="${PARTS[0]}.${PARTS[1]}.$NEW_PATCH"
+    NEW_MINOR=$((PARTS[1] + 1))
+    NEW_VERSION="${PARTS[0]}.$NEW_MINOR.0"
     echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
     sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
     sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
