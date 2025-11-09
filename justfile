@@ -42,12 +42,12 @@ lint-wasm:
     cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
 # Publishes the nightshade crate to crates.io
-publish:
+publish-crate:
     cargo publish -p nightshade
     cargo publish -p nightshade-editor
 
 # Dry run of publishing the nightshade crate
-publish-dry:
+publish-crate-dry:
     cargo publish -p nightshade --dry-run
     cargo publish -p nightshade-editor --dry-run
 
