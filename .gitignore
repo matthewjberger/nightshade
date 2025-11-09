@@ -1,5 +1,7 @@
 /target
 dist/
 **/dist/
+public/
+**/public/
 /Cargo.lock
 !apps/editor/Cargo.lock
