@@ -1,4 +1,6 @@
-![nightshade](images/logo.png)
+<p align="center">
+  <img src="images/logo.png" alt="nightshade" width="400">
+</p>
 
 # Nightshade
 
