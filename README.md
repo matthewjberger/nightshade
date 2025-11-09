@@ -34,8 +34,23 @@ cd site && just serve
 
 * [just](https://github.com/casey/just)
 * [trunk](https://trunkrs.dev/) (for web builds)
+* [git-cliff](https://git-cliff.org/) (for changelog generation)
 
 > Run `just` with no arguments to list all commands
+
+## Changelog
+
+This project uses [git-cliff](https://git-cliff.org/) for automated changelog generation. The changelog is maintained in [CHANGELOG.md](CHANGELOG.md).
+
+To generate/update the changelog:
+```bash
+just changelog
+```
+
+To create a new release tag (automatically updates changelog, creates tag, and pushes):
+```bash
+just tag
+```
 
 ## License
 
