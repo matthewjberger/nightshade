@@ -303,3 +303,12 @@ publish-major:
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
     @echo "  just publish-release"
+
+# Builds the project for Steam Deck using cross
+build-steamdeck $project="editor":
+    cross build --release --target x86_64-unknown-linux-gnu -p {{project}}
+
+# Builds and deploys the project to Steam Deck
+deploy-steamdeck $project="editor":
+    just build-steamdeck {{project}}
+    scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
