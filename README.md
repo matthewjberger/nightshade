@@ -49,7 +49,7 @@ cd site && just serve
 
 Deploy projects to Steam Deck using `just deploy-steamdeck [project]` (defaults to `editor`). First-time setup on Steam Deck (must be in desktop mode):
 
-1. Set root password: `passwd`
+1. Set password for `deck` user: `passwd`
 2. Enable SSH: `sudo systemctl enable sshd && sudo systemctl start sshd`
 3. Deploy the binary: `just deploy-steamdeck block_breaker`
 4. Add `~/Downloads/block_breaker` as a non-steam game in Steam
