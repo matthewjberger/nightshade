@@ -259,6 +259,12 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             initialize_user_interface(&mut self.world);
             self.state.initialize(&mut self.world);
+
+            if self.world.resources.graphics.use_fullscreen
+                && let Some(window_handle) = &self.world.resources.window.handle
+            {
+                window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+            }
         }
     }
 
@@ -280,6 +286,13 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 initialize_user_interface(&mut self.world);
                 self.state.initialize(&mut self.world);
+
+                if self.world.resources.graphics.use_fullscreen
+                    && let Some(window_handle) = &self.world.resources.window.handle
+                {
+                    window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+                }
+
                 renderer_received = true;
             }
             if renderer_received {
