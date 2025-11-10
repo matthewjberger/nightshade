@@ -13,6 +13,8 @@ pub mod prelude {
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime};
 
+    pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
+
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::picking::{

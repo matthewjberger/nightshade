@@ -48,6 +48,7 @@ pub(crate) fn step(
             });
             crate::ecs::transform::systems::run_systems(world);
             crate::ecs::world::process_commands_system(world);
+            crate::ecs::text::systems::sync_hud_text_system(world);
             crate::ecs::input::systems::reset_mouse_system(world);
 
             let Some(window_handle) = world.resources.window.handle.as_ref() else {
