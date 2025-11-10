@@ -40,13 +40,13 @@ pub(crate) fn step(
         WindowEvent::RedrawRequested => {
             update_frame_timing_system(world);
             crate::ecs::input::systems::gamepad_input_system(world);
-            crate::ecs::transform::systems::update_global_transforms_system(world);
+            crate::ecs::transform::systems::run_systems(world);
             create_ui_system(world, state);
             state.run_systems(world);
             crate::ecs::event_bus::systems::process_events_system(world, |world, message| {
                 state.handle_event(world, message);
             });
-            crate::ecs::transform::systems::update_global_transforms_system(world);
+            crate::ecs::transform::systems::run_systems(world);
             crate::ecs::world::process_commands_system(world);
             crate::ecs::input::systems::reset_mouse_system(world);
 

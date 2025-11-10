@@ -5,7 +5,8 @@ members = [
 ]
 exclude = [
     "site",
-    "apps/tower_defense"
+    "apps/tower_defense",
+    "apps/audio"
 ]
 resolver = "2"
 
