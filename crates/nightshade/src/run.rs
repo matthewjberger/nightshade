@@ -265,6 +265,10 @@ impl winit::application::ApplicationHandler for WindowContext {
             {
                 window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
             }
+
+            if let Some(window_handle) = &self.world.resources.window.handle {
+                window_handle.set_cursor_visible(self.world.resources.graphics.show_cursor);
+            }
         }
     }
 
@@ -291,6 +295,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                     && let Some(window_handle) = &self.world.resources.window.handle
                 {
                     window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+                }
+
+                if let Some(window_handle) = &self.world.resources.window.handle {
+                    window_handle.set_cursor_visible(self.world.resources.graphics.show_cursor);
                 }
 
                 renderer_received = true;
