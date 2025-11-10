@@ -85,9 +85,9 @@ watch $project="nightshade-editor":
 changelog:
     git cliff -o CHANGELOG.md
 
-# Shows git tags for the current commit
-show-tags:
-    git tag --points-at HEAD
+# Shows the last tagged commit
+show-tag:
+    git describe --tags --abbrev=0
 
 # Shows the current version from Cargo.toml (Windows)
 [windows]

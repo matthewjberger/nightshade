@@ -33,7 +33,6 @@ cd site && just serve
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
 > Firefox also [supports WebGPU](https://mozillagfx.wordpress.com/2025/07/15/shipping-webgpu-on-windows-in-firefox-141/) now starting with version `141`.
-
 > Run `just` with no arguments to list all commands
 
 ## Prerequisites
@@ -48,6 +47,7 @@ cd site && just serve
 ### Native (Windows/macOS/Linux)
 
 Build and run natively using cargo:
+
 ```bash
 just run [project]  # defaults to nightshade-editor
 just build          # release build
@@ -56,6 +56,7 @@ just build          # release build
 ### WebAssembly (WASM)
 
 Build for web browsers with WebGPU support:
+
 ```bash
 just run-wasm [project]   # defaults to editor
 just build-wasm [project]
@@ -76,8 +77,6 @@ Nightshade is free, open source and permissively licensed! All code in this repo
 * MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 
-at your option. This means you can select the license you prefer! This dual-licensing approach is the de-facto standard in the Rust ecosystem.
+at your option.
 
-### Your contributions
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in `nightshade` by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
