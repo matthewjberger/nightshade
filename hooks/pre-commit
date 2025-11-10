@@ -1,0 +1,20 @@
+#!/bin/sh
+
+echo "Running pre-commit checks..."
+
+echo "Formatting code..."
+just format
+if [ $? -ne 0 ]; then
+    echo "Format failed. Commit aborted."
+    exit 1
+fi
+
+echo "Running linter..."
+just lint
+if [ $? -ne 0 ]; then
+    echo "Lint failed. Commit aborted."
+    exit 1
+fi
+
+echo "Pre-commit checks passed!"
+exit 0

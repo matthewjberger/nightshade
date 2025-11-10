@@ -32,6 +32,15 @@ init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
 
+# Install git hooks
+install-hooks:
+    cp hooks/pre-commit .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+
+# Uninstall git hooks
+uninstall-hooks:
+    rm -f .git/hooks/pre-commit
+
 # Runs linter and displays warnings
 lint:
     cargo clippy --all --tests -- -D warnings
