@@ -42,19 +42,28 @@ cd site && just serve
 * [trunk](https://trunkrs.dev/) (for web builds)
 * [git-cliff](https://git-cliff.org/) (for changelog generation)
 * [gh](https://cli.github.com/) (GitHub CLI, for creating releases)
-* [cross](https://github.com/cross-rs/cross) (for Steam Deck builds)
-  * Requires Docker (macOS/Linux) or Docker Desktop (Windows)
 
-## Steam Deck Deployment
+## Platform Guides
 
-Deploy projects to Steam Deck using `just deploy-steamdeck [project]` (defaults to `editor`). First-time setup on Steam Deck (must be in desktop mode):
+### Native (Windows/macOS/Linux)
 
-1. Set password for `deck` user: `passwd`
-2. Enable SSH: `sudo systemctl enable sshd && sudo systemctl start sshd`
-3. Deploy the binary: `just deploy-steamdeck block_breaker`
-4. Add `~/Downloads/block_breaker` as a non-steam game in Steam
-5. Launch from Big Picture mode or Game mode after initial setup
-6. Future deploys must be done from desktop mode, but the last deployed binary will run in game mode
+Build and run natively using cargo:
+```bash
+just run [project]  # defaults to nightshade-editor
+just build          # release build
+```
+
+### WebAssembly (WASM)
+
+Build for web browsers with WebGPU support:
+```bash
+just run-wasm [project]   # defaults to editor
+just build-wasm [project]
+```
+
+### Steam Deck
+
+See [STEAM_DECK.md](STEAM_DECK.md) for deployment instructions.
 
 ## Contributing
 
