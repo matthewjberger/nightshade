@@ -13,6 +13,12 @@ pub enum WorldCommand {
         width: u32,
         height: u32,
     },
+    LoadTexture {
+        name: String,
+        rgba_data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
 }
 
 impl World {
@@ -27,7 +33,7 @@ pub fn process_commands_system(world: &mut World) {
 
     for command in commands {
         match &command {
-            WorldCommand::UploadSpriteTexture { .. } => {
+            WorldCommand::UploadSpriteTexture { .. } | WorldCommand::LoadTexture { .. } => {
                 sprite_texture_commands.push(command);
             }
             _ => {
@@ -49,6 +55,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
             despawn_entities_with_cache_cleanup(world, &descendents);
         }
         WorldCommand::UploadSpriteTexture { .. } => {}
+        WorldCommand::LoadTexture { .. } => {}
     }
 }
 

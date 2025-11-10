@@ -9,6 +9,7 @@ pub mod components {
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::picking::components::Hovered;
     pub use crate::ecs::render_layer::components::RenderLayer;
+    pub use crate::ecs::splash_screen::components::{SplashScreen, SplashScreenAlpha};
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
@@ -23,6 +24,7 @@ pub mod resources {
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::splash_screen::resources::{SplashScreenPhase, SplashScreenState};
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{Window, WindowTiming};
@@ -55,6 +57,8 @@ freecs::ecs! {
         material: crate::ecs::material::components::Material => MATERIAL,
         render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
+        splash_screen: crate::ecs::splash_screen::components::SplashScreen => SPLASH_SCREEN,
+        splash_screen_alpha: crate::ecs::splash_screen::components::SplashScreenAlpha => SPLASH_SCREEN_ALPHA,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
@@ -72,5 +76,6 @@ freecs::ecs! {
         event_bus: crate::ecs::event_bus::resources::EventBus,
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
+        splash_screen_state: crate::ecs::splash_screen::resources::SplashScreenState,
     }
 }

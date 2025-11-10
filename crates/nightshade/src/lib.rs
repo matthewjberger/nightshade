@@ -19,6 +19,10 @@ pub mod prelude {
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
         pick_closest_entity, pick_entities, pick_entities_in_frustum, pick_entities_with_options,
     };
+    pub use crate::ecs::splash_screen::commands::{
+        is_splash_screen_completed, spawn_splash_screen_quad, spawn_splash_screen_sprite,
+        spawn_splash_screen_text,
+    };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
     };
