@@ -2,6 +2,8 @@ set windows-shell := ["powershell.exe"]
 export RUST_LOG := "info,wgpu_core=off"
 export RUST_BACKTRACE := "1"
 
+template_repo := "https://github.com/matthewjberger/nightshade-template.git"
+
 # Displays the list of available commands
 @just:
     just --list
@@ -49,6 +51,18 @@ lint:
 # Runs linter for wasm32 target
 lint-wasm:
     cargo clippy --target wasm32-unknown-unknown -- -D warnings
+
+# Pushes template changes to nightshade-template repo
+push-template:
+    git subtree push --prefix=template {{template_repo}} main
+
+# Pulls updates from nightshade-template repo
+pull-template:
+    git subtree pull --prefix=template {{template_repo}} main --squash
+
+# Adds the template as a subtree (one-time setup)
+add-template:
+    git subtree add --prefix=template {{template_repo}} main --squash
 
 # Publishes the nightshade crate to crates.io
 publish-crate:
