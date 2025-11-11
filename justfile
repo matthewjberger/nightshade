@@ -276,6 +276,7 @@ publish-patch:
     just bump-patch-version
     just push-version
     just publish-crate
+    just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
     Write-Host "  just publish-release" -ForegroundColor Green
@@ -286,6 +287,7 @@ publish-patch:
     just bump-patch-version
     just push-version
     just publish-crate
+    just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
     @echo "  just publish-release"
@@ -296,6 +298,7 @@ publish-minor:
     just bump-minor-version
     just push-version
     just publish-crate
+    just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
     Write-Host "  just publish-release" -ForegroundColor Green
@@ -306,6 +309,7 @@ publish-minor:
     just bump-minor-version
     just push-version
     just publish-crate
+    just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
     @echo "  just publish-release"
@@ -316,6 +320,7 @@ publish-major:
     just bump-major-version
     just push-version
     just publish-crate
+    just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
     Write-Host "  just publish-release" -ForegroundColor Green
@@ -326,6 +331,7 @@ publish-major:
     just bump-major-version
     just push-version
     just publish-crate
+    just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
     @echo "  just publish-release"
