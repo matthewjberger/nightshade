@@ -1,11 +1,21 @@
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(Template)?;
+    launch(Template::default())?;
     Ok(())
 }
 
-struct Template;
+struct Template {
+    plugins: PluginGroup,
+}
+
+impl Default for Template {
+    fn default() -> Self {
+        Self {
+            plugins: PluginGroup::new().add(FlyCameraPlugin),
+        }
+    }
+}
 
 impl State for Template {
     fn title(&self) -> &str {
@@ -29,7 +39,7 @@ impl State for Template {
     }
 
     fn run_systems(&mut self, world: &mut World) {
-        fly_camera_system(world);
+        self.plugins.update(world);
     }
 
     fn handle_event(&mut self, _world: &mut World, message: &Message) {

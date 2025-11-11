@@ -1,4 +1,5 @@
 pub mod ecs;
+pub mod plugins;
 pub mod render;
 pub mod run;
 mod systems;
@@ -9,6 +10,7 @@ pub mod prelude {
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
+    pub use crate::plugins::*;
     pub use crate::run::*;
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime};
