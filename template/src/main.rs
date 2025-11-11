@@ -12,7 +12,7 @@ struct Template {
 impl Default for Template {
     fn default() -> Self {
         Self {
-            plugins: PluginGroup::new().add(FlyCameraPlugin),
+            plugins: PluginGroup::new().add_plugin(FlyCameraPlugin),
         }
     }
 }

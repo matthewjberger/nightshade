@@ -25,7 +25,7 @@ impl PluginGroup {
         }
     }
 
-    pub fn add<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
         self.plugins.push(Box::new(plugin));
         self
     }
