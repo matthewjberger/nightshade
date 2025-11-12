@@ -5,21 +5,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-struct Template {
-    plugins: PluginGroup,
-}
-
-impl Default for Template {
-    fn default() -> Self {
-        Self {
-            plugins: PluginGroup::new().add_plugin(FlyCameraPlugin),
-        }
-    }
-}
+#[derive(Default)]
+struct Template;
 
 impl State for Template {
     fn title(&self) -> &str {
         "Template"
+    }
+
+    fn plugins(&self) -> PluginGroup {
+        use nightshade::plugins::PluginGroupExt;
+        PluginGroup::new().add(FlyCameraPlugin)
     }
 
     fn initialize(&mut self, world: &mut World) {
@@ -36,10 +32,6 @@ impl State for Template {
         egui::Window::new("Template").show(ui_context, |ui| {
             ui.heading("Template");
         });
-    }
-
-    fn run_systems(&mut self, world: &mut World) {
-        self.plugins.update(world);
     }
 
     fn handle_event(&mut self, _world: &mut World, message: &Message) {

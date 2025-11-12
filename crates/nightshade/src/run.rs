@@ -1,5 +1,4 @@
-use crate::ecs::world::{Resources, World, resources::*};
-use web_time::Instant;
+use crate::ecs::world::World;
 use winit::{
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
@@ -15,9 +14,17 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
         console_log::init().expect("Failed to initialize logger");
     }
 
+    let state = Box::new(state);
+    let plugins = {
+        let mut base = crate::plugins::default_plugins();
+        base.extend(state.plugins());
+        base
+    };
+
     let mut context = WindowContext {
-        state: Box::new(state),
+        state,
         world: World::default(),
+        plugins,
         renderer: None,
         #[cfg(target_arch = "wasm32")]
         renderer_receiver: None,
@@ -33,31 +40,29 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
+    plugins: &mut crate::plugins::PluginGroup,
     renderer: &mut Option<Box<dyn crate::ecs::world::Render>>,
     event: &WindowEvent,
-) {
+) -> Option<Box<dyn State>> {
+    plugins.on_event(world, &crate::ecs::event_bus::EngineEvent::Window(event));
+
     match event {
         WindowEvent::RedrawRequested => {
-            update_frame_timing_system(world);
-            crate::ecs::input::systems::gamepad_input_system(world);
-            crate::ecs::transform::systems::run_systems(world);
             create_ui_system(world, state);
             state.run_systems(world);
+
             crate::ecs::event_bus::systems::process_events_system(world, |world, message| {
                 state.handle_event(world, message);
             });
-            crate::ecs::transform::systems::run_systems(world);
-            crate::ecs::world::process_commands_system(world);
-            crate::ecs::text::systems::sync_hud_text_system(world);
-            crate::ecs::input::systems::reset_mouse_system(world);
 
-            let Some(window_handle) = world.resources.window.handle.as_ref() else {
-                return;
-            };
+            plugins.step(world);
 
-            let Some(renderer) = renderer.as_mut() else {
-                return;
-            };
+            if let Some(new_state) = state.next_state(world) {
+                return Some(new_state);
+            }
+
+            let window_handle = world.resources.window.handle.as_ref()?;
+            let renderer = renderer.as_mut()?;
 
             let ui_frame_output = world.resources.user_interface.frame_output.take();
 
@@ -76,12 +81,12 @@ pub(crate) fn step(
                     log::error!("Failed to draw frame: {error}");
                 }
             }
+
+            None
         }
         event => {
-            crate::ecs::input::systems::receive_keyboard_input(world, event);
-            crate::ecs::input::systems::receive_mouse_input(world, event);
-            receive_ui_event(world, event);
             forward_window_events(world, state, event);
+            None
         }
     }
 }
@@ -117,6 +122,12 @@ pub trait State {
         Some(include_bytes!("../images/icon.png"))
     }
     fn initialize(&mut self, _world: &mut World) {}
+    fn plugins(&self) -> crate::plugins::PluginGroup {
+        crate::plugins::PluginGroup::new()
+    }
+    fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
+        None
+    }
     fn configure_render_graph(
         &mut self,
         graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
@@ -154,6 +165,7 @@ pub trait State {
 pub struct WindowContext {
     pub world: World,
     pub state: Box<dyn State>,
+    pub plugins: crate::plugins::PluginGroup,
     pub renderer: Option<Box<dyn crate::ecs::world::Render>>,
     #[cfg(target_arch = "wasm32")]
     pub renderer_receiver:
@@ -329,7 +341,18 @@ impl winit::application::ApplicationHandler for WindowContext {
             sync_ui_scale_factor(&mut self.world);
         }
 
-        crate::run::step(&mut self.world, &mut self.state, &mut self.renderer, &event);
+        if let Some(new_state) = crate::run::step(
+            &mut self.world,
+            &mut self.state,
+            &mut self.plugins,
+            &mut self.renderer,
+            &event,
+        ) {
+            self.state = new_state;
+            let user_plugins = self.state.plugins();
+            self.plugins = crate::plugins::default_plugins();
+            self.plugins.extend(user_plugins);
+        }
 
         request_redraw_system(&mut self.world);
     }
@@ -373,17 +396,6 @@ fn initialize_user_interface(world: &mut World) {
     world.resources.user_interface.state = Some(gui_state);
 }
 
-fn receive_ui_event(world: &mut World, event: &WindowEvent) {
-    let Some(gui_state) = &mut world.resources.user_interface.state else {
-        return;
-    };
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
-        return;
-    };
-    world.resources.user_interface.consumed_event =
-        gui_state.on_window_event(window_handle, event).consumed;
-}
-
 fn sync_ui_scale_factor(world: &mut World) {
     let Some(window_handle) = world.resources.window.handle.as_ref() else {
         return;
@@ -425,63 +437,4 @@ fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
     gui_state.handle_platform_output(window_handle, output.platform_output.clone());
     let paint_jobs = ui.tessellate(output.shapes.clone(), output.pixels_per_point);
     world.resources.user_interface.frame_output = Some((output, paint_jobs));
-}
-
-fn update_frame_timing_system(world: &mut World) {
-    let now = Instant::now();
-
-    let World {
-        resources:
-            Resources {
-                window:
-                    Window {
-                        timing:
-                            WindowTiming {
-                                delta_time,
-                                raw_delta_time,
-                                time_speed,
-                                last_frame_start_instant,
-                                current_frame_start_instant,
-                                initial_frame_start_instant,
-                                frame_counter,
-                                uptime_milliseconds,
-                                frames_per_second,
-                                ..
-                            },
-                        ..
-                    },
-                ..
-            },
-        ..
-    } = world;
-
-    if initial_frame_start_instant.is_none() {
-        *initial_frame_start_instant = Some(now);
-    }
-
-    *raw_delta_time =
-        last_frame_start_instant.map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
-
-    *delta_time = *raw_delta_time * *time_speed;
-
-    *last_frame_start_instant = Some(now);
-
-    if current_frame_start_instant.is_none() {
-        *current_frame_start_instant = Some(now);
-    }
-
-    if let Some(app_start) = initial_frame_start_instant.as_ref() {
-        *uptime_milliseconds = (now - *app_start).as_millis() as u64;
-    }
-
-    *frame_counter += 1;
-    if let Some(start) = current_frame_start_instant.as_ref() {
-        if (now - *start).as_secs_f32() >= 1.0 {
-            *frames_per_second = *frame_counter as f32;
-            *frame_counter = 0;
-            *current_frame_start_instant = Some(now);
-        }
-    } else {
-        *current_frame_start_instant = Some(now);
-    }
 }

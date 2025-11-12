@@ -1,17 +1,16 @@
+mod core;
 mod fly_camera;
 
+pub use core::*;
 pub use fly_camera::FlyCameraPlugin;
 
+use crate::ecs::event_bus::EngineEvent;
 use crate::ecs::world::World;
 
 pub trait Plugin {
-    fn update(&mut self, world: &mut World);
-}
+    fn step(&mut self, world: &mut World);
 
-pub fn run_plugins(plugins: &mut [Box<dyn Plugin>], world: &mut World) {
-    for plugin in plugins {
-        plugin.update(world);
-    }
+    fn on_event(&mut self, _world: &mut World, _event: &EngineEvent) {}
 }
 
 pub struct PluginGroup {
@@ -25,9 +24,24 @@ impl PluginGroup {
         }
     }
 
-    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
-        self.plugins.push(Box::new(plugin));
-        self
+    pub fn push(&mut self, plugin: Box<dyn Plugin>) {
+        self.plugins.push(plugin);
+    }
+
+    pub fn extend(&mut self, other: PluginGroup) {
+        self.plugins.extend(other.plugins);
+    }
+
+    pub fn on_event(&mut self, world: &mut World, event: &EngineEvent) {
+        for plugin in &mut self.plugins {
+            plugin.on_event(world, event);
+        }
+    }
+
+    pub fn step(&mut self, world: &mut World) {
+        for plugin in &mut self.plugins {
+            plugin.step(world);
+        }
     }
 }
 
@@ -37,10 +51,35 @@ impl Default for PluginGroup {
     }
 }
 
-impl Plugin for PluginGroup {
-    fn update(&mut self, world: &mut World) {
-        for plugin in &mut self.plugins {
-            plugin.update(world);
-        }
+pub trait PluginGroupExt {
+    fn add<P: Plugin + 'static>(self, plugin: P) -> Self;
+}
+
+impl PluginGroupExt for PluginGroup {
+    fn add<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+        self.push(Box::new(plugin));
+        self
     }
+}
+
+impl FromIterator<Box<dyn Plugin>> for PluginGroup {
+    fn from_iter<T: IntoIterator<Item = Box<dyn Plugin>>>(iter: T) -> Self {
+        let mut group = PluginGroup::new();
+        for plugin in iter {
+            group.push(plugin);
+        }
+        group
+    }
+}
+
+pub fn default_plugins() -> PluginGroup {
+    PluginGroup::new()
+        .add(UIEventPlugin)
+        .add(InputEventPlugin)
+        .add(TimingPlugin)
+        .add(GamepadInputPlugin)
+        .add(TransformPlugin)
+        .add(CommandProcessingPlugin)
+        .add(HudTextSyncPlugin)
+        .add(ResetMousePlugin)
 }
