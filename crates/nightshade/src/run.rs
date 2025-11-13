@@ -15,16 +15,10 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
     }
 
     let state = Box::new(state);
-    let plugins = {
-        let mut base = crate::plugins::default_plugins();
-        base.extend(state.plugins());
-        base
-    };
 
     let mut context = WindowContext {
         state,
         world: World::default(),
-        plugins,
         renderer: None,
         #[cfg(target_arch = "wasm32")]
         renderer_receiver: None,
@@ -40,11 +34,10 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
-    plugins: &mut crate::plugins::PluginGroup,
     renderer: &mut Option<Box<dyn crate::ecs::world::Render>>,
     event: &WindowEvent,
 ) -> Option<Box<dyn State>> {
-    plugins.on_event(world, &crate::ecs::event_bus::EngineEvent::Window(event));
+    handle_event_systems(world, event);
 
     match event {
         WindowEvent::RedrawRequested => {
@@ -55,7 +48,7 @@ pub(crate) fn step(
                 state.handle_event(world, message);
             });
 
-            plugins.step(world);
+            run_frame_systems(world);
 
             if let Some(new_state) = state.next_state(world) {
                 return Some(new_state);
@@ -91,6 +84,146 @@ pub(crate) fn step(
     }
 }
 
+fn handle_event_systems(world: &mut World, event: &WindowEvent) {
+    ui_event_system(world, event);
+    input_event_system(world, event);
+    timing_system(world, event);
+}
+
+fn run_frame_systems(world: &mut World) {
+    crate::ecs::input::systems::gamepad_input_system(world);
+    crate::ecs::transform::systems::run_systems(world);
+    crate::ecs::text::systems::sync_hud_text_system(world);
+    crate::ecs::camera::systems::fly_camera_system(world);
+    crate::ecs::input::systems::reset_mouse_system(world);
+    crate::ecs::world::process_commands_system(world);
+}
+
+fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
+    let Some(gui_state) = &mut world.resources.user_interface.state else {
+        return;
+    };
+    let Some(window_handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    world.resources.user_interface.consumed_event = gui_state
+        .on_window_event(window_handle, window_event)
+        .consumed;
+}
+
+fn input_event_system(world: &mut World, window_event: &WindowEvent) {
+    use crate::ecs::event_bus::commands::publish_event;
+    use crate::ecs::world::events::{InputEvent, KeyState, Message};
+    use crate::ecs::world::{Vec2, resources::MouseState};
+
+    if let winit::event::WindowEvent::KeyboardInput {
+        event:
+            winit::event::KeyEvent {
+                physical_key: winit::keyboard::PhysicalKey::Code(key_code),
+                state,
+                ..
+            },
+        ..
+    } = window_event
+    {
+        *world
+            .resources
+            .input
+            .keyboard
+            .keystates
+            .entry(*key_code)
+            .or_insert(*state) = *state;
+
+        let event_state = match state {
+            winit::event::ElementState::Pressed => InputEvent::KeyboardInput {
+                key_code: *key_code as u32,
+                state: KeyState::Pressed,
+            },
+            winit::event::ElementState::Released => InputEvent::KeyboardInput {
+                key_code: *key_code as u32,
+                state: KeyState::Released,
+            },
+        };
+
+        publish_event(world, Message::Input { event: event_state });
+    }
+
+    let mouse = &mut world.resources.input.mouse;
+    match window_event {
+        winit::event::WindowEvent::MouseInput { button, state, .. } => {
+            let clicked = *state == winit::event::ElementState::Pressed;
+            match button {
+                winit::event::MouseButton::Left => {
+                    mouse.state.set(MouseState::LEFT_CLICKED, clicked);
+                }
+                winit::event::MouseButton::Middle => {
+                    mouse.state.set(MouseState::MIDDLE_CLICKED, clicked);
+                }
+                winit::event::MouseButton::Right => {
+                    mouse.state.set(MouseState::RIGHT_CLICKED, clicked);
+                }
+                _ => {}
+            }
+        }
+        winit::event::WindowEvent::CursorMoved { position, .. } => {
+            let last_position = mouse.position;
+            let current_position = Vec2::new(position.x as _, position.y as _);
+            mouse.position = current_position;
+            mouse.position_delta = current_position - last_position;
+            mouse.state.set(MouseState::MOVED, true);
+        }
+        winit::event::WindowEvent::MouseWheel {
+            delta: winit::event::MouseScrollDelta::LineDelta(h_lines, v_lines),
+            ..
+        } => {
+            mouse.wheel_delta = Vec2::new(*h_lines, *v_lines);
+            mouse.state.set(MouseState::SCROLLED, true);
+        }
+        _ => {}
+    }
+}
+
+fn timing_system(world: &mut World, event: &WindowEvent) {
+    use web_time::Instant;
+
+    if let WindowEvent::RedrawRequested = event {
+        let now = Instant::now();
+
+        let timing = &mut world.resources.window.timing;
+
+        if timing.initial_frame_start_instant.is_none() {
+            timing.initial_frame_start_instant = Some(now);
+        }
+
+        timing.raw_delta_time = timing
+            .last_frame_start_instant
+            .map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
+
+        timing.delta_time = timing.raw_delta_time * timing.time_speed;
+
+        timing.last_frame_start_instant = Some(now);
+
+        if timing.current_frame_start_instant.is_none() {
+            timing.current_frame_start_instant = Some(now);
+        }
+
+        if let Some(app_start) = timing.initial_frame_start_instant.as_ref() {
+            timing.uptime_milliseconds = (now - *app_start).as_millis() as u64;
+        }
+
+        timing.frame_counter += 1;
+        if let Some(start) = timing.current_frame_start_instant.as_ref() {
+            if (now - *start).as_secs_f32() >= 1.0 {
+                timing.frames_per_second = timing.frame_counter as f32;
+                timing.frame_counter = 0;
+                timing.current_frame_start_instant = Some(now);
+            }
+        } else {
+            timing.current_frame_start_instant = Some(now);
+        }
+    }
+}
+
 fn forward_window_events(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -122,9 +255,6 @@ pub trait State {
         Some(include_bytes!("../images/icon.png"))
     }
     fn initialize(&mut self, _world: &mut World) {}
-    fn plugins(&self) -> crate::plugins::PluginGroup {
-        crate::plugins::PluginGroup::new()
-    }
     fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
         None
     }
@@ -165,7 +295,6 @@ pub trait State {
 pub struct WindowContext {
     pub world: World,
     pub state: Box<dyn State>,
-    pub plugins: crate::plugins::PluginGroup,
     pub renderer: Option<Box<dyn crate::ecs::world::Render>>,
     #[cfg(target_arch = "wasm32")]
     pub renderer_receiver:
@@ -341,17 +470,10 @@ impl winit::application::ApplicationHandler for WindowContext {
             sync_ui_scale_factor(&mut self.world);
         }
 
-        if let Some(new_state) = crate::run::step(
-            &mut self.world,
-            &mut self.state,
-            &mut self.plugins,
-            &mut self.renderer,
-            &event,
-        ) {
+        if let Some(new_state) =
+            crate::run::step(&mut self.world, &mut self.state, &mut self.renderer, &event)
+        {
             self.state = new_state;
-            let user_plugins = self.state.plugins();
-            self.plugins = crate::plugins::default_plugins();
-            self.plugins.extend(user_plugins);
         }
 
         request_redraw_system(&mut self.world);

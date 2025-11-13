@@ -13,11 +13,6 @@ impl State for Template {
         "Template"
     }
 
-    fn plugins(&self) -> PluginGroup {
-        use nightshade::plugins::PluginGroupExt;
-        PluginGroup::new().add(FlyCameraPlugin)
-    }
-
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = true;
         world.resources.graphics.show_grid = true;
