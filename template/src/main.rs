@@ -1,7 +1,7 @@
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(Template::default())?;
+    launch(Template)?;
     Ok(())
 }
 
