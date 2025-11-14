@@ -1,0 +1,10 @@
+[package]
+name = "tower_defense"
+version = "0.1.0"
+edition = "2024"
+default-run = "tower_defense"
+publish = false
+
+[dependencies]
+nightshade = { path = "../../crates/nightshade" }
+rand = "0.9.2"

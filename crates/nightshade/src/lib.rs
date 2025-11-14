@@ -28,6 +28,11 @@ pub mod prelude {
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
     };
+    pub use crate::ecs::text::systems::sync_text_meshes_system;
+    pub use crate::ecs::world::commands::{
+        spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
+        spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
+    };
     pub use egui;
     pub use freecs;
     pub use log;

@@ -49,20 +49,20 @@ impl LocalTransform {
 
     pub fn as_matrix(&self) -> Mat4 {
         let translation_matrix = nalgebra_glm::translation(&self.translation);
-        let rotation_matrix = quat_to_mat4(&self.rotation);
+        let rotation_matrix = quat_to_mat4(&self.rotation.normalize());
         let scale_matrix = nalgebra_glm::scaling(&self.scale);
         translation_matrix * rotation_matrix * scale_matrix
     }
 
     pub fn right_vector(&self) -> Vec3 {
-        nalgebra_glm::quat_rotate_vec3(&self.rotation, &Vec3::x())
+        super::extract_right_vector(&self.as_matrix())
     }
 
     pub fn up_vector(&self) -> Vec3 {
-        nalgebra_glm::quat_rotate_vec3(&self.rotation, &Vec3::y())
+        super::extract_up_vector(&self.as_matrix())
     }
 
     pub fn forward_vector(&self) -> Vec3 {
-        -nalgebra_glm::quat_rotate_vec3(&self.rotation, &Vec3::z())
+        super::extract_forward_vector(&self.as_matrix())
     }
 }

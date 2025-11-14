@@ -17,12 +17,13 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
     let global_transform = world.get_global_transform(entity)?;
 
     let normalized_rotation = local_transform.rotation.normalize();
-    let camera_position = global_transform.position();
+    let camera_position = global_transform.translation();
     let target = camera_position
         + nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 0.0, -1.0));
     let up = nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 1.0, 0.0));
 
-    let projection = camera.projection.matrix();
+    let aspect_ratio = query_window_aspect_ratio(world).unwrap_or(16.0 / 9.0);
+    let projection = camera.projection.matrix_with_aspect(aspect_ratio);
     let view = nalgebra_glm::look_at(&camera_position, &target, &up);
 
     Some(CameraMatrices {
@@ -30,4 +31,11 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
         projection,
         view,
     })
+}
+
+pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {
+    let window_handle = world.resources.window.handle.as_ref()?;
+    let inner_size = window_handle.inner_size();
+    let aspect_ratio = inner_size.width as f32 / inner_size.height.max(1) as f32;
+    Some(aspect_ratio)
 }

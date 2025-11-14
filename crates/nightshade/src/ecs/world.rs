@@ -3,6 +3,7 @@ pub mod components {
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PerspectiveCamera, Projection, Smoothing,
     };
+    pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{AlphaMode, Material};
     pub use crate::ecs::mesh::components::RenderMesh;
@@ -35,7 +36,11 @@ pub mod events {
 }
 
 pub mod commands;
-pub use commands::{CommandQueue, WorldCommand, process_commands_system};
+pub use commands::{
+    CommandQueue, WorldCommand, process_commands_system, spawn_3d_text_with_properties,
+    spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at, spawn_plane_at,
+    spawn_sphere_at, spawn_sun, spawn_torus_at,
+};
 
 mod render_trait;
 pub use render_trait::Render;
@@ -51,6 +56,7 @@ freecs::ecs! {
         local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,
         parent: crate::ecs::transform::components::Parent => PARENT,
         camera: crate::ecs::camera::components::Camera => CAMERA,
+        light: crate::ecs::light::components::Light => LIGHT,
         lines: crate::ecs::lines::components::Lines => LINES,
         visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,

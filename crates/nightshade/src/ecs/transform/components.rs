@@ -20,8 +20,8 @@ impl Default for GlobalTransform {
 }
 
 impl GlobalTransform {
-    pub fn position(&self) -> Vec3 {
-        self.0.column(3).xyz()
+    pub fn translation(&self) -> Vec3 {
+        nalgebra_glm::vec3(self.0[(0, 3)], self.0[(1, 3)], self.0[(2, 3)])
     }
 
     pub fn right_vector(&self) -> Vec3 {
@@ -37,14 +37,14 @@ impl GlobalTransform {
     }
 }
 
-fn extract_right_vector(matrix: &Mat4) -> Vec3 {
-    matrix.column(0).xyz()
+pub(super) fn extract_right_vector(matrix: &Mat4) -> Vec3 {
+    nalgebra_glm::vec3(matrix[(0, 0)], matrix[(1, 0)], matrix[(2, 0)])
 }
 
-fn extract_up_vector(matrix: &Mat4) -> Vec3 {
-    matrix.column(1).xyz()
+pub(super) fn extract_up_vector(matrix: &Mat4) -> Vec3 {
+    nalgebra_glm::vec3(matrix[(0, 1)], matrix[(1, 1)], matrix[(2, 1)])
 }
 
-fn extract_forward_vector(matrix: &Mat4) -> Vec3 {
-    -matrix.column(2).xyz()
+pub(super) fn extract_forward_vector(matrix: &Mat4) -> Vec3 {
+    nalgebra_glm::vec3(-matrix[(0, 2)], -matrix[(1, 2)], -matrix[(2, 2)])
 }

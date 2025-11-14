@@ -22,7 +22,10 @@ impl Default for PerspectiveCamera {
 impl PerspectiveCamera {
     pub fn matrix(&self) -> Mat4 {
         let aspect_ratio = self.aspect_ratio.unwrap_or(16.0 / 9.0);
+        self.matrix_with_aspect(aspect_ratio)
+    }
 
+    pub fn matrix_with_aspect(&self, aspect_ratio: f32) -> Mat4 {
         match self.z_far {
             Some(z_far) => {
                 nalgebra_glm::perspective_zo(aspect_ratio, self.y_fov_rad, self.z_near, z_far)

@@ -36,4 +36,11 @@ impl Projection {
             Projection::Orthographic(camera) => camera.matrix(),
         }
     }
+
+    pub fn matrix_with_aspect(&self, aspect_ratio: f32) -> Mat4 {
+        match self {
+            Projection::Perspective(camera) => camera.matrix_with_aspect(aspect_ratio),
+            Projection::Orthographic(camera) => camera.matrix(),
+        }
+    }
 }

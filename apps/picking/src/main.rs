@@ -117,6 +117,8 @@ impl State for PickingDemoState {
         world.resources.graphics.show_grid = true;
         world.resources.graphics.show_skybox = true;
 
+        spawn_sun(world);
+
         self.spin_speed = 1.0;
         self.show_debug_volumes = true;
         self.show_obb_volumes = true;
