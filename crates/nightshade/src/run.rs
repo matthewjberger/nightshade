@@ -91,6 +91,7 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 fn run_frame_systems(world: &mut World) {
+    crate::ecs::camera::systems::update_camera_aspect_ratios(world);
     crate::ecs::input::systems::gamepad_input_system(world);
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
@@ -456,17 +457,36 @@ impl winit::application::ApplicationHandler for WindowContext {
             return;
         }
 
-        if let winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) =
-            event
-            && width > 0
-            && height > 0
-        {
-            if let Some(renderer) = &mut self.renderer
-                && let Err(error) = renderer.resize_surface(width, height)
-            {
-                log::error!("Failed to resize surface: {error}");
+        match event {
+            winit::event::WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
+                    gui_state
+                        .egui_ctx()
+                        .set_pixels_per_point(scale_factor as f32);
+                }
             }
-            sync_ui_scale_factor(&mut self.world);
+            winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
+                if width > 0 && height > 0 =>
+            {
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use winit::platform::web::WindowExtWebSys;
+                    if let Some(window) = self.world.resources.window.handle.as_ref()
+                        && let Some(canvas) = window.canvas()
+                    {
+                        canvas.set_width(width);
+                        canvas.set_height(height);
+                    }
+                }
+
+                if let Some(renderer) = &mut self.renderer
+                    && let Err(error) = renderer.resize_surface(width, height)
+                {
+                    log::error!("Failed to resize surface: {error}");
+                }
+                sync_ui_scale_factor(&mut self.world);
+            }
+            _ => {}
         }
 
         if let Some(new_state) =
@@ -501,6 +521,11 @@ fn initialize_user_interface(world: &mut World) {
     };
 
     let gui_context = egui::Context::default();
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        gui_context.set_pixels_per_point(window_handle.scale_factor() as f32);
+    }
 
     let viewport_id = gui_context.viewport_id();
     let gui_state = egui_winit::State::new(

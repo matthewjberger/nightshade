@@ -103,7 +103,7 @@ impl TowerType {
 
     fn color(&self) -> Vec4 {
         match self {
-            TowerType::Basic => nalgebra_glm::vec4(0.2, 0.8, 0.2, 1.0),
+            TowerType::Basic => nalgebra_glm::vec4(1.0, 0.5, 0.0, 1.0),
             TowerType::Frost => nalgebra_glm::vec4(0.2, 0.6, 1.0, 1.0),
             TowerType::Cannon => nalgebra_glm::vec4(0.8, 0.2, 0.2, 1.0),
             TowerType::Sniper => nalgebra_glm::vec4(0.3, 0.3, 0.3, 1.0),
@@ -2213,52 +2213,56 @@ impl TowerDefenseECS {
                 let check_right = 0.15;
 
                 box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(check_left, mark_y - check_size, box_size),
-                    end: position + nalgebra_glm::vec3(check_middle, mark_y, box_size),
+                    start: position + nalgebra_glm::vec3(check_left, mark_y, box_size),
+                    end: position + nalgebra_glm::vec3(check_middle, mark_y - check_size, box_size),
                     color: mark_color,
                 });
-                box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(check_middle, mark_y, box_size),
-                    end: position
-                        + nalgebra_glm::vec3(check_right, mark_y - check_size * 1.5, box_size),
-                    color: mark_color,
-                });
-
                 box_lines.push(Line {
                     start: position
-                        + nalgebra_glm::vec3(check_left, mark_y - check_size, -box_size),
-                    end: position + nalgebra_glm::vec3(check_middle, mark_y, -box_size),
-                    color: mark_color,
-                });
-                box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(check_middle, mark_y, -box_size),
+                        + nalgebra_glm::vec3(check_middle, mark_y - check_size, box_size),
                     end: position
-                        + nalgebra_glm::vec3(check_right, mark_y - check_size * 1.5, -box_size),
+                        + nalgebra_glm::vec3(check_right, mark_y + check_size * 0.5, box_size),
                     color: mark_color,
                 });
 
                 box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(box_size, mark_y - check_size, check_left),
-                    end: position + nalgebra_glm::vec3(box_size, mark_y, check_middle),
-                    color: mark_color,
-                });
-                box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(box_size, mark_y, check_middle),
+                    start: position + nalgebra_glm::vec3(check_left, mark_y, -box_size),
                     end: position
-                        + nalgebra_glm::vec3(box_size, mark_y - check_size * 1.5, check_right),
+                        + nalgebra_glm::vec3(check_middle, mark_y - check_size, -box_size),
                     color: mark_color,
                 });
-
                 box_lines.push(Line {
                     start: position
-                        + nalgebra_glm::vec3(-box_size, mark_y - check_size, check_left),
-                    end: position + nalgebra_glm::vec3(-box_size, mark_y, check_middle),
+                        + nalgebra_glm::vec3(check_middle, mark_y - check_size, -box_size),
+                    end: position
+                        + nalgebra_glm::vec3(check_right, mark_y + check_size * 0.5, -box_size),
+                    color: mark_color,
+                });
+
+                box_lines.push(Line {
+                    start: position + nalgebra_glm::vec3(box_size, mark_y, check_left),
+                    end: position + nalgebra_glm::vec3(box_size, mark_y - check_size, check_middle),
                     color: mark_color,
                 });
                 box_lines.push(Line {
-                    start: position + nalgebra_glm::vec3(-box_size, mark_y, check_middle),
+                    start: position
+                        + nalgebra_glm::vec3(box_size, mark_y - check_size, check_middle),
                     end: position
-                        + nalgebra_glm::vec3(-box_size, mark_y - check_size * 1.5, check_right),
+                        + nalgebra_glm::vec3(box_size, mark_y + check_size * 0.5, check_right),
+                    color: mark_color,
+                });
+
+                box_lines.push(Line {
+                    start: position + nalgebra_glm::vec3(-box_size, mark_y, check_left),
+                    end: position
+                        + nalgebra_glm::vec3(-box_size, mark_y - check_size, check_middle),
+                    color: mark_color,
+                });
+                box_lines.push(Line {
+                    start: position
+                        + nalgebra_glm::vec3(-box_size, mark_y - check_size, check_middle),
+                    end: position
+                        + nalgebra_glm::vec3(-box_size, mark_y + check_size * 0.5, check_right),
                     color: mark_color,
                 });
             } else {
