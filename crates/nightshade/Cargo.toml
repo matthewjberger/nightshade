@@ -25,6 +25,7 @@ freecs = { workspace = true }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 gilrs = { workspace = true }
 gltf = { workspace = true }
+half = { workspace = true }
 log = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }

@@ -19,6 +19,12 @@ pub enum WorldCommand {
         width: u32,
         height: u32,
     },
+    LoadHdrSkybox {
+        hdr_data: Vec<u8>,
+    },
+    LoadHdrSkyboxFromPath {
+        path: std::path::PathBuf,
+    },
 }
 
 impl World {
@@ -33,7 +39,10 @@ pub fn process_commands_system(world: &mut World) {
 
     for command in commands {
         match &command {
-            WorldCommand::UploadSpriteTexture { .. } | WorldCommand::LoadTexture { .. } => {
+            WorldCommand::UploadSpriteTexture { .. }
+            | WorldCommand::LoadTexture { .. }
+            | WorldCommand::LoadHdrSkybox { .. }
+            | WorldCommand::LoadHdrSkyboxFromPath { .. } => {
                 sprite_texture_commands.push(command);
             }
             _ => {
@@ -56,6 +65,8 @@ fn process_command(world: &mut World, command: WorldCommand) {
         }
         WorldCommand::UploadSpriteTexture { .. } => {}
         WorldCommand::LoadTexture { .. } => {}
+        WorldCommand::LoadHdrSkybox { .. } => {}
+        WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
     }
 }
 
@@ -510,4 +521,12 @@ fn generate_uv_test_texture() -> (Vec<u8>, u32, u32) {
     }
 
     (pixels, width, height)
+}
+
+pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
+    world.queue_command(WorldCommand::LoadHdrSkybox { hdr_data });
+}
+
+pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
+    world.queue_command(WorldCommand::LoadHdrSkyboxFromPath { path });
 }

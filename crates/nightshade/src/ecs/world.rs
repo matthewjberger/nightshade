@@ -39,10 +39,10 @@ pub mod events {
 
 pub mod commands;
 pub use commands::{
-    CommandQueue, WorldCommand, cleanup_unused_resources_system, load_procedural_textures,
-    process_commands_system, set_material_with_textures, spawn_3d_text_with_properties,
-    spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at, spawn_plane_at,
-    spawn_sphere_at, spawn_sun, spawn_torus_at,
+    CommandQueue, WorldCommand, cleanup_unused_resources_system, load_hdr_skybox,
+    load_procedural_textures, process_commands_system, set_material_with_textures,
+    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at,
+    spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
 };
 
 mod render_trait;
