@@ -61,13 +61,11 @@ fn process_command(world: &mut World, command: WorldCommand) {
 
 fn query_children(world: &World, entity: Entity) -> Vec<Entity> {
     world
-        .query_entities(crate::ecs::world::PARENT)
-        .filter(|child_entity| {
-            world
-                .get_parent(*child_entity)
-                .is_some_and(|parent| parent.0 == Some(entity))
-        })
-        .collect()
+        .resources
+        .children_cache
+        .get(&entity)
+        .cloned()
+        .unwrap_or_default()
 }
 
 fn query_descendents(world: &World, target_entity: Entity) -> Vec<Entity> {
@@ -83,6 +81,8 @@ fn query_descendents(world: &World, target_entity: Entity) -> Vec<Entity> {
 }
 
 fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
+    let mut has_parent_entities = false;
+
     for &entity in entities {
         world.resources.children_cache.remove(&entity);
 
@@ -91,10 +91,69 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
             && let Some(children) = world.resources.children_cache.get_mut(&parent_entity)
         {
             children.retain(|&e| e != entity);
+            has_parent_entities = true;
+        }
+
+        if let Some(render_mesh) = world.get_render_mesh(entity) {
+            let mesh_name = render_mesh.name.clone();
+            world.resources.mesh_cache.remove_reference(&mesh_name);
+        }
+
+        if let Some(material) = world.get_material(entity) {
+            let base_texture = material.base_texture.clone();
+            let emissive_texture = material.emissive_texture.clone();
+            let material_id = material.cache_id.clone();
+
+            if let Some(base_texture) = base_texture {
+                world
+                    .resources
+                    .texture_cache
+                    .remove_reference(&base_texture);
+            }
+            if let Some(emissive_texture) = emissive_texture {
+                world
+                    .resources
+                    .texture_cache
+                    .remove_reference(&emissive_texture);
+            }
+            if let Some(material_id) = material_id {
+                world
+                    .resources
+                    .material_cache
+                    .remove_reference(&material_id);
+            }
         }
     }
 
+    if has_parent_entities {
+        world.resources.children_cache_valid = false;
+    }
+
     world.despawn_entities(entities);
+
+    let removed_meshes = world.resources.mesh_cache.remove_unused();
+    if !removed_meshes.is_empty() {
+        log::debug!(
+            "Immediately cleaned up {} unused meshes after despawn",
+            removed_meshes.len()
+        );
+    }
+
+    let removed_materials = world.resources.material_cache.remove_unused();
+    if !removed_materials.is_empty() {
+        log::debug!(
+            "Immediately cleaned up {} unused materials after despawn",
+            removed_materials.len()
+        );
+    }
+
+    let removed_textures = world.resources.texture_cache.remove_unused();
+    if !removed_textures.is_empty() {
+        log::debug!(
+            "Immediately cleaned up {} unused textures after despawn",
+            removed_textures.len()
+        );
+    }
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
@@ -170,13 +229,22 @@ pub fn spawn_mesh_at(
     );
     world.set_global_transform(entity, components::GlobalTransform::default());
     world.set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world.set_render_mesh(
-        entity,
-        components::RenderMesh {
-            name: mesh_name.to_string(),
-        },
-    );
-    world.set_material(entity, components::Material::default());
+    let render_mesh = components::RenderMesh {
+        name: mesh_name.to_string(),
+    };
+
+    if world.resources.mesh_cache.contains(&render_mesh.name) {
+        world.resources.mesh_cache.add_reference(&render_mesh.name);
+    }
+
+    world.set_render_mesh(entity, render_mesh);
+
+    let mut material = components::Material::default();
+    let material_id = world.resources.material_cache.insert_or_get_id(&material);
+    world.resources.material_cache.add_reference(&material_id);
+    material.cache_id = Some(material_id);
+
+    world.set_material(entity, material);
     world.set_bounding_volume(
         entity,
         components::BoundingVolume::from_mesh_type(mesh_name),
@@ -281,4 +349,41 @@ pub fn spawn_3d_text_with_properties(
     world.set_visibility(entity, components::Visibility { visible: true });
 
     entity
+}
+
+const CLEANUP_INTERVAL_FRAMES: u64 = 300;
+
+pub fn cleanup_unused_resources_system(world: &mut World) {
+    world.resources.cleanup_frame_counter += 1;
+
+    if world.resources.cleanup_frame_counter >= CLEANUP_INTERVAL_FRAMES {
+        world.resources.cleanup_frame_counter = 0;
+
+        let removed_meshes = world.resources.mesh_cache.remove_unused();
+        if !removed_meshes.is_empty() {
+            log::info!(
+                "Cleaned up {} unused meshes: {:?}",
+                removed_meshes.len(),
+                removed_meshes
+            );
+        }
+
+        let removed_materials = world.resources.material_cache.remove_unused();
+        if !removed_materials.is_empty() {
+            log::info!(
+                "Cleaned up {} unused materials: {:?}",
+                removed_materials.len(),
+                removed_materials
+            );
+        }
+
+        let removed_textures = world.resources.texture_cache.remove_unused();
+        if !removed_textures.is_empty() {
+            log::info!(
+                "Cleaned up {} unused textures: {:?}",
+                removed_textures.len(),
+                removed_textures
+            );
+        }
+    }
 }

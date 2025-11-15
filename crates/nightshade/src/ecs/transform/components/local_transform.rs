@@ -1,6 +1,8 @@
 use nalgebra_glm::{Mat4, Quat, Vec3, quat_to_mat4};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LocalTransform {
     pub translation: Vec3,
     pub rotation: Quat,

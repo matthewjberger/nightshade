@@ -71,10 +71,27 @@ impl Vertex {
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
+    pub bounding_volume: Option<crate::ecs::bounding_volume::components::BoundingVolume>,
 }
 
 impl Mesh {
     pub fn new(vertices: Vec<Vertex>, indices: Vec<u32>) -> Self {
-        Self { vertices, indices }
+        Self {
+            vertices,
+            indices,
+            bounding_volume: None,
+        }
+    }
+
+    pub fn with_bounding_volume(
+        vertices: Vec<Vertex>,
+        indices: Vec<u32>,
+        bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume,
+    ) -> Self {
+        Self {
+            vertices,
+            indices,
+            bounding_volume: Some(bounding_volume),
+        }
     }
 }

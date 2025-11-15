@@ -12,13 +12,7 @@ pub fn run_systems(world: &mut World) {
 }
 
 fn rebuild_children_cache_if_needed(world: &mut World) {
-    let needs_rebuild = if world.resources.children_cache.is_empty() {
-        world.query_entities(PARENT).count() > 0
-    } else {
-        false
-    };
-
-    if needs_rebuild {
+    if !world.resources.children_cache_valid {
         world.validate_and_rebuild_children_cache();
     }
 }
@@ -59,6 +53,7 @@ impl World {
             self.remove_parent(child);
         }
 
+        self.resources.children_cache_valid = false;
         self.mark_local_transform_dirty(child);
     }
 
@@ -77,6 +72,8 @@ impl World {
                     .push(child);
             }
         }
+
+        self.resources.children_cache_valid = true;
     }
 }
 
@@ -85,8 +82,12 @@ pub fn update_global_transforms_system(world: &mut World) {
         .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
         .collect();
 
+    let mut visited = std::collections::HashSet::new();
+
     for entity in dirty_entities {
-        let new_global_transform = global_transform_of(entity, world);
+        visited.clear();
+        let new_global_transform =
+            global_transform_of_with_cycle_detection(entity, world, &mut visited);
         if let Some(global_transform) = world.get_global_transform_mut(entity) {
             *global_transform = GlobalTransform(new_global_transform);
         }
@@ -95,13 +96,42 @@ pub fn update_global_transforms_system(world: &mut World) {
 }
 
 pub fn global_transform_of(entity: freecs::Entity, world: &World) -> nalgebra_glm::Mat4 {
+    let mut visited = std::collections::HashSet::new();
+    global_transform_of_with_cycle_detection(entity, world, &mut visited)
+}
+
+const MAX_HIERARCHY_DEPTH: usize = 256;
+
+fn global_transform_of_with_cycle_detection(
+    entity: freecs::Entity,
+    world: &World,
+    visited: &mut std::collections::HashSet<freecs::Entity>,
+) -> nalgebra_glm::Mat4 {
+    if visited.contains(&entity) {
+        log::error!("Cycle detected in parent hierarchy for entity {:?}", entity);
+        return nalgebra_glm::Mat4::identity();
+    }
+
+    visited.insert(entity);
+
+    if visited.len() > MAX_HIERARCHY_DEPTH {
+        log::warn!(
+            "Transform hierarchy depth {} exceeds recommended maximum {} for entity {:?}",
+            visited.len(),
+            MAX_HIERARCHY_DEPTH,
+            entity
+        );
+    }
+
     let Some(local_transform) = world.get_local_transform(entity) else {
         return nalgebra_glm::Mat4::identity();
     };
+
     if let Some(parent) = world.get_parent(entity)
         && let Some(parent_entity) = parent.0
     {
-        global_transform_of(parent_entity, world) * local_transform.as_matrix()
+        global_transform_of_with_cycle_detection(parent_entity, world, visited)
+            * local_transform.as_matrix()
     } else {
         local_transform.as_matrix()
     }

@@ -25,10 +25,12 @@ pub mod resources {
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::prefab::resources::MeshCache;
     pub use crate::ecs::splash_screen::resources::{SplashScreenPhase, SplashScreenState};
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{Window, WindowTiming};
+    pub use crate::render::wgpu::texture_cache::TextureCache;
 }
 
 pub mod events {
@@ -37,9 +39,9 @@ pub mod events {
 
 pub mod commands;
 pub use commands::{
-    CommandQueue, WorldCommand, process_commands_system, spawn_3d_text_with_properties,
-    spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at, spawn_plane_at,
-    spawn_sphere_at, spawn_sun, spawn_torus_at,
+    CommandQueue, WorldCommand, cleanup_unused_resources_system, process_commands_system,
+    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at,
+    spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
 };
 
 mod render_trait;
@@ -77,11 +79,16 @@ freecs::ecs! {
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         text_cache: crate::ecs::text::resources::TextCache,
+        mesh_cache: crate::ecs::prefab::resources::MeshCache,
+        material_cache: crate::ecs::material::resources::MaterialCache,
+        texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,
         active_camera: Option<freecs::Entity>,
         event_bus: crate::ecs::event_bus::resources::EventBus,
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
+        children_cache_valid: bool,
         splash_screen_state: crate::ecs::splash_screen::resources::SplashScreenState,
+        cleanup_frame_counter: u64,
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 pub enum AlphaMode {
     #[default]
     Opaque,
@@ -8,7 +8,7 @@ pub enum AlphaMode {
     Blend,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Material {
     pub base_color: [f32; 4],
     pub emissive_factor: [f32; 3],
@@ -19,6 +19,8 @@ pub struct Material {
     pub roughness: f32,
     pub metallic: f32,
     pub unlit: bool,
+    #[serde(skip)]
+    pub cache_id: Option<String>,
 }
 
 impl Material {
@@ -39,6 +41,7 @@ impl Default for Material {
             roughness: 0.5,
             metallic: 0.0,
             unlit: false,
+            cache_id: None,
         }
     }
 }

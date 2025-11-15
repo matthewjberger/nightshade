@@ -97,6 +97,7 @@ fn run_frame_systems(world: &mut World) {
     crate::ecs::text::systems::sync_hud_text_system(world);
     crate::ecs::input::systems::reset_mouse_system(world);
     crate::ecs::world::process_commands_system(world);
+    crate::ecs::world::cleanup_unused_resources_system(world);
 }
 
 fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
@@ -229,6 +230,19 @@ fn forward_window_events(
     state: &mut Box<dyn State + 'static>,
     event: &WindowEvent,
 ) {
+    match event {
+        WindowEvent::DroppedFile(path) => {
+            state.on_dropped_file(world, path);
+        }
+        WindowEvent::HoveredFile(path) => {
+            state.on_hovered_file(world, path);
+        }
+        WindowEvent::HoveredFileCancelled => {
+            state.on_hovered_file_cancelled(world);
+        }
+        _ => {}
+    }
+
     if world.resources.user_interface.consumed_event {
         return;
     }
@@ -290,6 +304,9 @@ pub trait State {
         _key_state: winit::event::ElementState,
     ) {
     }
+    fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
+    fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
+    fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
 }
 
 pub struct WindowContext {
