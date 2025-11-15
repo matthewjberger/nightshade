@@ -387,3 +387,127 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
         }
     }
 }
+
+pub fn set_material_with_textures(
+    world: &mut World,
+    entity: Entity,
+    material: crate::ecs::material::components::Material,
+) {
+    let old_textures = world
+        .get_material(entity)
+        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+
+    if let Some((old_base, old_emissive)) = old_textures {
+        if let Some(base_texture) = old_base {
+            world
+                .resources
+                .texture_cache
+                .remove_reference(&base_texture);
+        }
+        if let Some(emissive_texture) = old_emissive {
+            world
+                .resources
+                .texture_cache
+                .remove_reference(&emissive_texture);
+        }
+    }
+
+    if let Some(base_texture) = &material.base_texture {
+        world.resources.texture_cache.add_reference(base_texture);
+    }
+    if let Some(emissive_texture) = &material.emissive_texture {
+        world
+            .resources
+            .texture_cache
+            .add_reference(emissive_texture);
+    }
+
+    world.set_material(entity, material);
+}
+
+pub fn load_procedural_textures(world: &mut World) {
+    let checkerboard = generate_checkerboard_texture();
+    world.queue_command(WorldCommand::LoadTexture {
+        name: "checkerboard".to_string(),
+        rgba_data: checkerboard.0,
+        width: checkerboard.1,
+        height: checkerboard.2,
+    });
+
+    let gradient = generate_gradient_texture();
+    world.queue_command(WorldCommand::LoadTexture {
+        name: "gradient".to_string(),
+        rgba_data: gradient.0,
+        width: gradient.1,
+        height: gradient.2,
+    });
+
+    let uv_test = generate_uv_test_texture();
+    world.queue_command(WorldCommand::LoadTexture {
+        name: "uv_test".to_string(),
+        rgba_data: uv_test.0,
+        width: uv_test.1,
+        height: uv_test.2,
+    });
+}
+
+fn generate_checkerboard_texture() -> (Vec<u8>, u32, u32) {
+    let width = 256;
+    let height = 256;
+    let checker_size = 32;
+
+    let mut pixels = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            let checker_x = (x / checker_size) % 2;
+            let checker_y = (y / checker_size) % 2;
+            let is_white = (checker_x + checker_y) % 2 == 0;
+
+            if is_white {
+                pixels.extend_from_slice(&[255, 255, 255, 255]);
+            } else {
+                pixels.extend_from_slice(&[64, 64, 64, 255]);
+            }
+        }
+    }
+
+    (pixels, width, height)
+}
+
+fn generate_gradient_texture() -> (Vec<u8>, u32, u32) {
+    let width = 256;
+    let height = 256;
+
+    let mut pixels = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            let r = (x * 255 / width) as u8;
+            let g = (y * 255 / height) as u8;
+            let b = 128u8;
+            pixels.extend_from_slice(&[r, g, b, 255]);
+        }
+    }
+
+    (pixels, width, height)
+}
+
+fn generate_uv_test_texture() -> (Vec<u8>, u32, u32) {
+    let width = 256;
+    let height = 256;
+
+    let mut pixels = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            let u = x as f32 / width as f32;
+            let v = y as f32 / height as f32;
+
+            let r = (u * 255.0) as u8;
+            let g = (v * 255.0) as u8;
+            let b = ((1.0 - u) * (1.0 - v) * 255.0) as u8;
+
+            pixels.extend_from_slice(&[r, g, b, 255]);
+        }
+    }
+
+    (pixels, width, height)
+}
