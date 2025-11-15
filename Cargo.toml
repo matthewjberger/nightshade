@@ -5,7 +5,7 @@ members = [
 ]
 exclude = [
     "site",
-    "template"
+    "template",
 ]
 resolver = "2"
 

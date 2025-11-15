@@ -22,7 +22,17 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
         + nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 0.0, -1.0));
     let up = nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 1.0, 0.0));
 
-    let projection = camera.projection.matrix();
+    let projection = match &camera.projection {
+        crate::ecs::world::components::Projection::Perspective(persp) => {
+            let aspect_ratio = persp
+                .aspect_ratio
+                .or_else(|| query_window_aspect_ratio(world))
+                .unwrap_or(16.0 / 9.0);
+            persp.matrix_with_aspect(aspect_ratio)
+        }
+        crate::ecs::world::components::Projection::Orthographic(_) => camera.projection.matrix(),
+    };
+
     let view = nalgebra_glm::look_at(&camera_position, &target, &up);
 
     Some(CameraMatrices {
@@ -33,8 +43,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 }
 
 pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {
-    let window_handle = world.resources.window.handle.as_ref()?;
-    let inner_size = window_handle.inner_size();
-    let aspect_ratio = inner_size.width as f32 / inner_size.height.max(1) as f32;
+    let (width, height) = world.resources.window.cached_viewport_size?;
+    let aspect_ratio = width as f32 / height.max(1) as f32;
     Some(aspect_ratio)
 }

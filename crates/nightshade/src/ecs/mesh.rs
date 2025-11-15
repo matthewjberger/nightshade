@@ -4,3 +4,4 @@ pub mod queries;
 
 pub use commands::*;
 pub use components::*;
+pub use queries::*;

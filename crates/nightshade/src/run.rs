@@ -364,8 +364,25 @@ impl winit::application::ApplicationHandler for WindowContext {
         let window_handle = std::sync::Arc::new(window);
         self.world.resources.window.handle = Some(window_handle.clone());
 
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+            if let Some(canvas) = window_handle.canvas() {
+                let client_width = canvas.client_width() as u32;
+                let client_height = canvas.client_height() as u32;
+                self.world.resources.window.cached_viewport_size =
+                    Some((client_width, client_height));
+            }
+        }
+
         #[cfg(not(target_arch = "wasm32"))]
         let dimension = window_handle.inner_size();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.world.resources.window.cached_viewport_size =
+                Some((dimension.width, dimension.height));
+        }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -418,6 +435,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             initialize_user_interface(&mut self.world);
             self.state.initialize(&mut self.world);
+            crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
 
             if self.world.resources.graphics.use_fullscreen
                 && let Some(window_handle) = &self.world.resources.window.handle
@@ -449,6 +467,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 initialize_user_interface(&mut self.world);
                 self.state.initialize(&mut self.world);
+                crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
 
                 if self.world.resources.graphics.use_fullscreen
                     && let Some(window_handle) = &self.world.resources.window.handle
@@ -475,11 +494,19 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
 
         match event {
-            winit::event::WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+            winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
-                    gui_state
-                        .egui_ctx()
-                        .set_pixels_per_point(scale_factor as f32);
+                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                    {
+                        if let Some(window) = self.world.resources.window.handle.as_ref() {
+                            let scale_factor = window.scale_factor() as f32;
+                            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
+                        }
+                    }
+                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
+                    {
+                        gui_state.egui_ctx().set_pixels_per_point(1.0);
+                    }
                 }
             }
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
@@ -501,7 +528,20 @@ impl winit::application::ApplicationHandler for WindowContext {
                 {
                     log::error!("Failed to resize surface: {error}");
                 }
-                sync_ui_scale_factor(&mut self.world);
+
+                if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
+                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                    {
+                        if let Some(window) = self.world.resources.window.handle.as_ref() {
+                            let scale_factor = window.scale_factor() as f32;
+                            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
+                        }
+                    }
+                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
+                    {
+                        gui_state.egui_ctx().set_pixels_per_point(1.0);
+                    }
+                }
             }
             _ => {}
         }
@@ -557,18 +597,6 @@ fn initialize_user_interface(world: &mut World) {
     egui_extras::install_image_loaders(gui_state.egui_ctx());
 
     world.resources.user_interface.state = Some(gui_state);
-}
-
-fn sync_ui_scale_factor(world: &mut World) {
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
-        return;
-    };
-    let Some(gui_state) = world.resources.user_interface.state.as_mut() else {
-        return;
-    };
-    gui_state
-        .egui_ctx()
-        .set_pixels_per_point(window_handle.scale_factor() as f32);
 }
 
 fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
