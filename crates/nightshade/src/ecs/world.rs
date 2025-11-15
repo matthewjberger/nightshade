@@ -8,9 +8,7 @@ pub mod components {
     pub use crate::ecs::material::components::{AlphaMode, Material};
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
-    pub use crate::ecs::picking::components::Hovered;
     pub use crate::ecs::render_layer::components::RenderLayer;
-    pub use crate::ecs::splash_screen::components::{SplashScreen, SplashScreenAlpha};
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
@@ -19,6 +17,8 @@ pub mod components {
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
     pub use crate::ecs::visibility::components::Visibility;
+    pub use crate::plugins::picking::components::Hovered;
+    pub use crate::plugins::splash_screen::components::{SplashScreen, SplashScreenAlpha};
 }
 
 pub mod resources {
@@ -26,10 +26,10 @@ pub mod resources {
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::prefab::resources::MeshCache;
-    pub use crate::ecs::splash_screen::resources::{SplashScreenPhase, SplashScreenState};
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{Window, WindowTiming};
+    pub use crate::plugins::splash_screen::resources::{SplashScreenPhase, SplashScreenState};
     pub use crate::render::wgpu::texture_cache::TextureCache;
 }
 
@@ -66,12 +66,12 @@ freecs::ecs! {
         material: crate::ecs::material::components::Material => MATERIAL,
         render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
-        splash_screen: crate::ecs::splash_screen::components::SplashScreen => SPLASH_SCREEN,
-        splash_screen_alpha: crate::ecs::splash_screen::components::SplashScreenAlpha => SPLASH_SCREEN_ALPHA,
+        splash_screen: crate::plugins::splash_screen::components::SplashScreen => SPLASH_SCREEN,
+        splash_screen_alpha: crate::plugins::splash_screen::components::SplashScreenAlpha => SPLASH_SCREEN_ALPHA,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
-        hovered: crate::ecs::picking::components::Hovered => HOVERED,
+        hovered: crate::plugins::picking::components::Hovered => HOVERED,
         rotation: crate::ecs::transform::components::Rotation => ROTATION,
     }
     Resources {
@@ -89,7 +89,7 @@ freecs::ecs! {
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
         children_cache_valid: bool,
-        splash_screen_state: crate::ecs::splash_screen::resources::SplashScreenState,
+        splash_screen_state: crate::plugins::splash_screen::resources::SplashScreenState,
         cleanup_frame_counter: u64,
     }
 }

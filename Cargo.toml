@@ -2,12 +2,10 @@
 members = [
     "apps/*",
     "crates/*",
-    "crates/plugins/*"
 ]
 exclude = [
     "site",
     "template",
-    "crates/plugins",
 ]
 resolver = "2"
 
