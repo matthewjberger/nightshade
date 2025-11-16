@@ -10,6 +10,7 @@ pub mod components {
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::render_layer::components::RenderLayer;
+    pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
@@ -69,6 +70,7 @@ freecs::ecs! {
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
         hovered: crate::ecs::input::components::Hovered => HOVERED,
         rotation: crate::ecs::transform::components::Rotation => ROTATION,
+        casts_shadow: crate::ecs::shadow::components::CastsShadow => CASTS_SHADOW,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

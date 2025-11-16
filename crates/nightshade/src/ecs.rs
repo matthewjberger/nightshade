@@ -12,6 +12,7 @@ pub mod name;
 pub mod picking;
 pub mod prefab;
 pub mod render_layer;
+pub mod shadow;
 pub mod shell;
 pub mod sprite;
 pub mod text;

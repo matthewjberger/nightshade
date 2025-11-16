@@ -184,8 +184,11 @@ pub fn spawn_sun(world: &mut World) -> Entity {
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
             rotation: nalgebra_glm::quat_angle_axis(
-                -0.5,
-                &nalgebra_glm::Vec3::new(1.0, 0.0, 0.5).normalize(),
+                std::f32::consts::FRAC_PI_4,
+                &nalgebra_glm::Vec3::new(0.0, 1.0, 0.0),
+            ) * nalgebra_glm::quat_angle_axis(
+                -std::f32::consts::FRAC_PI_6,
+                &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
             ),
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
@@ -201,6 +204,50 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             range: 100.0,
             inner_cone_angle: std::f32::consts::PI / 6.0,
             outer_cone_angle: std::f32::consts::PI / 4.0,
+            cast_shadows: false,
+            shadow_bias: 0.0005,
+        },
+    );
+
+    entity
+}
+
+pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
+    use crate::ecs::world::components;
+    use crate::ecs::world::{
+        GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
+    };
+
+    let entity = world.spawn_entities(
+        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
+        1,
+    )[0];
+
+    world.set_name(entity, components::Name("Sun".to_string()));
+    world.set_local_transform(
+        entity,
+        components::LocalTransform {
+            translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
+            rotation: nalgebra_glm::quat_angle_axis(
+                -std::f32::consts::FRAC_PI_4,
+                &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
+            ),
+            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+        },
+    );
+    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.set_global_transform(entity, components::GlobalTransform::default());
+    world.set_light(
+        entity,
+        components::Light {
+            light_type: components::LightType::Directional,
+            color: nalgebra_glm::Vec3::new(1.0, 0.95, 0.8),
+            intensity: 5.0,
+            range: 100.0,
+            inner_cone_angle: std::f32::consts::PI / 6.0,
+            outer_cone_angle: std::f32::consts::PI / 4.0,
+            cast_shadows: false,
+            shadow_bias: 0.0,
         },
     );
 
