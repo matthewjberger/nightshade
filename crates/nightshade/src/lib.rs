@@ -1,5 +1,4 @@
 pub mod ecs;
-pub mod plugins;
 pub mod render;
 pub mod run;
 mod systems;
@@ -18,6 +17,10 @@ pub mod prelude {
 
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
+    pub use crate::ecs::picking::{
+        PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
+        pick_closest_entity, pick_entities, pick_entities_in_frustum, pick_entities_with_options,
+    };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
     };
@@ -27,14 +30,6 @@ pub mod prelude {
         set_material_with_textures, spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at,
         spawn_cylinder_at, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
         spawn_torus_at,
-    };
-    pub use crate::plugins::picking::{
-        PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
-        pick_closest_entity, pick_entities, pick_entities_in_frustum, pick_entities_with_options,
-    };
-    pub use crate::plugins::splash_screen::commands::{
-        is_splash_screen_completed, spawn_splash_screen_quad, spawn_splash_screen_sprite,
-        spawn_splash_screen_text,
     };
     pub use egui;
     pub use freecs;

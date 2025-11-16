@@ -1,6 +1,7 @@
 pub mod bounding_volume;
 pub mod camera;
 pub mod event_bus;
+pub mod gizmos;
 pub mod graphics;
 pub mod input;
 pub mod light;
@@ -8,8 +9,10 @@ pub mod lines;
 pub mod material;
 pub mod mesh;
 pub mod name;
+pub mod picking;
 pub mod prefab;
 pub mod render_layer;
+pub mod shell;
 pub mod sprite;
 pub mod text;
 pub mod transform;
