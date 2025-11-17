@@ -67,12 +67,12 @@ add-template:
 # Publishes the nightshade crate to crates.io
 publish-crate:
     cargo publish -p nightshade
-    cargo publish -p nightshade-editor
+    cargo publish -p nightshade-editor --no-verify
 
 # Dry run of publishing the nightshade crate
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
-    cargo publish -p nightshade-editor --dry-run
+    cargo publish -p nightshade-editor --dry-run --no-verify
 
 # Runs the specified project
 run $project="nightshade-editor":
