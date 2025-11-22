@@ -1,6 +1,6 @@
 use crate::ecs::world::World;
 use winit::{
-    event::WindowEvent,
+    event::{DeviceEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 
@@ -553,6 +553,19 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
 
         request_redraw_system(&mut self.world);
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: DeviceEvent,
+    ) {
+        if let DeviceEvent::MouseMotion { delta } = event {
+            let mouse = &mut self.world.resources.input.mouse;
+            mouse.raw_mouse_delta.x += delta.0 as f32;
+            mouse.raw_mouse_delta.y += delta.1 as f32;
+        }
     }
 
     fn exiting(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {}

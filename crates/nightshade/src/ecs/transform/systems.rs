@@ -130,9 +130,41 @@ fn global_transform_of_with_cycle_detection(
     if let Some(parent) = world.get_parent(entity)
         && let Some(parent_entity) = parent.0
     {
-        global_transform_of_with_cycle_detection(parent_entity, world, visited)
-            * local_transform.as_matrix()
+        let mut parent_transform =
+            global_transform_of_with_cycle_detection(parent_entity, world, visited);
+
+        if world.entity_has_ignore_parent_scale(entity) {
+            parent_transform = remove_scale_from_matrix(parent_transform);
+        }
+
+        parent_transform * local_transform.as_matrix()
     } else {
         local_transform.as_matrix()
     }
+}
+
+fn remove_scale_from_matrix(matrix: nalgebra_glm::Mat4) -> nalgebra_glm::Mat4 {
+    let mut result = matrix;
+
+    let right = nalgebra_glm::vec3(matrix[(0, 0)], matrix[(1, 0)], matrix[(2, 0)]);
+    let up = nalgebra_glm::vec3(matrix[(0, 1)], matrix[(1, 1)], matrix[(2, 1)]);
+    let forward = nalgebra_glm::vec3(matrix[(0, 2)], matrix[(1, 2)], matrix[(2, 2)]);
+
+    let right_normalized = nalgebra_glm::normalize(&right);
+    let up_normalized = nalgebra_glm::normalize(&up);
+    let forward_normalized = nalgebra_glm::normalize(&forward);
+
+    result[(0, 0)] = right_normalized.x;
+    result[(1, 0)] = right_normalized.y;
+    result[(2, 0)] = right_normalized.z;
+
+    result[(0, 1)] = up_normalized.x;
+    result[(1, 1)] = up_normalized.y;
+    result[(2, 1)] = up_normalized.z;
+
+    result[(0, 2)] = forward_normalized.x;
+    result[(1, 2)] = forward_normalized.y;
+    result[(2, 2)] = forward_normalized.z;
+
+    result
 }

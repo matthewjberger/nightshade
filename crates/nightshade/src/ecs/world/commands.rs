@@ -204,7 +204,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             range: 100.0,
             inner_cone_angle: std::f32::consts::PI / 6.0,
             outer_cone_angle: std::f32::consts::PI / 4.0,
-            cast_shadows: false,
+            cast_shadows: true,
             shadow_bias: 0.0005,
         },
     );
@@ -262,8 +262,8 @@ pub fn spawn_mesh_at(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        BOUNDING_VOLUME, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
-        RENDER_MESH,
+        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
+        MATERIAL, NAME, RENDER_MESH,
     };
 
     let entity = world.spawn_entities(
@@ -272,7 +272,8 @@ pub fn spawn_mesh_at(
             | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL
-            | BOUNDING_VOLUME,
+            | BOUNDING_VOLUME
+            | CASTS_SHADOW,
         1,
     )[0];
 
@@ -307,6 +308,7 @@ pub fn spawn_mesh_at(
         entity,
         components::BoundingVolume::from_mesh_type(mesh_name),
     );
+    world.set_casts_shadow(entity, components::CastsShadow);
 
     entity
 }

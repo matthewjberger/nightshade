@@ -1,8 +1,10 @@
+mod ignore_parent_scale;
 mod local_transform;
 mod local_transform_dirty;
 mod parent;
 mod rotation;
 
+pub use ignore_parent_scale::*;
 pub use local_transform::*;
 pub use local_transform_dirty::*;
 pub use parent::*;

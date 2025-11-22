@@ -57,6 +57,7 @@ freecs::ecs! {
         global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
         local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,
         parent: crate::ecs::transform::components::Parent => PARENT,
+        ignore_parent_scale: crate::ecs::transform::components::IgnoreParentScale => IGNORE_PARENT_SCALE,
         camera: crate::ecs::camera::components::Camera => CAMERA,
         light: crate::ecs::light::components::Light => LIGHT,
         lines: crate::ecs::lines::components::Lines => LINES,
