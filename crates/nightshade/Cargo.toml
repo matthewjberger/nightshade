@@ -33,6 +33,7 @@ nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
 petgraph = { workspace = true }
 rand = "0.9"
+rapier3d = { workspace = true }
 raw-window-handle = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

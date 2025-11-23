@@ -95,6 +95,7 @@ fn run_frame_systems(world: &mut World) {
     crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
     crate::ecs::input::systems::gamepad_input_system(world);
+    crate::ecs::physics::systems::run_physics_systems(world);
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
     crate::ecs::input::systems::reset_mouse_system(world);

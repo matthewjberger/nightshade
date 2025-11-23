@@ -38,6 +38,7 @@ nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
 nightshade = { version = "0.6.10", path = "crates/nightshade" }
 petgraph = "0.6"
+rapier3d = { version = "0.22.0", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"
 thiserror = "2.0"
 serde = { version = "1.0.228", features = ["derive"] }

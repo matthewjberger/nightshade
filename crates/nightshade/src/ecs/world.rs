@@ -10,6 +10,10 @@ pub mod components {
     pub use crate::ecs::material::components::{AlphaMode, Material};
     pub use crate::ecs::mesh::components::RenderMesh;
     pub use crate::ecs::name::components::Name;
+    pub use crate::ecs::physics::components::{
+        CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
+        RigidBodyComponent,
+    };
     pub use crate::ecs::render_layer::components::RenderLayer;
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::sprite::components::Sprite;
@@ -27,6 +31,7 @@ pub mod resources {
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::physics::resources::PhysicsWorld;
     pub use crate::ecs::prefab::resources::MeshCache;
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
@@ -76,6 +81,11 @@ freecs::ecs! {
         hovered: crate::ecs::input::components::Hovered => HOVERED,
         rotation: crate::ecs::transform::components::Rotation => ROTATION,
         casts_shadow: crate::ecs::shadow::components::CastsShadow => CASTS_SHADOW,
+        rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
+        collider: crate::ecs::physics::components::ColliderComponent => COLLIDER,
+        physics_material: crate::ecs::physics::material::PhysicsMaterialComponent => PHYSICS_MATERIAL,
+        character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
+        physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
@@ -83,6 +93,7 @@ freecs::ecs! {
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         audio: crate::ecs::audio::resources::AudioEngine,
+        physics: crate::ecs::physics::resources::PhysicsWorld,
         text_cache: crate::ecs::text::resources::TextCache,
         mesh_cache: crate::ecs::prefab::resources::MeshCache,
         material_cache: crate::ecs::material::resources::MaterialCache,

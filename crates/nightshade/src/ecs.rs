@@ -11,6 +11,7 @@ pub mod material;
 pub mod mesh;
 pub mod name;
 pub mod picking;
+pub mod physics;
 pub mod prefab;
 pub mod render_layer;
 pub mod shadow;
