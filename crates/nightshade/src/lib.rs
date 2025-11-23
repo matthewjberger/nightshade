@@ -18,8 +18,8 @@ pub mod prelude {
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::physics::{
-        CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsMaterial,
-        PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent, PhysicsInterpolation,
+        CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
+        PhysicsMaterial, PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent,
     };
     pub use crate::ecs::picking::{
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
@@ -51,6 +51,7 @@ pub mod prelude {
     pub use crate::render::wgpu::rendergraph::{
         PassExecutionContext, PassNode, RenderGraph, ResourceId,
     };
+    pub use gilrs;
     pub use nalgebra_glm;
     pub use rapier3d;
     pub use wgpu;

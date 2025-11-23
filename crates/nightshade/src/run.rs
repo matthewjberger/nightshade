@@ -41,7 +41,15 @@ pub(crate) fn step(
 
     match event {
         WindowEvent::RedrawRequested => {
+            crate::ecs::input::systems::gamepad_input_system(world);
+
             create_ui_system(world, state);
+
+            let gamepad_events = world.resources.input.gamepad.events.clone();
+            for event in gamepad_events {
+                state.on_gamepad_event(world, event);
+            }
+
             state.run_systems(world);
 
             crate::ecs::event_bus::systems::process_events_system(world, |world, message| {
@@ -94,7 +102,6 @@ fn run_frame_systems(world: &mut World) {
     crate::ecs::audio::systems::initialize_audio_system(world);
     crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
-    crate::ecs::input::systems::gamepad_input_system(world);
     crate::ecs::physics::systems::run_physics_systems(world);
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
@@ -310,6 +317,7 @@ pub trait State {
     fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
+    fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
 }
 
 pub struct WindowContext {

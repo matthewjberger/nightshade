@@ -60,6 +60,9 @@ pub fn process_commands_system(world: &mut World) {
 fn process_command(world: &mut World, command: WorldCommand) {
     match command {
         WorldCommand::DespawnRecursive { entity } => {
+            if !world.resources.children_cache_valid {
+                world.validate_and_rebuild_children_cache();
+            }
             let descendents = query_descendents(world, entity);
             despawn_entities_with_cache_cleanup(world, &descendents);
         }

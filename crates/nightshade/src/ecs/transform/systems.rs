@@ -31,6 +31,14 @@ impl World {
         mark_local_transform_dirty(self, entity);
     }
 
+    pub fn mutate_local_transform(
+        &mut self,
+        entity: freecs::Entity,
+    ) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
+        mark_local_transform_dirty(self, entity);
+        self.get_local_transform_mut(entity)
+    }
+
     pub fn update_parent(&mut self, child: freecs::Entity, new_parent: Option<Parent>) {
         let old_parent_entity = self.get_parent(child).and_then(|p| p.0);
 
