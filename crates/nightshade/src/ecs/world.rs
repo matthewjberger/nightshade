@@ -1,4 +1,5 @@
 pub mod components {
+    pub use crate::ecs::audio::components::{AudioListener, AudioSource};
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PerspectiveCamera, Projection, Smoothing,
@@ -22,6 +23,7 @@ pub mod components {
 }
 
 pub mod resources {
+    pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::Graphics;
     pub use crate::ecs::input::resources::{Input, MouseState};
@@ -58,6 +60,8 @@ freecs::ecs! {
         local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,
         parent: crate::ecs::transform::components::Parent => PARENT,
         ignore_parent_scale: crate::ecs::transform::components::IgnoreParentScale => IGNORE_PARENT_SCALE,
+        audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
+        audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
         camera: crate::ecs::camera::components::Camera => CAMERA,
         light: crate::ecs::light::components::Light => LIGHT,
         lines: crate::ecs::lines::components::Lines => LINES,
@@ -78,6 +82,7 @@ freecs::ecs! {
         user_interface: crate::ecs::ui::resources::UserInterface,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
+        audio: crate::ecs::audio::resources::AudioEngine,
         text_cache: crate::ecs::text::resources::TextCache,
         mesh_cache: crate::ecs::prefab::resources::MeshCache,
         material_cache: crate::ecs::material::resources::MaterialCache,

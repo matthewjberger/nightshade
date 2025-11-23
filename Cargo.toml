@@ -31,7 +31,9 @@ gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = ["KHR_lights_punctual", "names", "KHR_materials_pbrSpecularGlossiness", "import"] }
 half = "2.4.1"
 image = { version = "0.25", default-features = false, features = ["png", "hdr"] }
+kira = "0.10.8"
 log = "0.4.28"
+mint = "0.5"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
 nightshade = { version = "0.6.10", path = "crates/nightshade" }

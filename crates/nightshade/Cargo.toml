@@ -26,7 +26,9 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 gilrs = { workspace = true }
 gltf = { workspace = true }
 half = { workspace = true }
+kira = { workspace = true }
 log = { workspace = true }
+mint = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
 petgraph = { workspace = true }

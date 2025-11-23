@@ -91,6 +91,8 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 fn run_frame_systems(world: &mut World) {
+    crate::ecs::audio::systems::initialize_audio_system(world);
+    crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
     crate::ecs::input::systems::gamepad_input_system(world);
     crate::ecs::transform::systems::run_systems(world);
