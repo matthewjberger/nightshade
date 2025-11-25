@@ -3,6 +3,9 @@ pub mod render;
 pub mod run;
 mod systems;
 
+#[cfg(feature = "openxr")]
+pub mod xr;
+
 pub use systems::*;
 
 pub mod prelude {
@@ -55,4 +58,7 @@ pub mod prelude {
     pub use nalgebra_glm;
     pub use rapier3d;
     pub use wgpu;
+
+    #[cfg(feature = "openxr")]
+    pub use crate::xr::{XrContext, XrInput, launch_xr};
 }

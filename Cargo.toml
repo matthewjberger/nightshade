@@ -46,7 +46,13 @@ serde_json = "1.0"
 tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
 web-time = "1.1.0"
 wgpu = { version = "27.0.1", default-features = false }
+wgpu-hal = { version = "27.0.4", default-features = false }
 winit = { version = "0.30.12", features = ["serde"] }
+
+openxr = { version = "0.19", features = ["static", "loaded"] }
+ash = "0.38"
+gpu-allocator = "0.27"
+clap = { version = "4", features = ["derive"] }
 
 [profile.dev]
 opt-level = 1

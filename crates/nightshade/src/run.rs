@@ -5,6 +5,18 @@ use winit::{
 };
 
 pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "openxr")]
+    {
+        crate::xr::launch_xr(state)
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    {
+        launch_windowed(state)
+    }
+}
+
+pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(target_arch = "wasm32"))]
     env_logger::init();
 

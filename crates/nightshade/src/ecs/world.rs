@@ -105,5 +105,7 @@ freecs::ecs! {
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
         children_cache_valid: bool,
         cleanup_frame_counter: u64,
+        #[cfg(feature = "openxr")]
+        xr: crate::xr::XrResources,
     }
 }

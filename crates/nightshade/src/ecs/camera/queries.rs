@@ -1,5 +1,6 @@
 use crate::ecs::world::{Entity, Mat4, Vec3, World};
 
+#[derive(Clone)]
 pub struct CameraMatrices {
     pub camera_position: Vec3,
     pub projection: Mat4,
@@ -7,6 +8,10 @@ pub struct CameraMatrices {
 }
 
 pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
+    #[cfg(feature = "openxr")]
+    if let Some(xr_override) = &world.resources.xr.camera_override {
+        return Some(xr_override.clone());
+    }
     let active_camera = world.resources.active_camera?;
     query_camera_matrices(world, active_camera)
 }

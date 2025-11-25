@@ -78,6 +78,10 @@ publish-crate-dry:
 run $project="nightshade-editor":
     cargo run -r -p {{project}}
 
+# Runs the specified project in OpenXR VR mode
+run-openxr $project="block_breaker":
+    cargo run -r -p {{project}} --features openxr
+
 # Build the app for WASM
 build-wasm $project="editor":
     trunk build --config apps/{{project}}/Trunk.toml
