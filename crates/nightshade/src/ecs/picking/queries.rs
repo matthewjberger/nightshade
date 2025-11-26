@@ -30,15 +30,15 @@ impl PickingRay {
         let (origin, direction) = match camera.projection {
             Projection::Perspective { .. } => {
                 let camera_pos = global_transform.0.column(3).xyz();
-                let clip_pos = Vec4::new(ndc_x, ndc_y, -1.0, 1.0);
+                let clip_pos = Vec4::new(ndc_x, ndc_y, 1.0, 1.0);
                 let world_pos = inverse_vp * clip_pos;
                 let world_pos = world_pos.xyz() / world_pos.w;
                 let direction = (world_pos - camera_pos).normalize();
                 (camera_pos, direction)
             }
             Projection::Orthographic { .. } => {
-                let near_clip = Vec4::new(ndc_x, ndc_y, -1.0, 1.0);
-                let far_clip = Vec4::new(ndc_x, ndc_y, 1.0, 1.0);
+                let near_clip = Vec4::new(ndc_x, ndc_y, 1.0, 1.0);
+                let far_clip = Vec4::new(ndc_x, ndc_y, 0.0, 1.0);
 
                 let near_world = inverse_vp * near_clip;
                 let far_world = inverse_vp * far_clip;
@@ -231,7 +231,7 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
             && ndc.x - sphere_radius_ndc <= 1.0
             && ndc.y + sphere_radius_ndc >= -1.0
             && ndc.y - sphere_radius_ndc <= 1.0
-            && ndc.z + sphere_radius_ndc >= -1.0
+            && ndc.z + sphere_radius_ndc >= 0.0
             && ndc.z - sphere_radius_ndc <= 1.0
         {
             visible_entities.push(entity);

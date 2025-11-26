@@ -21,7 +21,7 @@ impl Default for OrthographicCamera {
 
 impl OrthographicCamera {
     pub fn matrix(&self) -> Mat4 {
-        nalgebra_glm::ortho_rh_zo(
+        reverse_z_ortho(
             -self.x_mag,
             self.x_mag,
             -self.y_mag,
@@ -30,4 +30,29 @@ impl OrthographicCamera {
             self.z_far,
         )
     }
+}
+
+fn reverse_z_ortho(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Mat4 {
+    let width = right - left;
+    let height = top - bottom;
+    let depth = far - near;
+
+    Mat4::new(
+        2.0 / width,
+        0.0,
+        0.0,
+        -(right + left) / width,
+        0.0,
+        2.0 / height,
+        0.0,
+        -(top + bottom) / height,
+        0.0,
+        0.0,
+        1.0 / depth,
+        far / depth,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    )
 }

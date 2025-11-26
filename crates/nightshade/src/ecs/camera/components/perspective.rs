@@ -27,12 +27,52 @@ impl PerspectiveCamera {
 
     pub fn matrix_with_aspect(&self, aspect_ratio: f32) -> Mat4 {
         match self.z_far {
-            Some(z_far) => {
-                nalgebra_glm::perspective_zo(aspect_ratio, self.y_fov_rad, self.z_near, z_far)
-            }
-            None => {
-                nalgebra_glm::infinite_perspective_rh_zo(aspect_ratio, self.y_fov_rad, self.z_near)
-            }
+            Some(z_far) => reverse_z_perspective(aspect_ratio, self.y_fov_rad, self.z_near, z_far),
+            None => infinite_reverse_z_perspective(aspect_ratio, self.y_fov_rad, self.z_near),
         }
     }
+}
+
+fn infinite_reverse_z_perspective(aspect_ratio: f32, y_fov_rad: f32, z_near: f32) -> Mat4 {
+    let f = 1.0 / (y_fov_rad / 2.0).tan();
+    Mat4::new(
+        f / aspect_ratio,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        f,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        z_near,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+    )
+}
+
+fn reverse_z_perspective(aspect_ratio: f32, y_fov_rad: f32, z_near: f32, z_far: f32) -> Mat4 {
+    let f = 1.0 / (y_fov_rad / 2.0).tan();
+    Mat4::new(
+        f / aspect_ratio,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        f,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        z_near / (z_far - z_near),
+        z_near * z_far / (z_far - z_near),
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+    )
 }
