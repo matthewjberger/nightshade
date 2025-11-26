@@ -1,8 +1,10 @@
 mod orthographic;
+mod pan_orbit;
 mod perspective;
 mod smoothing;
 
 pub use orthographic::*;
+pub use pan_orbit::*;
 pub use perspective::*;
 pub use smoothing::*;
 

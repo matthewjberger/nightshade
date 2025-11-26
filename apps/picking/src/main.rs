@@ -248,34 +248,13 @@ impl State for PickingDemoState {
             self.debug_obb_volumes.push(obb_debug_entity);
         }
 
-        let camera_pos = nalgebra_glm::vec3(0.0, 5.0, 10.0);
-        let camera_entity = world.spawn_entities(
-            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | CAMERA,
-            1,
-        )[0];
-
-        world.set_name(camera_entity, Name("Picking Demo Camera".to_string()));
-        world.set_local_transform(
-            camera_entity,
-            LocalTransform {
-                translation: camera_pos,
-                rotation: nalgebra_glm::quat_angle_axis(-0.3, &nalgebra_glm::vec3(1.0, 0.0, 0.0)),
-                ..Default::default()
-            },
-        );
-        world.set_global_transform(camera_entity, GlobalTransform::default());
-        world.set_local_transform_dirty(camera_entity, LocalTransformDirty);
-        world.set_camera(
-            camera_entity,
-            Camera {
-                projection: Projection::Perspective(PerspectiveCamera {
-                    aspect_ratio: None,
-                    y_fov_rad: 45.0_f32.to_radians(),
-                    z_far: None,
-                    z_near: 0.01,
-                }),
-                smoothing: Some(Smoothing::default()),
-            },
+        let camera_entity = spawn_pan_orbit_camera_with_angles(
+            world,
+            nalgebra_glm::vec3(0.0, 0.0, 0.0),
+            12.0,
+            0.0,
+            0.4,
+            "Picking Demo Camera".to_string(),
         );
 
         self.camera_entity = Some(camera_entity);
@@ -283,7 +262,7 @@ impl State for PickingDemoState {
     }
 
     fn run_systems(&mut self, world: &mut World) {
-        fly_camera_system(world);
+        pan_orbit_camera_system(world);
 
         for (i, debug_entity) in self.debug_volumes.iter().enumerate() {
             if let Some(visible) = world.get_visibility_mut(*debug_entity) {
@@ -424,10 +403,9 @@ impl State for PickingDemoState {
 
                 ui.label("Controls:");
                 ui.label("• Mouse: Hover to select meshes");
-                ui.label("• W/A/S/D: Move camera forward/back/left/right");
-                ui.label("• Space: Move camera up");
-                ui.label("• Right mouse + drag: Look around");
-                ui.label("• Middle mouse + drag: Pan camera");
+                ui.label("• Left mouse + drag: Orbit camera");
+                ui.label("• Right mouse + drag: Pan camera");
+                ui.label("• Scroll wheel: Zoom in/out");
                 ui.separator();
 
                 ui.horizontal(|ui| {
