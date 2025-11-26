@@ -110,7 +110,7 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     timing_system(world, event);
 }
 
-fn run_frame_systems(world: &mut World) {
+pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::audio::systems::initialize_audio_system(world);
     crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
