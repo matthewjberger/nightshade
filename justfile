@@ -34,12 +34,24 @@ init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
 
-# Install git hooks
+# Install git hooks (Windows)
+[windows]
+install-hooks:
+    Copy-Item -Path hooks/pre-commit -Destination .git/hooks/pre-commit -Force
+
+# Install git hooks (Unix)
+[unix]
 install-hooks:
     cp hooks/pre-commit .git/hooks/pre-commit
     chmod +x .git/hooks/pre-commit
 
-# Uninstall git hooks
+# Uninstall git hooks (Windows)
+[windows]
+uninstall-hooks:
+    Remove-Item -Path .git/hooks/pre-commit -Force -ErrorAction SilentlyContinue
+
+# Uninstall git hooks (Unix)
+[unix]
 uninstall-hooks:
     rm -f .git/hooks/pre-commit
 
