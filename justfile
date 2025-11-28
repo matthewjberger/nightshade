@@ -361,6 +361,12 @@ deploy-steamdeck $project="editor":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
 
+# Builds and deploys the project to Steam Deck as ~/Downloads/game
+deploy-steamdeck-quick $project="editor":
+    just build-steamdeck {{project}}
+    scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads/game
+    ssh deck@steamdeck.local "chmod +x ~/Downloads/game"
+
 # SSH into Steam Deck
 steamdeck-ssh:
     ssh deck@steamdeck.local

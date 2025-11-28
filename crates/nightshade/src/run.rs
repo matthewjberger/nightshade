@@ -174,16 +174,38 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
     let mouse = &mut world.resources.input.mouse;
     match window_event {
         winit::event::WindowEvent::MouseInput { button, state, .. } => {
-            let clicked = *state == winit::event::ElementState::Pressed;
+            let pressed = *state == winit::event::ElementState::Pressed;
+            let released = *state == winit::event::ElementState::Released;
             match button {
                 winit::event::MouseButton::Left => {
-                    mouse.state.set(MouseState::LEFT_CLICKED, clicked);
+                    let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
+                    mouse.state.set(MouseState::LEFT_CLICKED, pressed);
+                    if pressed && !was_clicked {
+                        mouse.state.set(MouseState::LEFT_JUST_PRESSED, true);
+                    }
+                    if released && was_clicked {
+                        mouse.state.set(MouseState::LEFT_JUST_RELEASED, true);
+                    }
                 }
                 winit::event::MouseButton::Middle => {
-                    mouse.state.set(MouseState::MIDDLE_CLICKED, clicked);
+                    let was_clicked = mouse.state.contains(MouseState::MIDDLE_CLICKED);
+                    mouse.state.set(MouseState::MIDDLE_CLICKED, pressed);
+                    if pressed && !was_clicked {
+                        mouse.state.set(MouseState::MIDDLE_JUST_PRESSED, true);
+                    }
+                    if released && was_clicked {
+                        mouse.state.set(MouseState::MIDDLE_JUST_RELEASED, true);
+                    }
                 }
                 winit::event::MouseButton::Right => {
-                    mouse.state.set(MouseState::RIGHT_CLICKED, clicked);
+                    let was_clicked = mouse.state.contains(MouseState::RIGHT_CLICKED);
+                    mouse.state.set(MouseState::RIGHT_CLICKED, pressed);
+                    if pressed && !was_clicked {
+                        mouse.state.set(MouseState::RIGHT_JUST_PRESSED, true);
+                    }
+                    if released && was_clicked {
+                        mouse.state.set(MouseState::RIGHT_JUST_RELEASED, true);
+                    }
                 }
                 _ => {}
             }
@@ -281,6 +303,15 @@ fn forward_window_events(
     {
         state.on_keyboard_input(world, *key_code, *key_state);
     }
+
+    if let WindowEvent::MouseInput {
+        button,
+        state: mouse_state,
+        ..
+    } = event
+    {
+        state.on_mouse_input(world, *mouse_state, *button);
+    }
 }
 
 pub trait State {
@@ -330,6 +361,13 @@ pub trait State {
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
     fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
+    fn on_mouse_input(
+        &mut self,
+        _world: &mut World,
+        _state: winit::event::ElementState,
+        _button: winit::event::MouseButton,
+    ) {
+    }
 }
 
 pub struct WindowContext {

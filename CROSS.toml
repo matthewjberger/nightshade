@@ -7,7 +7,7 @@ passthrough = [
 pre-build = [
     "dpkg --add-architecture amd64",
     "apt-get update",
-    "apt-get install -y pkg-config libvulkan-dev:amd64 libwayland-dev:amd64 libxkbcommon-dev:amd64 libx11-dev:amd64 libxcb1-dev:amd64 libxcb-render0-dev:amd64 libxcb-shape0-dev:amd64 libxcb-xfixes0-dev:amd64 libudev-dev:amd64",
+    "apt-get install -y pkg-config libvulkan-dev:amd64 libwayland-dev:amd64 libxkbcommon-dev:amd64 libx11-dev:amd64 libxcb1-dev:amd64 libxcb-render0-dev:amd64 libxcb-shape0-dev:amd64 libxcb-xfixes0-dev:amd64 libudev-dev:amd64 libasound2-dev:amd64",
 ]
 
 [target.x86_64-unknown-linux-gnu.env]

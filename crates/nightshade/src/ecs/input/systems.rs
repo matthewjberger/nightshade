@@ -15,6 +15,12 @@ pub fn reset_mouse_system(world: &mut World) {
     }
     mouse.state.set(MouseState::MOVED, false);
     mouse.raw_mouse_delta = Vec2::new(0.0, 0.0);
+    mouse.state.set(MouseState::LEFT_JUST_PRESSED, false);
+    mouse.state.set(MouseState::MIDDLE_JUST_PRESSED, false);
+    mouse.state.set(MouseState::RIGHT_JUST_PRESSED, false);
+    mouse.state.set(MouseState::LEFT_JUST_RELEASED, false);
+    mouse.state.set(MouseState::MIDDLE_JUST_RELEASED, false);
+    mouse.state.set(MouseState::RIGHT_JUST_RELEASED, false);
 }
 
 pub fn gamepad_input_system(world: &mut World) {

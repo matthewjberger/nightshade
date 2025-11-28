@@ -61,7 +61,7 @@ console_log = "1.0.0"
 egui-winit = { workspace = true, default-features = false }
 futures = "0.3.31"
 image = { workspace = true }
-wasm-bindgen = "0.2.105"
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4.55"
 
 [package.metadata.cargo-machete]
