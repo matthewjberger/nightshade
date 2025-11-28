@@ -36,11 +36,7 @@ pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
     camera
 }
 
-pub fn spawn_pan_orbit_camera(world: &mut World, focus: Vec3, radius: f32, name: String) -> Entity {
-    spawn_pan_orbit_camera_with_angles(world, focus, radius, 0.0, 0.0, name)
-}
-
-pub fn spawn_pan_orbit_camera_with_angles(
+pub fn spawn_pan_orbit_camera(
     world: &mut World,
     focus: Vec3,
     radius: f32,

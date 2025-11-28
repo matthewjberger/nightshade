@@ -26,7 +26,7 @@ pub mod prelude {
     };
     pub use crate::ecs::picking::{
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
-        pick_closest_entity, pick_entities, pick_entities_in_frustum, pick_entities_with_options,
+        pick_closest_entity, pick_entities, pick_entities_in_frustum,
     };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,

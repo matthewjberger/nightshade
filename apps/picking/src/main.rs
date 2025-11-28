@@ -248,7 +248,7 @@ impl State for PickingDemoState {
             self.debug_obb_volumes.push(obb_debug_entity);
         }
 
-        let camera_entity = spawn_pan_orbit_camera_with_angles(
+        let camera_entity = spawn_pan_orbit_camera(
             world,
             nalgebra_glm::vec3(0.0, 0.0, 0.0),
             12.0,
@@ -350,7 +350,7 @@ impl State for PickingDemoState {
             options.max_distance = max_dist;
         }
 
-        let picking_results = pick_entities_with_options(world, mouse_pos, options);
+        let picking_results = pick_entities(world, mouse_pos, options);
 
         let mut closest_hit = None;
         for result in picking_results {

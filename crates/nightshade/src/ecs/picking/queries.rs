@@ -95,7 +95,7 @@ impl Default for PickingOptions {
     }
 }
 
-pub fn pick_entities_with_options(
+pub fn pick_entities(
     world: &World,
     screen_pos: Vec2,
     options: PickingOptions,
@@ -156,12 +156,10 @@ pub fn pick_entities_with_options(
     results
 }
 
-pub fn pick_entities(world: &World, screen_pos: Vec2) -> Vec<PickingResult> {
-    pick_entities_with_options(world, screen_pos, PickingOptions::default())
-}
-
 pub fn pick_closest_entity(world: &World, screen_pos: Vec2) -> Option<PickingResult> {
-    pick_entities(world, screen_pos).into_iter().next()
+    pick_entities(world, screen_pos, PickingOptions::default())
+        .into_iter()
+        .next()
 }
 
 pub fn get_ground_position_from_screen(

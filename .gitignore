@@ -6,3 +6,4 @@ public/
 **/public/
 /Cargo.lock
 !apps/editor/Cargo.lock
+*.md
