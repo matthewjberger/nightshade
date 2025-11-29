@@ -23,6 +23,14 @@ pub fn reset_mouse_system(world: &mut World) {
     mouse.state.set(MouseState::RIGHT_JUST_RELEASED, false);
 }
 
+pub fn reset_touch_system(world: &mut World) {
+    use crate::ecs::input::resources::TouchGesture;
+
+    let touch = &mut world.resources.input.touch;
+    touch.clear_ended_touches();
+    touch.gesture = TouchGesture::None;
+}
+
 pub fn gamepad_input_system(world: &mut World) {
     if world.resources.input.gamepad.gilrs.is_none() {
         if let Ok(gilrs) = gilrs::Gilrs::new() {

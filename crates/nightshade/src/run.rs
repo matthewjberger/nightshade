@@ -118,6 +118,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
     crate::ecs::input::systems::reset_mouse_system(world);
+    crate::ecs::input::systems::reset_touch_system(world);
     crate::ecs::world::process_commands_system(world);
     crate::ecs::world::cleanup_unused_resources_system(world);
 }
@@ -225,6 +226,59 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             mouse.state.set(MouseState::SCROLLED, true);
         }
         _ => {}
+    }
+
+    handle_touch_input(world, window_event);
+}
+
+fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
+    use crate::ecs::input::resources::{TouchPhase, TouchPoint};
+    use crate::ecs::world::Vec2;
+
+    if let winit::event::WindowEvent::Touch(touch) = window_event {
+        let touch_input = &mut world.resources.input.touch;
+        let id = touch.id;
+        let position = Vec2::new(touch.location.x as f32, touch.location.y as f32);
+
+        match touch.phase {
+            winit::event::TouchPhase::Started => {
+                let touch_point = TouchPoint {
+                    id,
+                    position,
+                    start_position: position,
+                    previous_position: position,
+                    phase: TouchPhase::Started,
+                };
+                touch_input.touches.insert(id, touch_point);
+
+                if touch_input.primary_touch_id.is_none() {
+                    touch_input.primary_touch_id = Some(id);
+                } else if touch_input.secondary_touch_id.is_none() {
+                    touch_input.secondary_touch_id = Some(id);
+                }
+            }
+            winit::event::TouchPhase::Moved => {
+                if let Some(touch_point) = touch_input.touches.get_mut(&id) {
+                    touch_point.previous_position = touch_point.position;
+                    touch_point.position = position;
+                    touch_point.phase = TouchPhase::Moved;
+                }
+            }
+            winit::event::TouchPhase::Ended => {
+                if let Some(touch_point) = touch_input.touches.get_mut(&id) {
+                    touch_point.previous_position = touch_point.position;
+                    touch_point.position = position;
+                    touch_point.phase = TouchPhase::Ended;
+                }
+            }
+            winit::event::TouchPhase::Cancelled => {
+                if let Some(touch_point) = touch_input.touches.get_mut(&id) {
+                    touch_point.phase = TouchPhase::Cancelled;
+                }
+            }
+        }
+
+        touch_input.update_gesture();
     }
 }
 
