@@ -655,7 +655,7 @@ fn initialize_user_interface(world: &mut World) {
 
     #[cfg(target_arch = "wasm32")]
     {
-        gui_context.set_pixels_per_point(window_handle.scale_factor() as f32);
+        gui_context.set_pixels_per_point(1.0);
     }
 
     let viewport_id = gui_context.viewport_id();
@@ -685,7 +685,22 @@ fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
         let Some(window_handle) = world.resources.window.handle.as_ref() else {
             return;
         };
+        #[cfg(not(target_arch = "wasm32"))]
         let gui_input = gui_state.take_egui_input(window_handle);
+
+        #[cfg(target_arch = "wasm32")]
+        let gui_input = {
+            use winit::platform::web::WindowExtWebSys;
+            let mut input = gui_state.take_egui_input(window_handle);
+            if let Some(canvas) = window_handle.canvas() {
+                let dpr = window_handle.scale_factor() as f32;
+                let canvas_size =
+                    egui::vec2(canvas.width() as f32 / dpr, canvas.height() as f32 / dpr);
+                input.screen_rect = Some(egui::Rect::from_min_size(egui::Pos2::ZERO, canvas_size));
+            }
+            input
+        };
+
         gui_state.egui_ctx().begin_pass(gui_input);
         gui_state.egui_ctx().clone()
     };
