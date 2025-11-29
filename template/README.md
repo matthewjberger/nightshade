@@ -10,6 +10,9 @@ just run
 
 # wasm (webgpu)
 just run-wasm
+
+# openxr (vr headset)
+just run-xr
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.

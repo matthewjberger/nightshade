@@ -40,6 +40,10 @@ lint:
 run:
     cargo run -r
 
+# Runs the app with OpenXR (VR headset)
+run-xr:
+    cargo run -r --features openxr
+
 # Build the app for WASM
 build-wasm:
     trunk build --release

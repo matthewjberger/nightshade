@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 nightshade = "0.6.13"
+
+[features]
+openxr = ["nightshade/openxr"]

@@ -21,6 +21,11 @@ impl State for Template {
         let camera_position = Vec3::new(0.0, 2.0, 10.0);
         let main_camera = spawn_camera(world, camera_position, "Main Camera".to_string());
         world.resources.active_camera = Some(main_camera);
+
+        #[cfg(feature = "openxr")]
+        {
+            world.resources.xr.locomotion_enabled = true;
+        }
     }
 
     fn ui(&mut self, _world: &mut World, ui_context: &egui::Context) {
