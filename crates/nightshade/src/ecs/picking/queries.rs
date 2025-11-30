@@ -12,18 +12,26 @@ pub struct PickingRay {
 impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
         let window = &world.resources.window;
-        let (viewport_width, viewport_height) = window.cached_viewport_size?;
+
+        let (local_pos, viewport_width, viewport_height) =
+            if let Some(viewport_rect) = &window.active_viewport_rect {
+                let local = viewport_rect.to_local(screen_pos);
+                (local, viewport_rect.width, viewport_rect.height)
+            } else {
+                let (width, height) = window.cached_viewport_size?;
+                (screen_pos, width as f32, height as f32)
+            };
 
         let camera_entity = world.resources.active_camera?;
 
         let camera = world.get_camera(camera_entity)?;
         let global_transform = world.get_global_transform(camera_entity)?;
 
-        let ndc_x = (2.0 * screen_pos.x) / viewport_width as f32 - 1.0;
-        let ndc_y = 1.0 - (2.0 * screen_pos.y) / viewport_height as f32;
+        let ndc_x = (2.0 * local_pos.x) / viewport_width - 1.0;
+        let ndc_y = 1.0 - (2.0 * local_pos.y) / viewport_height;
 
         let view_matrix = global_transform.0.try_inverse()?;
-        let aspect_ratio = viewport_width as f32 / viewport_height as f32;
+        let aspect_ratio = viewport_width / viewport_height;
         let projection_matrix = camera.projection.matrix_with_aspect(aspect_ratio);
         let inverse_vp = (projection_matrix * view_matrix).try_inverse()?;
 

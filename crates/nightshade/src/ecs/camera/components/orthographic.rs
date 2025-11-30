@@ -14,7 +14,7 @@ impl Default for OrthographicCamera {
             x_mag: 10.0,
             y_mag: 10.0,
             z_far: 1000.0,
-            z_near: 0.1,
+            z_near: 0.01,
         }
     }
 }

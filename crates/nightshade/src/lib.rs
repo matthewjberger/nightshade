@@ -18,6 +18,7 @@ pub mod prelude {
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
+    pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::physics::{
@@ -28,6 +29,7 @@ pub mod prelude {
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
         pick_closest_entity, pick_entities, pick_entities_in_frustum,
     };
+    pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
     };

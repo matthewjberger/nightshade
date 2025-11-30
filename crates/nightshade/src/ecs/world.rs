@@ -1,4 +1,8 @@
 pub mod components {
+    pub use crate::ecs::animation::components::{
+        AnimationChannel, AnimationClip, AnimationInterpolation, AnimationPlayer,
+        AnimationProperty, AnimationSampler, AnimationSamplerOutput, AnimationValue,
+    };
     pub use crate::ecs::audio::components::{AudioListener, AudioSource};
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
@@ -35,7 +39,7 @@ pub mod resources {
     pub use crate::ecs::prefab::resources::MeshCache;
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
-    pub use crate::ecs::window::resources::{Window, WindowTiming};
+    pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
     pub use crate::render::wgpu::texture_cache::TextureCache;
 }
 
@@ -51,6 +55,10 @@ pub use commands::{
     spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
 };
 
+pub mod animation_systems {
+    pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
+}
+
 mod render_trait;
 pub use render_trait::Render;
 
@@ -59,6 +67,7 @@ pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
 freecs::ecs! {
     World {
+        animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
         name: crate::ecs::name::components::Name => NAME,
         local_transform: crate::ecs::transform::components::LocalTransform => LOCAL_TRANSFORM,
         global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,

@@ -18,14 +18,12 @@ pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
 
 pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatrices> {
     let camera = world.get_camera(entity)?;
-    let local_transform = world.get_local_transform(entity)?;
     let global_transform = world.get_global_transform(entity)?;
 
-    let normalized_rotation = local_transform.rotation.normalize();
     let camera_position = global_transform.translation();
-    let target = camera_position
-        + nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 0.0, -1.0));
-    let up = nalgebra_glm::quat_rotate_vec3(&normalized_rotation, &Vec3::new(0.0, 1.0, 0.0));
+    let forward = global_transform.forward_vector();
+    let up = global_transform.up_vector();
+    let target = camera_position + forward;
 
     let projection = match &camera.projection {
         crate::ecs::world::components::Projection::Perspective(persp) => {

@@ -14,7 +14,7 @@ impl Default for PerspectiveCamera {
             aspect_ratio: None,
             y_fov_rad: 45.0_f32.to_radians(),
             z_far: None,
-            z_near: 0.1,
+            z_near: 0.01,
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
