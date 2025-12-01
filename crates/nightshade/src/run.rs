@@ -4,6 +4,13 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
+#[cfg(target_arch = "wasm32")]
+use std::sync::Mutex;
+
+#[cfg(target_arch = "wasm32")]
+static WASM_DROPPED_FILES: Mutex<Vec<crate::ecs::input::resources::DroppedFile>> =
+    Mutex::new(Vec::new());
+
 pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "openxr")]
     {
@@ -54,6 +61,7 @@ pub(crate) fn step(
     match event {
         WindowEvent::RedrawRequested => {
             crate::ecs::input::systems::gamepad_input_system(world);
+            process_dropped_files(world, state);
 
             create_ui_system(world, state);
 
@@ -323,6 +331,96 @@ fn timing_system(world: &mut World, event: &WindowEvent) {
     }
 }
 
+fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Ok(mut files) = WASM_DROPPED_FILES.lock() {
+            world.resources.dropped_files.append(&mut files);
+        }
+    }
+
+    let dropped_files: Vec<_> = world.resources.dropped_files.drain(..).collect();
+    for file in dropped_files {
+        state.on_dropped_file_data(world, &file.name, &file.data);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn setup_wasm_file_drop() {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::prelude::*;
+
+    let window = web_sys::window().expect("no global window");
+    let document = window.document().expect("no document");
+    let canvas = document
+        .get_element_by_id("canvas")
+        .expect("no canvas element");
+
+    let dragover_closure = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+        event.prevent_default();
+        event.stop_propagation();
+    }) as Box<dyn FnMut(_)>);
+
+    canvas
+        .add_event_listener_with_callback("dragover", dragover_closure.as_ref().unchecked_ref())
+        .expect("failed to add dragover listener");
+    dragover_closure.forget();
+
+    let drop_closure = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+        event.prevent_default();
+        event.stop_propagation();
+
+        let Some(data_transfer) = event.data_transfer() else {
+            return;
+        };
+        let Some(files) = data_transfer.files() else {
+            return;
+        };
+
+        for index in 0..files.length() {
+            let Some(file) = files.get(index) else {
+                continue;
+            };
+
+            let file_name = file.name();
+            let file_reader = web_sys::FileReader::new().expect("failed to create FileReader");
+
+            let onload_closure = {
+                let file_name = file_name.clone();
+                let file_reader = file_reader.clone();
+
+                Closure::once(Box::new(move |_event: web_sys::ProgressEvent| {
+                    let result = file_reader.result().expect("failed to get result");
+                    let array_buffer = result
+                        .dyn_into::<js_sys::ArrayBuffer>()
+                        .expect("result is not ArrayBuffer");
+                    let uint8_array = js_sys::Uint8Array::new(&array_buffer);
+                    let data = uint8_array.to_vec();
+
+                    if let Ok(mut files) = WASM_DROPPED_FILES.lock() {
+                        files.push(crate::ecs::input::resources::DroppedFile {
+                            name: file_name,
+                            data,
+                        });
+                    }
+                }) as Box<dyn FnOnce(_)>)
+            };
+
+            file_reader.set_onload(Some(onload_closure.as_ref().unchecked_ref()));
+            onload_closure.forget();
+
+            file_reader
+                .read_as_array_buffer(&file)
+                .expect("failed to read file");
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    canvas
+        .add_event_listener_with_callback("drop", drop_closure.as_ref().unchecked_ref())
+        .expect("failed to add drop listener");
+    drop_closure.forget();
+}
+
 fn forward_window_events(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -412,6 +510,7 @@ pub trait State {
     ) {
     }
     fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
+    fn on_dropped_file_data(&mut self, _world: &mut World, _name: &str, _data: &[u8]) {}
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
     fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
@@ -471,6 +570,9 @@ impl winit::application::ApplicationHandler for WindowContext {
             attributes = attributes.with_canvas(Some(canvas));
             (canvas_width, canvas_height)
         };
+
+        #[cfg(target_arch = "wasm32")]
+        setup_wasm_file_drop();
 
         let Ok(window) = event_loop.create_window(attributes) else {
             return;

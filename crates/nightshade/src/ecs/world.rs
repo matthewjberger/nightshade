@@ -115,7 +115,10 @@ freecs::ecs! {
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
         children_cache_valid: bool,
         cleanup_frame_counter: u64,
+        dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
         #[cfg(feature = "openxr")]
         xr: crate::xr::XrResources,
     }
 }
+
+pub use crate::ecs::input::resources::DroppedFile;
