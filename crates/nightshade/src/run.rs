@@ -5,11 +5,10 @@ use winit::{
 };
 
 #[cfg(target_arch = "wasm32")]
-use std::sync::Mutex;
-
-#[cfg(target_arch = "wasm32")]
-static WASM_DROPPED_FILES: Mutex<Vec<crate::ecs::input::resources::DroppedFile>> =
-    Mutex::new(Vec::new());
+thread_local! {
+    static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::ecs::input::resources::DroppedFile>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
 
 pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "openxr")]
@@ -334,9 +333,12 @@ fn timing_system(world: &mut World, event: &WindowEvent) {
 fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>) {
     #[cfg(target_arch = "wasm32")]
     {
-        if let Ok(mut files) = WASM_DROPPED_FILES.lock() {
-            world.resources.dropped_files.append(&mut files);
-        }
+        WASM_DROPPED_FILES.with(|files| {
+            world
+                .resources
+                .dropped_files
+                .append(&mut files.borrow_mut());
+        });
     }
 
     let dropped_files: Vec<_> = world.resources.dropped_files.drain(..).collect();
@@ -397,12 +399,14 @@ fn setup_wasm_file_drop() {
                     let uint8_array = js_sys::Uint8Array::new(&array_buffer);
                     let data = uint8_array.to_vec();
 
-                    if let Ok(mut files) = WASM_DROPPED_FILES.lock() {
-                        files.push(crate::ecs::input::resources::DroppedFile {
-                            name: file_name,
-                            data,
-                        });
-                    }
+                    WASM_DROPPED_FILES.with(|files| {
+                        files
+                            .borrow_mut()
+                            .push(crate::ecs::input::resources::DroppedFile {
+                                name: file_name,
+                                data,
+                            });
+                    });
                 }) as Box<dyn FnOnce(_)>)
             };
 
