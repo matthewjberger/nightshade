@@ -15,8 +15,12 @@ impl PickingRay {
 
         let (local_pos, viewport_width, viewport_height) =
             if let Some(viewport_rect) = &window.active_viewport_rect {
+                let (window_width, window_height) = window.cached_viewport_size?;
                 let local = viewport_rect.to_local(screen_pos);
-                (local, viewport_rect.width, viewport_rect.height)
+                let scale_x = window_width as f32 / viewport_rect.width;
+                let scale_y = window_height as f32 / viewport_rect.height;
+                let scaled_local = Vec2::new(local.x * scale_x, local.y * scale_y);
+                (scaled_local, window_width as f32, window_height as f32)
             } else {
                 let (width, height) = window.cached_viewport_size?;
                 (screen_pos, width as f32, height as f32)
