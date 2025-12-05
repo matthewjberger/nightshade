@@ -226,11 +226,14 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             mouse.position_delta = current_position - last_position;
             mouse.state.set(MouseState::MOVED, true);
         }
-        winit::event::WindowEvent::MouseWheel {
-            delta: winit::event::MouseScrollDelta::LineDelta(h_lines, v_lines),
-            ..
-        } => {
-            mouse.wheel_delta = Vec2::new(*h_lines, *v_lines);
+        winit::event::WindowEvent::MouseWheel { delta, .. } => {
+            let (h_delta, v_delta) = match delta {
+                winit::event::MouseScrollDelta::LineDelta(h, v) => (*h, *v),
+                winit::event::MouseScrollDelta::PixelDelta(pos) => {
+                    (pos.x as f32 / 120.0, pos.y as f32 / 120.0)
+                }
+            };
+            mouse.wheel_delta = Vec2::new(h_delta, v_delta);
             mouse.state.set(MouseState::SCROLLED, true);
         }
         _ => {}
