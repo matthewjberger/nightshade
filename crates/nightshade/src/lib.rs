@@ -21,6 +21,7 @@ pub mod prelude {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
+    pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
         PhysicsMaterial, PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent,
@@ -37,8 +38,8 @@ pub mod prelude {
     pub use crate::ecs::world::commands::{
         load_hdr_skybox, load_hdr_skybox_from_path, load_procedural_textures,
         set_material_with_textures, spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at,
-        spawn_cylinder_at, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
-        spawn_sun_without_shadows, spawn_torus_at,
+        spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_mesh_at,
+        spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
     };
     pub use egui;
     pub use freecs;

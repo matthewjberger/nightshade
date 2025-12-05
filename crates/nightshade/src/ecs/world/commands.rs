@@ -582,3 +582,102 @@ pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
 pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
     world.queue_command(WorldCommand::LoadHdrSkyboxFromPath { path });
 }
+
+pub fn spawn_instanced_mesh(
+    world: &mut World,
+    mesh_name: &str,
+    instances: Vec<crate::ecs::mesh::components::InstanceTransform>,
+) -> Entity {
+    use crate::ecs::world::components;
+    use crate::ecs::world::{
+        GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
+        VISIBILITY,
+    };
+
+    let entity = world.spawn_entities(
+        NAME | LOCAL_TRANSFORM
+            | GLOBAL_TRANSFORM
+            | LOCAL_TRANSFORM_DIRTY
+            | INSTANCED_MESH
+            | MATERIAL
+            | VISIBILITY,
+        1,
+    )[0];
+
+    world.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.set_local_transform(
+        entity,
+        components::LocalTransform {
+            translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
+            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+            rotation: nalgebra_glm::Quat::identity(),
+        },
+    );
+    world.set_global_transform(entity, components::GlobalTransform::default());
+    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+
+    world.set_instanced_mesh(
+        entity,
+        crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
+    );
+
+    let mut material = components::Material::default();
+    let material_id = world.resources.material_cache.insert_or_get_id(&material);
+    world.resources.material_cache.add_reference(&material_id);
+    material.cache_id = Some(material_id);
+    world.set_material(entity, material);
+
+    world.set_visibility(entity, components::Visibility { visible: true });
+
+    entity
+}
+
+pub fn spawn_instanced_mesh_with_material(
+    world: &mut World,
+    mesh_name: &str,
+    instances: Vec<crate::ecs::mesh::components::InstanceTransform>,
+    material: crate::ecs::material::components::Material,
+) -> Entity {
+    use crate::ecs::world::components;
+    use crate::ecs::world::{
+        GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
+        VISIBILITY,
+    };
+
+    let entity = world.spawn_entities(
+        NAME | LOCAL_TRANSFORM
+            | GLOBAL_TRANSFORM
+            | LOCAL_TRANSFORM_DIRTY
+            | INSTANCED_MESH
+            | MATERIAL
+            | VISIBILITY,
+        1,
+    )[0];
+
+    world.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.set_local_transform(
+        entity,
+        components::LocalTransform {
+            translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
+            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+            rotation: nalgebra_glm::Quat::identity(),
+        },
+    );
+    world.set_global_transform(entity, components::GlobalTransform::default());
+    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+
+    world.set_instanced_mesh(
+        entity,
+        crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
+    );
+
+    let mut material = material;
+    let material_id = world.resources.material_cache.insert_or_get_id(&material);
+    world.resources.material_cache.add_reference(&material_id);
+    material.cache_id = Some(material_id);
+    world.set_material(entity, material);
+
+    world.set_visibility(entity, components::Visibility { visible: true });
+
+    entity
+}

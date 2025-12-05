@@ -12,7 +12,7 @@ pub mod components {
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{AlphaMode, Material};
-    pub use crate::ecs::mesh::components::RenderMesh;
+    pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::physics::components::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
@@ -51,8 +51,9 @@ pub mod commands;
 pub use commands::{
     CommandQueue, WorldCommand, cleanup_unused_resources_system, load_hdr_skybox,
     load_procedural_textures, process_commands_system, set_material_with_textures,
-    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at, spawn_mesh_at,
-    spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
+    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
+    spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_mesh_at, spawn_plane_at,
+    spawn_sphere_at, spawn_sun, spawn_torus_at,
 };
 
 pub mod animation_systems {
@@ -96,6 +97,7 @@ freecs::ecs! {
         physics_material: crate::ecs::physics::material::PhysicsMaterialComponent => PHYSICS_MATERIAL,
         character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
         physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
+        instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

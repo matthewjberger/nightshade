@@ -1,5 +1,7 @@
+mod instanced;
 mod primitives;
 
+pub use instanced::*;
 pub use primitives::*;
 
 use nalgebra_glm::Vec3;
