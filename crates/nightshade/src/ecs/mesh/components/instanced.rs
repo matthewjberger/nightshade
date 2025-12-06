@@ -1,11 +1,27 @@
 use nalgebra_glm::{Mat3, Mat4, Quat, Vec3};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::HashSet;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct InstanceModelMatrix {
     pub model: [[f32; 4]; 4],
     pub normal_matrix: [[f32; 4]; 3],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct InstanceCustomData {
+    pub tint: [f32; 4],
+}
+
+impl Default for InstanceCustomData {
+    fn default() -> Self {
+        Self {
+            tint: [1.0, 1.0, 1.0, 1.0],
+        }
+    }
 }
 
 #[repr(C)]
@@ -17,11 +33,21 @@ pub struct InstanceObjectData {
     pub visible: u32,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct InstanceTransform {
     pub translation: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
+}
+
+impl Default for InstanceTransform {
+    fn default() -> Self {
+        Self {
+            translation: Vec3::new(0.0, 0.0, 0.0),
+            rotation: Quat::identity(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+        }
+    }
 }
 
 impl InstanceTransform {
@@ -112,11 +138,15 @@ fn compute_normal_matrix(model_matrix: &Mat4) -> [[f32; 4]; 3] {
     ]
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InstancedMesh {
     pub mesh_name: String,
     #[serde(skip)]
     pub instances: Vec<InstanceTransform>,
+    #[serde(skip)]
+    pub custom_data: Vec<InstanceCustomData>,
+    #[serde(skip)]
+    dirty_custom_data_indices: RefCell<HashSet<usize>>,
     #[serde(skip)]
     pub dirty: bool,
     #[serde(skip)]
@@ -138,6 +168,8 @@ impl Default for InstancedMesh {
         Self {
             mesh_name: "Cube".to_string(),
             instances: Vec::new(),
+            custom_data: Vec::new(),
+            dirty_custom_data_indices: RefCell::new(HashSet::new()),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -149,11 +181,33 @@ impl Default for InstancedMesh {
     }
 }
 
+impl Clone for InstancedMesh {
+    fn clone(&self) -> Self {
+        Self {
+            mesh_name: self.mesh_name.clone(),
+            instances: self.instances.clone(),
+            custom_data: self.custom_data.clone(),
+            dirty_custom_data_indices: RefCell::new(
+                self.dirty_custom_data_indices.borrow().clone(),
+            ),
+            dirty: self.dirty,
+            cached_local_matrices: self.cached_local_matrices.clone(),
+            cached_world_matrices: self.cached_world_matrices.clone(),
+            cached_normal_matrices: self.cached_normal_matrices.clone(),
+            cached_parent_transform: self.cached_parent_transform,
+            local_matrices_valid: self.local_matrices_valid,
+            cached_model_matrices: self.cached_model_matrices.clone(),
+        }
+    }
+}
+
 impl InstancedMesh {
     pub fn new(mesh_name: &str) -> Self {
         Self {
             mesh_name: mesh_name.to_string(),
             instances: Vec::new(),
+            custom_data: Vec::new(),
+            dirty_custom_data_indices: RefCell::new(HashSet::new()),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -165,9 +219,12 @@ impl InstancedMesh {
     }
 
     pub fn with_instances(mesh_name: &str, instances: Vec<InstanceTransform>) -> Self {
+        let instance_count = instances.len();
         Self {
             mesh_name: mesh_name.to_string(),
             instances,
+            custom_data: vec![InstanceCustomData::default(); instance_count],
+            dirty_custom_data_indices: RefCell::new(HashSet::new()),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -180,28 +237,38 @@ impl InstancedMesh {
 
     pub fn add_instance(&mut self, transform: InstanceTransform) {
         self.instances.push(transform);
+        self.custom_data.push(InstanceCustomData::default());
         self.dirty = true;
         self.local_matrices_valid = false;
     }
 
     pub fn add_instances(&mut self, transforms: impl IntoIterator<Item = InstanceTransform>) {
+        let transforms: Vec<_> = transforms.into_iter().collect();
+        let count = transforms.len();
         self.instances.extend(transforms);
+        self.custom_data
+            .extend(std::iter::repeat_n(InstanceCustomData::default(), count));
         self.dirty = true;
         self.local_matrices_valid = false;
     }
 
     pub fn clear_instances(&mut self) {
         self.instances.clear();
+        self.custom_data.clear();
         self.cached_local_matrices.clear();
         self.cached_world_matrices.clear();
         self.cached_normal_matrices.clear();
         self.cached_model_matrices.clear();
+        self.dirty_custom_data_indices.borrow_mut().clear();
         self.dirty = true;
         self.local_matrices_valid = false;
     }
 
     pub fn set_instances(&mut self, instances: Vec<InstanceTransform>) {
+        let count = instances.len();
         self.instances = instances;
+        self.custom_data = vec![InstanceCustomData::default(); count];
+        self.dirty_custom_data_indices.borrow_mut().clear();
         self.dirty = true;
         self.local_matrices_valid = false;
     }
@@ -214,20 +281,53 @@ impl InstancedMesh {
         self.instances.get(index)
     }
 
-    pub fn get_instance_mut(&mut self, index: usize) -> Option<&mut InstanceTransform> {
-        self.dirty = true;
-        self.local_matrices_valid = false;
-        self.instances.get_mut(index)
+    pub fn set_instance_transform(&mut self, index: usize, transform: InstanceTransform) {
+        if let Some(existing) = self.instances.get_mut(index)
+            && (existing.translation != transform.translation
+                || existing.rotation != transform.rotation
+                || existing.scale != transform.scale)
+        {
+            *existing = transform;
+            self.dirty = true;
+            self.local_matrices_valid = false;
+        }
     }
 
     pub fn remove_instance(&mut self, index: usize) -> Option<InstanceTransform> {
         if index < self.instances.len() {
             self.dirty = true;
             self.local_matrices_valid = false;
+            self.dirty_custom_data_indices.borrow_mut().clear();
+            self.custom_data.remove(index);
             Some(self.instances.remove(index))
         } else {
             None
         }
+    }
+
+    pub fn get_custom_data(&self, index: usize) -> Option<&InstanceCustomData> {
+        self.custom_data.get(index)
+    }
+
+    pub fn set_instance_tint(&mut self, index: usize, tint: [f32; 4]) {
+        if let Some(data) = self.custom_data.get_mut(index)
+            && data.tint != tint
+        {
+            data.tint = tint;
+            self.dirty_custom_data_indices.borrow_mut().insert(index);
+        }
+    }
+
+    pub fn custom_data_slice(&self) -> &[InstanceCustomData] {
+        &self.custom_data
+    }
+
+    pub fn take_dirty_custom_data_indices(&self) -> HashSet<usize> {
+        std::mem::take(&mut *self.dirty_custom_data_indices.borrow_mut())
+    }
+
+    pub fn has_dirty_custom_data(&self) -> bool {
+        !self.dirty_custom_data_indices.borrow().is_empty()
     }
 
     fn ensure_local_matrices_cached(&mut self) {
