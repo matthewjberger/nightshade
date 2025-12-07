@@ -22,6 +22,7 @@ pub mod prelude {
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
+    pub use crate::ecs::particles::systems::update_particle_emitters;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
         PhysicsMaterial, PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent,

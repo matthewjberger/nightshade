@@ -4,6 +4,13 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
+pub struct RenderResources {
+    pub scene_color: crate::render::wgpu::rendergraph::ResourceId,
+    pub depth: crate::render::wgpu::rendergraph::ResourceId,
+    pub compute_output: crate::render::wgpu::rendergraph::ResourceId,
+    pub swapchain: crate::render::wgpu::rendergraph::ResourceId,
+}
+
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::ecs::input::resources::DroppedFile>> =
@@ -490,15 +497,16 @@ pub trait State {
         graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
         device: &wgpu::Device,
         surface_format: wgpu::TextureFormat,
-        scene_color: crate::render::wgpu::rendergraph::ResourceId,
-        _compute_output: crate::render::wgpu::rendergraph::ResourceId,
-        swapchain: crate::render::wgpu::rendergraph::ResourceId,
+        resources: RenderResources,
     ) {
         let blit_pass = crate::render::wgpu::passes::BlitPass::new(device, surface_format);
 
         let _ = graph.add_pass(
             Box::new(blit_pass),
-            &[("input", scene_color), ("output", swapchain)],
+            &[
+                ("input", resources.scene_color),
+                ("output", resources.swapchain),
+            ],
         );
     }
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}

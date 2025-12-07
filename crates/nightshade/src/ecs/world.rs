@@ -14,6 +14,9 @@ pub mod components {
     pub use crate::ecs::material::components::{AlphaMode, Material};
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::name::components::Name;
+    pub use crate::ecs::particles::components::{
+        ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
+    };
     pub use crate::ecs::physics::components::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
         RigidBodyComponent,
@@ -98,6 +101,7 @@ freecs::ecs! {
         character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
         physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
         instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
+        particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

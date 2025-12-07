@@ -11,6 +11,7 @@ pub mod lines;
 pub mod material;
 pub mod mesh;
 pub mod name;
+pub mod particles;
 pub mod physics;
 pub mod picking;
 pub mod prefab;
