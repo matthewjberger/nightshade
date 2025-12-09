@@ -96,6 +96,16 @@ struct FireworksDemo {
     show_start_time: f32,
     show_events: Vec<ShowEvent>,
     show_event_index: usize,
+    #[cfg(feature = "openxr")]
+    xr_a_button_was_pressed: bool,
+    #[cfg(feature = "openxr")]
+    xr_b_button_was_pressed: bool,
+    #[cfg(feature = "openxr")]
+    xr_left_trigger_was_pressed: bool,
+    #[cfg(feature = "openxr")]
+    xr_right_grip_was_pressed: bool,
+    #[cfg(feature = "openxr")]
+    xr_next_trigger_launch_time: f32,
 }
 
 impl State for FireworksDemo {
@@ -105,9 +115,17 @@ impl State for FireworksDemo {
 
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = true;
-        world.resources.graphics.show_skybox = false;
+        world.resources.graphics.atmosphere = Atmosphere::Space;
         world.resources.graphics.show_grid = true;
         world.resources.graphics.clear_color = [0.01, 0.01, 0.02, 1.0];
+
+        #[cfg(feature = "openxr")]
+        {
+            world.resources.xr.locomotion_enabled = true;
+            world.resources.xr.locomotion_speed = 15.0;
+            world.resources.xr.initial_player_position = Some(Vec3::new(0.0, 10.0, 100.0));
+            world.resources.xr.initial_player_yaw = Some(std::f32::consts::PI);
+        }
 
         let camera = world.spawn_entities(
             LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
@@ -131,7 +149,7 @@ impl State for FireworksDemo {
                     aspect_ratio: None,
                     y_fov_rad: 60.0_f32.to_radians(),
                     z_near: 0.1,
-                    z_far: Some(500.0),
+                    z_far: Some(2000.0),
                 }),
                 smoothing: Some(Smoothing::default()),
             },
@@ -190,7 +208,13 @@ impl State for FireworksDemo {
 
     fn run_systems(&mut self, world: &mut World) {
         escape_key_exit_system(world);
+
+        #[cfg(feature = "openxr")]
+        self.xr_input_system(world);
+
+        #[cfg(not(feature = "openxr"))]
         pan_orbit_camera_system(world);
+
         sync_text_meshes_system(world);
 
         let delta_time = world.resources.window.timing.delta_time;
@@ -485,6 +509,44 @@ impl State for FireworksDemo {
 }
 
 impl FireworksDemo {
+    #[cfg(feature = "openxr")]
+    fn xr_input_system(&mut self, world: &mut World) {
+        let Some(xr_input) = world.resources.xr.input.clone() else {
+            return;
+        };
+
+        let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+
+        let a_pressed = xr_input.a_button_pressed();
+        if a_pressed && !self.xr_a_button_was_pressed {
+            self.launch_firework(world);
+        }
+        self.xr_a_button_was_pressed = a_pressed;
+
+        let b_pressed = xr_input.b_button_pressed();
+        if b_pressed && !self.xr_b_button_was_pressed {
+            self.launch_salvo(world);
+        }
+        self.xr_b_button_was_pressed = b_pressed;
+
+        if xr_input.right_trigger_pressed() && uptime >= self.xr_next_trigger_launch_time {
+            self.launch_firework(world);
+            self.xr_next_trigger_launch_time = uptime + 0.15;
+        }
+
+        let left_trigger_pressed = xr_input.left_trigger_pressed();
+        if left_trigger_pressed && !self.xr_left_trigger_was_pressed {
+            self.auto_launch = !self.auto_launch;
+        }
+        self.xr_left_trigger_was_pressed = left_trigger_pressed;
+
+        let right_grip_pressed = xr_input.right_grip_pressed();
+        if right_grip_pressed && !self.xr_right_grip_was_pressed {
+            self.launch_finale(world);
+        }
+        self.xr_right_grip_was_pressed = right_grip_pressed;
+    }
+
     fn random_color() -> Vec3 {
         let mut rng = rand::rng();
 

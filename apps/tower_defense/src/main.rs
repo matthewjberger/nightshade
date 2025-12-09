@@ -3110,7 +3110,7 @@ impl State for TowerDefenseECS {
 
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = false;
-        world.resources.graphics.show_skybox = false;
+        world.resources.graphics.atmosphere = Atmosphere::None;
         world.resources.graphics.show_grid = false;
 
         spawn_sun(world);

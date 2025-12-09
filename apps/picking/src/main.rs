@@ -115,7 +115,7 @@ impl State for PickingDemoState {
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = true;
         world.resources.graphics.show_grid = true;
-        world.resources.graphics.show_skybox = true;
+        world.resources.graphics.atmosphere = Atmosphere::Sky;
 
         spawn_sun(world);
 

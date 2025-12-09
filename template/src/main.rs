@@ -16,7 +16,7 @@ impl State for Template {
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = true;
         world.resources.graphics.show_grid = true;
-        world.resources.graphics.show_skybox = true;
+        world.resources.graphics.atmosphere = Atmosphere::Sky;
 
         let camera_position = Vec3::new(0.0, 2.0, 10.0);
         let main_camera = spawn_camera(world, camera_position, "Main Camera".to_string());
