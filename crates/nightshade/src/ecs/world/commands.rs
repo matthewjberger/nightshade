@@ -376,6 +376,25 @@ pub fn spawn_3d_text_with_properties(
     position: nalgebra_glm::Vec3,
     properties: crate::ecs::text::components::TextProperties,
 ) -> Entity {
+    spawn_3d_text_impl(world, text, position, properties, false)
+}
+
+pub fn spawn_3d_billboard_text_with_properties(
+    world: &mut World,
+    text: &str,
+    position: nalgebra_glm::Vec3,
+    properties: crate::ecs::text::components::TextProperties,
+) -> Entity {
+    spawn_3d_text_impl(world, text, position, properties, true)
+}
+
+fn spawn_3d_text_impl(
+    world: &mut World,
+    text: &str,
+    position: nalgebra_glm::Vec3,
+    properties: crate::ecs::text::components::TextProperties,
+    billboard: bool,
+) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
         GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME, TEXT, VISIBILITY,
@@ -407,6 +426,7 @@ pub fn spawn_3d_text_with_properties(
             font_index: 0,
             dirty: true,
             cached_mesh: None,
+            billboard,
         },
     );
     world.set_visibility(entity, components::Visibility { visible: true });
