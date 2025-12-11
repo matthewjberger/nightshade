@@ -50,7 +50,7 @@ build-wasm:
 
 # Serve the app in browser
 run-wasm:
-    trunk serve --open
+    trunk serve --release --open
 
 # Runs all tests
 test:

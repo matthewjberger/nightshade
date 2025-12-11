@@ -100,7 +100,7 @@ build-wasm $project="editor":
 
 # Serve the app in browser
 run-wasm $project="editor":
-    trunk serve --open --config apps/{{project}}/Trunk.toml
+    trunk serve --release --open --config apps/{{project}}/Trunk.toml
 
 # Runs all tests
 test:
