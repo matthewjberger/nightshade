@@ -21,7 +21,7 @@ bitflags = { workspace = true }
 bytemuck = { workspace = true }
 egui = { workspace = true }
 egui_extras = { workspace = true }
-fontdue = "0.8"
+fontdue = "0.9"
 freecs = { workspace = true }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 gilrs = { workspace = true }
@@ -63,7 +63,7 @@ futures = "0.3.31"
 image = { workspace = true }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4.55"
+wasm-bindgen-futures = "0.4.56"
 web-sys = { version = "0.3", features = [
     "DataTransfer",
     "Document",
