@@ -6,6 +6,9 @@ mod systems;
 #[cfg(feature = "openxr")]
 pub mod xr;
 
+#[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+pub mod steam;
+
 pub use systems::*;
 
 pub mod prelude {
@@ -66,4 +69,9 @@ pub mod prelude {
 
     #[cfg(feature = "openxr")]
     pub use crate::xr::{XrContext, XrInput, launch_xr};
+
+    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+    pub use crate::steam::{
+        AchievementInfo, FriendInfo, PersonaState, StatInfo, StatValue, SteamResources,
+    };
 }

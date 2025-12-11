@@ -66,6 +66,10 @@ just build-wasm [project]
 
 See [STEAM_DECK.md](STEAM_DECK.md) for deployment instructions.
 
+### Steam Integration
+
+See [STEAM.md](STEAM.md) for Steam integration (achievements, stats, friends).
+
 ## Contributing
 
 Nightshade is currently in its early stages of development. The project is not accepting external contributions at this time as the architecture and core systems are still being established. Once the engine reaches a more mature and stable state, I will open up contributions and provide contributor guidelines.

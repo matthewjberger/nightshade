@@ -124,6 +124,8 @@ freecs::ecs! {
         dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
         #[cfg(feature = "openxr")]
         xr: crate::xr::XrResources,
+        #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+        steam: crate::steam::SteamResources,
     }
 }
 

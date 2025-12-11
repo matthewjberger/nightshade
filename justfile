@@ -60,9 +60,9 @@ lint:
     cargo clippy --all --tests -- -D warnings
     just lint-wasm
 
-# Runs linter for wasm32 target
+# Runs linter for wasm32 target (excludes native-only apps like steam)
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown -- -D warnings
+    cargo clippy --target wasm32-unknown-unknown --workspace --exclude steam -- -D warnings
 
 # Pushes template changes to nightshade-template repo
 push-template:

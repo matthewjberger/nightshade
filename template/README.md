@@ -38,6 +38,36 @@ Deploy to Steam Deck using `just deploy-steamdeck`. First-time setup on Steam De
 5. Launch from Big Picture mode or Game mode after initial setup
 6. Future deploys must be done from desktop mode, but the last deployed binary will run in game mode
 
+## Steam Integration
+
+To enable Steamworks integration (achievements, stats, friends):
+
+1. Enable the `steam` feature as default in `Cargo.toml`:
+   ```toml
+   [features]
+   default = ["steam"]
+   steam = ["nightshade/steam"]
+   ```
+
+2. Create `steam_appid.txt` in project root (use `480` for testing, replace with your App ID for release):
+   ```
+   480
+   ```
+
+3. Initialize Steam in your game:
+   ```rust
+   fn initialize(&mut self, world: &mut World) {
+       world.resources.steam.initialize().ok();
+   }
+   ```
+
+4. Include Steam redistributable DLLs with your release build:
+   - Windows: `steam_api64.dll`
+   - Linux: `libsteam_api.so`
+   - macOS: `libsteam_api.dylib`
+
+See the [full Steam documentation](https://github.com/matthewjberger/nightshade/blob/main/STEAM.md) for API reference and using your own App ID.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.

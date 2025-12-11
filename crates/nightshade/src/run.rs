@@ -71,6 +71,9 @@ pub(crate) fn step(
 
             create_ui_system(world, state);
 
+            #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+            world.resources.steam.run_callbacks();
+
             let gamepad_events = world.resources.input.gamepad.events.clone();
             for event in gamepad_events {
                 state.on_gamepad_event(world, event);
