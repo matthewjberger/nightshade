@@ -120,6 +120,26 @@ impl TowerType {
             TowerType::Poison => 10.0,
         }
     }
+
+    fn name(&self) -> &'static str {
+        match self {
+            TowerType::Basic => "Basic",
+            TowerType::Frost => "Frost",
+            TowerType::Cannon => "Cannon",
+            TowerType::Sniper => "Sniper",
+            TowerType::Poison => "Poison",
+        }
+    }
+
+    fn all() -> [TowerType; 5] {
+        [
+            TowerType::Basic,
+            TowerType::Frost,
+            TowerType::Cannon,
+            TowerType::Sniper,
+            TowerType::Poison,
+        ]
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -242,6 +262,7 @@ struct UiHandles {
     wave_announce_text: Option<Entity>,
     lives_bar: Option<Entity>,
     lives_bar_bg: Option<Entity>,
+    tower_select_texts: Vec<Entity>,
 }
 
 struct TowerDefenseECS {
@@ -840,41 +861,21 @@ impl TowerDefenseECS {
     }
 
     fn create_death_effect(&mut self, world: &mut World, position: Vec3) {
-        for _ in 0..6 {
-            let offset = nalgebra_glm::vec3(
-                rand::rng().random_range(-0.3..0.3),
-                rand::rng().random_range(0.0..0.4),
-                rand::rng().random_range(-0.3..0.3),
-            );
-
-            let particle = spawn_mesh(
-                world,
-                "Sphere",
-                position + offset,
-                nalgebra_glm::vec3(0.1, 0.1, 0.1),
-            );
-
-            if let Some(material) = world.get_material_mut(particle) {
-                material.base_color = [1.0, 0.0, 0.0, 0.8];
-                material.emissive_factor = [0.5, 0.0, 0.0];
-                material.alpha_mode = AlphaMode::Blend;
-            }
-
-            let game_entity = self
-                .game_world
-                .spawn_entities(ENTITY_HANDLE | VISUAL_EFFECT, 1)[0];
-            self.game_world
-                .set_entity_handle(game_entity, EntityHandle(particle));
-            self.game_world.set_visual_effect(
-                game_entity,
-                VisualEffect {
-                    effect_type: EffectType::DeathParticle,
-                    lifetime: 0.8,
-                    age: 0.0,
-                },
-            );
-            self.game_world.resources.effects_list.push(game_entity);
-        }
+        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let mut smoke_emitter = ParticleEmitter::smoke(position);
+        smoke_emitter.one_shot = true;
+        smoke_emitter.burst_count = 30;
+        smoke_emitter.spawn_rate = 0.0;
+        smoke_emitter.particle_lifetime_min = 0.8;
+        smoke_emitter.particle_lifetime_max = 1.5;
+        smoke_emitter.initial_velocity_min = 1.5;
+        smoke_emitter.initial_velocity_max = 3.0;
+        smoke_emitter.size_start = 0.3;
+        smoke_emitter.size_end = 0.8;
+        smoke_emitter.velocity_spread = 0.6;
+        smoke_emitter.shape =
+            nightshade::ecs::particles::components::EmitterShape::Sphere { radius: 0.2 };
+        world.set_particle_emitter(entity, smoke_emitter);
     }
 
     fn create_poison_bubble_effect(&mut self, world: &mut World, position: Vec3) {
@@ -1968,7 +1969,34 @@ impl TowerDefenseECS {
             .state
             .contains(MouseState::RIGHT_CLICKED);
 
+        let mut clicked_tower_hud = false;
+        if left_clicked {
+            let mouse_pos = world.resources.input.mouse.position;
+            let hud_x_min = 10.0;
+            let hud_x_max = 200.0;
+            let hud_y_start = 10.0;
+            let line_height = 28.0;
+            let tower_count = TowerType::all().len();
+
+            if mouse_pos.x >= hud_x_min && mouse_pos.x <= hud_x_max {
+                for index in 0..tower_count {
+                    let y_min = hud_y_start + (index as f32 * line_height);
+                    let y_max = y_min + line_height;
+                    if mouse_pos.y >= y_min && mouse_pos.y <= y_max {
+                        let old_selection = self.game_world.resources.selected_tower_type;
+                        self.game_world.resources.selected_tower_type = TowerType::all()[index];
+                        if old_selection != self.game_world.resources.selected_tower_type {
+                            self.update_tower_selection_hud(world);
+                        }
+                        clicked_tower_hud = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         if left_clicked
+            && !clicked_tower_hud
             && let Some((grid_x, grid_z)) = self.game_world.resources.mouse_grid_pos
             && self.can_place_tower_at(grid_x, grid_z)
         {
@@ -1996,26 +2024,71 @@ impl TowerDefenseECS {
             self.sell_tower(world, tower_entity, grid_x, grid_z);
         }
 
-        let keyboard = &world.resources.input.keyboard;
-        if keyboard.is_key_pressed(KeyCode::Digit1) {
+        let key_1 = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Digit1);
+        let key_2 = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Digit2);
+        let key_3 = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Digit3);
+        let key_4 = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Digit4);
+        let key_5 = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Digit5);
+        let key_bracket_left = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::BracketLeft);
+        let key_bracket_right = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::BracketRight);
+        let key_backslash = world
+            .resources
+            .input
+            .keyboard
+            .is_key_pressed(KeyCode::Backslash);
+
+        let old_selection = self.game_world.resources.selected_tower_type;
+        if key_1 {
             self.game_world.resources.selected_tower_type = TowerType::Basic;
-        } else if keyboard.is_key_pressed(KeyCode::Digit2) {
+        } else if key_2 {
             self.game_world.resources.selected_tower_type = TowerType::Frost;
-        } else if keyboard.is_key_pressed(KeyCode::Digit3) {
+        } else if key_3 {
             self.game_world.resources.selected_tower_type = TowerType::Cannon;
-        } else if keyboard.is_key_pressed(KeyCode::Digit4) {
+        } else if key_4 {
             self.game_world.resources.selected_tower_type = TowerType::Sniper;
-        } else if keyboard.is_key_pressed(KeyCode::Digit5) {
+        } else if key_5 {
             self.game_world.resources.selected_tower_type = TowerType::Poison;
         }
 
-        if keyboard.is_key_pressed(KeyCode::BracketLeft) {
+        if old_selection != self.game_world.resources.selected_tower_type {
+            self.update_tower_selection_hud(world);
+        }
+
+        if key_bracket_left {
             self.game_world.resources.game_speed =
                 (self.game_world.resources.game_speed - 0.5).max(0.5);
-        } else if keyboard.is_key_pressed(KeyCode::BracketRight) {
+        } else if key_bracket_right {
             self.game_world.resources.game_speed =
                 (self.game_world.resources.game_speed + 0.5).min(3.0);
-        } else if keyboard.is_key_pressed(KeyCode::Backslash) {
+        } else if key_backslash {
             self.game_world.resources.game_speed = 1.0;
         }
     }
@@ -2466,6 +2539,32 @@ impl TowerDefenseECS {
                 }
             } else if let Some(visibility) = world.get_visibility_mut(wave_announce_entity) {
                 visibility.visible = false;
+            }
+        }
+    }
+
+    fn update_tower_selection_hud(&mut self, world: &mut World) {
+        let selected = self.game_world.resources.selected_tower_type;
+        for (index, tower_type) in TowerType::all().iter().enumerate() {
+            if let Some(&entity) = self
+                .game_world
+                .resources
+                .ui_handles
+                .tower_select_texts
+                .get(index)
+            {
+                let is_selected = *tower_type == selected;
+                let base_color = tower_type.color();
+                let text_color = if is_selected {
+                    nalgebra_glm::vec4(1.0, 1.0, 0.0, 1.0)
+                } else {
+                    nalgebra_glm::vec4(base_color.x, base_color.y, base_color.z, 0.7)
+                };
+
+                if let Some(hud_text) = world.get_hud_text_mut(entity) {
+                    hud_text.properties.color = text_color;
+                    hud_text.dirty = true;
+                }
             }
         }
     }
@@ -3110,24 +3209,54 @@ impl State for TowerDefenseECS {
 
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = false;
-        world.resources.graphics.atmosphere = Atmosphere::None;
+        world.resources.graphics.atmosphere = Atmosphere::Nebula;
         world.resources.graphics.show_grid = false;
 
         spawn_sun(world);
 
-        let camera_position = nalgebra_glm::vec3(0.0, 8.0, 14.0);
-        let main_camera = spawn_camera(world, camera_position, "Main Camera".to_string());
+        let main_camera = world.spawn_entities(
+            LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
+            1,
+        )[0];
 
-        if let Some(camera) = world.get_camera_mut(main_camera) {
-            camera.smoothing = Some(Smoothing::default());
-        }
-
-        if let Some(transform) = world.get_local_transform_mut(main_camera) {
-            transform.rotation =
-                nalgebra_glm::quat_angle_axis(-0.6, &nalgebra_glm::vec3(1.0, 0.0, 0.0));
-            world.set_local_transform_dirty(main_camera, LocalTransformDirty);
-        }
-
+        let camera_radius = 16.1;
+        let camera_pitch = 0.52;
+        world.set_local_transform(
+            main_camera,
+            LocalTransform {
+                translation: Vec3::new(0.0, 8.0, 14.0),
+                rotation: nalgebra_glm::quat_angle_axis(-0.6, &nalgebra_glm::vec3(1.0, 0.0, 0.0)),
+                scale: Vec3::new(1.0, 1.0, 1.0),
+            },
+        );
+        world.set_local_transform_dirty(main_camera, LocalTransformDirty);
+        world.set_global_transform(main_camera, GlobalTransform::default());
+        world.set_camera(
+            main_camera,
+            Camera {
+                projection: Projection::Perspective(PerspectiveCamera {
+                    aspect_ratio: None,
+                    y_fov_rad: 45.0_f32.to_radians(),
+                    z_near: 0.1,
+                    z_far: Some(500.0),
+                }),
+                smoothing: Some(Smoothing::default()),
+            },
+        );
+        world.set_pan_orbit_camera(
+            main_camera,
+            PanOrbitCamera {
+                focus: Vec3::new(0.0, 0.0, 0.0),
+                target_focus: Vec3::new(0.0, 0.0, 0.0),
+                radius: camera_radius,
+                target_radius: camera_radius,
+                pitch: camera_pitch,
+                target_pitch: camera_pitch,
+                yaw: 0.0,
+                target_yaw: 0.0,
+                ..Default::default()
+            },
+        );
         world.resources.active_camera = Some(main_camera);
 
         self.game_world.resources.camera_entity = main_camera;
@@ -3239,7 +3368,41 @@ impl State for TowerDefenseECS {
             )),
             lives_bar: None,
             lives_bar_bg: None,
+            tower_select_texts: Vec::new(),
         };
+
+        for (index, tower_type) in TowerType::all().iter().enumerate() {
+            let is_selected = *tower_type == self.game_world.resources.selected_tower_type;
+            let base_color = tower_type.color();
+            let text_color = if is_selected {
+                nalgebra_glm::vec4(1.0, 1.0, 0.0, 1.0)
+            } else {
+                nalgebra_glm::vec4(base_color.x, base_color.y, base_color.z, 0.7)
+            };
+
+            let text = format!(
+                "[{}] {} - ${}",
+                index + 1,
+                tower_type.name(),
+                tower_type.cost()
+            );
+
+            let entity = spawn_hud_text_with_properties(
+                world,
+                &text,
+                HudAnchor::TopLeft,
+                nalgebra_glm::vec2(15.0, 15.0 + (index as f32 * 28.0)),
+                TextProperties {
+                    font_size: 22.0,
+                    color: text_color,
+                    alignment: TextAlignment::Left,
+                    outline_width: 0.02,
+                    outline_color: nalgebra_glm::vec4(0.0, 0.0, 0.0, 1.0),
+                    ..Default::default()
+                },
+            );
+            ui_handles.tower_select_texts.push(entity);
+        }
 
         if let Some(status_text) = ui_handles.status_text
             && let Some(visibility) = world.get_visibility_mut(status_text)
@@ -3290,6 +3453,7 @@ impl State for TowerDefenseECS {
 
     fn run_systems(&mut self, world: &mut World) {
         escape_key_exit_system(world);
+        pan_orbit_camera_system(world);
 
         self.input_system(world);
         self.tile_hover_system(world);
@@ -3308,7 +3472,62 @@ impl State for TowerDefenseECS {
         self.update_money_popups(world, world.resources.window.timing.delta_time);
         self.ui_update_system(world);
 
+        update_particle_emitters(world, world.resources.window.timing.delta_time);
         nightshade::ecs::text::systems::sync_text_meshes_system(world);
+    }
+
+    fn configure_render_graph(
+        &mut self,
+        graph: &mut RenderGraph<World>,
+        device: &wgpu::Device,
+        surface_format: wgpu::TextureFormat,
+        resources: RenderResources,
+    ) {
+        let particle_pass = passes::ParticlePass::new(device, wgpu::TextureFormat::Rgba16Float);
+        graph
+            .pass(Box::new(particle_pass))
+            .slot("color", resources.scene_color)
+            .slot("depth", resources.depth);
+
+        let (width, height) = (1920, 1080);
+        let bloom_width = width / 2;
+        let bloom_height = height / 2;
+
+        let bloom_texture = graph
+            .add_color_texture("bloom")
+            .format(wgpu::TextureFormat::Rgba16Float)
+            .size(bloom_width, bloom_height)
+            .clear_color(wgpu::Color::BLACK)
+            .transient();
+
+        let bloom_pass = passes::BloomPass::new(device, width, height);
+        graph
+            .pass(Box::new(bloom_pass))
+            .read("hdr", resources.scene_color)
+            .write("bloom", bloom_texture);
+
+        let postprocess_pass = passes::PostProcessPass::new(device, surface_format, 0.005);
+        graph
+            .pass(Box::new(postprocess_pass))
+            .read("hdr", resources.scene_color)
+            .read("bloom", bloom_texture)
+            .write("output", resources.swapchain);
+    }
+
+    fn on_keyboard_input(&mut self, world: &mut World, key: KeyCode, state: KeyState) {
+        if state != KeyState::Pressed {
+            return;
+        }
+
+        if key == KeyCode::KeyC || key == KeyCode::Home {
+            let camera = self.game_world.resources.camera_entity;
+            if let Some(pan_orbit) = world.get_pan_orbit_camera_mut(camera) {
+                pan_orbit.target_focus = Vec3::new(0.0, 0.0, 0.0);
+                pan_orbit.target_radius = 16.1;
+                pan_orbit.target_pitch = 0.52;
+                pan_orbit.target_yaw = 0.0;
+            }
+        }
     }
 }
 
