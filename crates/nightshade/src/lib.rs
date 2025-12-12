@@ -72,6 +72,9 @@ pub mod prelude {
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use crate::steam::{
-        AchievementInfo, FriendInfo, PersonaState, StatInfo, StatValue, SteamResources,
+        AchievementInfo, ActiveSession, FriendInfo, NetworkMessage, PendingSessionRequest,
+        PersonaState, SessionState, StatInfo, StatValue, SteamResources,
     };
+    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+    pub use steamworks::SteamId;
 }

@@ -4,6 +4,9 @@ export RUST_BACKTRACE := "1"
 
 template_repo := "https://github.com/matthewjberger/nightshade-template.git"
 
+# Native-only apps that don't compile to WASM - keep in sync with .native-only-apps
+native_only_apps := "steam multiplayer_pong"
+
 # Displays the list of available commands
 @just:
     just --list
@@ -60,9 +63,19 @@ lint:
     cargo clippy --all --tests -- -D warnings
     just lint-wasm
 
-# Runs linter for wasm32 target (excludes native-only apps like steam)
+# Runs linter for wasm32 target (excludes native-only apps)
+[unix]
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown --workspace --exclude steam -- -D warnings
+    #!/usr/bin/env bash
+    excludes=""
+    while IFS= read -r app || [ -n "$app" ]; do
+        [ -n "$app" ] && excludes="$excludes --exclude $app"
+    done < .native-only-apps
+    cargo clippy --target wasm32-unknown-unknown --workspace $excludes -- -D warnings
+
+[windows]
+lint-wasm:
+    $excludes = (Get-Content .native-only-apps | Where-Object { $_.Trim() } | ForEach-Object { "--exclude"; $_.Trim() }); cargo clippy --target wasm32-unknown-unknown --workspace @excludes '--' -D warnings
 
 # Pushes template changes to nightshade-template repo
 push-template:
@@ -370,3 +383,15 @@ deploy-steamdeck-quick $project="editor":
 # SSH into Steam Deck
 steamdeck-ssh:
     ssh deck@steamdeck.local
+
+# Creates a redistributable bundle for an app (Windows)
+[windows]
+bundle $project:
+    cargo build -r -p {{project}}
+    powershell -ExecutionPolicy Bypass -File scripts/bundle.ps1 -Project {{project}} -NativeOnlyApps "{{native_only_apps}}"
+
+# Creates a redistributable bundle for an app (Unix)
+[unix]
+bundle $project:
+    cargo build -r -p {{project}}
+    bash scripts/bundle.sh {{project}} "{{native_only_apps}}"
