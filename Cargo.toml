@@ -21,10 +21,10 @@ rust-version = "1.90"
 [workspace.dependencies]
 bitflags = "2.10.0"
 bytemuck = "1.24.0"
-egui = { version = "0.33.2", default-features = false, features = ["bytemuck", "default_fonts"] }
-egui_extras = { version = "0.33.2", default-features = false, features = ["all_loaders"] }
-egui-wgpu = { version = "0.33.2", default-features = false, features = ["winit"] }
-egui-winit = { version = "0.33.2", default-features = false }
+egui = { version = "0.33.3", default-features = false, features = ["bytemuck", "default_fonts"] }
+egui_extras = { version = "0.33.3", default-features = false, features = ["all_loaders"] }
+egui-wgpu = { version = "0.33.3", default-features = false, features = ["winit"] }
+egui-winit = { version = "0.33.3", default-features = false }
 env_logger = "0.11.8"
 freecs = "1.3.2"
 gilrs = "0.11.0"
