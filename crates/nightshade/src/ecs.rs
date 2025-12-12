@@ -8,6 +8,7 @@ pub mod graphics;
 pub mod input;
 pub mod light;
 pub mod lines;
+pub mod map;
 pub mod material;
 pub mod mesh;
 pub mod name;

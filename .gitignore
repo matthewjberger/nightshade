@@ -7,3 +7,4 @@ public/
 /Cargo.lock
 !apps/editor/Cargo.lock
 *.md
+apps/maps/maps/

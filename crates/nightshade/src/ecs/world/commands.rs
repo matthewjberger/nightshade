@@ -610,8 +610,8 @@ pub fn spawn_instanced_mesh(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
-        VISIBILITY,
+        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
+        MATERIAL, NAME, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -620,7 +620,8 @@ pub fn spawn_instanced_mesh(
             | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
             | MATERIAL
-            | VISIBILITY,
+            | VISIBILITY
+            | CASTS_SHADOW,
         1,
     )[0];
 
@@ -648,6 +649,7 @@ pub fn spawn_instanced_mesh(
     world.set_material(entity, material);
 
     world.set_visibility(entity, components::Visibility { visible: true });
+    world.set_casts_shadow(entity, components::CastsShadow);
 
     entity
 }
@@ -660,8 +662,8 @@ pub fn spawn_instanced_mesh_with_material(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, MATERIAL, NAME,
-        VISIBILITY,
+        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
+        MATERIAL, NAME, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -670,7 +672,8 @@ pub fn spawn_instanced_mesh_with_material(
             | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
             | MATERIAL
-            | VISIBILITY,
+            | VISIBILITY
+            | CASTS_SHADOW,
         1,
     )[0];
 
@@ -698,6 +701,7 @@ pub fn spawn_instanced_mesh_with_material(
     world.set_material(entity, material);
 
     world.set_visibility(entity, components::Visibility { visible: true });
+    world.set_casts_shadow(entity, components::CastsShadow);
 
     entity
 }

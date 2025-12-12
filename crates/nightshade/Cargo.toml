@@ -18,6 +18,7 @@ openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vu
 steam = ["dep:steamworks", "dep:steamworks-sys"]
 
 [dependencies]
+bincode = { workspace = true }
 bitflags = { workspace = true }
 bytemuck = { workspace = true }
 egui = { workspace = true }

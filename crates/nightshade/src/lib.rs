@@ -23,6 +23,10 @@ pub mod prelude {
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
+    pub use crate::ecs::map::{
+        Map, MapCamera, MapError, MapLight, MapNode, MapPrefab, NodeIndex, load_map,
+        load_map_binary, load_map_json, save_map, save_map_binary, save_map_json, spawn_map,
+    };
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::particles::systems::update_particle_emitters;
