@@ -8,3 +8,4 @@ public/
 !apps/editor/Cargo.lock
 *.md
 apps/maps/maps/
+apps/shadows/*.json

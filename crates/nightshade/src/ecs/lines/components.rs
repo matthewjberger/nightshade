@@ -1,6 +1,6 @@
 use nalgebra_glm::{Vec3, Vec4, vec3, vec4};
 
-pub const MAX_LINES: u32 = 100_000;
+pub const MAX_LINES: u32 = 1_000_000;
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Lines {

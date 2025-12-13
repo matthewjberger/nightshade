@@ -102,6 +102,7 @@ freecs::ecs! {
         physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
         instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
         particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
+        prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
