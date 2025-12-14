@@ -9,5 +9,9 @@ logs/
 /Cargo.lock
 !apps/editor/Cargo.lock
 *.md
+!/*.md
+!apps/editor/*.md
+!crates/nightshade/*.md
+!template/*.md
 apps/maps/maps/
 apps/shadows/*.json

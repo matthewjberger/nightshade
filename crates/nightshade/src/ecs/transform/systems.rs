@@ -7,6 +7,7 @@ use crate::ecs::world::{
 };
 
 pub fn run_systems(world: &mut World) {
+    let _span = tracing::info_span!("transform_systems").entered();
     rebuild_children_cache_if_needed(world);
     update_global_transforms_system(world);
 }
@@ -85,11 +86,12 @@ impl World {
     }
 }
 
-#[tracing::instrument(skip_all, name = "transforms")]
 pub fn update_global_transforms_system(world: &mut World) {
     let dirty_entities: Vec<freecs::Entity> = world
         .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
         .collect();
+
+    let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
     let mut visited = std::collections::HashSet::new();
 

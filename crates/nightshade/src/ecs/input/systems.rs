@@ -5,6 +5,7 @@ use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::{Vec2, World, events::*, resources::MouseState};
 
 pub fn reset_mouse_system(world: &mut World) {
+    let _span = tracing::info_span!("reset_mouse").entered();
     let mouse = &mut world.resources.input.mouse;
     if mouse.state.contains(MouseState::SCROLLED) {
         mouse.wheel_delta = Vec2::new(0.0, 0.0);
@@ -24,6 +25,7 @@ pub fn reset_mouse_system(world: &mut World) {
 }
 
 pub fn reset_touch_system(world: &mut World) {
+    let _span = tracing::info_span!("reset_touch").entered();
     use crate::ecs::input::resources::TouchGesture;
 
     let touch = &mut world.resources.input.touch;
@@ -32,6 +34,7 @@ pub fn reset_touch_system(world: &mut World) {
 }
 
 pub fn gamepad_input_system(world: &mut World) {
+    let _span = tracing::info_span!("gamepad_input").entered();
     if world.resources.input.gamepad.gilrs.is_none() {
         if let Ok(gilrs) = gilrs::Gilrs::new() {
             world.resources.input.gamepad.gilrs = Some(gilrs);

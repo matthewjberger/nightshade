@@ -2,6 +2,7 @@ use crate::ecs::world::{INSTANCED_MESH, World};
 
 pub fn update_instanced_mesh_caches_system(world: &mut World) {
     let entities: Vec<_> = world.query_entities(INSTANCED_MESH).collect();
+    let _span = tracing::info_span!("instanced_meshes", count = entities.len()).entered();
 
     for entity in entities {
         let parent_transform = world

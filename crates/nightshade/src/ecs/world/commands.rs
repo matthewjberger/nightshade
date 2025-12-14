@@ -35,6 +35,7 @@ impl World {
 
 pub fn process_commands_system(world: &mut World) {
     let commands = world.resources.command_queue.drain(..).collect::<Vec<_>>();
+    let _span = tracing::info_span!("commands", count = commands.len()).entered();
     let mut sprite_texture_commands = Vec::new();
 
     for command in commands {
@@ -437,6 +438,7 @@ fn spawn_3d_text_impl(
 const CLEANUP_INTERVAL_FRAMES: u64 = 300;
 
 pub fn cleanup_unused_resources_system(world: &mut World) {
+    let _span = tracing::info_span!("cleanup").entered();
     world.resources.cleanup_frame_counter += 1;
 
     if world.resources.cleanup_frame_counter >= CLEANUP_INTERVAL_FRAMES {

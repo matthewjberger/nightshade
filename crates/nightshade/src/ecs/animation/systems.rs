@@ -4,9 +4,10 @@ use crate::ecs::animation::components::{
 use crate::ecs::world::{ANIMATION_PLAYER, World};
 use std::collections::HashMap;
 
-#[tracing::instrument(skip(world), name = "animation")]
 pub fn update_animation_players(world: &mut World, delta_time: f32) {
     let entities_with_animations: Vec<_> = world.query_entities(ANIMATION_PLAYER).collect();
+    let _span =
+        tracing::info_span!("animation", players = entities_with_animations.len()).entered();
 
     for entity in entities_with_animations {
         if let Some(animation_player) = world.get_animation_player_mut(entity) {

@@ -44,7 +44,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
         let env_filter =
@@ -73,7 +73,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
         let env_filter =
@@ -103,7 +103,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
         let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
 
         let env_filter =
@@ -133,7 +133,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
         let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
 
         let env_filter =
@@ -184,13 +184,15 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
-#[tracing::instrument(skip_all, name = "frame_step")]
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
     renderer: &mut Option<Box<dyn crate::ecs::world::Render>>,
     event: &WindowEvent,
 ) -> Option<Box<dyn State>> {
+    let delta_ms = (world.resources.window.timing.delta_time * 1000.0) as u32;
+    let _span = tracing::info_span!("frame", delta_ms).entered();
+
     handle_event_systems(world, event);
 
     match event {
@@ -251,13 +253,14 @@ pub(crate) fn step(
 }
 
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
+    let _span = tracing::info_span!("event_handling").entered();
     ui_event_system(world, event);
     input_event_system(world, event);
     timing_system(world, event);
 }
 
-#[tracing::instrument(skip_all, name = "frame_systems")]
 pub(crate) fn run_frame_systems(world: &mut World) {
+    let _span = tracing::info_span!("systems").entered();
     crate::ecs::audio::systems::initialize_audio_system(world);
     crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
@@ -272,6 +275,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
 }
 
 fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
+    let _span = tracing::info_span!("ui_event").entered();
     let Some(gui_state) = &mut world.resources.user_interface.state else {
         return;
     };
@@ -284,6 +288,7 @@ fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
 }
 
 fn input_event_system(world: &mut World, window_event: &WindowEvent) {
+    let _span = tracing::info_span!("input_event").entered();
     use crate::ecs::event_bus::commands::publish_event;
     use crate::ecs::world::events::{InputEvent, KeyState, Message};
     use crate::ecs::world::{Vec2, resources::MouseState};
@@ -434,6 +439,7 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
 }
 
 fn timing_system(world: &mut World, event: &WindowEvent) {
+    let _span = tracing::info_span!("timing").entered();
     use web_time::Instant;
 
     if let WindowEvent::RedrawRequested = event {
@@ -979,6 +985,7 @@ fn initialize_user_interface(world: &mut World) {
 }
 
 fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
+    let _span = tracing::info_span!("ui").entered();
     if !world.resources.user_interface.enabled {
         return;
     }
