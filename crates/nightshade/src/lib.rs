@@ -6,7 +6,7 @@
 //!
 //! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and WebGPU backends.
 //!
-//! - **`openxr`** - OpenXR support for VR headsets. Enables the [`xr`] module for VR development.
+//! - **`openxr`** - OpenXR support for VR headsets. Enables the `xr` module for VR development.
 //!
 //! - **`steam`** - Steamworks integration for achievements, stats, friends, and multiplayer. Native only.
 //!
