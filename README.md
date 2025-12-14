@@ -74,6 +74,10 @@ See [STEAM.md](STEAM.md) for Steam integration (achievements, stats, friends).
 
 See [PROFILING.md](PROFILING.md) for detailed profiling and logging documentation.
 
+### Plugins
+
+See [PLUGINS.md](PLUGINS.md) for runtime WASI plugin support.
+
 Quick start:
 
 ```toml

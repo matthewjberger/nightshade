@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Third-Party Licenses - Nightshade</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            border-bottom: 2px solid #4a4a6a;
+            padding-bottom: 0.5rem;
+        }
+        h2 {
+            color: #8be9fd;
+            margin-top: 2rem;
+        }
+        h3 {
+            color: #bd93f9;
+        }
+        .license {
+            background: #252540;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+        }
+        .license-text {
+            background: #16213e;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .crate-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        .crate-name {
+            background: #4a4a6a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        a {
+            color: #8be9fd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Third-Party Licenses</h1>
+    <p>This document contains the licenses for third-party dependencies used by Nightshade.</p>
+
+{{#each licenses}}
+    <div class="license">
+        <h2>{{name}}</h2>
+        <h3>Used by:</h3>
+        <div class="crate-list">
+        {{#each used_by}}
+            <span class="crate-name">{{crate.name}} {{crate.version}}</span>
+        {{/each}}
+        </div>
+        {{#if text}}
+        <h3>License Text:</h3>
+        <div class="license-text">{{text}}</div>
+        {{/if}}
+    </div>
+{{/each}}
+</body>
+</html>

@@ -12,52 +12,92 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["wgpu"]
-wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
-openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
-steam = ["dep:steamworks", "dep:steamworks-sys"]
-tracing = ["dep:tracing-appender"]
+default = ["engine", "wgpu"]
+engine = [
+    "dep:bincode",
+    "dep:bitflags",
+    "dep:bytemuck",
+    "dep:egui",
+    "dep:egui_extras",
+    "dep:fontdue",
+    "dep:freecs",
+    "dep:getrandom",
+    "dep:gilrs",
+    "dep:gltf",
+    "dep:half",
+    "dep:kira",
+    "dep:tracing",
+    "dep:mint",
+    "dep:nalgebra",
+    "dep:nalgebra-glm",
+    "dep:petgraph",
+    "dep:rand",
+    "dep:rapier3d",
+    "dep:raw-window-handle",
+    "dep:serde_json",
+    "dep:thiserror",
+    "dep:web-time",
+    "dep:winit",
+    "dep:tracing-subscriber",
+    "dep:egui-winit",
+    "dep:image",
+    "dep:tokio",
+    "dep:console_error_panic_hook",
+    "dep:tracing-web",
+    "dep:futures",
+    "dep:js-sys",
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+    "dep:web-sys",
+]
+wgpu = ["engine", "dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
+openxr = ["engine", "dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
+steam = ["engine", "dep:steamworks", "dep:steamworks-sys"]
+tracing = ["engine", "dep:tracing-appender"]
 tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
+plugins = []
 
 [dependencies]
-bincode = { workspace = true }
-bitflags = { workspace = true }
-bytemuck = { workspace = true }
-egui = { workspace = true }
-egui_extras = { workspace = true }
-fontdue = "0.9"
-freecs = { workspace = true }
-getrandom = { version = "0.3", features = ["wasm_js"] }
-gilrs = { workspace = true }
-gltf = { workspace = true }
-half = { workspace = true }
-kira = { workspace = true }
-tracing = { workspace = true }
-mint = { workspace = true }
-nalgebra = { workspace = true }
-nalgebra-glm = { workspace = true }
-petgraph = { workspace = true }
-rand = "0.9"
-rapier3d = { workspace = true }
-raw-window-handle = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-web-time = { workspace = true }
-winit = { workspace = true }
+postcard = { version = "1.0", features = ["alloc"] }
+
+bincode = { workspace = true, optional = true }
+bitflags = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
+egui = { workspace = true, optional = true }
+egui_extras = { workspace = true, optional = true }
+fontdue = { version = "0.9", optional = true }
+freecs = { workspace = true, optional = true }
+getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
+gilrs = { workspace = true, optional = true }
+gltf = { workspace = true, optional = true }
+half = { workspace = true, optional = true }
+kira = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+mint = { workspace = true, optional = true }
+nalgebra = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true }
+petgraph = { workspace = true, optional = true }
+rand = { version = "0.9", optional = true }
+rapier3d = { workspace = true, optional = true }
+raw-window-handle = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+web-time = { workspace = true, optional = true }
+winit = { workspace = true, optional = true }
 
 egui-wgpu = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tracing-subscriber = { workspace = true }
+tracing-subscriber = { workspace = true, optional = true }
 tracing-appender = { workspace = true, optional = true }
 tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
-egui-winit = { workspace = true }
-image = { workspace = true }
-tokio = { workspace = true }
+egui-winit = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 openxr = { workspace = true, optional = true }
 ash = { workspace = true, optional = true }
 wgpu-hal = { workspace = true, optional = true }
@@ -66,15 +106,15 @@ steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = "0.1.7"
-tracing-subscriber = { workspace = true }
-tracing-web = { workspace = true }
-egui-winit = { workspace = true, default-features = false }
-futures = "0.3.31"
-image = { workspace = true }
-js-sys = "0.3"
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4.56"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+tracing-web = { workspace = true, optional = true }
+egui-winit = { workspace = true, default-features = false, optional = true }
+futures = { version = "0.3.31", optional = true }
+image = { workspace = true, optional = true }
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4.56", optional = true }
 web-sys = { version = "0.3", features = [
     "DataTransfer",
     "Document",
@@ -87,7 +127,7 @@ web-sys = { version = "0.3", features = [
     "FileReader",
     "ProgressEvent",
     "Window",
-] }
+], optional = true }
 
 [package.metadata.cargo-machete]
 ignored = ["nalgebra", "getrandom"]

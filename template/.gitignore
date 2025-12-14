@@ -1,2 +1,4 @@
 /target
 dist/
+vendor/
+THIRD_PARTY_LICENSES.html

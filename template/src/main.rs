@@ -1,12 +1,18 @@
 use nightshade::prelude::*;
 
+#[cfg(feature = "plugins")]
+mod plugin_runtime;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(Template)?;
+    launch(Template::default())?;
     Ok(())
 }
 
 #[derive(Default)]
-struct Template;
+struct Template {
+    #[cfg(feature = "plugins")]
+    plugin_runtime: Option<plugin_runtime::PluginRuntime>,
+}
 
 impl State for Template {
     fn title(&self) -> &str {
@@ -26,12 +32,40 @@ impl State for Template {
         {
             world.resources.xr.locomotion_enabled = true;
         }
+
+        #[cfg(feature = "plugins")]
+        {
+            let plugins_dir = std::path::PathBuf::from("plugins/plugins");
+
+            match plugin_runtime::PluginRuntime::new(plugins_dir.clone()) {
+                Ok(mut runtime) => {
+                    tracing::info!("Loading plugins from: {:?}", plugins_dir);
+
+                    if let Err(error) = runtime.load_plugins_from_directory(&plugins_dir) {
+                        tracing::error!("Failed to load plugins: {}", error);
+                    }
+
+                    runtime.call_on_init(world);
+                    self.plugin_runtime = Some(runtime);
+                }
+                Err(error) => {
+                    tracing::error!("Failed to create plugin runtime: {}", error);
+                }
+            }
+        }
     }
 
     fn ui(&mut self, _world: &mut World, ui_context: &egui::Context) {
         egui::Window::new("Template").show(ui_context, |ui| {
             ui.heading("Template");
         });
+    }
+
+    fn run_systems(&mut self, world: &mut World) {
+        #[cfg(feature = "plugins")]
+        if let Some(runtime) = &mut self.plugin_runtime {
+            runtime.run_frame(world);
+        }
     }
 
     fn handle_event(&mut self, _world: &mut World, message: &Message) {
@@ -49,5 +83,19 @@ impl State for Template {
         if matches!((key_code, key_state), (KeyCode::KeyQ, KeyState::Pressed)) {
             world.resources.window.should_exit = true;
         }
+
+        #[cfg(feature = "plugins")]
+        if let Some(runtime) = &mut self.plugin_runtime {
+            runtime.queue_keyboard_event(key_code, key_state);
+        }
+    }
+
+    fn on_mouse_input(&mut self, _world: &mut World, state: ElementState, button: MouseButton) {
+        #[cfg(feature = "plugins")]
+        if let Some(runtime) = &mut self.plugin_runtime {
+            runtime.queue_mouse_event(state, button);
+        }
+
+        let _ = (state, button);
     }
 }

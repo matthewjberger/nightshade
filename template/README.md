@@ -51,6 +51,118 @@ RUST_LOG=info,my_game=trace just run
 
 For real-time profiling with Tracy or offline Chrome tracing, see the [Nightshade profiling documentation](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md).
 
+## Plugin Support
+
+This template includes WASI plugin support for modding by default. Plugins are loaded from `plugins/plugins/` at runtime.
+
+> **Note:** Plugins are only supported on native builds (Windows, macOS, Linux). WASM/web builds do not support plugins.
+
+### Building the Example Plugin
+
+```bash
+# Install the wasm32-wasip1 target
+rustup target add wasm32-wasip1
+
+# Build the example plugin
+cargo build -p example-plugin --target wasm32-wasip1 --release
+
+# Copy to plugins directory
+cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
+```
+
+### Creating Your Own Plugins
+
+1. Create a new crate in `plugins/` with `crate-type = ["cdylib"]`
+2. Use `nightshade::plugin` types for the API:
+   ```rust
+   use nightshade::plugin::{log, spawn_cube, drain_engine_events, EngineEvent};
+
+   #[unsafe(no_mangle)]
+   pub extern "C" fn on_init() {
+       log("Plugin initialized!");
+       spawn_cube(0.0, 1.0, -5.0);
+   }
+
+   #[unsafe(no_mangle)]
+   pub extern "C" fn on_frame() {
+       for event in drain_engine_events() {
+           // Handle events
+       }
+   }
+   ```
+
+See the [full plugins documentation](https://github.com/matthewjberger/nightshade/blob/main/PLUGINS.md) for the complete API.
+
+### Editor Plugins
+
+Editor plugins extend the Nightshade Editor with custom inspectors, menu items, and functionality. They use the `nightshade-editor-api` crate.
+
+```bash
+# Build the editor plugin
+cargo build -p editor-plugin --target wasm32-wasip1 --release
+
+# Copy to plugins directory
+cp target/wasm32-wasip1/release/editor_plugin.wasm plugins/plugins/
+```
+
+Example editor plugin:
+
+```rust
+use nightshade_editor_api::{
+    drain_events, drain_inspector_requests, log, register_inspector,
+    respond_inspector_ui, send_mod_info, EditorEvent, InspectorRequest,
+    ModInfo, UiElement,
+};
+
+#[unsafe(no_mangle)]
+pub extern "C" fn on_init() {
+    send_mod_info(&ModInfo {
+        id: "my-plugin".to_string(),
+        name: "My Plugin".to_string(),
+        version: "0.1.0".to_string(),
+    });
+    register_inspector("My Data", "my_data");
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn on_frame() {
+    for event in drain_events() {
+        // Handle editor events
+    }
+    for request in drain_inspector_requests() {
+        // Render custom inspector UI
+    }
+}
+```
+
+### Opting Out of Plugin Support
+
+If you don't need plugin support, you can remove it to reduce binary size and dependencies:
+
+1. **Remove the `plugins` default feature** in `Cargo.toml`:
+   ```toml
+   [features]
+   default = []  # Remove "plugins" from default
+   ```
+
+2. **Remove the workspace members** in `Cargo.toml`:
+   ```toml
+   [workspace]
+   members = []  # Remove "plugins/example-plugin" and "plugins/editor-plugin"
+   ```
+
+3. **Delete the plugins directory**:
+   ```bash
+   rm -rf plugins/
+   ```
+
+4. **Remove plugin code from `src/main.rs`** - delete or comment out:
+   - The `#[cfg(feature = "plugins")] mod plugin_runtime;` line
+   - The `plugin_runtime` field from the `Template` struct
+   - All `#[cfg(feature = "plugins")]` blocks
+
+5. **Delete `src/plugin_runtime.rs`**
+
 ## Steam Integration
 
 To enable Steamworks integration (achievements, stats, friends):
@@ -58,7 +170,7 @@ To enable Steamworks integration (achievements, stats, friends):
 1. Enable the `steam` feature as default in `Cargo.toml`:
    ```toml
    [features]
-   default = ["steam"]
+   default = ["plugins", "steam"]
    steam = ["nightshade/steam"]
    ```
 
@@ -83,4 +195,9 @@ See the [full Steam documentation](https://github.com/matthewjberger/nightshade/
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.

@@ -4,6 +4,10 @@
 //!
 //! ## Features
 //!
+//! - **`engine`** (default) - Full engine functionality including ECS, rendering, physics, and audio.
+//!
+//! - **`plugins`** - Minimal guest-side plugin API for WASM plugins. Only includes serialization types.
+//!
 //! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and WebGPU backends.
 //!
 //! - **`openxr`** - OpenXR support for VR headsets. Enables the `xr` module for VR development.
@@ -39,9 +43,15 @@
 //! }
 //! ```
 
+pub mod plugin;
+
+#[cfg(feature = "engine")]
 pub mod ecs;
+#[cfg(feature = "engine")]
 pub mod render;
+#[cfg(feature = "engine")]
 pub mod run;
+#[cfg(feature = "engine")]
 mod systems;
 
 #[cfg(feature = "openxr")]
@@ -50,8 +60,10 @@ pub mod xr;
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
 
+#[cfg(feature = "engine")]
 pub use systems::*;
 
+#[cfg(feature = "engine")]
 pub mod prelude {
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
@@ -97,7 +109,7 @@ pub mod prelude {
     pub use serde;
     pub use tracing;
     pub use winit::{
-        event::{ElementState as KeyState, WindowEvent},
+        event::{ElementState, ElementState as KeyState, MouseButton, WindowEvent},
         keyboard::KeyCode,
     };
 

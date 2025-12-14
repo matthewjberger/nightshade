@@ -32,6 +32,21 @@ init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
 
+# Install plugin tooling
+init-plugins:
+    rustup target add wasm32-wasip1
+
+# Build all plugins
+build-plugins:
+    cargo build -p example-plugin --target wasm32-wasip1 --release
+    cargo build -p editor-plugin --target wasm32-wasip1 --release
+
+# Build and deploy plugins to the plugins directory
+deploy-plugins:
+    just build-plugins
+    cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
+    cp target/wasm32-wasip1/release/editor_plugin.wasm plugins/plugins/
+
 # Runs linter and displays warnings
 lint:
     cargo clippy --all --tests -- -D warnings
@@ -59,6 +74,29 @@ test:
 # Checks for unused dependencies
 udeps:
     cargo machete
+
+# Prints a table of all dependencies and their licenses
+licenses:
+    cargo license
+
+# Checks for problematic licenses in dependencies
+licenses-check:
+    cargo deny check licenses
+
+# Generates third-party license attribution document
+licenses-html:
+    cargo about generate about.hbs -o THIRD_PARTY_LICENSES.html
+
+# Vendors all dependencies into the vendor directory
+vendor:
+    cargo vendor
+
+# Install development tools
+install-tools:
+    cargo install cargo-license
+    cargo install cargo-about
+    cargo install cargo-deny
+    cargo install cargo-machete
 
 # Displays version information for Rust tools
 @versions:
