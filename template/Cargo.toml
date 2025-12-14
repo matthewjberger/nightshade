@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-nightshade = "0.6.23"
+nightshade = { version = "0.6.23", features = ["tracing"] }
 
 [features]
 openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
+tracing = ["nightshade/tracing"]

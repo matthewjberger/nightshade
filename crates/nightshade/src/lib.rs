@@ -1,3 +1,44 @@
+//! # Nightshade
+//!
+//! A data-oriented game engine written in Rust.
+//!
+//! ## Features
+//!
+//! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and WebGPU backends.
+//!
+//! - **`openxr`** - OpenXR support for VR headsets. Enables the [`xr`] module for VR development.
+//!
+//! - **`steam`** - Steamworks integration for achievements, stats, friends, and multiplayer. Native only.
+//!
+//! - **`tracing`** - Enables rolling daily log files written to the `logs/` directory. Also enables
+//!   `RUST_LOG` environment variable filtering (e.g., `RUST_LOG=debug,nightshade::render=trace`).
+//!
+//! - **`tracy`** - Real-time profiling with [Tracy](https://github.com/wolfpld/tracy). Requires the
+//!   Tracy profiler to be running. Shows frame timings, span hierarchy, and performance data live.
+//!   Implies `tracing`.
+//!
+//! - **`chrome`** - Chrome tracing output. Writes `logs/trace.json` that can be loaded in
+//!   `chrome://tracing` for offline performance analysis. Implies `tracing`.
+//!
+//! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md) for
+//! detailed profiling documentation including Tracy setup and adding custom instrumentation.
+//!
+//! ## Example
+//!
+//! ```no_run
+//! use nightshade::prelude::*;
+//!
+//! struct Game;
+//!
+//! impl State for Game {
+//!     fn title(&self) -> &str { "My Game" }
+//! }
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     launch(Game)
+//! }
+//! ```
+
 pub mod ecs;
 pub mod render;
 pub mod run;
@@ -52,9 +93,9 @@ pub mod prelude {
     };
     pub use egui;
     pub use freecs;
-    pub use log;
     pub use rand::{self, Rng};
     pub use serde;
+    pub use tracing;
     pub use winit::{
         event::{ElementState as KeyState, WindowEvent},
         keyboard::KeyCode,

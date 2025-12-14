@@ -6,4 +6,4 @@ default-run = "tower_defense"
 publish = false
 
 [dependencies]
-nightshade = { path = "../../crates/nightshade" }
+nightshade = { path = "../../crates/nightshade", features = ["tracing"] }

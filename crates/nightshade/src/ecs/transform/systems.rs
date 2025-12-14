@@ -85,6 +85,7 @@ impl World {
     }
 }
 
+#[tracing::instrument(skip_all, name = "transforms")]
 pub fn update_global_transforms_system(world: &mut World) {
     let dirty_entities: Vec<freecs::Entity> = world
         .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
@@ -116,14 +117,14 @@ fn global_transform_of_with_cycle_detection(
     visited: &mut std::collections::HashSet<freecs::Entity>,
 ) -> nalgebra_glm::Mat4 {
     if visited.contains(&entity) {
-        log::error!("Cycle detected in parent hierarchy for entity {:?}", entity);
+        tracing::error!("Cycle detected in parent hierarchy for entity {:?}", entity);
         return nalgebra_glm::Mat4::identity();
     }
 
     visited.insert(entity);
 
     if visited.len() > MAX_HIERARCHY_DEPTH {
-        log::warn!(
+        tracing::warn!(
             "Transform hierarchy depth {} exceeds recommended maximum {} for entity {:?}",
             visited.len(),
             MAX_HIERARCHY_DEPTH,

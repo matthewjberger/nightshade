@@ -16,6 +16,9 @@ default = ["wgpu"]
 wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
+tracing = ["dep:tracing-appender"]
+tracy = ["tracing", "dep:tracing-tracy"]
+chrome = ["tracing", "dep:tracing-chrome"]
 
 [dependencies]
 bincode = { workspace = true }
@@ -30,7 +33,7 @@ gilrs = { workspace = true }
 gltf = { workspace = true }
 half = { workspace = true }
 kira = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 mint = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
@@ -48,7 +51,10 @@ egui-wgpu = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true, optional = true }
+tracing-tracy = { workspace = true, optional = true }
+tracing-chrome = { workspace = true, optional = true }
 egui-winit = { workspace = true }
 image = { workspace = true }
 tokio = { workspace = true }
@@ -61,7 +67,8 @@ steamworks-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
-console_log = "1.0.0"
+tracing-subscriber = { workspace = true }
+tracing-web = { workspace = true }
 egui-winit = { workspace = true, default-features = false }
 futures = "0.3.31"
 image = { workspace = true }

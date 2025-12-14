@@ -6,4 +6,4 @@ default-run = "picking"
 publish = false
 
 [dependencies]
-nightshade = { path = "../../crates/nightshade" }
+nightshade = { path = "../../crates/nightshade", features = ["tracing"] }

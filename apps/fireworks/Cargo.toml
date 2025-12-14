@@ -8,7 +8,7 @@ publish = false
 openxr = ["nightshade/openxr"]
 
 [dependencies]
-nightshade = { path = "../../crates/nightshade" }
+nightshade = { path = "../../crates/nightshade", features = ["tracing"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1"

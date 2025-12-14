@@ -147,7 +147,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
 
     let removed_meshes = world.resources.mesh_cache.remove_unused();
     if !removed_meshes.is_empty() {
-        log::debug!(
+        tracing::debug!(
             "Immediately cleaned up {} unused meshes after despawn",
             removed_meshes.len()
         );
@@ -155,7 +155,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
 
     let removed_materials = world.resources.material_cache.remove_unused();
     if !removed_materials.is_empty() {
-        log::debug!(
+        tracing::debug!(
             "Immediately cleaned up {} unused materials after despawn",
             removed_materials.len()
         );
@@ -163,7 +163,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
 
     let removed_textures = world.resources.texture_cache.remove_unused();
     if !removed_textures.is_empty() {
-        log::debug!(
+        tracing::debug!(
             "Immediately cleaned up {} unused textures after despawn",
             removed_textures.len()
         );
@@ -444,7 +444,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
         let removed_meshes = world.resources.mesh_cache.remove_unused();
         if !removed_meshes.is_empty() {
-            log::info!(
+            tracing::info!(
                 "Cleaned up {} unused meshes: {:?}",
                 removed_meshes.len(),
                 removed_meshes
@@ -453,7 +453,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
         let removed_materials = world.resources.material_cache.remove_unused();
         if !removed_materials.is_empty() {
-            log::info!(
+            tracing::info!(
                 "Cleaned up {} unused materials: {:?}",
                 removed_materials.len(),
                 removed_materials
@@ -462,7 +462,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
         let removed_textures = world.resources.texture_cache.remove_unused();
         if !removed_textures.is_empty() {
-            log::info!(
+            tracing::info!(
                 "Cleaned up {} unused textures: {:?}",
                 removed_textures.len(),
                 removed_textures

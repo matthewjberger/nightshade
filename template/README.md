@@ -38,6 +38,19 @@ Deploy to Steam Deck using `just deploy-steamdeck`. First-time setup on Steam De
 5. Launch from Big Picture mode or Game mode after initial setup
 6. Future deploys must be done from desktop mode, but the last deployed binary will run in game mode
 
+## Profiling & Logging
+
+The `tracing` feature is enabled by default, providing:
+- Rolling daily log files in `logs/`
+- `RUST_LOG` environment variable filtering
+
+```bash
+RUST_LOG=debug just run
+RUST_LOG=info,my_game=trace just run
+```
+
+For real-time profiling with Tracy or offline Chrome tracing, see the [Nightshade profiling documentation](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md).
+
 ## Steam Integration
 
 To enable Steamworks integration (achievements, stats, friends):

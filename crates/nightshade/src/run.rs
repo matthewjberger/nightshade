@@ -30,13 +30,141 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 }
 
 pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(not(target_arch = "wasm32"))]
-    env_logger::init();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "tracing")))]
+    tracing_subscriber::fmt::init();
+
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        feature = "tracing",
+        not(feature = "tracy"),
+        not(feature = "chrome")
+    ))]
+    let _guard = {
+        use tracing_subscriber::EnvFilter;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::util::SubscriberInitExt;
+
+        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .init();
+
+        guard
+    };
+
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        feature = "tracy",
+        not(feature = "chrome")
+    ))]
+    let _guard = {
+        use tracing_subscriber::EnvFilter;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::util::SubscriberInitExt;
+
+        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .with(tracing_tracy::TracyLayer::default())
+            .init();
+
+        guard
+    };
+
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        feature = "chrome",
+        not(feature = "tracy")
+    ))]
+    let _guard = {
+        use tracing_subscriber::EnvFilter;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::util::SubscriberInitExt;
+
+        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+        let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
+            .file("logs/trace.json")
+            .build();
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .with(chrome_layer)
+            .init();
+
+        (file_guard, chrome_guard)
+    };
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "tracy", feature = "chrome"))]
+    let _guard = {
+        use tracing_subscriber::EnvFilter;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::util::SubscriberInitExt;
+
+        let file_appender = tracing_appender::rolling::daily("logs", "nightshade.log");
+        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+        let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
+            .file("logs/trace.json")
+            .build();
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .with(tracing_tracy::TracyLayer::default())
+            .with(chrome_layer)
+            .init();
+
+        (file_guard, chrome_guard)
+    };
 
     #[cfg(target_arch = "wasm32")]
     {
         console_error_panic_hook::set_once();
-        console_log::init().expect("Failed to initialize logger");
+        tracing_subscriber::fmt()
+            .with_writer(tracing_web::MakeConsoleWriter)
+            .without_time()
+            .init();
     }
 
     let state = Box::new(state);
@@ -56,6 +184,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+#[tracing::instrument(skip_all, name = "frame_step")]
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -100,7 +229,7 @@ pub(crate) fn step(
                 window_handle.inner_size().width > 0 && window_handle.inner_size().height > 0;
             if should_render {
                 if let Err(error) = renderer.update_with_state(state.as_mut(), world) {
-                    log::error!("Failed to update render graph: {error}");
+                    tracing::error!("Failed to update render graph: {error}");
                 }
 
                 let (ui_output, ui_primitives) = match ui_frame_output {
@@ -108,7 +237,7 @@ pub(crate) fn step(
                     None => (None, None),
                 };
                 if let Err(error) = renderer.render_frame(world, ui_output, ui_primitives) {
-                    log::error!("Failed to draw frame: {error}");
+                    tracing::error!("Failed to draw frame: {error}");
                 }
             }
 
@@ -127,6 +256,7 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     timing_system(world, event);
 }
 
+#[tracing::instrument(skip_all, name = "frame_systems")]
 pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::audio::systems::initialize_audio_system(world);
     crate::ecs::audio::systems::update_audio_system(world);
@@ -630,12 +760,12 @@ impl winit::application::ApplicationHandler for WindowContext {
             )) {
                 Ok(mut renderer) => {
                     if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
-                        log::error!("Failed to configure renderer with state: {error}");
+                        tracing::error!("Failed to configure renderer with state: {error}");
                     }
                     self.renderer = Some(renderer);
                 }
                 Err(error) => {
-                    log::error!("Failed to create renderer: {error}");
+                    tracing::error!("Failed to create renderer: {error}");
                 }
             }
         }
@@ -657,11 +787,11 @@ impl winit::application::ApplicationHandler for WindowContext {
                 {
                     Ok(renderer) => {
                         if sender.send(renderer).is_err() {
-                            log::error!("Failed to send renderer");
+                            tracing::error!("Failed to send renderer");
                         }
                     }
                     Err(error) => {
-                        log::error!("Failed to create renderer: {error}");
+                        tracing::error!("Failed to create renderer: {error}");
                     }
                 }
             });
@@ -698,7 +828,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 && let Ok(Some(mut renderer)) = receiver.try_recv()
             {
                 if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
-                    log::error!("Failed to configure renderer with state: {error}");
+                    tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
                 initialize_user_interface(&mut self.world);
@@ -762,7 +892,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(renderer) = &mut self.renderer
                     && let Err(error) = renderer.resize_surface(width, height)
                 {
-                    log::error!("Failed to resize surface: {error}");
+                    tracing::error!("Failed to resize surface: {error}");
                 }
 
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {

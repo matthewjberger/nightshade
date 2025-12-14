@@ -70,6 +70,23 @@ See [STEAM_DECK.md](STEAM_DECK.md) for deployment instructions.
 
 See [STEAM.md](STEAM.md) for Steam integration (achievements, stats, friends).
 
+### Profiling & Logging
+
+See [PROFILING.md](PROFILING.md) for detailed profiling and logging documentation.
+
+Quick start:
+
+```toml
+# File logging with RUST_LOG filtering
+nightshade = { version = "0.6.23", features = ["tracing"] }
+
+# Real-time profiling with Tracy
+nightshade = { version = "0.6.23", features = ["tracy"] }
+
+# Offline analysis with Chrome tracing
+nightshade = { version = "0.6.23", features = ["chrome"] }
+```
+
 ## Contributing
 
 Nightshade is currently in its early stages of development. The project is not accepting external contributions at this time as the architecture and core systems are still being established. Once the engine reaches a more mature and stable state, I will open up contributions and provide contributor guidelines.

@@ -4,6 +4,8 @@ dist/
 **/dist/
 public/
 **/public/
+logs/
+**/logs/
 /Cargo.lock
 !apps/editor/Cargo.lock
 *.md
