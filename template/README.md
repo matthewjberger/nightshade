@@ -31,53 +31,14 @@ just run-openxr
 
 Enable features with `cargo run --features <feature>`:
 
-| Feature | Description |
-|---------|-------------|
-| `plugins` | WASI plugin runtime for modding support |
-| `tracing` | File logging to `logs/nightshade.log` |
-| `openxr` | VR headset support |
-| `steam` | Steamworks integration |
+| Feature | Description | Docs |
+|---------|-------------|------|
+| `plugins` | WASI plugin runtime for modding support | [Plugins](https://github.com/matthewjberger/nightshade/blob/main/docs/PLUGINS.md) |
+| `tracing` | File logging to `logs/nightshade.log` | [Profiling](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) |
+| `openxr` | VR headset support | |
+| `steam` | Steamworks integration | [Steam](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md) |
 
-## Documentation
-
-- [Profiling & Logging](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md)
-- [Plugin System](https://github.com/matthewjberger/nightshade/blob/main/docs/PLUGINS.md)
-- [Steam Integration](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md)
-
-## Plugin Support
-
-This template includes optional WASI plugin support for modding. Plugin support is **disabled by default** and must be explicitly enabled.
-
-### Enabling Plugins
-
-```bash
-# Run with plugin support
-cargo run --features plugins
-
-# Or via just
-just run-plugins
-```
-
-When enabled, plugins are loaded from `plugins/plugins/` at runtime.
-
-### Building Plugins
-
-```bash
-just build-plugins
-```
-
-### Removing Plugin Support Entirely
-
-If you don't need plugin support at all, you can remove it from your project:
-
-1. Remove `plugins/example-plugin` from workspace members in `Cargo.toml`
-2. Delete the `plugins/` directory
-3. Remove the `plugins` feature from `Cargo.toml`
-4. Remove `#[cfg(feature = "plugins")]` blocks from `src/main.rs`
-
-## Steam Deck Deployment
-
-See [Steam Deck documentation](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM_DECK.md).
+See also: [Steam Deck Deployment](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM_DECK.md)
 
 ## License
 
