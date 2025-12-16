@@ -9,13 +9,14 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [dependencies]
-nightshade = { path = "../crates/nightshade", features = ["plugin_runtime"] }
+nightshade = "0.6.28"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 
 [features]
+plugins = ["nightshade/plugin_runtime"]
 openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]

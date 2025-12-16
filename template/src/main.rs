@@ -1,7 +1,7 @@
-#[cfg(not(target_arch = "wasm32"))]
-use nightshade::plugin_runtime::{PluginRuntime, PluginRuntimeConfig};
 use nightshade::prelude::*;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "plugins")]
+use nightshade::plugin_runtime::{PluginRuntime, PluginRuntimeConfig};
+#[cfg(feature = "plugins")]
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Default)]
 struct Template {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "plugins")]
     plugin_runtime: Option<PluginRuntime>,
 }
 
@@ -42,7 +42,7 @@ impl State for Template {
             world.resources.xr.locomotion_enabled = true;
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "plugins")]
         {
             let plugins_dir = PathBuf::from("plugins/plugins");
             let config = PluginRuntimeConfig {
@@ -77,7 +77,7 @@ impl State for Template {
     fn run_systems(&mut self, world: &mut World) {
         pan_orbit_camera_system(world);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "plugins")]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.run_frame(world);
         }
@@ -99,14 +99,14 @@ impl State for Template {
             world.resources.window.should_exit = true;
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "plugins")]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.queue_keyboard_event(key_code, key_state);
         }
     }
 
     fn on_mouse_input(&mut self, _world: &mut World, state: ElementState, button: MouseButton) {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "plugins")]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.queue_mouse_event(state, button);
         }
