@@ -1,6 +1,6 @@
-use nightshade::prelude::*;
 #[cfg(feature = "plugins")]
 use nightshade::plugin_runtime::{PluginRuntime, PluginRuntimeConfig};
+use nightshade::prelude::*;
 #[cfg(feature = "plugins")]
 use std::path::PathBuf;
 
