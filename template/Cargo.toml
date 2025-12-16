@@ -9,13 +9,7 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [dependencies]
-nightshade = "0.6.27"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmtime = "27.0"
-wasmtime-wasi = "27.0"
-anyhow = "1.0"
-image = "0.25"
+nightshade = { path = "../crates/nightshade", features = ["plugin_runtime"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

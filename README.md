@@ -82,13 +82,13 @@ Quick start:
 
 ```toml
 # File logging with RUST_LOG filtering
-nightshade = { version = "0.6.23", features = ["tracing"] }
+nightshade = { version = "*", features = ["tracing"] }
 
 # Real-time profiling with Tracy
-nightshade = { version = "0.6.23", features = ["tracy"] }
+nightshade = { version = "*", features = ["tracy"] }
 
 # Offline analysis with Chrome tracing
-nightshade = { version = "0.6.23", features = ["chrome"] }
+nightshade = { version = "*", features = ["chrome"] }
 ```
 
 ## Contributing

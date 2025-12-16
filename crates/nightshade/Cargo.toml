@@ -57,6 +57,7 @@ tracing = ["engine", "dep:tracing-appender"]
 tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
+plugin_runtime = ["engine", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 
 [dependencies]
 serde = { workspace = true }
@@ -104,6 +105,9 @@ wgpu-hal = { workspace = true, optional = true }
 gpu-allocator = { workspace = true, optional = true }
 steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
+wasmtime = { version = "27.0", optional = true }
+wasmtime-wasi = { version = "27.0", optional = true }
+anyhow = { version = "1.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { version = "0.1.7", optional = true }

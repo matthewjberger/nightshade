@@ -60,6 +60,9 @@ pub mod xr;
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
 
+#[cfg(all(feature = "plugin_runtime", not(target_arch = "wasm32")))]
+pub mod plugin_runtime;
+
 #[cfg(feature = "engine")]
 pub use systems::*;
 

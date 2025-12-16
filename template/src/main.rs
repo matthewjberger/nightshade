@@ -1,7 +1,8 @@
-use nightshade::prelude::*;
-
 #[cfg(not(target_arch = "wasm32"))]
-mod plugin_runtime;
+use nightshade::plugin_runtime::{PluginRuntime, PluginRuntimeConfig};
+use nightshade::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     launch(Template::default())?;
@@ -11,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Default)]
 struct Template {
     #[cfg(not(target_arch = "wasm32"))]
-    plugin_runtime: Option<plugin_runtime::PluginRuntime>,
+    plugin_runtime: Option<PluginRuntime>,
 }
 
 impl State for Template {
@@ -43,9 +44,13 @@ impl State for Template {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let plugins_dir = std::path::PathBuf::from("plugins/plugins");
+            let plugins_dir = PathBuf::from("plugins/plugins");
+            let config = PluginRuntimeConfig {
+                plugins_base_path: plugins_dir.clone(),
+                ..Default::default()
+            };
 
-            match plugin_runtime::PluginRuntime::new(plugins_dir.clone()) {
+            match PluginRuntime::new(config) {
                 Ok(mut runtime) => {
                     tracing::info!("Loading plugins from: {:?}", plugins_dir);
 
