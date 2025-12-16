@@ -4673,6 +4673,8 @@ dependencies = [
  "anyhow",
  "image",
  "nightshade",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasmtime",
  "wasmtime-wasi",
 ]

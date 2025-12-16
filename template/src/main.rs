@@ -1,6 +1,6 @@
 use nightshade::prelude::*;
 
-#[cfg(feature = "plugins")]
+#[cfg(not(target_arch = "wasm32"))]
 mod plugin_runtime;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Default)]
 struct Template {
-    #[cfg(feature = "plugins")]
+    #[cfg(not(target_arch = "wasm32"))]
     plugin_runtime: Option<plugin_runtime::PluginRuntime>,
 }
 
@@ -41,7 +41,7 @@ impl State for Template {
             world.resources.xr.locomotion_enabled = true;
         }
 
-        #[cfg(feature = "plugins")]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             let plugins_dir = std::path::PathBuf::from("plugins/plugins");
 
@@ -72,7 +72,7 @@ impl State for Template {
     fn run_systems(&mut self, world: &mut World) {
         pan_orbit_camera_system(world);
 
-        #[cfg(feature = "plugins")]
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.run_frame(world);
         }
@@ -94,14 +94,14 @@ impl State for Template {
             world.resources.window.should_exit = true;
         }
 
-        #[cfg(feature = "plugins")]
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.queue_keyboard_event(key_code, key_state);
         }
     }
 
     fn on_mouse_input(&mut self, _world: &mut World, state: ElementState, button: MouseButton) {
-        #[cfg(feature = "plugins")]
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.queue_mouse_event(state, button);
         }
