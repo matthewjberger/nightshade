@@ -107,10 +107,6 @@ push-template:
 pull-template:
     git subtree pull --prefix=template {{template_repo}} main --squash
 
-# Adds the template as a subtree (one-time setup)
-add-template:
-    git subtree add --prefix=template {{template_repo}} main --squash
-
 # Publishes the nightshade crates to crates.io
 publish-crate:
     cargo publish -p nightshade

@@ -22,11 +22,19 @@ impl State for Template {
     fn initialize(&mut self, world: &mut World) {
         world.resources.user_interface.enabled = true;
         world.resources.graphics.show_grid = true;
-        world.resources.graphics.atmosphere = Atmosphere::Sky;
+        world.resources.graphics.atmosphere = Atmosphere::Nebula;
 
-        let camera_position = Vec3::new(0.0, 2.0, 10.0);
-        let main_camera = spawn_camera(world, camera_position, "Main Camera".to_string());
-        world.resources.active_camera = Some(main_camera);
+        spawn_sun(world);
+
+        let camera_entity = spawn_pan_orbit_camera(
+            world,
+            Vec3::new(0.0, 0.0, 0.0),
+            15.0,
+            0.0,
+            std::f32::consts::FRAC_PI_4,
+            "Main Camera".to_string(),
+        );
+        world.resources.active_camera = Some(camera_entity);
 
         #[cfg(feature = "openxr")]
         {
@@ -62,6 +70,8 @@ impl State for Template {
     }
 
     fn run_systems(&mut self, world: &mut World) {
+        pan_orbit_camera_system(world);
+
         #[cfg(feature = "plugins")]
         if let Some(runtime) = &mut self.plugin_runtime {
             runtime.run_frame(world);
@@ -71,10 +81,10 @@ impl State for Template {
     fn handle_event(&mut self, _world: &mut World, message: &Message) {
         match message {
             Message::Input { event } => {
-                log::debug!("Input event: {:?}", event);
+                tracing::debug!("Input event: {:?}", event);
             }
             Message::App { type_name, .. } => {
-                log::debug!("App event: {}", type_name);
+                tracing::debug!("App event: {}", type_name);
             }
         }
     }

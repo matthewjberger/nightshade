@@ -1,5 +1,5 @@
 [workspace]
-members = ["plugins/example-plugin", "plugins/editor-plugin"]
+members = ["plugins/example-plugin"]
 resolver = "2"
 
 [package]

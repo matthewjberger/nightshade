@@ -80,7 +80,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --all --tests --exclude example-plugin -- -D warnings
 
   clippy_wasm:
     name: Clippy wasm32

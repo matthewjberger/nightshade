@@ -37,15 +37,17 @@ init-plugins:
     rustup target add wasm32-wasip1
 
 # Build all plugins
+[unix]
 build-plugins:
     cargo build -p example-plugin --target wasm32-wasip1 --release
-    cargo build -p editor-plugin --target wasm32-wasip1 --release
-
-# Build and deploy plugins to the plugins directory
-deploy-plugins:
-    just build-plugins
+    mkdir -p plugins/plugins
     cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
-    cp target/wasm32-wasip1/release/editor_plugin.wasm plugins/plugins/
+
+[windows]
+build-plugins:
+    cargo build -p example-plugin --target wasm32-wasip1 --release
+    if (!(Test-Path plugins/plugins)) { New-Item -ItemType Directory -Path plugins/plugins | Out-Null }
+    cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
 
 # Runs linter and displays warnings
 lint:
