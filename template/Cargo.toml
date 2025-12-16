@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [dependencies]
-nightshade = { version = "0.6.23", features = ["tracing"] }
+nightshade = "0.6.27"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 wasmtime = "27.0"

@@ -12,7 +12,7 @@ just run
 just run-wasm
 
 # openxr (vr headset)
-just run-xr
+just run-openxr
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
@@ -27,171 +27,47 @@ just run-xr
 
 > Run `just` with no arguments to list all commands
 
-## Steam Deck Deployment
+## Optional Features
 
-Deploy to Steam Deck using `just deploy-steamdeck`. First-time setup on Steam Deck (must be in desktop mode):
+Enable features with `cargo run --features <feature>`:
 
-1. Set password for `deck` user: `passwd`
-2. Enable SSH: `sudo systemctl enable sshd && sudo systemctl start sshd`
-3. Deploy the binary: `just deploy-steamdeck`
-4. Add `~/Downloads/nightshade-template` as a non-steam game in Steam
-5. Launch from Big Picture mode or Game mode after initial setup
-6. Future deploys must be done from desktop mode, but the last deployed binary will run in game mode
+| Feature | Description |
+|---------|-------------|
+| `tracing` | File logging to `logs/nightshade.log` |
+| `openxr` | VR headset support |
+| `steam` | Steamworks integration |
 
-## Profiling & Logging
+## Documentation
 
-The `tracing` feature is enabled by default, providing:
-- Rolling daily log files in `logs/`
-- `RUST_LOG` environment variable filtering
-
-```bash
-RUST_LOG=debug just run
-RUST_LOG=info,my_game=trace just run
-```
-
-For real-time profiling with Tracy or offline Chrome tracing, see the [Nightshade profiling documentation](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md).
+- [Profiling & Logging](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md)
+- [Plugin System](https://github.com/matthewjberger/nightshade/blob/main/PLUGINS.md)
+- [Steam Integration](https://github.com/matthewjberger/nightshade/blob/main/STEAM.md)
 
 ## Plugin Support
 
-This template includes WASI plugin support for modding by default. Plugins are loaded from `plugins/plugins/` at runtime.
+This template includes WASI plugin support for modding. Plugins are loaded from `plugins/plugins/` at runtime.
 
-> **Note:** Plugins are only supported on native builds (Windows, macOS, Linux). WASM/web builds do not support plugins.
+> **Note:** Plugins are only supported on native builds. WASM/web builds do not include the plugin runtime.
 
-### Building the Example Plugin
-
-```bash
-# Install the wasm32-wasip1 target
-rustup target add wasm32-wasip1
-
-# Build the example plugin
-cargo build -p example-plugin --target wasm32-wasip1 --release
-
-# Copy to plugins directory
-cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
-```
-
-### Creating Your Own Plugins
-
-1. Create a new crate in `plugins/` with `crate-type = ["cdylib"]`
-2. Use `nightshade::plugin` types for the API:
-   ```rust
-   use nightshade::plugin::{log, spawn_cube, drain_engine_events, EngineEvent};
-
-   #[unsafe(no_mangle)]
-   pub extern "C" fn on_init() {
-       log("Plugin initialized!");
-       spawn_cube(0.0, 1.0, -5.0);
-   }
-
-   #[unsafe(no_mangle)]
-   pub extern "C" fn on_frame() {
-       for event in drain_engine_events() {
-           // Handle events
-       }
-   }
-   ```
-
-See the [full plugins documentation](https://github.com/matthewjberger/nightshade/blob/main/PLUGINS.md) for the complete API.
-
-### Editor Plugins
-
-Editor plugins extend the Nightshade Editor with custom inspectors, menu items, and functionality. They use the `nightshade-editor-api` crate.
+### Building Plugins
 
 ```bash
-# Build the editor plugin
-cargo build -p editor-plugin --target wasm32-wasip1 --release
-
-# Copy to plugins directory
-cp target/wasm32-wasip1/release/editor_plugin.wasm plugins/plugins/
+just build-plugins
 ```
 
-Example editor plugin:
+### Opting Out
 
-```rust
-use nightshade_editor_api::{
-    drain_events, drain_inspector_requests, log, register_inspector,
-    respond_inspector_ui, send_mod_info, EditorEvent, InspectorRequest,
-    ModInfo, UiElement,
-};
+To remove plugin support:
 
-#[unsafe(no_mangle)]
-pub extern "C" fn on_init() {
-    send_mod_info(&ModInfo {
-        id: "my-plugin".to_string(),
-        name: "My Plugin".to_string(),
-        version: "0.1.0".to_string(),
-    });
-    register_inspector("My Data", "my_data");
-}
+1. Remove `plugins/example-plugin` from workspace members in `Cargo.toml`
+2. Delete `plugins/` directory
+3. Delete `src/plugin_runtime.rs`
+4. Remove `#[cfg(not(target_arch = "wasm32"))]` plugin blocks from `src/main.rs`
+5. Remove the `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]` section from `Cargo.toml`
 
-#[unsafe(no_mangle)]
-pub extern "C" fn on_frame() {
-    for event in drain_events() {
-        // Handle editor events
-    }
-    for request in drain_inspector_requests() {
-        // Render custom inspector UI
-    }
-}
-```
+## Steam Deck Deployment
 
-### Opting Out of Plugin Support
-
-If you don't need plugin support, you can remove it to reduce binary size and dependencies:
-
-1. **Remove the `plugins` default feature** in `Cargo.toml`:
-   ```toml
-   [features]
-   default = []  # Remove "plugins" from default
-   ```
-
-2. **Remove the workspace members** in `Cargo.toml`:
-   ```toml
-   [workspace]
-   members = []  # Remove "plugins/example-plugin" and "plugins/editor-plugin"
-   ```
-
-3. **Delete the plugins directory**:
-   ```bash
-   rm -rf plugins/
-   ```
-
-4. **Remove plugin code from `src/main.rs`** - delete or comment out:
-   - The `#[cfg(feature = "plugins")] mod plugin_runtime;` line
-   - The `plugin_runtime` field from the `Template` struct
-   - All `#[cfg(feature = "plugins")]` blocks
-
-5. **Delete `src/plugin_runtime.rs`**
-
-## Steam Integration
-
-To enable Steamworks integration (achievements, stats, friends):
-
-1. Enable the `steam` feature as default in `Cargo.toml`:
-   ```toml
-   [features]
-   default = ["plugins", "steam"]
-   steam = ["nightshade/steam"]
-   ```
-
-2. Create `steam_appid.txt` in project root (use `480` for testing, replace with your App ID for release):
-   ```
-   480
-   ```
-
-3. Initialize Steam in your game:
-   ```rust
-   fn initialize(&mut self, world: &mut World) {
-       world.resources.steam.initialize().ok();
-   }
-   ```
-
-4. Include Steam redistributable DLLs with your release build:
-   - Windows: `steam_api64.dll`
-   - Linux: `libsteam_api.so`
-   - macOS: `libsteam_api.dylib`
-
-See the [full Steam documentation](https://github.com/matthewjberger/nightshade/blob/main/STEAM.md) for API reference and using your own App ID.
+See [Steam Deck documentation](https://github.com/matthewjberger/nightshade/blob/main/STEAM_DECK.md).
 
 ## License
 
