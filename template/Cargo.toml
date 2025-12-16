@@ -1,5 +1,5 @@
 [workspace]
-members = ["plugins/example-plugin"]
+members = ["plugins/engine-plugin", "plugins/shared", "plugins/game-plugin"]
 resolver = "2"
 
 [package]
@@ -10,13 +10,15 @@ edition = "2024"
 
 [dependencies]
 nightshade = "0.6.28"
+plugins-shared = { path = "plugins/shared", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 
 [features]
-plugins = ["nightshade/plugin_runtime"]
+default = ["tracing"]
+plugins = ["nightshade/plugin_runtime", "dep:plugins-shared"]
 openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]

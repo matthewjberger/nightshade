@@ -39,15 +39,18 @@ init-plugins:
 # Build all plugins
 [unix]
 build-plugins:
-    cargo build -p example-plugin --target wasm32-wasip1 --release
-    mkdir -p plugins/plugins
-    cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
+    cargo build -p engine-plugin -p game-plugin --target wasm32-wasip1 --release
+    mkdir -p plugins/engine plugins/app
+    cp target/wasm32-wasip1/release/engine_plugin.wasm plugins/engine/
+    cp target/wasm32-wasip1/release/game_plugin.wasm plugins/app/
 
 [windows]
 build-plugins:
-    cargo build -p example-plugin --target wasm32-wasip1 --release
-    if (!(Test-Path plugins/plugins)) { New-Item -ItemType Directory -Path plugins/plugins | Out-Null }
-    cp target/wasm32-wasip1/release/example_plugin.wasm plugins/plugins/
+    cargo build -p engine-plugin -p game-plugin --target wasm32-wasip1 --release
+    if (!(Test-Path plugins/engine)) { New-Item -ItemType Directory -Path plugins/engine -Force | Out-Null }
+    if (!(Test-Path plugins/app)) { New-Item -ItemType Directory -Path plugins/app -Force | Out-Null }
+    cp target/wasm32-wasip1/release/engine_plugin.wasm plugins/engine/
+    cp target/wasm32-wasip1/release/game_plugin.wasm plugins/app/
 
 # Runs linter and displays warnings
 lint:
