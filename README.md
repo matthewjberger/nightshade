@@ -64,19 +64,19 @@ just build-wasm [project]
 
 ### Steam Deck
 
-See [STEAM_DECK.md](STEAM_DECK.md) for deployment instructions.
+See [STEAM_DECK.md](docs/STEAM_DECK.md) for deployment instructions.
 
 ### Steam Integration
 
-See [STEAM.md](STEAM.md) for Steam integration (achievements, stats, friends).
+See [STEAM.md](docs/STEAM.md) for Steam integration (achievements, stats, friends).
 
 ### Profiling & Logging
 
-See [PROFILING.md](PROFILING.md) for detailed profiling and logging documentation.
+See [PROFILING.md](docs/PROFILING.md) for detailed profiling and logging documentation.
 
 ### Plugins
 
-See [PLUGINS.md](PLUGINS.md) for runtime WASI plugin support.
+See [PLUGINS.md](docs/PLUGINS.md) for runtime WASI plugin support.
 
 Quick start:
 

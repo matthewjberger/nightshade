@@ -8,7 +8,6 @@ logs/
 **/logs/
 /Cargo.lock
 !apps/editor/Cargo.lock
-*.md
 !/*.md
 !apps/editor/*.md
 !crates/nightshade/*.md

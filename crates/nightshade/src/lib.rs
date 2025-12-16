@@ -24,7 +24,7 @@
 //! - **`chrome`** - Chrome tracing output. Writes `logs/trace.json` that can be loaded in
 //!   `chrome://tracing` for offline performance analysis. Implies `tracing`.
 //!
-//! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md) for
+//! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!
 //! ## Example

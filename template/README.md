@@ -40,9 +40,9 @@ Enable features with `cargo run --features <feature>`:
 
 ## Documentation
 
-- [Profiling & Logging](https://github.com/matthewjberger/nightshade/blob/main/PROFILING.md)
-- [Plugin System](https://github.com/matthewjberger/nightshade/blob/main/PLUGINS.md)
-- [Steam Integration](https://github.com/matthewjberger/nightshade/blob/main/STEAM.md)
+- [Profiling & Logging](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md)
+- [Plugin System](https://github.com/matthewjberger/nightshade/blob/main/docs/PLUGINS.md)
+- [Steam Integration](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md)
 
 ## Plugin Support
 
@@ -77,7 +77,7 @@ If you don't need plugin support at all, you can remove it from your project:
 
 ## Steam Deck Deployment
 
-See [Steam Deck documentation](https://github.com/matthewjberger/nightshade/blob/main/STEAM_DECK.md).
+See [Steam Deck documentation](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM_DECK.md).
 
 ## License
 
