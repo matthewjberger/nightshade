@@ -58,7 +58,7 @@ run:
     cargo run -r
 
 # Runs the app with OpenXR (VR headset)
-run-xr:
+run-openxr:
     cargo run -r --features openxr
 
 # Build the app for WASM
