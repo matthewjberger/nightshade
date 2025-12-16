@@ -2578,7 +2578,7 @@ dependencies = [
 
 [[package]]
 name = "nightshade"
-version = "0.6.27"
+version = "0.6.28"
 dependencies = [
  "anyhow",
  "ash",
@@ -4359,7 +4359,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 name = "template"
 version = "0.1.0"
 dependencies = [
- "nightshade 0.6.27",
+ "nightshade 0.6.28",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]
