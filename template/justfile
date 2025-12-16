@@ -57,6 +57,10 @@ lint:
 run:
     cargo run -r
 
+# Runs the app with plugin support
+run-plugins:
+    cargo run -r --features plugins
+
 # Runs the app with OpenXR (VR headset)
 run-openxr:
     cargo run -r --features openxr

@@ -33,6 +33,7 @@ Enable features with `cargo run --features <feature>`:
 
 | Feature | Description |
 |---------|-------------|
+| `plugins` | WASI plugin runtime for modding support |
 | `tracing` | File logging to `logs/nightshade.log` |
 | `openxr` | VR headset support |
 | `steam` | Steamworks integration |
@@ -45,9 +46,19 @@ Enable features with `cargo run --features <feature>`:
 
 ## Plugin Support
 
-This template includes WASI plugin support for modding. Plugins are loaded from `plugins/plugins/` at runtime.
+This template includes optional WASI plugin support for modding. Plugin support is **disabled by default** and must be explicitly enabled.
 
-> **Note:** Plugins are only supported on native builds. WASM/web builds do not include the plugin runtime.
+### Enabling Plugins
+
+```bash
+# Run with plugin support
+cargo run --features plugins
+
+# Or via just
+just run-plugins
+```
+
+When enabled, plugins are loaded from `plugins/plugins/` at runtime.
 
 ### Building Plugins
 
@@ -55,15 +66,14 @@ This template includes WASI plugin support for modding. Plugins are loaded from 
 just build-plugins
 ```
 
-### Opting Out
+### Removing Plugin Support Entirely
 
-To remove plugin support:
+If you don't need plugin support at all, you can remove it from your project:
 
 1. Remove `plugins/example-plugin` from workspace members in `Cargo.toml`
-2. Delete `plugins/` directory
-3. Delete `src/plugin_runtime.rs`
-4. Remove `#[cfg(not(target_arch = "wasm32"))]` plugin blocks from `src/main.rs`
-5. Remove the `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]` section from `Cargo.toml`
+2. Delete the `plugins/` directory
+3. Remove the `plugins` feature from `Cargo.toml`
+4. Remove `#[cfg(feature = "plugins")]` blocks from `src/main.rs`
 
 ## Steam Deck Deployment
 
