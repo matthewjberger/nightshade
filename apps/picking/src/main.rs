@@ -1,3 +1,5 @@
+use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
+use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
@@ -166,9 +168,29 @@ impl State for PickingDemoState {
                 nalgebra_glm::vec3(1.0, 1.0, 1.0),
             );
 
-            if let Some(material) = world.get_material_mut(entity) {
-                material.base_color = color.into();
-            }
+            let material_name = format!("{}_{}", name, entity.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: color.into(),
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
+            };
+            world.set_material_ref(entity, MaterialRef::new(material_name));
 
             self.original_scales
                 .insert(entity, nalgebra_glm::vec3(1.0, 1.0, 1.0));
@@ -376,8 +398,14 @@ impl State for PickingDemoState {
                 transform.scale = self.original_scales[&prev_hovered];
                 world.set_local_transform_dirty(prev_hovered, LocalTransformDirty);
             }
-            if let Some(material) = world.get_material_mut(prev_hovered) {
-                material.base_color = self.original_colors[&prev_hovered].into();
+            if let Some(material_ref) = world.get_material_ref(prev_hovered) {
+                let name = material_ref.name.clone();
+                if let Some(material) = registry_entry_by_name_mut(
+                    &mut world.resources.material_registry.registry,
+                    &name,
+                ) {
+                    material.base_color = self.original_colors[&prev_hovered].into();
+                }
             }
         }
 
@@ -388,8 +416,14 @@ impl State for PickingDemoState {
                 transform.scale = self.original_scales[&hovered] * 1.2;
                 world.set_local_transform_dirty(hovered, LocalTransformDirty);
             }
-            if let Some(material) = world.get_material_mut(hovered) {
-                material.base_color = nalgebra_glm::vec4(1.0, 1.0, 0.0, 1.0).into();
+            if let Some(material_ref) = world.get_material_ref(hovered) {
+                let name = material_ref.name.clone();
+                if let Some(material) = registry_entry_by_name_mut(
+                    &mut world.resources.material_registry.registry,
+                    &name,
+                ) {
+                    material.base_color = nalgebra_glm::vec4(1.0, 1.0, 0.0, 1.0).into();
+                }
             }
         }
     }

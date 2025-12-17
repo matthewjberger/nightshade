@@ -1,4 +1,52 @@
+use crate::ecs::asset_id::MaterialId;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MaterialRef {
+    pub name: String,
+    #[serde(skip)]
+    pub id: Option<MaterialId>,
+}
+
+impl MaterialRef {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            id: None,
+        }
+    }
+
+    pub fn with_id(name: impl Into<String>, id: MaterialId) -> Self {
+        Self {
+            name: name.into(),
+            id: Some(id),
+        }
+    }
+}
+
+impl Default for MaterialRef {
+    fn default() -> Self {
+        Self {
+            name: "Default".to_string(),
+            id: None,
+        }
+    }
+}
+
+impl From<String> for MaterialRef {
+    fn from(name: String) -> Self {
+        Self { name, id: None }
+    }
+}
+
+impl From<&str> for MaterialRef {
+    fn from(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            id: None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 pub enum AlphaMode {
@@ -19,8 +67,6 @@ pub struct Material {
     pub roughness: f32,
     pub metallic: f32,
     pub unlit: bool,
-    #[serde(skip)]
-    pub cache_id: Option<String>,
 }
 
 impl Material {
@@ -41,7 +87,6 @@ impl Default for Material {
             roughness: 0.5,
             metallic: 0.0,
             unlit: false,
-            cache_id: None,
         }
     }
 }

@@ -1,3 +1,5 @@
+use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
+use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
@@ -293,9 +295,29 @@ impl TowerDefenseECS {
             nalgebra_glm::vec3(0.4, 0.8, 0.4),
         );
 
-        if let Some(material) = world.get_material_mut(engine_entity) {
-            material.base_color = color.into();
+        let material_name = format!("Tower_{}", engine_entity.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: color.into(),
+                ..Default::default()
+            },
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
         }
+        world.set_material_ref(engine_entity, MaterialRef::new(material_name));
 
         let game_entity = self
             .game_world
@@ -459,9 +481,29 @@ impl TowerDefenseECS {
                     nalgebra_glm::vec3(0.9, 0.1, 0.9),
                 );
 
-                if let Some(material) = world.get_material_mut(tile_entity) {
-                    material.base_color = color.into();
+                let material_name = format!("GridTile_{}", tile_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(tile_entity, MaterialRef::new(material_name));
 
                 self.game_world
                     .resources
@@ -536,9 +578,29 @@ impl TowerDefenseECS {
                     nalgebra_glm::vec3(0.9, 0.1, 0.9),
                 );
 
-                if let Some(material) = world.get_material_mut(path_segment) {
-                    material.base_color = [0.5, 0.3, 0.1, 1.0];
+                let material_name = format!("PathSegment_{}", path_segment.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: [0.5, 0.3, 0.1, 1.0],
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(path_segment, MaterialRef::new(material_name));
             }
         }
 
@@ -549,10 +611,30 @@ impl TowerDefenseECS {
             nalgebra_glm::vec3(1.5, 1.0, 1.5),
         );
 
-        if let Some(material) = world.get_material_mut(start_marker) {
-            material.base_color = [1.0, 0.5, 0.0, 1.0];
-            material.emissive_factor = [0.5, 0.25, 0.0];
+        let material_name = format!("StartMarker_{}", start_marker.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: [1.0, 0.5, 0.0, 1.0],
+                emissive_factor: [0.5, 0.25, 0.0],
+                ..Default::default()
+            },
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
         }
+        world.set_material_ref(start_marker, MaterialRef::new(material_name));
 
         let end_marker = spawn_mesh(
             world,
@@ -561,10 +643,30 @@ impl TowerDefenseECS {
             nalgebra_glm::vec3(2.0, 1.5, 2.0),
         );
 
-        if let Some(material) = world.get_material_mut(end_marker) {
-            material.base_color = [0.2, 0.2, 0.8, 1.0];
-            material.emissive_factor = [0.1, 0.1, 0.4];
+        let material_name = format!("EndMarker_{}", end_marker.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: [0.2, 0.2, 0.8, 1.0],
+                emissive_factor: [0.1, 0.1, 0.4],
+                ..Default::default()
+            },
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
         }
+        world.set_material_ref(end_marker, MaterialRef::new(material_name));
     }
 
     fn get_grid_position_from_mouse(&self, world: &World) -> Option<(i32, i32)> {
@@ -837,11 +939,31 @@ impl TowerDefenseECS {
                 nalgebra_glm::vec3(0.15, 0.15, 0.15),
             );
 
-            if let Some(material) = world.get_material_mut(particle) {
-                material.base_color = [1.0, 0.5, 0.0, 0.8];
-                material.emissive_factor = [1.0, 0.3, 0.0];
-                material.alpha_mode = AlphaMode::Blend;
+            let material_name = format!("ExplosionParticle_{}", particle.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: [1.0, 0.5, 0.0, 0.8],
+                    emissive_factor: [1.0, 0.3, 0.0],
+                    alpha_mode: AlphaMode::Blend,
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
             }
+            world.set_material_ref(particle, MaterialRef::new(material_name));
 
             let game_entity = self
                 .game_world
@@ -892,10 +1014,30 @@ impl TowerDefenseECS {
             nalgebra_glm::vec3(0.08, 0.08, 0.08),
         );
 
-        if let Some(material) = world.get_material_mut(particle) {
-            material.base_color = [0.5, 0.0, 0.8, 0.6];
-            material.alpha_mode = AlphaMode::Blend;
+        let material_name = format!("PoisonBubble_{}", particle.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: [0.5, 0.0, 0.8, 0.6],
+                alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            },
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
         }
+        world.set_material_ref(particle, MaterialRef::new(material_name));
 
         let game_entity = self
             .game_world
@@ -916,10 +1058,30 @@ impl TowerDefenseECS {
     fn create_muzzle_flash(&mut self, world: &mut World, position: Vec3) {
         let flash = spawn_mesh(world, "Sphere", position, nalgebra_glm::vec3(0.6, 0.6, 0.6));
 
-        if let Some(material) = world.get_material_mut(flash) {
-            material.base_color = [1.0, 1.0, 0.0, 1.0];
-            material.emissive_factor = [2.0, 2.0, 0.0];
+        let material_name = format!("MuzzleFlash_{}", flash.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: [1.0, 1.0, 0.0, 1.0],
+                emissive_factor: [2.0, 2.0, 0.0],
+                ..Default::default()
+            },
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
         }
+        world.set_material_ref(flash, MaterialRef::new(material_name));
 
         let game_entity = self
             .game_world
@@ -947,10 +1109,30 @@ impl TowerDefenseECS {
                 nalgebra_glm::vec3(0.4, 0.4, 0.4),
             );
 
-            if let Some(material) = world.get_material_mut(smoke) {
-                material.base_color = [0.3, 0.3, 0.3, 0.8];
-                material.alpha_mode = AlphaMode::Blend;
+            let material_name = format!("MuzzleSmoke_{}", smoke.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: [0.3, 0.3, 0.3, 0.8],
+                    alpha_mode: AlphaMode::Blend,
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
             }
+            world.set_material_ref(smoke, MaterialRef::new(material_name));
 
             let smoke_entity = self
                 .game_world
@@ -999,7 +1181,12 @@ impl TowerDefenseECS {
                                 world.set_local_transform_dirty(handle.0, LocalTransformDirty);
                             }
 
-                            if let Some(material) = world.get_material_mut(handle.0) {
+                            if let Some(material_ref) = world.get_material_ref(handle.0).cloned()
+                                && let Some(material) = registry_entry_by_name_mut(
+                                    &mut world.resources.material_registry.registry,
+                                    &material_ref.name,
+                                )
+                            {
                                 let alpha = 1.0 - progress;
                                 material.base_color[3] = alpha * 0.8;
                             }
@@ -1010,7 +1197,12 @@ impl TowerDefenseECS {
                                 world.set_local_transform_dirty(handle.0, LocalTransformDirty);
                             }
 
-                            if let Some(material) = world.get_material_mut(handle.0) {
+                            if let Some(material_ref) = world.get_material_ref(handle.0).cloned()
+                                && let Some(material) = registry_entry_by_name_mut(
+                                    &mut world.resources.material_registry.registry,
+                                    &material_ref.name,
+                                )
+                            {
                                 let progress = effect.age / effect.lifetime;
                                 let alpha = 1.0 - progress;
                                 material.base_color[3] = alpha * 0.6;
@@ -1022,7 +1214,12 @@ impl TowerDefenseECS {
                                 world.set_local_transform_dirty(handle.0, LocalTransformDirty);
                             }
 
-                            if let Some(material) = world.get_material_mut(handle.0) {
+                            if let Some(material_ref) = world.get_material_ref(handle.0).cloned()
+                                && let Some(material) = registry_entry_by_name_mut(
+                                    &mut world.resources.material_registry.registry,
+                                    &material_ref.name,
+                                )
+                            {
                                 let progress = effect.age / effect.lifetime;
                                 let alpha = 1.0 - progress;
                                 material.base_color[3] = alpha * 0.8;
@@ -1169,16 +1366,36 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.25, 0.3, 0.2),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
+                let material_name = format!("GoblinBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let head = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1194,19 +1411,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(head, GlobalTransform::default());
                 world.set_local_transform_dirty(head, LocalTransformDirty);
-                world.set_render_mesh(
-                    head,
-                    RenderMesh {
-                        name: "Sphere".to_string(),
-                    },
-                );
-                world.set_material(
-                    head,
+                world.set_render_mesh(head, RenderMesh::new("Sphere"));
+                let material_name = format!("GoblinHead_{}", head.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.9, color.y * 0.9, color.z * 0.9, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(head, MaterialRef::new(material_name));
                 world.set_bounding_volume(head, BoundingVolume::from_mesh_type("Sphere"));
                 world.set_parent(head, Parent(Some(main_entity)));
 
@@ -1215,7 +1443,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1231,19 +1459,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(arm_left, GlobalTransform::default());
                 world.set_local_transform_dirty(arm_left, LocalTransformDirty);
-                world.set_render_mesh(
-                    arm_left,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    arm_left,
+                world.set_render_mesh(arm_left, RenderMesh::new("Cube"));
+                let material_name = format!("GoblinArmL_{}", arm_left.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.8, color.y * 0.8, color.z * 0.8, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(arm_left, MaterialRef::new(material_name));
                 world.set_bounding_volume(arm_left, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(arm_left, Parent(Some(main_entity)));
 
@@ -1252,7 +1491,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1268,19 +1507,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(arm_right, GlobalTransform::default());
                 world.set_local_transform_dirty(arm_right, LocalTransformDirty);
-                world.set_render_mesh(
-                    arm_right,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    arm_right,
+                world.set_render_mesh(arm_right, RenderMesh::new("Cube"));
+                let material_name = format!("GoblinArmR_{}", arm_right.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.8, color.y * 0.8, color.z * 0.8, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(arm_right, MaterialRef::new(material_name));
                 world.set_bounding_volume(arm_right, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(arm_right, Parent(Some(main_entity)));
 
@@ -1293,16 +1543,36 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.22, 0.4, 0.22),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
+                let material_name = format!("FastBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let head = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1318,19 +1588,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(head, GlobalTransform::default());
                 world.set_local_transform_dirty(head, LocalTransformDirty);
-                world.set_render_mesh(
-                    head,
-                    RenderMesh {
-                        name: "Sphere".to_string(),
-                    },
-                );
-                world.set_material(
-                    head,
+                world.set_render_mesh(head, RenderMesh::new("Sphere"));
+                let material_name = format!("FastHead_{}", head.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 1.2, color.y * 1.2, color.z * 1.2, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(head, MaterialRef::new(material_name));
                 world.set_bounding_volume(head, BoundingVolume::from_mesh_type("Sphere"));
                 world.set_parent(head, Parent(Some(main_entity)));
 
@@ -1343,16 +1624,36 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.35, 0.4, 0.3),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
+                let material_name = format!("TankBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let head = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1368,19 +1669,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(head, GlobalTransform::default());
                 world.set_local_transform_dirty(head, LocalTransformDirty);
-                world.set_render_mesh(
-                    head,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    head,
+                world.set_render_mesh(head, RenderMesh::new("Cube"));
+                let material_name = format!("TankHead_{}", head.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.8, color.y * 0.8, color.z * 0.8, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(head, MaterialRef::new(material_name));
                 world.set_bounding_volume(head, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(head, Parent(Some(main_entity)));
 
@@ -1389,7 +1701,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1405,19 +1717,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(shoulder_left, GlobalTransform::default());
                 world.set_local_transform_dirty(shoulder_left, LocalTransformDirty);
-                world.set_render_mesh(
-                    shoulder_left,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    shoulder_left,
+                world.set_render_mesh(shoulder_left, RenderMesh::new("Cube"));
+                let material_name = format!("TankShoulderL_{}", shoulder_left.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 1.2, color.y * 1.2, color.z * 1.2, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(shoulder_left, MaterialRef::new(material_name));
                 world.set_bounding_volume(shoulder_left, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(shoulder_left, Parent(Some(main_entity)));
 
@@ -1426,7 +1749,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1442,19 +1765,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(shoulder_right, GlobalTransform::default());
                 world.set_local_transform_dirty(shoulder_right, LocalTransformDirty);
-                world.set_render_mesh(
-                    shoulder_right,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    shoulder_right,
+                world.set_render_mesh(shoulder_right, RenderMesh::new("Cube"));
+                let material_name = format!("TankShoulderR_{}", shoulder_right.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 1.2, color.y * 1.2, color.z * 1.2, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(shoulder_right, MaterialRef::new(material_name));
                 world.set_bounding_volume(shoulder_right, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(shoulder_right, Parent(Some(main_entity)));
 
@@ -1467,17 +1801,37 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.22, 0.28, 0.22),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
-                    mat.emissive_factor = [color.x * 0.35, color.y * 0.35, color.z * 0.35];
+                let material_name = format!("FlyingBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        emissive_factor: [color.x * 0.35, color.y * 0.35, color.z * 0.35],
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let wing_left = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1496,20 +1850,31 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(wing_left, GlobalTransform::default());
                 world.set_local_transform_dirty(wing_left, LocalTransformDirty);
-                world.set_render_mesh(
-                    wing_left,
-                    RenderMesh {
-                        name: "Cone".to_string(),
-                    },
-                );
-                world.set_material(
-                    wing_left,
+                world.set_render_mesh(wing_left, RenderMesh::new("Cone"));
+                let material_name = format!("FlyingWingL_{}", wing_left.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.5, color.y * 0.5, color.z * 0.5, 0.7],
                         alpha_mode: AlphaMode::Blend,
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(wing_left, MaterialRef::new(material_name));
                 world.set_bounding_volume(wing_left, BoundingVolume::from_mesh_type("Cone"));
                 world.set_parent(wing_left, Parent(Some(main_entity)));
 
@@ -1518,7 +1883,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1537,20 +1902,31 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(wing_right, GlobalTransform::default());
                 world.set_local_transform_dirty(wing_right, LocalTransformDirty);
-                world.set_render_mesh(
-                    wing_right,
-                    RenderMesh {
-                        name: "Cone".to_string(),
-                    },
-                );
-                world.set_material(
-                    wing_right,
+                world.set_render_mesh(wing_right, RenderMesh::new("Cone"));
+                let material_name = format!("FlyingWingR_{}", wing_right.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.5, color.y * 0.5, color.z * 0.5, 0.7],
                         alpha_mode: AlphaMode::Blend,
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(wing_right, MaterialRef::new(material_name));
                 world.set_bounding_volume(wing_right, BoundingVolume::from_mesh_type("Cone"));
                 world.set_parent(wing_right, Parent(Some(main_entity)));
 
@@ -1563,16 +1939,36 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.25, 0.3, 0.2),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
+                let material_name = format!("ShieldedBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let head = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1588,19 +1984,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(head, GlobalTransform::default());
                 world.set_local_transform_dirty(head, LocalTransformDirty);
-                world.set_render_mesh(
-                    head,
-                    RenderMesh {
-                        name: "Sphere".to_string(),
-                    },
-                );
-                world.set_material(
-                    head,
+                world.set_render_mesh(head, RenderMesh::new("Sphere"));
+                let material_name = format!("ShieldedHead_{}", head.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.9, color.y * 0.9, color.z * 0.9, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(head, MaterialRef::new(material_name));
                 world.set_bounding_volume(head, BoundingVolume::from_mesh_type("Sphere"));
                 world.set_parent(head, Parent(Some(main_entity)));
 
@@ -1609,7 +2016,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1625,14 +2032,11 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(shield, GlobalTransform::default());
                 world.set_local_transform_dirty(shield, LocalTransformDirty);
-                world.set_render_mesh(
-                    shield,
-                    RenderMesh {
-                        name: "Cylinder".to_string(),
-                    },
-                );
-                world.set_material(
-                    shield,
+                world.set_render_mesh(shield, RenderMesh::new("Cylinder"));
+                let material_name = format!("ShieldedShield_{}", shield.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [0.7, 0.7, 1.0, 0.65],
                         alpha_mode: AlphaMode::Blend,
@@ -1640,6 +2044,20 @@ impl TowerDefenseECS {
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(shield, MaterialRef::new(material_name));
                 world.set_bounding_volume(shield, BoundingVolume::from_mesh_type("Cylinder"));
                 world.set_parent(shield, Parent(Some(main_entity)));
 
@@ -1652,17 +2070,37 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.25, 0.25, 0.25),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
-                    mat.emissive_factor = [color.x * 0.5, color.y * 0.5, color.z * 0.5];
+                let material_name = format!("HealerBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        emissive_factor: [color.x * 0.5, color.y * 0.5, color.z * 0.5],
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let orb = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1678,20 +2116,31 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(orb, GlobalTransform::default());
                 world.set_local_transform_dirty(orb, LocalTransformDirty);
-                world.set_render_mesh(
-                    orb,
-                    RenderMesh {
-                        name: "Sphere".to_string(),
-                    },
-                );
-                world.set_material(
-                    orb,
+                world.set_render_mesh(orb, RenderMesh::new("Sphere"));
+                let material_name = format!("HealerOrb_{}", orb.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [0.3, 1.0, 0.3, 1.0],
                         emissive_factor: [0.0, 0.6, 0.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(orb, MaterialRef::new(material_name));
                 world.set_bounding_volume(orb, BoundingVolume::from_mesh_type("Sphere"));
                 world.set_parent(orb, Parent(Some(main_entity)));
 
@@ -1704,16 +2153,36 @@ impl TowerDefenseECS {
                     position + nalgebra_glm::vec3(0.0, base_y, 0.0),
                     nalgebra_glm::vec3(0.5, 0.6, 0.4),
                 );
-                if let Some(mat) = world.get_material_mut(main_entity) {
-                    mat.base_color = color.into();
+                let material_name = format!("BossBody_{}", main_entity.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
+                    Material {
+                        base_color: color.into(),
+                        ..Default::default()
+                    },
+                );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
                 }
+                world.set_material_ref(main_entity, MaterialRef::new(material_name));
 
                 let head = world.spawn_entities(
                     NAME | LOCAL_TRANSFORM
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1729,19 +2198,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(head, GlobalTransform::default());
                 world.set_local_transform_dirty(head, LocalTransformDirty);
-                world.set_render_mesh(
-                    head,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    head,
+                world.set_render_mesh(head, RenderMesh::new("Cube"));
+                let material_name = format!("BossHead_{}", head.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 0.7, color.y * 0.7, color.z * 0.7, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(head, MaterialRef::new(material_name));
                 world.set_bounding_volume(head, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(head, Parent(Some(main_entity)));
 
@@ -1750,7 +2230,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1766,20 +2246,31 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(crown, GlobalTransform::default());
                 world.set_local_transform_dirty(crown, LocalTransformDirty);
-                world.set_render_mesh(
-                    crown,
-                    RenderMesh {
-                        name: "Cone".to_string(),
-                    },
-                );
-                world.set_material(
-                    crown,
+                world.set_render_mesh(crown, RenderMesh::new("Cone"));
+                let material_name = format!("BossCrown_{}", crown.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [1.0, 0.85, 0.0, 1.0],
                         emissive_factor: [0.6, 0.4, 0.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(crown, MaterialRef::new(material_name));
                 world.set_bounding_volume(crown, BoundingVolume::from_mesh_type("Cone"));
                 world.set_parent(crown, Parent(Some(main_entity)));
 
@@ -1788,7 +2279,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1804,19 +2295,30 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(shoulder_left, GlobalTransform::default());
                 world.set_local_transform_dirty(shoulder_left, LocalTransformDirty);
-                world.set_render_mesh(
-                    shoulder_left,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    shoulder_left,
+                world.set_render_mesh(shoulder_left, RenderMesh::new("Cube"));
+                let material_name = format!("BossShoulderL_{}", shoulder_left.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 1.3, color.y * 1.3, color.z * 1.3, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(shoulder_left, MaterialRef::new(material_name));
                 world.set_bounding_volume(shoulder_left, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(shoulder_left, Parent(Some(main_entity)));
 
@@ -1825,7 +2327,7 @@ impl TowerDefenseECS {
                         | GLOBAL_TRANSFORM
                         | LOCAL_TRANSFORM_DIRTY
                         | RENDER_MESH
-                        | MATERIAL
+                        | MATERIAL_REF
                         | BOUNDING_VOLUME
                         | PARENT,
                     1,
@@ -1841,29 +2343,36 @@ impl TowerDefenseECS {
                 );
                 world.set_global_transform(shoulder_right, GlobalTransform::default());
                 world.set_local_transform_dirty(shoulder_right, LocalTransformDirty);
-                world.set_render_mesh(
-                    shoulder_right,
-                    RenderMesh {
-                        name: "Cube".to_string(),
-                    },
-                );
-                world.set_material(
-                    shoulder_right,
+                world.set_render_mesh(shoulder_right, RenderMesh::new("Cube"));
+                let material_name = format!("BossShoulderR_{}", shoulder_right.id);
+                material_registry_insert(
+                    &mut world.resources.material_registry,
+                    material_name.clone(),
                     Material {
                         base_color: [color.x * 1.3, color.y * 1.3, color.z * 1.3, 1.0],
                         ..Default::default()
                     },
                 );
+                if let Some(&index) = world
+                    .resources
+                    .material_registry
+                    .registry
+                    .name_to_index
+                    .get(&material_name)
+                {
+                    world
+                        .resources
+                        .material_registry
+                        .registry
+                        .add_reference(index);
+                }
+                world.set_material_ref(shoulder_right, MaterialRef::new(material_name));
                 world.set_bounding_volume(shoulder_right, BoundingVolume::from_mesh_type("Cube"));
                 world.set_parent(shoulder_right, Parent(Some(main_entity)));
 
                 main_entity
             }
         };
-
-        if let Some(material) = world.get_material_mut(engine_entity) {
-            material.base_color = color.into();
-        }
 
         let game_entity = self
             .game_world
@@ -2165,14 +2674,34 @@ impl TowerDefenseECS {
                 nalgebra_glm::vec3(0.4, 0.8, 0.4),
             );
 
-            if let Some(material) = world.get_material_mut(preview) {
-                material.base_color = [
-                    tower_type.color().x,
-                    tower_type.color().y,
-                    tower_type.color().z,
-                    1.0,
-                ];
+            let material_name = format!("Preview_{}", preview.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: [
+                        tower_type.color().x,
+                        tower_type.color().y,
+                        tower_type.color().z,
+                        1.0,
+                    ],
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
             }
+            world.set_material_ref(preview, MaterialRef::new(material_name));
 
             self.game_world.resources.preview_entity = Some(preview);
 
@@ -2434,7 +2963,12 @@ impl TowerDefenseECS {
                 world.set_local_transform_dirty(bar_entity, LocalTransformDirty);
             }
 
-            if let Some(material) = world.get_material_mut(bar_entity) {
+            if let Some(material_ref) = world.get_material_ref(bar_entity).cloned()
+                && let Some(material) = registry_entry_by_name_mut(
+                    &mut world.resources.material_registry.registry,
+                    &material_ref.name,
+                )
+            {
                 material.base_color = if health_percentage > 0.5 {
                     [0.0, 1.0, 0.0, 1.0]
                 } else if health_percentage > 0.25 {
@@ -2577,7 +3111,11 @@ impl TowerDefenseECS {
                 .resources
                 .tile_original_colors
                 .get(&last_pos)
-            && let Some(material) = world.get_material_mut(tile_entity)
+            && let Some(material_ref) = world.get_material_ref(tile_entity).cloned()
+            && let Some(material) = registry_entry_by_name_mut(
+                &mut world.resources.material_registry.registry,
+                &material_ref.name,
+            )
         {
             material.base_color = original_color.into();
         }
@@ -2607,7 +3145,11 @@ impl TowerDefenseECS {
 
             if !is_start && !is_end && !is_path {
                 if let Some(&tile_entity) = self.game_world.resources.grid_tiles.get(&current_pos)
-                    && let Some(material) = world.get_material_mut(tile_entity)
+                    && let Some(material_ref) = world.get_material_ref(tile_entity).cloned()
+                    && let Some(material) = registry_entry_by_name_mut(
+                        &mut world.resources.material_registry.registry,
+                        &material_ref.name,
+                    )
                 {
                     material.base_color = [1.0, 1.0, 0.0, 1.0];
                 }
@@ -2966,14 +3508,34 @@ impl TowerDefenseECS {
                                 nalgebra_glm::vec3(0.15, 0.15, 0.15),
                             );
 
-                            if let Some(material) = world.get_material_mut(engine_entity) {
-                                material.base_color = tower.tower_type.color().into();
-                                material.emissive_factor = [
-                                    tower.tower_type.color().x * 0.5,
-                                    tower.tower_type.color().y * 0.5,
-                                    tower.tower_type.color().z * 0.5,
-                                ];
+                            let material_name = format!("Projectile_{}", engine_entity.id);
+                            material_registry_insert(
+                                &mut world.resources.material_registry,
+                                material_name.clone(),
+                                Material {
+                                    base_color: tower.tower_type.color().into(),
+                                    emissive_factor: [
+                                        tower.tower_type.color().x * 0.5,
+                                        tower.tower_type.color().y * 0.5,
+                                        tower.tower_type.color().z * 0.5,
+                                    ],
+                                    ..Default::default()
+                                },
+                            );
+                            if let Some(&index) = world
+                                .resources
+                                .material_registry
+                                .registry
+                                .name_to_index
+                                .get(&material_name)
+                            {
+                                world
+                                    .resources
+                                    .material_registry
+                                    .registry
+                                    .add_reference(index);
                             }
+                            world.set_material_ref(engine_entity, MaterialRef::new(material_name));
 
                             let projectile_entity = self.game_world.spawn_entities(
                                 ENTITY_HANDLE | POSITION | VELOCITY | PROJECTILE,
@@ -3037,7 +3599,12 @@ impl TowerDefenseECS {
                     }
 
                     if animation_scale > 1.05 {
-                        if let Some(material) = world.get_material_mut(handle.0) {
+                        if let Some(material_ref) = world.get_material_ref(handle.0).cloned()
+                            && let Some(material) = registry_entry_by_name_mut(
+                                &mut world.resources.material_registry.registry,
+                                &material_ref.name,
+                            )
+                        {
                             let flash_intensity = (animation_scale - 1.0) * 5.0;
                             material.emissive_factor = [
                                 tower.tower_type.color().x * 0.5 + flash_intensity,
@@ -3045,7 +3612,12 @@ impl TowerDefenseECS {
                                 tower.tower_type.color().z * 0.5 + flash_intensity,
                             ];
                         }
-                    } else if let Some(material) = world.get_material_mut(handle.0) {
+                    } else if let Some(material_ref) = world.get_material_ref(handle.0).cloned()
+                        && let Some(material) = registry_entry_by_name_mut(
+                            &mut world.resources.material_registry.registry,
+                            &material_ref.name,
+                        )
+                    {
                         material.emissive_factor = [
                             tower.tower_type.color().x * 0.5,
                             tower.tower_type.color().y * 0.5,
@@ -3423,10 +3995,30 @@ impl State for TowerDefenseECS {
             nalgebra_glm::vec3(6.0, 0.3, 0.1),
         ));
 
-        if let Some(bg_entity) = ui_handles.lives_bar_bg
-            && let Some(material) = world.get_material_mut(bg_entity)
-        {
-            material.base_color = [0.2, 0.2, 0.2, 1.0];
+        if let Some(bg_entity) = ui_handles.lives_bar_bg {
+            let material_name = format!("LivesBarBg_{}", bg_entity.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: [0.2, 0.2, 0.2, 1.0],
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
+            }
+            world.set_material_ref(bg_entity, MaterialRef::new(material_name));
         }
 
         let total_hp = (self.game_world.resources.lives - 1) * self.game_world.resources.max_hp
@@ -3442,10 +4034,30 @@ impl State for TowerDefenseECS {
             nalgebra_glm::vec3(bar_width, 0.25, 0.1),
         ));
 
-        if let Some(bar_entity) = ui_handles.lives_bar
-            && let Some(material) = world.get_material_mut(bar_entity)
-        {
-            material.base_color = [0.0, 1.0, 0.0, 1.0];
+        if let Some(bar_entity) = ui_handles.lives_bar {
+            let material_name = format!("LivesBar_{}", bar_entity.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: [0.0, 1.0, 0.0, 1.0],
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
+            }
+            world.set_material_ref(bar_entity, MaterialRef::new(material_name));
         }
 
         self.game_world.resources.ui_handles = ui_handles;

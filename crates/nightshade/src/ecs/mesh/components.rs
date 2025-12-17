@@ -4,18 +4,53 @@ mod primitives;
 pub use instanced::*;
 pub use primitives::*;
 
+use crate::ecs::asset_id::MeshId;
 use nalgebra_glm::Vec3;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderMesh {
     pub name: String,
+    #[serde(skip)]
+    pub id: Option<MeshId>,
+}
+
+impl RenderMesh {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            id: None,
+        }
+    }
+
+    pub fn with_id(name: impl Into<String>, id: MeshId) -> Self {
+        Self {
+            name: name.into(),
+            id: Some(id),
+        }
+    }
 }
 
 impl Default for RenderMesh {
     fn default() -> Self {
         Self {
             name: "Cube".to_string(),
+            id: None,
+        }
+    }
+}
+
+impl From<String> for RenderMesh {
+    fn from(name: String) -> Self {
+        Self { name, id: None }
+    }
+}
+
+impl From<&str> for RenderMesh {
+    fn from(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            id: None,
         }
     }
 }

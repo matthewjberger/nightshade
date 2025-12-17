@@ -1,103 +1,166 @@
+use crate::ecs::asset_id::MaterialId;
+use crate::ecs::generational_registry::GenerationalRegistry;
 use crate::ecs::material::components::Material;
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
-#[derive(Default)]
-pub struct MaterialCache {
-    materials: HashMap<String, Material>,
-    reference_counts: HashMap<String, usize>,
+pub struct MaterialRegistry {
+    pub registry: GenerationalRegistry<Material>,
+    pub protected_indices: Vec<u32>,
 }
 
-impl MaterialCache {
-    pub fn new() -> Self {
-        Self {
-            materials: HashMap::new(),
-            reference_counts: HashMap::new(),
+impl Default for MaterialRegistry {
+    fn default() -> Self {
+        let mut instance = Self {
+            registry: GenerationalRegistry::new(),
+            protected_indices: Vec::new(),
+        };
+
+        let default_materials = [
+            (
+                "Default",
+                Material {
+                    base_color: [0.7, 0.7, 0.7, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Red",
+                Material {
+                    base_color: [1.0, 0.3, 0.3, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Green",
+                Material {
+                    base_color: [0.3, 1.0, 0.3, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Blue",
+                Material {
+                    base_color: [0.3, 0.3, 1.0, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Yellow",
+                Material {
+                    base_color: [1.0, 1.0, 0.3, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Magenta",
+                Material {
+                    base_color: [1.0, 0.3, 1.0, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Cyan",
+                Material {
+                    base_color: [0.3, 1.0, 1.0, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "White",
+                Material {
+                    base_color: [1.0, 1.0, 1.0, 1.0],
+                    ..Default::default()
+                },
+            ),
+            (
+                "Black",
+                Material {
+                    base_color: [0.1, 0.1, 0.1, 1.0],
+                    ..Default::default()
+                },
+            ),
+        ];
+
+        for (name, material) in default_materials {
+            let (index, _generation) = instance.registry.insert(name.to_string(), material);
+            instance.protected_indices.push(index);
+        }
+
+        instance
+    }
+}
+
+pub fn material_registry_insert(
+    registry: &mut MaterialRegistry,
+    name: String,
+    material: Material,
+) -> MaterialId {
+    let (index, generation) = registry.registry.insert(name, material);
+    MaterialId { index, generation }
+}
+
+pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> Option<MaterialId> {
+    registry
+        .registry
+        .lookup_index(name)
+        .map(|(index, generation)| MaterialId { index, generation })
+}
+
+pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<String> {
+    let mut removed = Vec::new();
+
+    for index in 0..registry.registry.entries.len() {
+        if registry.protected_indices.contains(&(index as u32)) {
+            continue;
+        }
+
+        if registry.registry.reference_counts[index] == 0
+            && registry.registry.entries[index].is_some()
+        {
+            if let Some(name) = registry.registry.index_to_name[index].take() {
+                registry.registry.name_to_index.remove(&name);
+                removed.push(name);
+            }
+            registry.registry.entries[index] = None;
+            registry.registry.free_indices.push(index as u32);
         }
     }
 
-    pub fn insert_or_get_id(&mut self, material: &Material) -> String {
-        let id = Self::hash_material(material);
+    removed
+}
 
-        if !self.materials.contains_key(&id) {
-            self.materials.insert(id.clone(), material.clone());
-            self.reference_counts.insert(id.clone(), 0);
-        }
+pub fn material_registry_iter(
+    registry: &MaterialRegistry,
+) -> impl Iterator<Item = (&String, &Material)> {
+    registry
+        .registry
+        .index_to_name
+        .iter()
+        .enumerate()
+        .filter_map(|(index, name_opt)| {
+            name_opt.as_ref().and_then(|name| {
+                registry.registry.entries[index]
+                    .as_ref()
+                    .map(|material| (name, material))
+            })
+        })
+}
 
-        id
+pub fn material_registry_names(registry: &MaterialRegistry) -> impl Iterator<Item = &String> {
+    registry.registry.name_to_index.keys()
+}
+
+pub fn material_registry_load_from_map(
+    registry: &mut MaterialRegistry,
+    materials: HashMap<String, Material>,
+) {
+    for (name, material) in materials {
+        material_registry_insert(registry, name, material);
     }
+}
 
-    pub fn get(&self, id: &str) -> Option<&Material> {
-        self.materials.get(id)
-    }
-
-    pub fn contains(&self, id: &str) -> bool {
-        self.materials.contains_key(id)
-    }
-
-    pub fn add_reference(&mut self, id: &str) {
-        if let Some(count) = self.reference_counts.get_mut(id) {
-            *count += 1;
-        }
-    }
-
-    pub fn remove_reference(&mut self, id: &str) {
-        if let Some(count) = self.reference_counts.get_mut(id) {
-            *count = count.saturating_sub(1);
-        }
-    }
-
-    pub fn get_reference_count(&self, id: &str) -> usize {
-        self.reference_counts.get(id).copied().unwrap_or(0)
-    }
-
-    pub fn remove_unused(&mut self) -> Vec<String> {
-        let unused: Vec<String> = self
-            .reference_counts
-            .iter()
-            .filter(|&(_, count)| *count == 0)
-            .map(|(id, _)| id.clone())
-            .collect();
-
-        for id in &unused {
-            self.materials.remove(id);
-            self.reference_counts.remove(id);
-        }
-
-        unused
-    }
-
-    pub fn clear(&mut self) {
-        self.materials.clear();
-        self.reference_counts.clear();
-    }
-
-    pub fn len(&self) -> usize {
-        self.materials.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.materials.is_empty()
-    }
-
-    fn hash_material(material: &Material) -> String {
-        let mut hasher = DefaultHasher::new();
-
-        for &val in &material.base_color {
-            val.to_bits().hash(&mut hasher);
-        }
-        for &val in &material.emissive_factor {
-            val.to_bits().hash(&mut hasher);
-        }
-        material.alpha_mode.hash(&mut hasher);
-        material.alpha_cutoff.to_bits().hash(&mut hasher);
-        material.base_texture.hash(&mut hasher);
-        material.emissive_texture.hash(&mut hasher);
-        material.roughness.to_bits().hash(&mut hasher);
-        material.metallic.to_bits().hash(&mut hasher);
-        material.unlit.hash(&mut hasher);
-
-        format!("material_{:016x}", hasher.finish())
-    }
+pub fn material_registry_to_map(registry: &MaterialRegistry) -> HashMap<String, Material> {
+    material_registry_iter(registry)
+        .map(|(name, material)| (name.clone(), material.clone()))
+        .collect()
 }

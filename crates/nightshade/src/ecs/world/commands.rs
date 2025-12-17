@@ -1,4 +1,12 @@
+use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+use crate::ecs::material::resources::{
+    material_registry_insert, material_registry_lookup_id, material_registry_remove_unused,
+};
+use crate::ecs::prefab::resources::mesh_cache_lookup_id;
 use crate::ecs::world::{Entity, World};
+use crate::render::wgpu::texture_cache::{
+    texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
+};
 
 pub type CommandQueue = Vec<WorldCommand>;
 
@@ -111,31 +119,47 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
 
         if let Some(render_mesh) = world.get_render_mesh(entity) {
             let mesh_name = render_mesh.name.clone();
-            world.resources.mesh_cache.remove_reference(&mesh_name);
+            if let Some(&index) = world
+                .resources
+                .mesh_cache
+                .registry
+                .name_to_index
+                .get(&mesh_name)
+            {
+                world.resources.mesh_cache.registry.remove_reference(index);
+            }
         }
 
-        if let Some(material) = world.get_material(entity) {
-            let base_texture = material.base_texture.clone();
-            let emissive_texture = material.emissive_texture.clone();
-            let material_id = material.cache_id.clone();
-
-            if let Some(base_texture) = base_texture {
-                world
-                    .resources
-                    .texture_cache
-                    .remove_reference(&base_texture);
+        if let Some(material_ref) = world.get_material_ref(entity) {
+            let material_name = material_ref.name.clone();
+            if let Some(material) =
+                registry_entry_by_name(&world.resources.material_registry.registry, &material_name)
+            {
+                if let Some(base_texture) = &material.base_texture {
+                    texture_cache_remove_reference(
+                        &mut world.resources.texture_cache,
+                        base_texture,
+                    );
+                }
+                if let Some(emissive_texture) = &material.emissive_texture {
+                    texture_cache_remove_reference(
+                        &mut world.resources.texture_cache,
+                        emissive_texture,
+                    );
+                }
             }
-            if let Some(emissive_texture) = emissive_texture {
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
                 world
                     .resources
-                    .texture_cache
-                    .remove_reference(&emissive_texture);
-            }
-            if let Some(material_id) = material_id {
-                world
-                    .resources
-                    .material_cache
-                    .remove_reference(&material_id);
+                    .material_registry
+                    .registry
+                    .remove_reference(index);
             }
         }
     }
@@ -146,7 +170,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
 
     world.despawn_entities(entities);
 
-    let removed_meshes = world.resources.mesh_cache.remove_unused();
+    let removed_meshes = world.resources.mesh_cache.registry.remove_unused();
     if !removed_meshes.is_empty() {
         tracing::debug!(
             "Immediately cleaned up {} unused meshes after despawn",
@@ -154,7 +178,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
         );
     }
 
-    let removed_materials = world.resources.material_cache.remove_unused();
+    let removed_materials = material_registry_remove_unused(&mut world.resources.material_registry);
     if !removed_materials.is_empty() {
         tracing::debug!(
             "Immediately cleaned up {} unused materials after despawn",
@@ -162,7 +186,7 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
         );
     }
 
-    let removed_textures = world.resources.texture_cache.remove_unused();
+    let removed_textures = texture_cache_remove_unused(&mut world.resources.texture_cache);
     if !removed_textures.is_empty() {
         tracing::debug!(
             "Immediately cleaned up {} unused textures after despawn",
@@ -267,7 +291,7 @@ pub fn spawn_mesh_at(
     use crate::ecs::world::components;
     use crate::ecs::world::{
         BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL, NAME, RENDER_MESH,
+        MATERIAL_REF, NAME, RENDER_MESH,
     };
 
     let entity = world.spawn_entities(
@@ -275,7 +299,7 @@ pub fn spawn_mesh_at(
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
-            | MATERIAL
+            | MATERIAL_REF
             | BOUNDING_VOLUME
             | CASTS_SHADOW,
         1,
@@ -292,22 +316,35 @@ pub fn spawn_mesh_at(
     );
     world.set_global_transform(entity, components::GlobalTransform::default());
     world.set_local_transform_dirty(entity, components::LocalTransformDirty);
-    let render_mesh = components::RenderMesh {
-        name: mesh_name.to_string(),
-    };
+    let render_mesh = components::RenderMesh::new(mesh_name);
 
-    if world.resources.mesh_cache.contains(&render_mesh.name) {
-        world.resources.mesh_cache.add_reference(&render_mesh.name);
+    if let Some(&index) = world
+        .resources
+        .mesh_cache
+        .registry
+        .name_to_index
+        .get(&render_mesh.name)
+    {
+        world.resources.mesh_cache.registry.add_reference(index);
     }
 
     world.set_render_mesh(entity, render_mesh);
 
-    let mut material = components::Material::default();
-    let material_id = world.resources.material_cache.insert_or_get_id(&material);
-    world.resources.material_cache.add_reference(&material_id);
-    material.cache_id = Some(material_id);
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get("Default")
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(entity, components::MaterialRef::new("Default"));
 
-    world.set_material(entity, material);
     world.set_bounding_volume(
         entity,
         components::BoundingVolume::from_mesh_type(mesh_name),
@@ -444,7 +481,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
     if world.resources.cleanup_frame_counter >= CLEANUP_INTERVAL_FRAMES {
         world.resources.cleanup_frame_counter = 0;
 
-        let removed_meshes = world.resources.mesh_cache.remove_unused();
+        let removed_meshes = world.resources.mesh_cache.registry.remove_unused();
         if !removed_meshes.is_empty() {
             tracing::info!(
                 "Cleaned up {} unused meshes: {:?}",
@@ -453,7 +490,8 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
             );
         }
 
-        let removed_materials = world.resources.material_cache.remove_unused();
+        let removed_materials =
+            material_registry_remove_unused(&mut world.resources.material_registry);
         if !removed_materials.is_empty() {
             tracing::info!(
                 "Cleaned up {} unused materials: {:?}",
@@ -462,7 +500,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
             );
         }
 
-        let removed_textures = world.resources.texture_cache.remove_unused();
+        let removed_textures = texture_cache_remove_unused(&mut world.resources.texture_cache);
         if !removed_textures.is_empty() {
             tracing::info!(
                 "Cleaned up {} unused textures: {:?}",
@@ -478,36 +516,65 @@ pub fn set_material_with_textures(
     entity: Entity,
     material: crate::ecs::material::components::Material,
 ) {
-    let old_textures = world
-        .get_material(entity)
-        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+    let material_ref = world.get_material_ref(entity).cloned();
 
-    if let Some((old_base, old_emissive)) = old_textures {
-        if let Some(base_texture) = old_base {
-            world
-                .resources
-                .texture_cache
-                .remove_reference(&base_texture);
-        }
-        if let Some(emissive_texture) = old_emissive {
-            world
-                .resources
-                .texture_cache
-                .remove_reference(&emissive_texture);
+    if let Some(ref mat_ref) = material_ref {
+        let old_textures =
+            registry_entry_by_name(&world.resources.material_registry.registry, &mat_ref.name)
+                .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+
+        if let Some((old_base, old_emissive)) = old_textures {
+            if let Some(base_texture) = old_base {
+                texture_cache_remove_reference(&mut world.resources.texture_cache, &base_texture);
+            }
+            if let Some(emissive_texture) = old_emissive {
+                texture_cache_remove_reference(
+                    &mut world.resources.texture_cache,
+                    &emissive_texture,
+                );
+            }
         }
     }
 
     if let Some(base_texture) = &material.base_texture {
-        world.resources.texture_cache.add_reference(base_texture);
+        texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
     }
     if let Some(emissive_texture) = &material.emissive_texture {
-        world
-            .resources
-            .texture_cache
-            .add_reference(emissive_texture);
+        texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
     }
 
-    world.set_material(entity, material);
+    if let Some(ref mat_ref) = material_ref {
+        if let Some(existing_mat) = registry_entry_by_name_mut(
+            &mut world.resources.material_registry.registry,
+            &mat_ref.name,
+        ) {
+            *existing_mat = material;
+        }
+    } else {
+        let material_name = format!("TexturedMaterial_{}", entity.id);
+        material_registry_insert(
+            &mut world.resources.material_registry,
+            material_name.clone(),
+            material,
+        );
+        if let Some(&index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(index);
+        }
+        world.set_material_ref(
+            entity,
+            crate::ecs::material::components::MaterialRef::new(material_name),
+        );
+    }
 }
 
 pub fn load_procedural_textures(world: &mut World) {
@@ -613,7 +680,7 @@ pub fn spawn_instanced_mesh(
     use crate::ecs::world::components;
     use crate::ecs::world::{
         CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL, NAME, VISIBILITY,
+        MATERIAL_REF, NAME, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -621,7 +688,7 @@ pub fn spawn_instanced_mesh(
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
-            | MATERIAL
+            | MATERIAL_REF
             | VISIBILITY
             | CASTS_SHADOW,
         1,
@@ -644,11 +711,20 @@ pub fn spawn_instanced_mesh(
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
 
-    let mut material = components::Material::default();
-    let material_id = world.resources.material_cache.insert_or_get_id(&material);
-    world.resources.material_cache.add_reference(&material_id);
-    material.cache_id = Some(material_id);
-    world.set_material(entity, material);
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get("Default")
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(entity, components::MaterialRef::new("Default"));
 
     world.set_visibility(entity, components::Visibility { visible: true });
     world.set_casts_shadow(entity, components::CastsShadow);
@@ -660,12 +736,12 @@ pub fn spawn_instanced_mesh_with_material(
     world: &mut World,
     mesh_name: &str,
     instances: Vec<crate::ecs::mesh::components::InstanceTransform>,
-    material: crate::ecs::material::components::Material,
+    material_name: &str,
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
         CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL, NAME, VISIBILITY,
+        MATERIAL_REF, NAME, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -673,7 +749,7 @@ pub fn spawn_instanced_mesh_with_material(
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
-            | MATERIAL
+            | MATERIAL_REF
             | VISIBILITY
             | CASTS_SHADOW,
         1,
@@ -696,14 +772,81 @@ pub fn spawn_instanced_mesh_with_material(
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
 
-    let mut material = material;
-    let material_id = world.resources.material_cache.insert_or_get_id(&material);
-    world.resources.material_cache.add_reference(&material_id);
-    material.cache_id = Some(material_id);
-    world.set_material(entity, material);
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get(material_name)
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(entity, components::MaterialRef::new(material_name));
 
     world.set_visibility(entity, components::Visibility { visible: true });
     world.set_casts_shadow(entity, components::CastsShadow);
 
     entity
+}
+
+pub fn resolve_asset_references(world: &mut World) {
+    use crate::ecs::world::{MATERIAL_REF, RENDER_MESH};
+
+    let entities_with_material_ref: Vec<Entity> = world.query_entities(MATERIAL_REF).collect();
+
+    for entity in entities_with_material_ref {
+        if let Some(material_ref) = world.get_material_ref(entity)
+            && material_ref.id.is_none()
+        {
+            let name = material_ref.name.clone();
+            if let Some(id) = material_registry_lookup_id(&world.resources.material_registry, &name)
+                && let Some(material_ref_mut) = world.get_material_ref_mut(entity)
+            {
+                material_ref_mut.id = Some(id);
+            }
+        }
+    }
+
+    let entities_with_render_mesh: Vec<Entity> = world.query_entities(RENDER_MESH).collect();
+
+    for entity in entities_with_render_mesh {
+        if let Some(render_mesh) = world.get_render_mesh(entity)
+            && render_mesh.id.is_none()
+        {
+            let name = render_mesh.name.clone();
+            if let Some(id) = mesh_cache_lookup_id(&world.resources.mesh_cache, &name)
+                && let Some(render_mesh_mut) = world.get_render_mesh_mut(entity)
+            {
+                render_mesh_mut.id = Some(id);
+            }
+        }
+    }
+}
+
+pub fn resolve_entity_asset_references(world: &mut World, entity: Entity) {
+    if let Some(material_ref) = world.get_material_ref(entity)
+        && material_ref.id.is_none()
+    {
+        let name = material_ref.name.clone();
+        if let Some(id) = material_registry_lookup_id(&world.resources.material_registry, &name)
+            && let Some(material_ref_mut) = world.get_material_ref_mut(entity)
+        {
+            material_ref_mut.id = Some(id);
+        }
+    }
+
+    if let Some(render_mesh) = world.get_render_mesh(entity)
+        && render_mesh.id.is_none()
+    {
+        let name = render_mesh.name.clone();
+        if let Some(id) = mesh_cache_lookup_id(&world.resources.mesh_cache, &name)
+            && let Some(render_mesh_mut) = world.get_render_mesh_mut(entity)
+        {
+            render_mesh_mut.id = Some(id);
+        }
+    }
 }

@@ -1,9 +1,10 @@
+use crate::ecs::material::resources::material_registry_insert;
 use crate::ecs::world::{
     BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-    MATERIAL, NAME, Quat, RENDER_MESH, Vec3, World,
+    MATERIAL_REF, NAME, Quat, RENDER_MESH, Vec3, World,
     components::{
         BoundingVolume, CastsShadow, GlobalTransform, LocalTransform, LocalTransformDirty,
-        Material, Name, RenderMesh,
+        Material, MaterialRef, Name, RenderMesh,
     },
 };
 use freecs::Entity;
@@ -14,7 +15,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
-            | MATERIAL
+            | MATERIAL_REF
             | BOUNDING_VOLUME
             | CASTS_SHADOW,
         1,
@@ -31,13 +32,27 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     );
     world.set_global_transform(entity, GlobalTransform::default());
     world.set_local_transform_dirty(entity, LocalTransformDirty);
-    world.set_render_mesh(
-        entity,
-        RenderMesh {
-            name: mesh_name.to_string(),
-        },
+    world.set_render_mesh(entity, RenderMesh::new(mesh_name));
+    let material_name = format!("Mesh_{}", entity.id);
+    material_registry_insert(
+        &mut world.resources.material_registry,
+        material_name.clone(),
+        Material::default(),
     );
-    world.set_material(entity, Material::default());
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&material_name)
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(entity, MaterialRef::new(material_name));
     world.set_bounding_volume(entity, BoundingVolume::from_mesh_type(mesh_name));
     world.set_casts_shadow(entity, CastsShadow);
 

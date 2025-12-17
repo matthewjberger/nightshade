@@ -1,8 +1,10 @@
 pub mod animation;
+pub mod asset_id;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
 pub mod event_bus;
+pub mod generational_registry;
 pub mod gizmos;
 pub mod graphics;
 pub mod input;

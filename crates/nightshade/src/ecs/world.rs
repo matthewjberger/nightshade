@@ -11,7 +11,7 @@ pub mod components {
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
-    pub use crate::ecs::material::components::{AlphaMode, Material};
+    pub use crate::ecs::material::components::{AlphaMode, Material, MaterialRef};
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::particles::components::{
@@ -38,6 +38,7 @@ pub mod resources {
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{Atmosphere, Graphics};
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::material::resources::MaterialRegistry;
     pub use crate::ecs::physics::resources::PhysicsWorld;
     pub use crate::ecs::prefab::resources::MeshCache;
     pub use crate::ecs::text::resources::TextCache;
@@ -86,7 +87,7 @@ freecs::ecs! {
         lines: crate::ecs::lines::components::Lines => LINES,
         visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
-        material: crate::ecs::material::components::Material => MATERIAL,
+        material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
         render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
         text: crate::ecs::text::components::Text => TEXT,
@@ -113,7 +114,7 @@ freecs::ecs! {
         physics: crate::ecs::physics::resources::PhysicsWorld,
         text_cache: crate::ecs::text::resources::TextCache,
         mesh_cache: crate::ecs::prefab::resources::MeshCache,
-        material_cache: crate::ecs::material::resources::MaterialCache,
+        material_registry: crate::ecs::material::resources::MaterialRegistry,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,
         active_camera: Option<freecs::Entity>,
