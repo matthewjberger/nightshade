@@ -422,10 +422,41 @@ steamdeck-ssh:
 [windows]
 bundle $project:
     cargo build -r -p {{project}}
-    powershell -ExecutionPolicy Bypass -File scripts/bundle.ps1 -Project {{project}} -NativeOnlyApps "{{native_only_apps}}"
+    $ErrorActionPreference = "Stop"; $bundleDir = "dist/{{project}}"; $zipFile = "dist/{{project}}.zip"; Write-Host "Creating bundle directory: $bundleDir" -ForegroundColor Cyan; if (Test-Path $bundleDir) { Remove-Item -Recurse -Force $bundleDir }; if (Test-Path $zipFile) { Remove-Item -Force $zipFile }; New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null; Write-Host "Copying executable..." -ForegroundColor Cyan; Copy-Item "target/release/{{project}}.exe" "$bundleDir/"; $nativeApps = "{{native_only_apps}}".Split(" "); if ($nativeApps -contains "{{project}}") { Write-Host "Steam app detected, copying Steam files..." -ForegroundColor Cyan; $steamDll = Get-ChildItem -Path "target/release/build" -Recurse -Filter "steam_api64.dll" | Select-Object -First 1; if ($steamDll) { Copy-Item $steamDll.FullName "$bundleDir/"; Write-Host "  Copied steam_api64.dll" -ForegroundColor Green } else { Write-Host "  WARNING: steam_api64.dll not found!" -ForegroundColor Yellow }; if (Test-Path "apps/{{project}}/steam_appid.txt") { Copy-Item "apps/{{project}}/steam_appid.txt" "$bundleDir/"; Write-Host "  Copied steam_appid.txt" -ForegroundColor Green } else { Write-Host "  Creating steam_appid.txt with default App ID 480..." -ForegroundColor Yellow; "480" | Out-File -FilePath "$bundleDir/steam_appid.txt" -NoNewline -Encoding ascii } }; Write-Host "Creating zip archive: $zipFile" -ForegroundColor Cyan; Compress-Archive -Path "$bundleDir/*" -DestinationPath $zipFile -Force; Write-Host ""; Write-Host "Bundle created successfully!" -ForegroundColor Green; Write-Host "  Directory: $bundleDir" -ForegroundColor Green; Write-Host "  Archive:   $zipFile" -ForegroundColor Green
 
 # Creates a redistributable bundle for an app (Unix)
 [unix]
 bundle $project:
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo build -r -p {{project}}
-    bash scripts/bundle.sh {{project}} "{{native_only_apps}}"
+    bundle_dir="dist/{{project}}"
+    zip_file="dist/{{project}}.zip"
+    echo -e "\033[36mCreating bundle directory: $bundle_dir\033[0m"
+    rm -rf "$bundle_dir" "$zip_file"
+    mkdir -p "$bundle_dir"
+    echo -e "\033[36mCopying executable...\033[0m"
+    cp "target/release/{{project}}" "$bundle_dir/"
+    if echo "{{native_only_apps}}" | grep -qw "{{project}}"; then
+        echo -e "\033[36mSteam app detected, copying Steam files...\033[0m"
+        steam_lib=$(find target/release/build -name "libsteam_api.so" 2>/dev/null | head -1)
+        if [ -n "$steam_lib" ]; then
+            cp "$steam_lib" "$bundle_dir/"
+            echo -e "\033[32m  Copied libsteam_api.so\033[0m"
+        else
+            echo -e "\033[33m  WARNING: libsteam_api.so not found!\033[0m"
+        fi
+        if [ -f "apps/{{project}}/steam_appid.txt" ]; then
+            cp "apps/{{project}}/steam_appid.txt" "$bundle_dir/"
+            echo -e "\033[32m  Copied steam_appid.txt\033[0m"
+        else
+            echo -e "\033[33m  Creating steam_appid.txt with default App ID 480...\033[0m"
+            echo -n "480" > "$bundle_dir/steam_appid.txt"
+        fi
+    fi
+    echo -e "\033[36mCreating zip archive: $zip_file\033[0m"
+    cd dist && zip -r "{{project}}.zip" "{{project}}" && cd ..
+    echo ""
+    echo -e "\033[32mBundle created successfully!\033[0m"
+    echo -e "\033[32m  Directory: $bundle_dir\033[0m"
+    echo -e "\033[32m  Archive:   $zip_file\033[0m"
