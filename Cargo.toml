@@ -11,7 +11,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "0.6.28"
+version = "0.6.29"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
@@ -42,7 +42,7 @@ kira = "0.11.0"
 mint = "0.5"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
-nightshade = { version = "0.6.28", path = "crates/nightshade" }
+nightshade = { version = "0.6.29", path = "crates/nightshade" }
 petgraph = { version = "0.8", features = ["serde-1"] }
 rapier3d = { version = "0.31.0", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"
