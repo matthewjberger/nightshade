@@ -408,16 +408,16 @@ publish-major:
     @echo "  just publish-release"
 
 # Builds the project for Steam Deck using cross
-build-steamdeck $project="editor":
+build-steamdeck $project="nightshade-editor":
     cross build --release --target x86_64-unknown-linux-gnu -p {{project}}
 
 # Builds and deploys the project to Steam Deck
-deploy-steamdeck $project="editor":
+deploy-steamdeck $project="nightshade-editor":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
 
 # Builds and deploys the project to Steam Deck as ~/Downloads/game
-deploy-steamdeck-quick $project="editor":
+deploy-steamdeck-quick $project="nightshade-editor":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads/game
     ssh deck@steamdeck.local "chmod +x ~/Downloads/game"
