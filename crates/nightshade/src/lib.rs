@@ -24,6 +24,12 @@
 //! - **`chrome`** - Chrome tracing output. Writes `logs/trace.json` that can be loaded in
 //!   `chrome://tracing` for offline performance analysis. Implies `tracing`.
 //!
+//! - **`editor-plugin-host`** - Editor plugin host API. Re-exports egui and egui_tiles for building
+//!   editor UIs that can host WASM plugins.
+//!
+//! - **`editor-plugin-guest`** - Editor plugin guest API for WASM plugins. Provides functions to
+//!   register inspectors, menu items, and communicate with the editor host.
+//!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!
@@ -44,6 +50,9 @@
 //! ```
 
 pub mod plugin;
+
+#[cfg(any(feature = "editor-plugin-host", feature = "editor-plugin-guest"))]
+pub mod editor_plugin;
 
 #[cfg(feature = "engine")]
 pub mod ecs;

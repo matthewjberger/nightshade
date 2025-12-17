@@ -58,6 +58,8 @@ tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
 plugin_runtime = ["engine", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
+editor-plugin-host = ["dep:egui", "dep:egui_tiles"]
+editor-plugin-guest = []
 
 [dependencies]
 serde = { workspace = true }
@@ -89,6 +91,7 @@ web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
 
 egui-wgpu = { workspace = true, optional = true }
+egui_tiles = { version = "0.14", optional = true }
 wgpu = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
