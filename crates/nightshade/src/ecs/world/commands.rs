@@ -169,30 +169,6 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     }
 
     world.despawn_entities(entities);
-
-    let removed_meshes = world.resources.mesh_cache.registry.remove_unused();
-    if !removed_meshes.is_empty() {
-        tracing::debug!(
-            "Immediately cleaned up {} unused meshes after despawn",
-            removed_meshes.len()
-        );
-    }
-
-    let removed_materials = material_registry_remove_unused(&mut world.resources.material_registry);
-    if !removed_materials.is_empty() {
-        tracing::debug!(
-            "Immediately cleaned up {} unused materials after despawn",
-            removed_materials.len()
-        );
-    }
-
-    let removed_textures = texture_cache_remove_unused(&mut world.resources.texture_cache);
-    if !removed_textures.is_empty() {
-        tracing::debug!(
-            "Immediately cleaned up {} unused textures after despawn",
-            removed_textures.len()
-        );
-    }
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
@@ -785,6 +761,18 @@ pub fn spawn_instanced_mesh_with_material(
             .registry
             .add_reference(index);
     }
+
+    if let Some(mat) =
+        registry_entry_by_name(&world.resources.material_registry.registry, material_name)
+    {
+        if let Some(base_texture) = &mat.base_texture {
+            texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
+        }
+        if let Some(emissive_texture) = &mat.emissive_texture {
+            texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
+        }
+    }
+
     world.set_material_ref(entity, components::MaterialRef::new(material_name));
 
     world.set_visibility(entity, components::Visibility { visible: true });
