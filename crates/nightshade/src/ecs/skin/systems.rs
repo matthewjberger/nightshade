@@ -158,10 +158,7 @@ impl SkinningCache {
 }
 
 pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
-    let skinned_entities: Vec<Entity> = world
-        .query_entities(SKIN | RENDER_MESH)
-        .into_iter()
-        .collect();
+    let skinned_entities: Vec<Entity> = world.query_entities(SKIN | RENDER_MESH).collect();
 
     if skinned_entities.is_empty() {
         return SkinningUploadData {

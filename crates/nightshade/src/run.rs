@@ -882,12 +882,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
-                        let scale_factor = self
-                            .world
-                            .resources
-                            .graphics
-                            .ui_scale
-                            .unwrap_or_else(|| {
+                        let scale_factor =
+                            self.world.resources.graphics.ui_scale.unwrap_or_else(|| {
                                 self.world
                                     .resources
                                     .window
@@ -927,12 +923,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
-                        let scale_factor = self
-                            .world
-                            .resources
-                            .graphics
-                            .ui_scale
-                            .unwrap_or_else(|| {
+                        let scale_factor =
+                            self.world.resources.graphics.ui_scale.unwrap_or_else(|| {
                                 self.world
                                     .resources
                                     .window
