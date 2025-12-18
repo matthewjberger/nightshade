@@ -63,6 +63,10 @@ pub struct AnimationPlayer {
     pub looping: bool,
     pub playing: bool,
     pub node_index_to_entity: HashMap<usize, Entity>,
+    pub blend_from_clip: Option<usize>,
+    pub blend_from_time: f32,
+    pub blend_factor: f32,
+    pub blend_duration: f32,
 }
 
 impl Default for AnimationPlayer {
@@ -75,6 +79,10 @@ impl Default for AnimationPlayer {
             looping: true,
             playing: false,
             node_index_to_entity: HashMap::new(),
+            blend_from_clip: None,
+            blend_from_time: 0.0,
+            blend_factor: 1.0,
+            blend_duration: 0.0,
         }
     }
 }
@@ -85,12 +93,18 @@ impl AnimationPlayer {
             self.current_clip = Some(clip_index);
             self.time = 0.0;
             self.playing = true;
+            self.blend_from_clip = None;
+            self.blend_from_time = 0.0;
+            self.blend_factor = 1.0;
         }
     }
 
     pub fn stop(&mut self) {
         self.playing = false;
         self.time = 0.0;
+        self.blend_from_clip = None;
+        self.blend_from_time = 0.0;
+        self.blend_factor = 1.0;
     }
 
     pub fn pause(&mut self) {
@@ -103,6 +117,27 @@ impl AnimationPlayer {
 
     pub fn get_current_clip(&self) -> Option<&AnimationClip> {
         self.current_clip.and_then(|index| self.clips.get(index))
+    }
+
+    pub fn blend_to(&mut self, clip_index: usize, duration: f32) {
+        if clip_index >= self.clips.len() {
+            return;
+        }
+        if self.current_clip == Some(clip_index) {
+            return;
+        }
+
+        self.blend_from_clip = self.current_clip;
+        self.blend_from_time = self.time;
+        self.current_clip = Some(clip_index);
+        self.time = 0.0;
+        self.blend_factor = 0.0;
+        self.blend_duration = duration;
+        self.playing = true;
+    }
+
+    pub fn is_blending(&self) -> bool {
+        self.blend_from_clip.is_some() && self.blend_factor < 1.0
     }
 
     pub fn update(&mut self, delta_time: f32) {
@@ -128,6 +163,22 @@ impl AnimationPlayer {
             } else {
                 self.time = clip_duration;
                 self.playing = false;
+            }
+        }
+
+        if self.blend_from_clip.is_some() {
+            self.blend_factor += delta_time / self.blend_duration.max(0.001);
+            if self.blend_factor >= 1.0 {
+                self.blend_factor = 1.0;
+                self.blend_from_clip = None;
+                self.blend_from_time = 0.0;
+            } else if let Some(from_index) = self.blend_from_clip
+                && let Some(from_clip) = self.clips.get(from_index)
+            {
+                self.blend_from_time += delta_time * self.speed;
+                if self.blend_from_time >= from_clip.duration && self.looping {
+                    self.blend_from_time %= from_clip.duration;
+                }
             }
         }
     }

@@ -32,6 +32,7 @@ engine = [
     "dep:nalgebra-glm",
     "dep:petgraph",
     "dep:rand",
+    "dep:noise",
     "dep:rapier3d",
     "dep:raw-window-handle",
     "dep:serde_json",
@@ -64,7 +65,7 @@ editor-plugin-guest = []
 
 [dependencies]
 serde = { workspace = true }
-postcard = { version = "1.0", features = ["alloc"] }
+postcard = { version = "1.1", features = ["alloc"] }
 
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true, optional = true }
@@ -84,6 +85,7 @@ nalgebra = { workspace = true, optional = true }
 nalgebra-glm = { workspace = true, optional = true }
 petgraph = { workspace = true, optional = true }
 rand = { version = "0.9", optional = true }
+noise = { workspace = true, optional = true }
 rapier3d = { workspace = true, optional = true }
 raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -96,7 +98,7 @@ egui_tiles = { version = "0.14", optional = true }
 wgpu = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rhai = { version = "1.21", optional = true, features = ["sync"] }
+rhai = { version = "1.23", optional = true, features = ["sync"] }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-appender = { workspace = true, optional = true }
 tracing-tracy = { workspace = true, optional = true }
@@ -115,7 +117,7 @@ wasmtime-wasi = { version = "27.0", optional = true }
 anyhow = { version = "1.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-rhai = { version = "1.21", optional = true, features = ["sync", "wasm-bindgen"] }
+rhai = { version = "1.23", optional = true, features = ["sync", "wasm-bindgen"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-web = { workspace = true, optional = true }

@@ -24,6 +24,7 @@ pub mod shadow;
 pub mod shell;
 pub mod skin;
 pub mod sprite;
+pub mod terrain;
 pub mod text;
 pub mod transform;
 pub mod ui;

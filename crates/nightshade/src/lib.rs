@@ -109,6 +109,10 @@ pub mod prelude {
         pick_closest_entity, pick_entities, pick_entities_in_frustum,
     };
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
+    pub use crate::ecs::terrain::{
+        NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,
+        sample_terrain_height, spawn_terrain, spawn_terrain_with_material,
+    };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
     };
