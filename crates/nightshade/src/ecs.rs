@@ -22,6 +22,7 @@ pub mod render_layer;
 pub mod script;
 pub mod shadow;
 pub mod shell;
+pub mod skin;
 pub mod sprite;
 pub mod text;
 pub mod transform;

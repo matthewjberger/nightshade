@@ -104,11 +104,75 @@ impl Vertex {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Serialize, Deserialize)]
+pub struct SkinnedVertex {
+    pub position: [f32; 3],
+    pub normal: [f32; 3],
+    pub tex_coords: [f32; 2],
+    pub tangent: [f32; 4],
+    pub joint_indices: [u32; 4],
+    pub joint_weights: [f32; 4],
+}
+
+impl SkinnedVertex {
+    pub fn new(
+        position: Vec3,
+        normal: Vec3,
+        tex_coords: [f32; 2],
+        joint_indices: [u32; 4],
+        joint_weights: [f32; 4],
+    ) -> Self {
+        Self {
+            position: [position.x, position.y, position.z],
+            normal: [normal.x, normal.y, normal.z],
+            tex_coords,
+            tangent: [1.0, 0.0, 0.0, 1.0],
+            joint_indices,
+            joint_weights,
+        }
+    }
+}
+
+impl Default for SkinnedVertex {
+    fn default() -> Self {
+        Self {
+            position: [0.0, 0.0, 0.0],
+            normal: [0.0, 1.0, 0.0],
+            tex_coords: [0.0, 0.0],
+            tangent: [1.0, 0.0, 0.0, 1.0],
+            joint_indices: [0, 0, 0, 0],
+            joint_weights: [1.0, 0.0, 0.0, 0.0],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkinData {
+    pub skinned_vertices: Vec<SkinnedVertex>,
+    pub skin_index: Option<usize>,
+}
+
+impl SkinData {
+    pub fn new(skinned_vertices: Vec<SkinnedVertex>) -> Self {
+        Self {
+            skinned_vertices,
+            skin_index: None,
+        }
+    }
+
+    pub fn with_skin_index(mut self, skin_index: usize) -> Self {
+        self.skin_index = Some(skin_index);
+        self
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
     pub bounding_volume: Option<crate::ecs::bounding_volume::components::BoundingVolume>,
+    pub skin_data: Option<SkinData>,
 }
 
 impl Mesh {
@@ -117,6 +181,7 @@ impl Mesh {
             vertices,
             indices,
             bounding_volume: None,
+            skin_data: None,
         }
     }
 
@@ -129,6 +194,16 @@ impl Mesh {
             vertices,
             indices,
             bounding_volume: Some(bounding_volume),
+            skin_data: None,
         }
+    }
+
+    pub fn with_skin_data(mut self, skin_data: SkinData) -> Self {
+        self.skin_data = Some(skin_data);
+        self
+    }
+
+    pub fn is_skinned(&self) -> bool {
+        self.skin_data.is_some()
     }
 }

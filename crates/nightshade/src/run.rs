@@ -273,6 +273,10 @@ pub(crate) fn run_frame_systems(world: &mut World) {
         world.resources.script_runtime = runtime;
     }
 
+    let delta_time = world.resources.window.timing.delta_time;
+    crate::ecs::animation::systems::update_animation_players(world, delta_time);
+    crate::ecs::animation::systems::apply_animations(world);
+
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
@@ -876,14 +880,25 @@ impl winit::application::ApplicationHandler for WindowContext {
         match event {
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
-                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                    #[cfg(not(target_arch = "wasm32"))]
                     {
-                        if let Some(window) = self.world.resources.window.handle.as_ref() {
-                            let scale_factor = window.scale_factor() as f32;
-                            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
-                        }
+                        let scale_factor = self
+                            .world
+                            .resources
+                            .graphics
+                            .ui_scale
+                            .unwrap_or_else(|| {
+                                self.world
+                                    .resources
+                                    .window
+                                    .handle
+                                    .as_ref()
+                                    .map(|w| w.scale_factor() as f32)
+                                    .unwrap_or(1.0)
+                            });
+                        gui_state.egui_ctx().set_pixels_per_point(scale_factor);
                     }
-                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
+                    #[cfg(target_arch = "wasm32")]
                     {
                         gui_state.egui_ctx().set_pixels_per_point(1.0);
                     }
@@ -910,14 +925,25 @@ impl winit::application::ApplicationHandler for WindowContext {
                 }
 
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
-                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                    #[cfg(not(target_arch = "wasm32"))]
                     {
-                        if let Some(window) = self.world.resources.window.handle.as_ref() {
-                            let scale_factor = window.scale_factor() as f32;
-                            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
-                        }
+                        let scale_factor = self
+                            .world
+                            .resources
+                            .graphics
+                            .ui_scale
+                            .unwrap_or_else(|| {
+                                self.world
+                                    .resources
+                                    .window
+                                    .handle
+                                    .as_ref()
+                                    .map(|w| w.scale_factor() as f32)
+                                    .unwrap_or(1.0)
+                            });
+                        gui_state.egui_ctx().set_pixels_per_point(scale_factor);
                     }
-                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
+                    #[cfg(target_arch = "wasm32")]
                     {
                         gui_state.egui_ctx().set_pixels_per_point(1.0);
                     }
@@ -1005,6 +1031,17 @@ fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
         let Some(window_handle) = world.resources.window.handle.as_ref() else {
             return;
         };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let scale_factor = world
+                .resources
+                .graphics
+                .ui_scale
+                .unwrap_or_else(|| window_handle.scale_factor() as f32);
+            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
+        }
+
         #[cfg(not(target_arch = "wasm32"))]
         let gui_input = gui_state.take_egui_input(window_handle);
 

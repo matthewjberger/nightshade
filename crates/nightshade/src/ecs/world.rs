@@ -24,6 +24,7 @@ pub mod components {
     pub use crate::ecs::render_layer::components::RenderLayer;
     pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
+    pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
@@ -108,6 +109,8 @@ freecs::ecs! {
         particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
         prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
         script: crate::ecs::script::components::Script => SCRIPT,
+        skin: crate::ecs::skin::components::Skin => SKIN,
+        joint: crate::ecs::skin::components::Joint => JOINT,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
@@ -128,6 +131,8 @@ freecs::ecs! {
         children_cache_valid: bool,
         cleanup_frame_counter: u64,
         dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
+        skinning_offsets: std::collections::HashMap<freecs::Entity, usize>,
+        total_skinning_joints: u32,
         #[cfg(feature = "scripting")]
         script_runtime: crate::ecs::script::resources::ScriptRuntime,
         #[cfg(feature = "openxr")]
