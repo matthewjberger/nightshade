@@ -34,6 +34,7 @@ Enable features with `cargo run --features <feature>`:
 | Feature | Description | Docs |
 |---------|-------------|------|
 | `plugins` | WASI plugin runtime for modding support | [Plugins](https://github.com/matthewjberger/nightshade/blob/main/docs/PLUGINS.md) |
+| `scripting` | Rhai scripting for runtime script execution | [Scripting](https://github.com/matthewjberger/nightshade/blob/main/docs/SCRIPTING.md) |
 | `tracing` | File logging to `logs/nightshade.log` | [Profiling](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) |
 | `openxr` | VR headset support | |
 | `steam` | Steamworks integration | [Steam](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md) |
