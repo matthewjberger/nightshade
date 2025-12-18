@@ -265,6 +265,14 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::audio::systems::update_audio_system(world);
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
     crate::ecs::physics::systems::run_physics_systems(world);
+
+    #[cfg(feature = "scripting")]
+    {
+        let mut runtime = std::mem::take(&mut world.resources.script_runtime);
+        crate::ecs::script::systems::run_scripts_system(world, &mut runtime);
+        world.resources.script_runtime = runtime;
+    }
+
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);
     crate::ecs::text::systems::sync_hud_text_system(world);

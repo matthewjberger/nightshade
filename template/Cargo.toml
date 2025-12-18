@@ -19,6 +19,7 @@ wasm-bindgen-futures = "0.4"
 [features]
 default = ["tracing"]
 plugins = ["nightshade/plugin_runtime", "dep:plugins-shared"]
+scripting = ["nightshade/scripting"]
 openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]

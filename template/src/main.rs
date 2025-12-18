@@ -382,7 +382,11 @@ fn spawn_enemy_entity(world: &mut World, enemy_type: &EnemyType, position: Vec3)
                 transform.scale = Vec3::new(0.5, 0.5, 0.5);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.2, 0.8, 0.2, 1.0];
                 }
             }
@@ -394,7 +398,11 @@ fn spawn_enemy_entity(world: &mut World, enemy_type: &EnemyType, position: Vec3)
                 transform.scale = Vec3::new(0.3, 1.0, 0.3);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.9, 0.9, 0.85, 1.0];
                 }
             }
@@ -406,7 +414,11 @@ fn spawn_enemy_entity(world: &mut World, enemy_type: &EnemyType, position: Vec3)
                 transform.scale = Vec3::new(2.0, 2.0, 3.0);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.8, 0.2, 0.1, 1.0];
                 }
             }
@@ -424,7 +436,11 @@ fn spawn_item_entity(world: &mut World, item_type: &ItemType, position: Vec3) ->
                 transform.scale = Vec3::new(0.3, 0.3, 0.3);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [1.0, 0.2, 0.2, 1.0];
                 }
             }
@@ -436,7 +452,11 @@ fn spawn_item_entity(world: &mut World, item_type: &ItemType, position: Vec3) ->
                 transform.scale = Vec3::new(0.3, 0.3, 0.3);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.2, 0.2, 1.0, 1.0];
                 }
             }
@@ -448,7 +468,11 @@ fn spawn_item_entity(world: &mut World, item_type: &ItemType, position: Vec3) ->
                 transform.scale = Vec3::new(0.1, 0.8, 0.1);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.7, 0.7, 0.8, 1.0];
                 }
             }
@@ -460,7 +484,11 @@ fn spawn_item_entity(world: &mut World, item_type: &ItemType, position: Vec3) ->
                 transform.scale = Vec3::new(0.6, 0.6, 0.1);
             }
             if let Some(material_ref) = world.get_material_ref(entity).cloned() {
-                if let Some(material) = world.resources.material_registry.get_mut(&material_ref.name) {
+                if let Some(material) = world
+                    .resources
+                    .material_registry
+                    .get_mut(&material_ref.name)
+                {
                     material.base_color = [0.6, 0.4, 0.2, 1.0];
                 }
             }

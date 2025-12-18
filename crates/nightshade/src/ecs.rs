@@ -19,6 +19,7 @@ pub mod physics;
 pub mod picking;
 pub mod prefab;
 pub mod render_layer;
+pub mod script;
 pub mod shadow;
 pub mod shell;
 pub mod sprite;

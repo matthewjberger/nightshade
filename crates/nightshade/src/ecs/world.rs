@@ -22,6 +22,7 @@ pub mod components {
         RigidBodyComponent,
     };
     pub use crate::ecs::render_layer::components::RenderLayer;
+    pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
@@ -41,6 +42,8 @@ pub mod resources {
     pub use crate::ecs::material::resources::MaterialRegistry;
     pub use crate::ecs::physics::resources::PhysicsWorld;
     pub use crate::ecs::prefab::resources::MeshCache;
+    #[cfg(feature = "scripting")]
+    pub use crate::ecs::script::resources::ScriptRuntime;
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
@@ -104,6 +107,7 @@ freecs::ecs! {
         instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
         particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
         prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
+        script: crate::ecs::script::components::Script => SCRIPT,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
@@ -124,6 +128,8 @@ freecs::ecs! {
         children_cache_valid: bool,
         cleanup_frame_counter: u64,
         dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
+        #[cfg(feature = "scripting")]
+        script_runtime: crate::ecs::script::resources::ScriptRuntime,
         #[cfg(feature = "openxr")]
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]

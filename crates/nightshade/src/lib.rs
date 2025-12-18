@@ -30,6 +30,11 @@
 //! - **`editor-plugin-guest`** - Editor plugin guest API for WASM plugins. Provides functions to
 //!   register inspectors, menu items, and communicate with the editor host.
 //!
+//! - **`scripting`** - Rhai scripting support for runtime script execution. Enables the script
+//!   runtime, systems, and API. Script data types (`Script`, `ScriptSource`) are always available
+//!   for map/prefab serialization, but script execution requires this feature. Used by the editor
+//!   for play mode and any app that needs to run embedded or file-based scripts.
+//!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!

@@ -78,18 +78,9 @@ See [PROFILING.md](docs/PROFILING.md) for detailed profiling and logging documen
 
 See [PLUGINS.md](docs/PLUGINS.md) for runtime WASI plugin support.
 
-Quick start:
+### Scripting
 
-```toml
-# File logging with RUST_LOG filtering
-nightshade = { version = "*", features = ["tracing"] }
-
-# Real-time profiling with Tracy
-nightshade = { version = "*", features = ["tracy"] }
-
-# Offline analysis with Chrome tracing
-nightshade = { version = "*", features = ["chrome"] }
-```
+See [SCRIPTING.md](docs/SCRIPTING.md) for Rhai scripting support.
 
 ## Contributing
 
