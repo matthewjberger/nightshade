@@ -4,9 +4,6 @@ export RUST_BACKTRACE := "1"
 
 template_repo := "https://github.com/matthewjberger/nightshade-template.git"
 
-# Native-only apps that don't compile to WASM - keep in sync with .native-only-apps
-native_only_apps := "steam multiplayer_pong"
-
 # Displays the list of available commands
 @just:
     just --list
@@ -422,7 +419,7 @@ steamdeck-ssh:
 [windows]
 bundle $project:
     cargo build -r -p {{project}}
-    $ErrorActionPreference = "Stop"; $bundleDir = "dist/{{project}}"; $zipFile = "dist/{{project}}.zip"; Write-Host "Creating bundle directory: $bundleDir" -ForegroundColor Cyan; if (Test-Path $bundleDir) { Remove-Item -Recurse -Force $bundleDir }; if (Test-Path $zipFile) { Remove-Item -Force $zipFile }; New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null; Write-Host "Copying executable..." -ForegroundColor Cyan; Copy-Item "target/release/{{project}}.exe" "$bundleDir/"; $nativeApps = "{{native_only_apps}}".Split(" "); if ($nativeApps -contains "{{project}}") { Write-Host "Steam app detected, copying Steam files..." -ForegroundColor Cyan; $steamDll = Get-ChildItem -Path "target/release/build" -Recurse -Filter "steam_api64.dll" | Select-Object -First 1; if ($steamDll) { Copy-Item $steamDll.FullName "$bundleDir/"; Write-Host "  Copied steam_api64.dll" -ForegroundColor Green } else { Write-Host "  WARNING: steam_api64.dll not found!" -ForegroundColor Yellow }; if (Test-Path "apps/{{project}}/steam_appid.txt") { Copy-Item "apps/{{project}}/steam_appid.txt" "$bundleDir/"; Write-Host "  Copied steam_appid.txt" -ForegroundColor Green } else { Write-Host "  Creating steam_appid.txt with default App ID 480..." -ForegroundColor Yellow; "480" | Out-File -FilePath "$bundleDir/steam_appid.txt" -NoNewline -Encoding ascii } }; Write-Host "Creating zip archive: $zipFile" -ForegroundColor Cyan; Compress-Archive -Path "$bundleDir/*" -DestinationPath $zipFile -Force; Write-Host ""; Write-Host "Bundle created successfully!" -ForegroundColor Green; Write-Host "  Directory: $bundleDir" -ForegroundColor Green; Write-Host "  Archive:   $zipFile" -ForegroundColor Green
+    $ErrorActionPreference = "Stop"; $bundleDir = "dist/{{project}}"; $zipFile = "dist/{{project}}.zip"; Write-Host "Creating bundle directory: $bundleDir" -ForegroundColor Cyan; if (Test-Path $bundleDir) { Remove-Item -Recurse -Force $bundleDir }; if (Test-Path $zipFile) { Remove-Item -Force $zipFile }; New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null; Write-Host "Copying executable..." -ForegroundColor Cyan; Copy-Item "target/release/{{project}}.exe" "$bundleDir/"; $nativeApps = Get-Content .native-only-apps | Where-Object { $_.Trim() }; if ($nativeApps -contains "{{project}}") { Write-Host "Steam app detected, copying Steam files..." -ForegroundColor Cyan; $steamDll = Get-ChildItem -Path "target/release/build" -Recurse -Filter "steam_api64.dll" | Select-Object -First 1; if ($steamDll) { Copy-Item $steamDll.FullName "$bundleDir/"; Write-Host "  Copied steam_api64.dll" -ForegroundColor Green } else { Write-Host "  WARNING: steam_api64.dll not found!" -ForegroundColor Yellow }; if (Test-Path "apps/{{project}}/steam_appid.txt") { Copy-Item "apps/{{project}}/steam_appid.txt" "$bundleDir/"; Write-Host "  Copied steam_appid.txt" -ForegroundColor Green } else { Write-Host "  Creating steam_appid.txt with default App ID 480..." -ForegroundColor Yellow; "480" | Out-File -FilePath "$bundleDir/steam_appid.txt" -NoNewline -Encoding ascii } }; Write-Host "Creating zip archive: $zipFile" -ForegroundColor Cyan; Compress-Archive -Path "$bundleDir/*" -DestinationPath $zipFile -Force; Write-Host ""; Write-Host "Bundle created successfully!" -ForegroundColor Green; Write-Host "  Directory: $bundleDir" -ForegroundColor Green; Write-Host "  Archive:   $zipFile" -ForegroundColor Green
 
 # Creates a redistributable bundle for an app (Unix)
 [unix]
@@ -437,7 +434,7 @@ bundle $project:
     mkdir -p "$bundle_dir"
     echo -e "\033[36mCopying executable...\033[0m"
     cp "target/release/{{project}}" "$bundle_dir/"
-    if echo "{{native_only_apps}}" | grep -qw "{{project}}"; then
+    if grep -qxF "{{project}}" .native-only-apps; then
         echo -e "\033[36mSteam app detected, copying Steam files...\033[0m"
         steam_lib=$(find target/release/build -name "libsteam_api.so" 2>/dev/null | head -1)
         if [ -n "$steam_lib" ]; then
