@@ -87,7 +87,7 @@ pub mod prelude {
     pub use crate::ecs::world::*;
     pub use crate::run::*;
     pub use crate::systems::*;
-    pub use web_time::{Duration, Instant, SystemTime};
+    pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
