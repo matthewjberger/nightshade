@@ -1,9 +1,10 @@
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{
     material_registry_insert, material_registry_lookup_id, material_registry_remove_unused,
 };
 use crate::ecs::prefab::resources::mesh_cache_lookup_id;
-use crate::ecs::world::{Entity, World};
+use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
 };
@@ -837,4 +838,37 @@ pub fn resolve_entity_asset_references(world: &mut World, entity: Entity) {
             render_mesh_mut.id = Some(id);
         }
     }
+}
+
+pub fn find_entity_by_name(world: &World, name: &str) -> Option<Entity> {
+    world
+        .query_entities(NAME)
+        .find(|&entity| world.get_name(entity).is_some_and(|n| n.0 == name))
+}
+
+pub fn spawn_material(
+    world: &mut World,
+    entity: Entity,
+    name: String,
+    material: crate::ecs::material::components::Material,
+) {
+    material_registry_insert(
+        &mut world.resources.material_registry,
+        name.clone(),
+        material,
+    );
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&name)
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(entity, MaterialRef::new(name));
 }
