@@ -139,6 +139,7 @@ freecs::ecs! {
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
+        picking_world: crate::ecs::picking::resources::PickingWorld,
     }
 }
 

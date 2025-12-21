@@ -3,7 +3,11 @@ use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{
     material_registry_insert, material_registry_lookup_id, material_registry_remove_unused,
 };
-use crate::ecs::prefab::resources::mesh_cache_lookup_id;
+use crate::ecs::mesh::components::{
+    create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
+    create_sphere_mesh, create_torus_mesh,
+};
+use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_lookup_id};
 use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
@@ -268,7 +272,7 @@ pub fn spawn_mesh_at(
     use crate::ecs::world::components;
     use crate::ecs::world::{
         BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL_REF, NAME, RENDER_MESH,
+        MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -278,7 +282,8 @@ pub fn spawn_mesh_at(
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
-            | CASTS_SHADOW,
+            | CASTS_SHADOW
+            | VISIBILITY,
         1,
     )[0];
 
@@ -294,6 +299,27 @@ pub fn spawn_mesh_at(
     world.set_global_transform(entity, components::GlobalTransform::default());
     world.set_local_transform_dirty(entity, components::LocalTransformDirty);
     let render_mesh = components::RenderMesh::new(mesh_name);
+
+    if !world
+        .resources
+        .mesh_cache
+        .registry
+        .name_to_index
+        .contains_key(&render_mesh.name)
+    {
+        let mesh = match mesh_name {
+            "Cube" => Some(create_cube_mesh()),
+            "Sphere" => Some(create_sphere_mesh(1.0, 16)),
+            "Plane" => Some(create_plane_mesh(2.0)),
+            "Torus" => Some(create_torus_mesh(1.0, 0.3, 32, 16)),
+            "Cylinder" => Some(create_cylinder_mesh(0.5, 1.0, 16)),
+            "Cone" => Some(create_cone_mesh(0.5, 1.0, 16)),
+            _ => None,
+        };
+        if let Some(mesh) = mesh {
+            mesh_cache_insert(&mut world.resources.mesh_cache, mesh_name.to_string(), mesh);
+        }
+    }
 
     if let Some(&index) = world
         .resources
@@ -327,6 +353,10 @@ pub fn spawn_mesh_at(
         components::BoundingVolume::from_mesh_type(mesh_name),
     );
     world.set_casts_shadow(entity, components::CastsShadow);
+
+    if let Some(visibility) = world.get_visibility_mut(entity) {
+        visibility.visible = true;
+    }
 
     entity
 }

@@ -2,6 +2,7 @@ use crate::ecs::{
     camera::components::Projection,
     world::{Entity, Vec2, Vec3, Vec4, World},
 };
+use rapier3d::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct PickingRay {
@@ -249,4 +250,59 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
     }
 
     visible_entities
+}
+
+pub fn pick_entities_trimesh(
+    world: &World,
+    screen_pos: Vec2,
+    options: PickingOptions,
+) -> Vec<PickingResult> {
+    let ray = match PickingRay::from_screen_position(world, screen_pos) {
+        Some(ray) => ray,
+        None => return Vec::new(),
+    };
+
+    let rapier_ray = rapier3d::parry::query::Ray::new(
+        point![ray.origin.x, ray.origin.y, ray.origin.z],
+        vector![ray.direction.x, ray.direction.y, ray.direction.z],
+    );
+
+    let mut results = Vec::new();
+    let picking_world = &world.resources.picking_world;
+
+    for (handle, collider) in picking_world.collider_set.iter() {
+        let entity = match picking_world.get_entity(handle) {
+            Some(e) => e,
+            None => continue,
+        };
+
+        if options.ignore_invisible
+            && let Some(visible) = world.get_visibility(entity)
+            && !visible.visible
+        {
+            continue;
+        }
+
+        if let Some(toi) =
+            collider
+                .shape()
+                .cast_ray(collider.position(), &rapier_ray, options.max_distance, true)
+        {
+            let world_position = ray.origin + ray.direction * toi;
+            results.push(PickingResult {
+                entity,
+                distance: toi,
+                world_position,
+            });
+        }
+    }
+
+    results.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+    results
+}
+
+pub fn pick_closest_entity_trimesh(world: &World, screen_pos: Vec2) -> Option<PickingResult> {
+    pick_entities_trimesh(world, screen_pos, PickingOptions::default())
+        .into_iter()
+        .next()
 }

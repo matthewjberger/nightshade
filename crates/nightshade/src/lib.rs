@@ -105,8 +105,11 @@ pub mod prelude {
         PhysicsMaterial, PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent,
     };
     pub use crate::ecs::picking::{
-        PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
-        pick_closest_entity, pick_entities, pick_entities_in_frustum,
+        PickingOptions, PickingRay, PickingResult, PickingWorld, get_ground_position_from_screen,
+        pick_closest_entity, pick_closest_entity_trimesh, pick_entities, pick_entities_in_frustum,
+        pick_entities_trimesh, register_entity_for_trimesh_picking,
+        register_entity_hierarchy_for_trimesh_picking, unregister_entity_from_picking,
+        update_picking_transform,
     };
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::terrain::{
