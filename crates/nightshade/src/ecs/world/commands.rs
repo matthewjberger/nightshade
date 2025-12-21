@@ -176,6 +176,14 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     world.despawn_entities(entities);
 }
 
+pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
+    if !world.resources.children_cache_valid {
+        world.validate_and_rebuild_children_cache();
+    }
+    let descendents = query_descendents(world, entity);
+    despawn_entities_with_cache_cleanup(world, &descendents);
+}
+
 pub fn spawn_sun(world: &mut World) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
