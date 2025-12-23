@@ -38,7 +38,7 @@ pub mod components {
 pub mod resources {
     pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
-    pub use crate::ecs::graphics::resources::{Atmosphere, Graphics};
+    pub use crate::ecs::graphics::resources::{Atmosphere, Fog, Graphics, VertexSnap};
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::material::resources::MaterialRegistry;
     pub use crate::ecs::physics::resources::PhysicsWorld;

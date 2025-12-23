@@ -5,7 +5,7 @@ use crate::ecs::material::resources::{
 };
 use crate::ecs::mesh::components::{
     create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
-    create_sphere_mesh, create_torus_mesh,
+    create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
 use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_lookup_id};
 use crate::ecs::world::{Entity, NAME, World};
@@ -319,6 +319,7 @@ pub fn spawn_mesh_at(
             "Cube" => Some(create_cube_mesh()),
             "Sphere" => Some(create_sphere_mesh(1.0, 16)),
             "Plane" => Some(create_plane_mesh(2.0)),
+            "SubdividedPlane" => Some(create_subdivided_plane_mesh(2.0, 20)),
             "Torus" => Some(create_torus_mesh(1.0, 0.3, 32, 16)),
             "Cylinder" => Some(create_cylinder_mesh(0.5, 1.0, 16)),
             "Cone" => Some(create_cone_mesh(0.5, 1.0, 16)),

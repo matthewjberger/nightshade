@@ -14,3 +14,4 @@ logs/
 !template/*.md
 apps/maps/maps/
 apps/shadows/*.json
+apps/psx/assets/*.json
