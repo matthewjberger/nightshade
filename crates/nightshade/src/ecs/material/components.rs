@@ -64,6 +64,13 @@ pub struct Material {
     pub alpha_cutoff: f32,
     pub base_texture: Option<String>,
     pub emissive_texture: Option<String>,
+    pub normal_texture: Option<String>,
+    #[serde(default = "default_normal_scale")]
+    pub normal_scale: f32,
+    pub metallic_roughness_texture: Option<String>,
+    pub occlusion_texture: Option<String>,
+    #[serde(default = "default_occlusion_strength")]
+    pub occlusion_strength: f32,
     pub roughness: f32,
     pub metallic: f32,
     pub unlit: bool,
@@ -73,6 +80,14 @@ pub struct Material {
 
 fn default_uv_scale() -> [f32; 2] {
     [1.0, 1.0]
+}
+
+fn default_normal_scale() -> f32 {
+    1.0
+}
+
+fn default_occlusion_strength() -> f32 {
+    1.0
 }
 
 impl Material {
@@ -90,6 +105,11 @@ impl Default for Material {
             alpha_cutoff: 0.5,
             base_texture: None,
             emissive_texture: None,
+            normal_texture: None,
+            normal_scale: 1.0,
+            metallic_roughness_texture: None,
+            occlusion_texture: None,
+            occlusion_strength: 1.0,
             roughness: 0.5,
             metallic: 0.0,
             unlit: false,
