@@ -84,6 +84,7 @@ pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
     pub tex_coords: [f32; 2],
+    pub tangent: [f32; 4],
 }
 
 impl Vertex {
@@ -92,6 +93,7 @@ impl Vertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords: [0.0, 0.0],
+            tangent: [1.0, 0.0, 0.0, 1.0],
         }
     }
 
@@ -100,6 +102,21 @@ impl Vertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords,
+            tangent: [1.0, 0.0, 0.0, 1.0],
+        }
+    }
+
+    pub fn with_tangent(
+        position: Vec3,
+        normal: Vec3,
+        tex_coords: [f32; 2],
+        tangent: [f32; 4],
+    ) -> Self {
+        Self {
+            position: [position.x, position.y, position.z],
+            normal: [normal.x, normal.y, normal.z],
+            tex_coords,
+            tangent,
         }
     }
 }

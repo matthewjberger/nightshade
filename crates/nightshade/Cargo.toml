@@ -25,6 +25,7 @@ engine = [
     "dep:gilrs",
     "dep:gltf",
     "dep:half",
+    "dep:mikktspace",
     "dep:kira",
     "dep:tracing",
     "dep:mint",
@@ -79,6 +80,7 @@ getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }
 gltf = { workspace = true, optional = true }
 half = { workspace = true, optional = true }
+mikktspace = { version = "0.3", optional = true }
 kira = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
 mint = { workspace = true, optional = true }

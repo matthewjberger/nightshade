@@ -67,6 +67,10 @@ pub struct Material {
     pub normal_texture: Option<String>,
     #[serde(default = "default_normal_scale")]
     pub normal_scale: f32,
+    #[serde(default)]
+    pub normal_map_flip_y: bool,
+    #[serde(default)]
+    pub normal_map_two_component: bool,
     pub metallic_roughness_texture: Option<String>,
     pub occlusion_texture: Option<String>,
     #[serde(default = "default_occlusion_strength")]
@@ -107,6 +111,8 @@ impl Default for Material {
             emissive_texture: None,
             normal_texture: None,
             normal_scale: 1.0,
+            normal_map_flip_y: false,
+            normal_map_two_component: false,
             metallic_roughness_texture: None,
             occlusion_texture: None,
             occlusion_strength: 1.0,
