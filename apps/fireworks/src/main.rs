@@ -118,6 +118,8 @@ impl State for FireworksDemo {
         world.resources.graphics.atmosphere = Atmosphere::Space;
         world.resources.graphics.show_grid = true;
         world.resources.graphics.clear_color = [0.01, 0.01, 0.02, 1.0];
+        world.resources.graphics.bloom_enabled = true;
+        world.resources.graphics.bloom_intensity = 0.1;
 
         #[cfg(feature = "openxr")]
         {
@@ -343,6 +345,11 @@ impl State for FireworksDemo {
                 if self.salvo_mode {
                     ui.add(egui::Slider::new(&mut self.salvo_count, 3..=15).text("Salvo count"));
                 }
+
+                ui.add(
+                    egui::Slider::new(&mut world.resources.graphics.bloom_intensity, 0.0..=2.0)
+                        .text("Bloom intensity"),
+                );
 
                 ui.separator();
 
