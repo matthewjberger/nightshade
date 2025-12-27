@@ -117,9 +117,14 @@ pub mod prelude {
         sample_terrain_height, spawn_terrain, spawn_terrain_with_material,
     };
     pub use crate::ecs::text::commands::{
-        load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties,
+        load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties, spawn_ui_text,
+        spawn_ui_text_with_properties,
     };
     pub use crate::ecs::text::systems::sync_text_meshes_system;
+    pub use crate::ecs::ui::{
+        Anchor, ImmediateUi, Layout, LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle,
+        UiWidget, WidgetState,
+    };
     pub use crate::ecs::world::commands::{
         despawn_recursive_immediate, load_hdr_skybox, load_hdr_skybox_from_path,
         load_procedural_textures, set_material_with_textures,

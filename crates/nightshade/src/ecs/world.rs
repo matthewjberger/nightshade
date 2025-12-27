@@ -117,6 +117,7 @@ freecs::ecs! {
     Resources {
         window: crate::ecs::window::resources::Window,
         user_interface: crate::ecs::ui::resources::UserInterface,
+        immediate_ui: crate::ecs::ui::immediate::ImmediateUi,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         audio: crate::ecs::audio::resources::AudioEngine,

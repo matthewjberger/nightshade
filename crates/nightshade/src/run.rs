@@ -201,6 +201,7 @@ pub(crate) fn step(
             process_dropped_files(world, state);
 
             create_ui_system(world, state);
+            create_immediate_ui_system(world, state);
 
             #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
             world.resources.steam.run_callbacks();
@@ -280,6 +281,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);
     crate::ecs::text::systems::sync_hud_text_system(world);
+    crate::ecs::text::systems::sync_immediate_ui_text_system(world);
     crate::ecs::input::systems::reset_mouse_system(world);
     crate::ecs::input::systems::reset_touch_system(world);
     crate::ecs::world::process_commands_system(world);
@@ -310,6 +312,7 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             winit::event::KeyEvent {
                 physical_key: winit::keyboard::PhysicalKey::Code(key_code),
                 state,
+                text,
                 ..
             },
         ..
@@ -322,6 +325,20 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             .keystates
             .entry(*key_code)
             .or_insert(*state) = *state;
+
+        let pressed = *state == winit::event::ElementState::Pressed;
+        world
+            .resources
+            .input
+            .keyboard
+            .frame_keys
+            .push((*key_code, pressed));
+
+        if pressed && let Some(text) = text {
+            for character in text.chars() {
+                world.resources.input.keyboard.frame_chars.push(character);
+            }
+        }
 
         let event_state = match state {
             winit::event::ElementState::Pressed => InputEvent::KeyboardInput {
@@ -661,6 +678,7 @@ pub trait State {
         );
     }
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
+    fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
     fn run_systems(&mut self, _world: &mut World) {}
     fn update_render_graph(
         &mut self,
@@ -1066,4 +1084,68 @@ fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
     gui_state.handle_platform_output(window_handle, output.platform_output.clone());
     let paint_jobs = ui.tessellate(output.shapes.clone(), output.pixels_per_point);
     world.resources.user_interface.frame_output = Some((output, paint_jobs));
+}
+
+fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
+    let _span = tracing::info_span!("immediate_ui").entered();
+
+    if !world.resources.immediate_ui.enabled {
+        return;
+    }
+
+    let Some(window_handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+
+    let size = window_handle.inner_size();
+    let screen_size = crate::ecs::world::Vec2::new(size.width as f32, size.height as f32);
+    let mouse_pos = crate::ecs::world::Vec2::new(
+        world.resources.input.mouse.position.x,
+        world.resources.input.mouse.position.y,
+    );
+    let mouse_down = world
+        .resources
+        .input
+        .mouse
+        .state
+        .contains(crate::ecs::world::resources::MouseState::LEFT_CLICKED);
+    let mouse_just_pressed = world
+        .resources
+        .input
+        .mouse
+        .state
+        .contains(crate::ecs::world::resources::MouseState::LEFT_JUST_PRESSED);
+    let mouse_just_released = world
+        .resources
+        .input
+        .mouse
+        .state
+        .contains(crate::ecs::world::resources::MouseState::LEFT_JUST_RELEASED);
+
+    let scroll_delta = world.resources.input.mouse.wheel_delta;
+    world.resources.immediate_ui.begin_frame(
+        screen_size,
+        mouse_pos,
+        mouse_down,
+        mouse_just_pressed,
+        mouse_just_released,
+        scroll_delta,
+    );
+
+    for character in &world.resources.input.keyboard.frame_chars {
+        world.resources.immediate_ui.add_char_input(*character);
+    }
+    for (key_code, pressed) in &world.resources.input.keyboard.frame_keys {
+        world
+            .resources
+            .immediate_ui
+            .add_key_input(*key_code, *pressed);
+    }
+
+    let mut ui = std::mem::take(&mut world.resources.immediate_ui);
+    state.immediate_ui(world, &mut ui);
+    world.resources.immediate_ui = ui;
+
+    world.resources.immediate_ui.end_frame();
+    world.resources.input.keyboard.clear_frame_input();
 }
