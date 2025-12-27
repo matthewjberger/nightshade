@@ -200,6 +200,10 @@ pub(crate) fn step(
             crate::ecs::input::systems::gamepad_input_system(world);
             process_dropped_files(world, state);
 
+            if let Some(renderer) = renderer.as_mut() {
+                renderer.initialize_fonts(world);
+            }
+
             create_ui_system(world, state);
             create_immediate_ui_system(world, state);
 

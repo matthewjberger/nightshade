@@ -133,6 +133,7 @@ pub mod prelude {
         spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows,
         spawn_torus_at,
     };
+    pub use crate::render::wgpu::passes::geometry::UiLayer;
     pub use egui;
     pub use freecs;
     pub use rand::{self, Rng};
