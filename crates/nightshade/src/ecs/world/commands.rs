@@ -499,30 +499,18 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
         let removed_meshes = world.resources.mesh_cache.registry.remove_unused();
         if !removed_meshes.is_empty() {
-            tracing::info!(
-                "Cleaned up {} unused meshes: {:?}",
-                removed_meshes.len(),
-                removed_meshes
-            );
+            tracing::debug!("Cleaned up {} unused meshes", removed_meshes.len());
         }
 
         let removed_materials =
             material_registry_remove_unused(&mut world.resources.material_registry);
         if !removed_materials.is_empty() {
-            tracing::info!(
-                "Cleaned up {} unused materials: {:?}",
-                removed_materials.len(),
-                removed_materials
-            );
+            tracing::debug!("Cleaned up {} unused materials", removed_materials.len());
         }
 
         let removed_textures = texture_cache_remove_unused(&mut world.resources.texture_cache);
         if !removed_textures.is_empty() {
-            tracing::info!(
-                "Cleaned up {} unused textures: {:?}",
-                removed_textures.len(),
-                removed_textures
-            );
+            tracing::debug!("Cleaned up {} unused textures", removed_textures.len());
         }
     }
 }

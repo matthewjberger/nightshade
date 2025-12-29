@@ -7,8 +7,9 @@ use std::collections::HashMap;
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuSkinData {
     pub joint_count: u32,
-    pub base_joint_index: u32,
-    pub _padding: [u32; 2],
+    pub base_bone_index: u32,
+    pub base_ibm_index: u32,
+    pub base_output_index: u32,
 }
 
 pub struct SkinningUploadData {
@@ -17,6 +18,16 @@ pub struct SkinningUploadData {
     pub skin_data: Vec<GpuSkinData>,
     pub entity_skin_indices: HashMap<Entity, u32>,
     pub total_joints: u32,
+}
+
+impl SkinningUploadData {
+    pub fn get_joint_offset(&self, skin_index: u32) -> u32 {
+        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
+            skin_data.base_output_index
+        } else {
+            0
+        }
+    }
 }
 
 #[derive(Default)]
@@ -85,6 +96,8 @@ impl SkinningCache {
 
         let mut skin_configs: HashMap<u64, u32> = HashMap::new();
         let mut unique_skin_index = 0u32;
+        let mut current_ibm_offset = 0u32;
+        let mut current_output_offset = 0u32;
 
         for &entity in &skinned_entities {
             if let Some(skin) = world.get_skin(entity) {
@@ -92,6 +105,14 @@ impl SkinningCache {
                 for joint in skin.joints.iter() {
                     use std::hash::Hash;
                     joint.id.hash(&mut hasher);
+                }
+                for matrix in skin.inverse_bind_matrices.iter() {
+                    for row in 0..4 {
+                        for column in 0..4 {
+                            use std::hash::Hash;
+                            matrix[(row, column)].to_bits().hash(&mut hasher);
+                        }
+                    }
                 }
                 use std::hash::Hasher;
                 let skin_hash = hasher.finish();
@@ -102,16 +123,19 @@ impl SkinningCache {
                     let index = unique_skin_index;
                     skin_configs.insert(skin_hash, index);
 
-                    let base_joint_index = if let Some(&first_joint) = skin.joints.first() {
+                    let base_bone_index = if let Some(&first_joint) = skin.joints.first() {
                         bone_entity_to_index.get(&first_joint).copied().unwrap_or(0)
                     } else {
                         0
                     };
 
+                    let joint_count = skin.joints.len().min(256) as u32;
+
                     let gpu_skin_data = GpuSkinData {
-                        joint_count: skin.joints.len() as u32,
-                        base_joint_index,
-                        _padding: [0, 0],
+                        joint_count,
+                        base_bone_index,
+                        base_ibm_index: current_ibm_offset,
+                        base_output_index: current_output_offset,
                     };
                     self.skin_data.push(gpu_skin_data);
 
@@ -123,22 +147,18 @@ impl SkinningCache {
                         }
                     }
 
-                    while self.inverse_bind_matrices.len() < (index as usize + 1) * 256 {
-                        self.inverse_bind_matrices.push(Mat4::identity());
-                    }
+                    current_ibm_offset += joint_count;
+                    current_output_offset += joint_count;
 
                     unique_skin_index += 1;
                     index
                 };
 
-                let joint_offset = skin_index * 256;
                 self.entity_skin_indices.insert(entity, skin_index);
-                self.total_joints = self
-                    .total_joints
-                    .max((joint_offset + skin.joints.len() as u32).min(256 * 500));
             }
         }
 
+        self.total_joints = current_output_offset;
         self.static_data_uploaded = true;
     }
 
@@ -154,6 +174,14 @@ impl SkinningCache {
         }
 
         bone_transforms
+    }
+
+    pub fn get_joint_offset(&self, skin_index: u32) -> u32 {
+        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
+            skin_data.base_output_index
+        } else {
+            0
+        }
     }
 }
 
@@ -174,7 +202,6 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
     let mut inverse_bind_matrices = Vec::new();
     let mut skin_data_vec = Vec::new();
     let mut entity_skin_indices = HashMap::new();
-    let mut total_joints = 0u32;
 
     let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
     let mut bone_index = 0u32;
@@ -200,6 +227,8 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
 
     let mut skin_configs: HashMap<u64, u32> = HashMap::new();
     let mut unique_skin_index = 0u32;
+    let mut current_ibm_offset = 0u32;
+    let mut current_output_offset = 0u32;
 
     for &entity in &skinned_entities {
         if let Some(skin) = world.get_skin(entity) {
@@ -225,16 +254,19 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
                 let index = unique_skin_index;
                 skin_configs.insert(skin_hash, index);
 
-                let base_joint_index = if let Some(&first_joint) = skin.joints.first() {
+                let base_bone_index = if let Some(&first_joint) = skin.joints.first() {
                     bone_entity_to_index.get(&first_joint).copied().unwrap_or(0)
                 } else {
                     0
                 };
 
+                let joint_count = skin.joints.len().min(256) as u32;
+
                 let gpu_skin_data = GpuSkinData {
-                    joint_count: skin.joints.len() as u32,
-                    base_joint_index,
-                    _padding: [0, 0],
+                    joint_count,
+                    base_bone_index,
+                    base_ibm_index: current_ibm_offset,
+                    base_output_index: current_output_offset,
                 };
                 skin_data_vec.push(gpu_skin_data);
 
@@ -244,18 +276,14 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
                     }
                 }
 
-                while inverse_bind_matrices.len() < (index as usize + 1) * 256 {
-                    inverse_bind_matrices.push(Mat4::identity());
-                }
+                current_ibm_offset += joint_count;
+                current_output_offset += joint_count;
 
                 unique_skin_index += 1;
                 index
             };
 
-            let joint_offset = skin_index * 256;
             entity_skin_indices.insert(entity, skin_index);
-            total_joints =
-                total_joints.max((joint_offset + skin.joints.len() as u32).min(256 * 500));
         }
     }
 
@@ -264,6 +292,6 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
         inverse_bind_matrices,
         skin_data: skin_data_vec,
         entity_skin_indices,
-        total_joints,
+        total_joints: current_output_offset,
     }
 }
