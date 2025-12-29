@@ -281,6 +281,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     let delta_time = world.resources.window.timing.delta_time;
     crate::ecs::animation::systems::update_animation_players(world, delta_time);
     crate::ecs::animation::systems::apply_animations(world);
+    crate::ecs::morph::systems::apply_morph_targets(world);
 
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);

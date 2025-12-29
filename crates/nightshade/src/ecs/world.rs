@@ -13,6 +13,7 @@ pub mod components {
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{AlphaMode, Material, MaterialRef};
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
+    pub use crate::ecs::morph::components::MorphWeights;
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::particles::components::{
         ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
@@ -113,6 +114,7 @@ freecs::ecs! {
         script: crate::ecs::script::components::Script => SCRIPT,
         skin: crate::ecs::skin::components::Skin => SKIN,
         joint: crate::ecs::skin::components::Joint => JOINT,
+        morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

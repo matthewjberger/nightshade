@@ -1,7 +1,7 @@
 use crate::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationValue, sample_animation_channel,
 };
-use crate::ecs::world::{ANIMATION_PLAYER, World};
+use crate::ecs::world::{ANIMATION_PLAYER, MORPH_WEIGHTS, World};
 use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
@@ -79,6 +79,9 @@ pub fn apply_animations(world: &mut World) {
                         transform.scale = scale;
                     }
                 }
+                if let Some(weights) = values.morph_weights {
+                    apply_morph_weights_to_entity_and_children(world, target_entity, &weights);
+                }
             }
         }
     }
@@ -106,6 +109,9 @@ fn sample_clip(
                 }
                 (AnimationProperty::Scale, AnimationValue::Vec3(scale)) => {
                     entry.scale = Some(scale);
+                }
+                (AnimationProperty::MorphWeights, AnimationValue::Weights(weights)) => {
+                    entry.morph_weights = Some(weights);
                 }
                 _ => {}
             }
@@ -169,6 +175,19 @@ fn blend_accumulators(
             (Some(a), None) => Some(a),
             (None, None) => None,
         },
+        morph_weights: match (&from.morph_weights, &to.morph_weights) {
+            (Some(a), Some(b)) => {
+                let blended: Vec<f32> = a
+                    .iter()
+                    .zip(b.iter())
+                    .map(|(a_val, b_val)| a_val + (b_val - a_val) * factor)
+                    .collect();
+                Some(blended)
+            }
+            (None, Some(b)) => Some(b.clone()),
+            (Some(a), None) => Some(a.clone()),
+            (None, None) => None,
+        },
     }
 }
 
@@ -177,4 +196,24 @@ struct AnimationAccumulator {
     translation: Option<Vec3>,
     rotation: Option<Quat>,
     scale: Option<Vec3>,
+    morph_weights: Option<Vec<f32>>,
+}
+
+fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity, weights: &[f32]) {
+    if world.entity_has_components(entity, MORPH_WEIGHTS)
+        && let Some(morph_weights) = world.get_morph_weights_mut(entity)
+    {
+        morph_weights.weights = weights.to_vec();
+    }
+
+    let child_entities: Vec<Entity> = world
+        .resources
+        .children_cache
+        .get(&entity)
+        .cloned()
+        .unwrap_or_default();
+
+    for child in child_entities {
+        apply_morph_weights_to_entity_and_children(world, child, weights);
+    }
 }

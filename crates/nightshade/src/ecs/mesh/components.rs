@@ -165,6 +165,68 @@ impl Default for SkinnedVertex {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MorphTarget {
+    pub position_displacements: Vec<[f32; 3]>,
+    pub normal_displacements: Option<Vec<[f32; 3]>>,
+    pub tangent_displacements: Option<Vec<[f32; 3]>>,
+}
+
+impl MorphTarget {
+    pub fn new(position_displacements: Vec<[f32; 3]>) -> Self {
+        Self {
+            position_displacements,
+            normal_displacements: None,
+            tangent_displacements: None,
+        }
+    }
+
+    pub fn with_normals(mut self, normal_displacements: Vec<[f32; 3]>) -> Self {
+        self.normal_displacements = Some(normal_displacements);
+        self
+    }
+
+    pub fn with_tangents(mut self, tangent_displacements: Vec<[f32; 3]>) -> Self {
+        self.tangent_displacements = Some(tangent_displacements);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MorphTargetData {
+    pub targets: Vec<MorphTarget>,
+    pub default_weights: Vec<f32>,
+    pub base_positions: Vec<[f32; 3]>,
+    pub base_normals: Vec<[f32; 3]>,
+}
+
+impl MorphTargetData {
+    pub fn new(targets: Vec<MorphTarget>) -> Self {
+        let default_weights = vec![1.0; targets.len()];
+        Self {
+            targets,
+            default_weights,
+            base_positions: Vec::new(),
+            base_normals: Vec::new(),
+        }
+    }
+
+    pub fn with_default_weights(mut self, weights: Vec<f32>) -> Self {
+        self.default_weights = weights;
+        self
+    }
+
+    pub fn with_base_data(mut self, positions: Vec<[f32; 3]>, normals: Vec<[f32; 3]>) -> Self {
+        self.base_positions = positions;
+        self.base_normals = normals;
+        self
+    }
+
+    pub fn target_count(&self) -> usize {
+        self.targets.len()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkinData {
     pub skinned_vertices: Vec<SkinnedVertex>,
     pub skin_index: Option<usize>,
@@ -190,6 +252,7 @@ pub struct Mesh {
     pub indices: Vec<u32>,
     pub bounding_volume: Option<crate::ecs::bounding_volume::components::BoundingVolume>,
     pub skin_data: Option<SkinData>,
+    pub morph_targets: Option<MorphTargetData>,
 }
 
 impl Mesh {
@@ -199,6 +262,7 @@ impl Mesh {
             indices,
             bounding_volume: None,
             skin_data: None,
+            morph_targets: None,
         }
     }
 
@@ -212,6 +276,7 @@ impl Mesh {
             indices,
             bounding_volume: Some(bounding_volume),
             skin_data: None,
+            morph_targets: None,
         }
     }
 
@@ -220,7 +285,23 @@ impl Mesh {
         self
     }
 
+    pub fn with_morph_targets(mut self, morph_targets: MorphTargetData) -> Self {
+        self.morph_targets = Some(morph_targets);
+        self
+    }
+
     pub fn is_skinned(&self) -> bool {
         self.skin_data.is_some()
+    }
+
+    pub fn has_morph_targets(&self) -> bool {
+        self.morph_targets.is_some()
+    }
+
+    pub fn morph_target_count(&self) -> usize {
+        self.morph_targets
+            .as_ref()
+            .map(|m| m.target_count())
+            .unwrap_or(0)
     }
 }

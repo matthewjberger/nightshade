@@ -22,6 +22,7 @@ pub enum AnimationProperty {
     Translation,
     Rotation,
     Scale,
+    MorphWeights,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -35,6 +36,7 @@ pub struct AnimationSampler {
 pub enum AnimationSamplerOutput {
     Vec3(Vec<Vec3>),
     Quat(Vec<Quat>),
+    Weights(Vec<Vec<f32>>),
     CubicSplineVec3 {
         values: Vec<Vec3>,
         in_tangents: Vec<Vec3>,
@@ -44,6 +46,11 @@ pub enum AnimationSamplerOutput {
         values: Vec<Quat>,
         in_tangents: Vec<Quat>,
         out_tangents: Vec<Quat>,
+    },
+    CubicSplineWeights {
+        values: Vec<Vec<f32>>,
+        in_tangents: Vec<Vec<f32>>,
+        out_tangents: Vec<Vec<f32>>,
     },
 }
 
@@ -184,10 +191,11 @@ impl AnimationPlayer {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum AnimationValue {
     Vec3(Vec3),
     Quat(Quat),
+    Weights(Vec<f32>),
 }
 
 pub fn interpolate_vec3(a: &Vec3, b: &Vec3, t: f32, interpolation: AnimationInterpolation) -> Vec3 {
@@ -196,6 +204,53 @@ pub fn interpolate_vec3(a: &Vec3, b: &Vec3, t: f32, interpolation: AnimationInte
         AnimationInterpolation::Step => *a,
         AnimationInterpolation::CubicSpline => *a + (*b - *a) * t,
     }
+}
+
+pub fn interpolate_weights(
+    a: &[f32],
+    b: &[f32],
+    t: f32,
+    interpolation: AnimationInterpolation,
+) -> Vec<f32> {
+    match interpolation {
+        AnimationInterpolation::Linear => a
+            .iter()
+            .zip(b.iter())
+            .map(|(a_val, b_val)| a_val + (b_val - a_val) * t)
+            .collect(),
+        AnimationInterpolation::Step => a.to_vec(),
+        AnimationInterpolation::CubicSpline => a
+            .iter()
+            .zip(b.iter())
+            .map(|(a_val, b_val)| a_val + (b_val - a_val) * t)
+            .collect(),
+    }
+}
+
+fn cubic_spline_weights(
+    p0: &[f32],
+    m0: &[f32],
+    p1: &[f32],
+    m1: &[f32],
+    t: f32,
+    dt: f32,
+) -> Vec<f32> {
+    let t2 = t * t;
+    let t3 = t2 * t;
+
+    let h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+    let h10 = t3 - 2.0 * t2 + t;
+    let h01 = -2.0 * t3 + 3.0 * t2;
+    let h11 = t3 - t2;
+
+    p0.iter()
+        .zip(m0.iter())
+        .zip(p1.iter())
+        .zip(m1.iter())
+        .map(|(((p0_val, m0_val), p1_val), m1_val)| {
+            p0_val * h00 + m0_val * (h10 * dt) + p1_val * h01 + m1_val * (h11 * dt)
+        })
+        .collect()
 }
 
 fn cubic_spline_vec3(p0: &Vec3, m0: &Vec3, p1: &Vec3, m1: &Vec3, t: f32, dt: f32) -> Vec3 {
@@ -270,11 +325,17 @@ pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option
             AnimationSamplerOutput::Quat(values) => {
                 values.first().map(|q| AnimationValue::Quat(*q))
             }
+            AnimationSamplerOutput::Weights(values) => {
+                values.first().map(|w| AnimationValue::Weights(w.clone()))
+            }
             AnimationSamplerOutput::CubicSplineVec3 { values, .. } => {
                 values.first().map(|v| AnimationValue::Vec3(*v))
             }
             AnimationSamplerOutput::CubicSplineQuat { values, .. } => {
                 values.first().map(|q| AnimationValue::Quat(*q))
+            }
+            AnimationSamplerOutput::CubicSplineWeights { values, .. } => {
+                values.first().map(|w| AnimationValue::Weights(w.clone()))
             }
         };
     }
@@ -288,12 +349,18 @@ pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option
             AnimationSamplerOutput::Quat(values) => {
                 values.get(last_index).map(|q| AnimationValue::Quat(*q))
             }
+            AnimationSamplerOutput::Weights(values) => values
+                .get(last_index)
+                .map(|w| AnimationValue::Weights(w.clone())),
             AnimationSamplerOutput::CubicSplineVec3 { values, .. } => {
                 values.get(last_index).map(|v| AnimationValue::Vec3(*v))
             }
             AnimationSamplerOutput::CubicSplineQuat { values, .. } => {
                 values.get(last_index).map(|q| AnimationValue::Quat(*q))
             }
+            AnimationSamplerOutput::CubicSplineWeights { values, .. } => values
+                .get(last_index)
+                .map(|w| AnimationValue::Weights(w.clone())),
         };
     }
 
@@ -315,12 +382,18 @@ pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option
             AnimationSamplerOutput::Quat(values) => {
                 values.get(key_index).map(|q| AnimationValue::Quat(*q))
             }
+            AnimationSamplerOutput::Weights(values) => values
+                .get(key_index)
+                .map(|w| AnimationValue::Weights(w.clone())),
             AnimationSamplerOutput::CubicSplineVec3 { values, .. } => {
                 values.get(key_index).map(|v| AnimationValue::Vec3(*v))
             }
             AnimationSamplerOutput::CubicSplineQuat { values, .. } => {
                 values.get(key_index).map(|q| AnimationValue::Quat(*q))
             }
+            AnimationSamplerOutput::CubicSplineWeights { values, .. } => values
+                .get(key_index)
+                .map(|w| AnimationValue::Weights(w.clone())),
         };
     }
 
@@ -384,6 +457,36 @@ pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option
                 in_tangents.get(next_key_index),
             ) {
                 Some(AnimationValue::Quat(cubic_spline_quat(
+                    p0, m0, p1, m1, t, dt,
+                )))
+            } else {
+                None
+            }
+        }
+        AnimationSamplerOutput::Weights(values) => {
+            if let (Some(a), Some(b)) = (values.get(key_index), values.get(next_key_index)) {
+                Some(AnimationValue::Weights(interpolate_weights(
+                    a,
+                    b,
+                    t,
+                    sampler.interpolation,
+                )))
+            } else {
+                None
+            }
+        }
+        AnimationSamplerOutput::CubicSplineWeights {
+            values,
+            in_tangents,
+            out_tangents,
+        } => {
+            if let (Some(p0), Some(p1), Some(m0), Some(m1)) = (
+                values.get(key_index),
+                values.get(next_key_index),
+                out_tangents.get(key_index),
+                in_tangents.get(next_key_index),
+            ) {
+                Some(AnimationValue::Weights(cubic_spline_weights(
                     p0, m0, p1, m1, t, dt,
                 )))
             } else {

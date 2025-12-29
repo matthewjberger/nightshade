@@ -13,6 +13,7 @@ pub mod lines;
 pub mod map;
 pub mod material;
 pub mod mesh;
+pub mod morph;
 pub mod name;
 pub mod particles;
 pub mod physics;
