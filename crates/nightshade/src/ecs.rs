@@ -15,6 +15,7 @@ pub mod material;
 pub mod mesh;
 pub mod morph;
 pub mod name;
+pub mod navmesh;
 pub mod particles;
 pub mod physics;
 pub mod picking;

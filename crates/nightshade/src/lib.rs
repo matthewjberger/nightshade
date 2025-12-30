@@ -35,6 +35,9 @@
 //!   for map/prefab serialization, but script execution requires this feature. Used by the editor
 //!   for play mode and any app that needs to run embedded or file-based scripts.
 //!
+//! - **`trenchbroom`** - TrenchBroom/Quake map file import support. Enables loading `.map` files
+//!   with brush geometry, entity parsing, and texture mapping. Uses the `quake-util` crate.
+//!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!
@@ -99,6 +102,13 @@ pub mod prelude {
     };
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
+    pub use crate::ecs::navmesh::{
+        NavMeshAgent, NavMeshAgentState, NavMeshConnection, NavMeshEdge, NavMeshTriangle,
+        NavMeshWorld, PathRequest, PathResult, PathStatus, PathfindingAlgorithm,
+        RecastNavMeshConfig, SpatialHash, clear_navmesh, generate_navmesh_recast,
+        get_agent_path_length, get_agent_state, run_navmesh_systems, set_agent_destination,
+        set_agent_speed, set_navmesh_debug_draw, spawn_navmesh_agent, stop_agent,
+    };
     pub use crate::ecs::particles::systems::update_particle_emitters;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
@@ -130,8 +140,8 @@ pub mod prelude {
         load_procedural_textures, set_material_with_textures,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
-        spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows,
-        spawn_torus_at,
+        spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
+        spawn_sun_without_shadows, spawn_torus_at,
     };
     pub use crate::render::wgpu::passes::geometry::UiLayer;
     pub use egui;

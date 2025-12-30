@@ -115,6 +115,7 @@ freecs::ecs! {
         skin: crate::ecs::skin::components::Skin => SKIN,
         joint: crate::ecs::skin::components::Joint => JOINT,
         morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
+        navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
     }
     Resources {
         window: crate::ecs::window::resources::Window,
@@ -124,6 +125,7 @@ freecs::ecs! {
         input: crate::ecs::input::resources::Input,
         audio: crate::ecs::audio::resources::AudioEngine,
         physics: crate::ecs::physics::resources::PhysicsWorld,
+        navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
         text_cache: crate::ecs::text::resources::TextCache,
         mesh_cache: crate::ecs::prefab::resources::MeshCache,
         material_registry: crate::ecs::material::resources::MaterialRegistry,

@@ -32,6 +32,8 @@ engine = [
     "dep:nalgebra-glm",
     "dep:petgraph",
     "dep:rand",
+    "dep:rerecast",
+    "dep:glam",
     "dep:noise",
     "dep:rapier3d",
     "dep:raw-window-handle",
@@ -51,6 +53,7 @@ engine = [
     "dep:wasm-bindgen-futures",
     "dep:web-sys",
 ]
+trenchbroom = ["engine", "dep:quake-util"]
 wgpu = ["engine", "dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 openxr = ["engine", "dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
 steam = ["engine", "dep:steamworks", "dep:steamworks-sys"]
@@ -85,7 +88,10 @@ mint = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
 nalgebra-glm = { workspace = true, optional = true }
 petgraph = { workspace = true, optional = true }
+quake-util = { version = "0.4", optional = true }
 rand = { version = "0.9", optional = true }
+rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
+glam = { version = "0.30", optional = true }
 noise = { workspace = true, optional = true }
 rapier3d = { workspace = true, optional = true }
 raw-window-handle = { workspace = true, optional = true }
