@@ -6,8 +6,6 @@ pub struct MorphWeights {
     pub mesh_name: String,
     #[serde(skip)]
     pub applied_weights: Vec<f32>,
-    #[serde(skip)]
-    pub morphed_mesh_name: Option<String>,
 }
 
 impl MorphWeights {
@@ -16,7 +14,6 @@ impl MorphWeights {
             weights,
             mesh_name: mesh_name.into(),
             applied_weights: Vec::new(),
-            morphed_mesh_name: None,
         }
     }
 
@@ -25,7 +22,6 @@ impl MorphWeights {
             weights: vec![0.0; count],
             mesh_name: mesh_name.into(),
             applied_weights: Vec::new(),
-            morphed_mesh_name: None,
         }
     }
 
