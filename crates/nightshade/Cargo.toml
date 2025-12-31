@@ -53,7 +53,7 @@ physics = ["dep:rapier3d"]
 navmesh = ["dep:rerecast", "dep:glam"]
 trenchbroom = ["dep:quake-util"]
 gamepad = ["dep:gilrs"]
-base = ["gamepad", "physics"]
+base = ["egui", "gamepad", "physics"]
 
 full = [
     "engine",
