@@ -49,7 +49,7 @@ engine = [
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 audio = ["dep:kira"]
-physics = ["dep:rapier3d", "gamepad"]
+physics = ["dep:rapier3d"]
 navmesh = ["dep:rerecast", "dep:glam"]
 trenchbroom = ["dep:quake-util"]
 gamepad = ["dep:gilrs"]

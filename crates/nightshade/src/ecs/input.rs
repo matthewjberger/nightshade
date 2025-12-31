@@ -8,6 +8,7 @@ pub mod systems;
 pub use commands::*;
 pub use components::*;
 pub use events::*;
+#[cfg(feature = "gamepad")]
 pub use queries::*;
 pub use resources::*;
 pub use systems::*;

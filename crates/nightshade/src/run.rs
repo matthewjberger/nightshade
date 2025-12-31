@@ -718,6 +718,7 @@ pub trait State {
     fn on_dropped_file_data(&mut self, _world: &mut World, _name: &str, _data: &[u8]) {}
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
+    #[cfg(feature = "gamepad")]
     fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
     fn on_mouse_input(
         &mut self,
