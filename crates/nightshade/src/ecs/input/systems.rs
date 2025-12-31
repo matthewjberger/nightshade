@@ -1,8 +1,12 @@
 pub use crate::ecs::input::commands::*;
+#[cfg(feature = "gamepad")]
 pub use crate::ecs::input::queries::*;
 
+#[cfg(feature = "gamepad")]
 use crate::ecs::event_bus::commands::publish_event;
-use crate::ecs::world::{Vec2, World, events::*, resources::MouseState};
+use crate::ecs::world::{Vec2, World, resources::MouseState};
+#[cfg(feature = "gamepad")]
+use crate::ecs::world::events::*;
 
 pub fn reset_mouse_system(world: &mut World) {
     let _span = tracing::info_span!("reset_mouse").entered();
@@ -33,6 +37,7 @@ pub fn reset_touch_system(world: &mut World) {
     touch.gesture = TouchGesture::None;
 }
 
+#[cfg(feature = "gamepad")]
 pub fn gamepad_input_system(world: &mut World) {
     let _span = tracing::info_span!("gamepad_input").entered();
     if world.resources.input.gamepad.gilrs.is_none() {

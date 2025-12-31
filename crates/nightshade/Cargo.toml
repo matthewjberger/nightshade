@@ -21,7 +21,6 @@ engine = [
     "dep:fontdue",
     "dep:freecs",
     "dep:getrandom",
-    "dep:gilrs",
     "dep:gltf",
     "dep:half",
     "dep:tracing",
@@ -50,9 +49,11 @@ engine = [
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 audio = ["dep:kira"]
-physics = ["dep:rapier3d"]
+physics = ["dep:rapier3d", "gamepad"]
 navmesh = ["dep:rerecast", "dep:glam"]
 trenchbroom = ["dep:quake-util"]
+gamepad = ["dep:gilrs"]
+base = ["gamepad", "physics"]
 
 full = [
     "engine",
@@ -60,6 +61,7 @@ full = [
     "egui",
     "audio",
     "physics",
+    "gamepad",
     "navmesh",
     "trenchbroom",
     "scripting",

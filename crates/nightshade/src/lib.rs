@@ -184,6 +184,7 @@ pub mod prelude {
     pub use crate::render::wgpu::rendergraph::{
         PassExecutionContext, PassNode, RenderGraph, ResourceId,
     };
+    #[cfg(feature = "gamepad")]
     pub use gilrs;
     pub use nalgebra_glm;
     #[cfg(feature = "physics")]
