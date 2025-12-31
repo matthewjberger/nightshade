@@ -7,4 +7,4 @@ default-run = "picking"
 publish = false
 
 [dependencies]
-nightshade = { path = "../../crates/nightshade", features = ["egui", "tracing"] }
+nightshade = { path = "../../crates/nightshade", features = ["egui", "physics", "tracing"] }

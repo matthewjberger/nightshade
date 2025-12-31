@@ -278,6 +278,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
         crate::ecs::audio::systems::update_audio_system(world);
     }
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
+    #[cfg(feature = "physics")]
     crate::ecs::physics::systems::run_physics_systems(world);
 
     #[cfg(feature = "scripting")]

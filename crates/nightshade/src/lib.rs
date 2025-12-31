@@ -132,8 +132,11 @@ pub mod prelude {
     pub use crate::ecs::particles::systems::update_particle_emitters;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
-        PhysicsMaterial, PhysicsMaterialComponent, PhysicsWorld, RigidBodyComponent,
+        PhysicsMaterial, PhysicsMaterialComponent, RigidBodyComponent,
     };
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::PhysicsWorld;
+    #[cfg(feature = "physics")]
     pub use crate::ecs::picking::{
         PickingOptions, PickingRay, PickingResult, PickingWorld, get_ground_position_from_screen,
         pick_closest_entity, pick_closest_entity_trimesh, pick_entities, pick_entities_in_frustum,
@@ -183,6 +186,7 @@ pub mod prelude {
     };
     pub use gilrs;
     pub use nalgebra_glm;
+    #[cfg(feature = "physics")]
     pub use rapier3d;
     pub use wgpu;
 

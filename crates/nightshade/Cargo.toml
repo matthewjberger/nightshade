@@ -31,7 +31,6 @@ engine = [
     "dep:noise",
     "dep:petgraph",
     "dep:rand",
-    "dep:rapier3d",
     "dep:raw-window-handle",
     "dep:serde_json",
     "dep:thiserror",
@@ -51,6 +50,7 @@ engine = [
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 audio = ["dep:kira"]
+physics = ["dep:rapier3d"]
 navmesh = ["dep:rerecast", "dep:glam"]
 trenchbroom = ["dep:quake-util"]
 
@@ -59,6 +59,7 @@ full = [
     "wgpu",
     "egui",
     "audio",
+    "physics",
     "navmesh",
     "trenchbroom",
     "scripting",

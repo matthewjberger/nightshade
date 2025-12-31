@@ -45,6 +45,7 @@ pub mod resources {
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::material::resources::MaterialRegistry;
+    #[cfg(feature = "physics")]
     pub use crate::ecs::physics::resources::PhysicsWorld;
     pub use crate::ecs::prefab::resources::MeshCache;
     #[cfg(feature = "scripting")]
@@ -126,6 +127,7 @@ freecs::ecs! {
         input: crate::ecs::input::resources::Input,
         #[cfg(feature = "audio")]
         audio: crate::ecs::audio::resources::AudioEngine,
+        #[cfg(feature = "physics")]
         physics: crate::ecs::physics::resources::PhysicsWorld,
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
         text_cache: crate::ecs::text::resources::TextCache,
@@ -148,6 +150,7 @@ freecs::ecs! {
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
+        #[cfg(feature = "physics")]
         picking_world: crate::ecs::picking::resources::PickingWorld,
     }
 }
