@@ -4,45 +4,54 @@
 //!
 //! ## Features
 //!
-//! - **`engine`** (default) - Full engine functionality including ECS, rendering, physics, and audio.
+//! ### Core Features
+//!
+//! - **`engine`** (default) - Full engine functionality including ECS, windowing, and all sub-features
+//!   below. This is the standard feature for building games.
+//!
+//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `trenchbroom`, and `scripting`.
+//!   Use this when you want all optional functionality.
+//!
+//! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and
+//!   WebGPU backends.
+//!
+//! ### Optional Features
+//!
+//! These are NOT included in `engine` and must be enabled explicitly:
+//!
+//! - **`audio`** - Audio playback and spatial audio using the Kira library.
+//!
+//! - **`navmesh`** - Navigation mesh generation using Recast. The navmesh pathfinding and agent
+//!   systems are always available; this feature enables procedural mesh generation.
+//!
+//! - **`trenchbroom`** - TrenchBroom/Quake `.map` file import with brush geometry and entity parsing.
+//!
+//! - **`scripting`** - Rhai scripting for runtime script execution. Script data types are always
+//!   available for serialization; this enables the runtime.
+//!
+//! ### Platform Features
+//!
+//! - **`openxr`** - OpenXR support for VR headsets. Enables the `xr` module.
+//!
+//! - **`steam`** - Steamworks integration for achievements, stats, friends, and multiplayer.
+//!
+//! ### Profiling Features
+//!
+//! - **`tracing`** - Rolling log files in `logs/` and `RUST_LOG` environment variable support.
+//!
+//! - **`tracy`** - Real-time profiling with Tracy. Implies `tracing`.
+//!
+//! - **`chrome`** - Chrome tracing output to `logs/trace.json`. Implies `tracing`.
+//!
+//! ### Plugin Features
 //!
 //! - **`plugins`** - Minimal guest-side plugin API for WASM plugins. Only includes serialization types.
 //!
-//! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and WebGPU backends.
+//! - **`plugin_runtime`** - WASM plugin runtime using Wasmtime. Enables hosting and executing plugins.
 //!
-//! - **`openxr`** - OpenXR support for VR headsets. Enables the `xr` module for VR development.
+//! - **`editor-plugin-host`** - Editor plugin host API with egui and egui_tiles.
 //!
-//! - **`steam`** - Steamworks integration for achievements, stats, friends, and multiplayer. Native only.
-//!
-//! - **`tracing`** - Enables rolling daily log files written to the `logs/` directory. Also enables
-//!   `RUST_LOG` environment variable filtering (e.g., `RUST_LOG=debug,nightshade::render=trace`).
-//!
-//! - **`tracy`** - Real-time profiling with [Tracy](https://github.com/wolfpld/tracy). Requires the
-//!   Tracy profiler to be running. Shows frame timings, span hierarchy, and performance data live.
-//!   Implies `tracing`.
-//!
-//! - **`chrome`** - Chrome tracing output. Writes `logs/trace.json` that can be loaded in
-//!   `chrome://tracing` for offline performance analysis. Implies `tracing`.
-//!
-//! - **`editor-plugin-host`** - Editor plugin host API. Re-exports egui and egui_tiles for building
-//!   editor UIs that can host WASM plugins.
-//!
-//! - **`editor-plugin-guest`** - Editor plugin guest API for WASM plugins. Provides functions to
-//!   register inspectors, menu items, and communicate with the editor host.
-//!
-//! - **`scripting`** - Rhai scripting support for runtime script execution. Enables the script
-//!   runtime, systems, and API. Script data types (`Script`, `ScriptSource`) are always available
-//!   for map/prefab serialization, but script execution requires this feature. Used by the editor
-//!   for play mode and any app that needs to run embedded or file-based scripts.
-//!
-//! - **`trenchbroom`** - TrenchBroom/Quake map file import support. Enables loading `.map` files
-//!   with brush geometry, entity parsing, and texture mapping. Uses the `quake-util` crate.
-//!
-//! - **`audio`** - Audio playback and spatial audio support using the Kira audio library.
-//!   Enables audio sources, audio listeners, and the audio engine resource.
-//!
-//! - **`navmesh`** - Navigation mesh generation using Recast. Enables procedural navmesh generation
-//!   from geometry. The navmesh pathfinding and agent systems are always available.
+//! - **`editor-plugin-guest`** - Editor plugin guest API for WASM plugins.
 //!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
