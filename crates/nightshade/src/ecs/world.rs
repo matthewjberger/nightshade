@@ -37,6 +37,7 @@ pub mod components {
 }
 
 pub mod resources {
+    #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
@@ -123,6 +124,7 @@ freecs::ecs! {
         immediate_ui: crate::ecs::ui::immediate::ImmediateUi,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
+        #[cfg(feature = "audio")]
         audio: crate::ecs::audio::resources::AudioEngine,
         physics: crate::ecs::physics::resources::PhysicsWorld,
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,

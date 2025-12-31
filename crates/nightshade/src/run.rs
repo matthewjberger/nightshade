@@ -266,8 +266,11 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 
 pub(crate) fn run_frame_systems(world: &mut World) {
     let _span = tracing::info_span!("systems").entered();
-    crate::ecs::audio::systems::initialize_audio_system(world);
-    crate::ecs::audio::systems::update_audio_system(world);
+    #[cfg(feature = "audio")]
+    {
+        crate::ecs::audio::systems::initialize_audio_system(world);
+        crate::ecs::audio::systems::update_audio_system(world);
+    }
     crate::ecs::camera::systems::update_camera_aspect_ratios(world);
     crate::ecs::physics::systems::run_physics_systems(world);
 

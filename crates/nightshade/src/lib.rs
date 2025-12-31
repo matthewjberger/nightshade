@@ -38,6 +38,12 @@
 //! - **`trenchbroom`** - TrenchBroom/Quake map file import support. Enables loading `.map` files
 //!   with brush geometry, entity parsing, and texture mapping. Uses the `quake-util` crate.
 //!
+//! - **`audio`** - Audio playback and spatial audio support using the Kira audio library.
+//!   Enables audio sources, audio listeners, and the audio engine resource.
+//!
+//! - **`navmesh`** - Navigation mesh generation using Recast. Enables procedural navmesh generation
+//!   from geometry. The navmesh pathfinding and agent systems are always available.
+//!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!
@@ -104,11 +110,13 @@ pub mod prelude {
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::navmesh::{
         NavMeshAgent, NavMeshAgentState, NavMeshConnection, NavMeshEdge, NavMeshTriangle,
-        NavMeshWorld, PathRequest, PathResult, PathStatus, PathfindingAlgorithm,
-        RecastNavMeshConfig, SpatialHash, clear_navmesh, generate_navmesh_recast,
-        get_agent_path_length, get_agent_state, run_navmesh_systems, set_agent_destination,
-        set_agent_speed, set_navmesh_debug_draw, spawn_navmesh_agent, stop_agent,
+        NavMeshWorld, PathRequest, PathResult, PathStatus, PathfindingAlgorithm, SpatialHash,
+        clear_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
+        set_agent_destination, set_agent_speed, set_navmesh_debug_draw, spawn_navmesh_agent,
+        stop_agent,
     };
+    #[cfg(feature = "navmesh")]
+    pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     pub use crate::ecs::particles::systems::update_particle_emitters;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,

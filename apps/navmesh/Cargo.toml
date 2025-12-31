@@ -7,5 +7,5 @@ default-run = "navmesh"
 publish = false
 
 [dependencies]
-nightshade = { path = "../../crates/nightshade", features = ["tracing"] }
+nightshade = { path = "../../crates/nightshade", features = ["tracing", "navmesh"] }
 tracing = { workspace = true }
