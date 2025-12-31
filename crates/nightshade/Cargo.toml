@@ -18,9 +18,6 @@ engine = [
     "dep:bincode",
     "dep:bitflags",
     "dep:bytemuck",
-    "dep:egui",
-    "dep:egui_extras",
-    "dep:egui-winit",
     "dep:fontdue",
     "dep:freecs",
     "dep:getrandom",
@@ -52,6 +49,7 @@ engine = [
     "dep:web-sys",
 ]
 
+egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 audio = ["dep:kira"]
 navmesh = ["dep:rerecast", "dep:glam"]
 trenchbroom = ["dep:quake-util"]
@@ -59,13 +57,14 @@ trenchbroom = ["dep:quake-util"]
 full = [
     "engine",
     "wgpu",
+    "egui",
     "audio",
     "navmesh",
     "trenchbroom",
     "scripting",
 ]
 
-wgpu = ["dep:wgpu", "dep:egui-wgpu", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
+wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
 tracing = ["dep:tracing-appender"]

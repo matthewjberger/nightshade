@@ -19,6 +19,9 @@
 //!
 //! These are NOT included in `engine` and must be enabled explicitly:
 //!
+//! - **`egui`** (default) - Immediate mode GUI using egui. Enables the `fn ui()` method on the State
+//!   trait. Games that only use the built-in immediate mode UI can disable this feature.
+//!
 //! - **`audio`** - Audio playback and spatial audio using the Kira library.
 //!
 //! - **`navmesh`** - Navigation mesh generation using Recast. The navmesh pathfinding and agent
@@ -161,6 +164,7 @@ pub mod prelude {
         spawn_sun_without_shadows, spawn_torus_at,
     };
     pub use crate::render::wgpu::passes::geometry::UiLayer;
+    #[cfg(feature = "egui")]
     pub use egui;
     pub use freecs;
     pub use rand::{self, Rng};

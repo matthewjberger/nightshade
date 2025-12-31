@@ -204,6 +204,7 @@ pub(crate) fn step(
                 renderer.initialize_fonts(world);
             }
 
+            #[cfg(feature = "egui")]
             create_ui_system(world, state);
             create_immediate_ui_system(world, state);
 
@@ -230,6 +231,7 @@ pub(crate) fn step(
             let window_handle = world.resources.window.handle.as_ref()?;
             let renderer = renderer.as_mut()?;
 
+            #[cfg(feature = "egui")]
             let ui_frame_output = world.resources.user_interface.frame_output.take();
 
             let should_render =
@@ -239,10 +241,13 @@ pub(crate) fn step(
                     tracing::error!("Failed to update render graph: {error}");
                 }
 
+                #[cfg(feature = "egui")]
                 let (ui_output, ui_primitives) = match ui_frame_output {
                     Some((output, primitives)) => (Some(output), Some(primitives)),
                     None => (None, None),
                 };
+                #[cfg(not(feature = "egui"))]
+                let (ui_output, ui_primitives) = (None, None);
                 if let Err(error) = renderer.render_frame(world, ui_output, ui_primitives) {
                     tracing::error!("Failed to draw frame: {error}");
                 }
@@ -259,6 +264,7 @@ pub(crate) fn step(
 
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("event_handling").entered();
+    #[cfg(feature = "egui")]
     ui_event_system(world, event);
     input_event_system(world, event);
     timing_system(world, event);
@@ -295,6 +301,7 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     crate::ecs::world::cleanup_unused_resources_system(world);
 }
 
+#[cfg(feature = "egui")]
 fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
     let _span = tracing::info_span!("ui_event").entered();
     let Some(gui_state) = &mut world.resources.user_interface.state else {
@@ -684,6 +691,7 @@ pub trait State {
             ],
         );
     }
+    #[cfg(feature = "egui")]
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
     fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
     fn run_systems(&mut self, _world: &mut World) {}
@@ -842,6 +850,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
+            #[cfg(feature = "egui")]
             initialize_user_interface(&mut self.world);
             self.state.initialize(&mut self.world);
             crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
@@ -874,6 +883,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
+                #[cfg(feature = "egui")]
                 initialize_user_interface(&mut self.world);
                 self.state.initialize(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
@@ -904,6 +914,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         match event {
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
+                #[cfg(feature = "egui")]
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
@@ -945,6 +956,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to resize surface: {error}");
                 }
 
+                #[cfg(feature = "egui")]
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
@@ -1005,6 +1017,7 @@ fn request_redraw_system(world: &mut World) {
     window_handle.request_redraw();
 }
 
+#[cfg(feature = "egui")]
 fn initialize_user_interface(world: &mut World) {
     let window_handle = {
         let Some(window_handle) = world.resources.window.handle.as_mut() else {
@@ -1035,6 +1048,7 @@ fn initialize_user_interface(world: &mut World) {
     world.resources.user_interface.state = Some(gui_state);
 }
 
+#[cfg(feature = "egui")]
 fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
     let _span = tracing::info_span!("ui").entered();
     if !world.resources.user_interface.enabled {

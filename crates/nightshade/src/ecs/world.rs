@@ -73,7 +73,7 @@ pub mod animation_systems {
 }
 
 mod render_trait;
-pub use render_trait::Render;
+pub use render_trait::{Render, UiOutput, UiPrimitives};
 
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
