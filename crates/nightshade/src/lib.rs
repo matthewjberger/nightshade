@@ -22,6 +22,10 @@
 //! - **`egui`** (default) - Immediate mode GUI using egui. Enables the `fn ui()` method on the State
 //!   trait. Games that only use the built-in immediate mode UI can disable this feature.
 //!
+//! - **`shell`** - Drop-down developer console with command registration. Requires `egui`. Apps
+//!   define a context struct and register commands that can modify both the ECS world and the
+//!   app-specific context.
+//!
 //! - **`audio`** - Audio playback and spatial audio using the Kira library.
 //!
 //! - **`navmesh`** - Navigation mesh generation using Recast. The navmesh pathfinding and agent
@@ -91,6 +95,9 @@ mod systems;
 
 #[cfg(feature = "openxr")]
 pub mod xr;
+
+#[cfg(feature = "shell")]
+pub mod shell;
 
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
@@ -208,4 +215,7 @@ pub mod prelude {
     };
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use steamworks::SteamId;
+
+    #[cfg(feature = "shell")]
+    pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_ui};
 }

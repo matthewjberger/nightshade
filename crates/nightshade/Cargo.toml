@@ -49,6 +49,7 @@ engine = [
 ]
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
+shell = ["egui"]
 audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
 navmesh = ["dep:rerecast", "dep:glam"]
