@@ -175,12 +175,14 @@ pub mod prelude {
     #[cfg(feature = "egui")]
     pub use egui;
     pub use freecs;
+    pub use image;
     pub use rand::{self, Rng};
     pub use serde;
     pub use tracing;
     pub use winit::{
         event::{ElementState, ElementState as KeyState, MouseButton, WindowEvent},
         keyboard::KeyCode,
+        window,
     };
 
     #[cfg(feature = "wgpu")]
