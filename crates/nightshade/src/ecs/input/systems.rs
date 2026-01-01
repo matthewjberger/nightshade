@@ -4,9 +4,9 @@ pub use crate::ecs::input::queries::*;
 
 #[cfg(feature = "gamepad")]
 use crate::ecs::event_bus::commands::publish_event;
-use crate::ecs::world::{Vec2, World, resources::MouseState};
 #[cfg(feature = "gamepad")]
 use crate::ecs::world::events::*;
+use crate::ecs::world::{Vec2, World, resources::MouseState};
 
 pub fn reset_mouse_system(world: &mut World) {
     let _span = tracing::info_span!("reset_mouse").entered();

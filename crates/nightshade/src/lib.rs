@@ -130,12 +130,12 @@ pub mod prelude {
     #[cfg(feature = "navmesh")]
     pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     pub use crate::ecs::particles::systems::update_particle_emitters;
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::PhysicsWorld;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
         PhysicsMaterial, PhysicsMaterialComponent, RigidBodyComponent,
     };
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
     pub use crate::ecs::picking::{
         PickingOptions, PickingRay, PickingResult, PickingWorld, get_ground_position_from_screen,
@@ -154,6 +154,11 @@ pub mod prelude {
         spawn_ui_text_with_properties,
     };
     pub use crate::ecs::text::systems::sync_text_meshes_system;
+    pub use crate::ecs::texture_loader::{
+        AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
+        TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
+        process_texture_queue, queue_texture_from_path, set_asset_search_paths,
+    };
     pub use crate::ecs::ui::{
         Anchor, ImmediateUi, Layout, LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle,
         UiWidget, WidgetState,

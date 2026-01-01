@@ -29,6 +29,7 @@ pub mod skin;
 pub mod sprite;
 pub mod terrain;
 pub mod text;
+pub mod texture_loader;
 pub mod transform;
 pub mod ui;
 pub mod visibility;

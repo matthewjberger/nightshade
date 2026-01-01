@@ -62,6 +62,7 @@ clap = { version = "4", features = ["derive"] }
 steamworks = "0.12"
 steamworks-sys = "0.12"
 noise = "0.9"
+ehttp = "0.6"
 
 [profile.dev]
 opt-level = 1

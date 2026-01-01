@@ -45,6 +45,7 @@ engine = [
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
     "dep:web-sys",
+    "dep:ehttp",
 ]
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
@@ -112,6 +113,7 @@ serde_json = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
+ehttp = { workspace = true, optional = true }
 
 egui-wgpu = { workspace = true, optional = true }
 egui_tiles = { version = "0.14", optional = true }
