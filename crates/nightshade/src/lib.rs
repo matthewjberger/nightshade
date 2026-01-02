@@ -9,7 +9,7 @@
 //! - **`engine`** (default) - Full engine functionality including ECS, windowing, and all sub-features
 //!   below. This is the standard feature for building games.
 //!
-//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `trenchbroom`, and `scripting`.
+//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, and `scripting`.
 //!   Use this when you want all optional functionality.
 //!
 //! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and
@@ -30,8 +30,6 @@
 //!
 //! - **`navmesh`** - Navigation mesh generation using Recast. The navmesh pathfinding and agent
 //!   systems are always available; this feature enables procedural mesh generation.
-//!
-//! - **`trenchbroom`** - TrenchBroom/Quake `.map` file import with brush geometry and entity parsing.
 //!
 //! - **`scripting`** - Rhai scripting for runtime script execution. Script data types are always
 //!   available for serialization; this enables the runtime.

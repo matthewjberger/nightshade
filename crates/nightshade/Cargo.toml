@@ -54,7 +54,6 @@ audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
 lattice = []
 navmesh = ["dep:rerecast", "dep:glam"]
-trenchbroom = ["dep:quake-util"]
 gamepad = ["dep:gilrs"]
 base = ["egui", "gamepad", "physics"]
 
@@ -66,7 +65,6 @@ full = [
     "physics",
     "gamepad",
     "navmesh",
-    "trenchbroom",
     "scripting",
 ]
 
@@ -104,7 +102,6 @@ mint = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
 nalgebra-glm = { workspace = true, optional = true }
 petgraph = { workspace = true, optional = true }
-quake-util = { version = "0.4", optional = true }
 rand = { version = "0.9", optional = true }
 rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.30", optional = true }
