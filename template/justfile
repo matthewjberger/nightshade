@@ -32,26 +32,6 @@ init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
 
-# Install plugin tooling
-init-plugins:
-    rustup target add wasm32-wasip1
-
-# Build all plugins
-[unix]
-build-plugins:
-    cargo build -p engine-plugin -p game-plugin --target wasm32-wasip1 --release
-    mkdir -p plugins/engine plugins/app
-    cp target/wasm32-wasip1/release/engine_plugin.wasm plugins/engine/
-    cp target/wasm32-wasip1/release/game_plugin.wasm plugins/app/
-
-[windows]
-build-plugins:
-    cargo build -p engine-plugin -p game-plugin --target wasm32-wasip1 --release
-    if (!(Test-Path plugins/engine)) { New-Item -ItemType Directory -Path plugins/engine -Force | Out-Null }
-    if (!(Test-Path plugins/app)) { New-Item -ItemType Directory -Path plugins/app -Force | Out-Null }
-    cp target/wasm32-wasip1/release/engine_plugin.wasm plugins/engine/
-    cp target/wasm32-wasip1/release/game_plugin.wasm plugins/app/
-
 # Runs linter and displays warnings
 lint:
     cargo clippy --all --tests -- -D warnings
@@ -59,10 +39,6 @@ lint:
 # Runs the app natively
 run:
     cargo run -r
-
-# Runs the app with plugin support
-run-plugins:
-    cargo run -r --features plugins
 
 # Runs the app with OpenXR (VR headset)
 run-openxr:
