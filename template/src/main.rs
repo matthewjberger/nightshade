@@ -37,33 +37,16 @@ impl State for Template {
     }
 
     fn ui(&mut self, _world: &mut World, ui_context: &egui::Context) {
-        egui::Window::new("Template").show(ui_context, |ui| {
-            ui.heading("Template");
-        });
+        egui::Window::new("Template").show(ui_context, |_ui| {});
     }
 
     fn run_systems(&mut self, world: &mut World) {
         pan_orbit_camera_system(world);
     }
 
-    fn handle_event(&mut self, _world: &mut World, message: &Message) {
-        match message {
-            Message::Input { event } => {
-                tracing::debug!("Input event: {:?}", event);
-            }
-            Message::App { type_name, .. } => {
-                tracing::debug!("App event: {}", type_name);
-            }
-        }
-    }
-
     fn on_keyboard_input(&mut self, world: &mut World, key_code: KeyCode, key_state: KeyState) {
         if matches!((key_code, key_state), (KeyCode::KeyQ, KeyState::Pressed)) {
             world.resources.window.should_exit = true;
         }
-    }
-
-    fn on_mouse_input(&mut self, _world: &mut World, state: ElementState, button: MouseButton) {
-        let _ = (state, button);
     }
 }
