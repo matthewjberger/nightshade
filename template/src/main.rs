@@ -29,11 +29,6 @@ impl State for Template {
             "Main Camera".to_string(),
         );
         world.resources.active_camera = Some(camera_entity);
-
-        #[cfg(feature = "openxr")]
-        {
-            world.resources.xr.locomotion_enabled = true;
-        }
     }
 
     fn ui(&mut self, _world: &mut World, ui_context: &egui::Context) {

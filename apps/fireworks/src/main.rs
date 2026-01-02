@@ -123,7 +123,6 @@ impl State for FireworksDemo {
 
         #[cfg(feature = "openxr")]
         {
-            world.resources.xr.locomotion_enabled = true;
             world.resources.xr.locomotion_speed = 15.0;
             world.resources.xr.initial_player_position = Some(Vec3::new(0.0, 10.0, 100.0));
             world.resources.xr.initial_player_yaw = Some(std::f32::consts::PI);
