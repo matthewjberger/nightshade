@@ -138,9 +138,9 @@ pub mod prelude {
     pub use crate::ecs::navmesh::{
         NavMeshAgent, NavMeshAgentState, NavMeshConnection, NavMeshEdge, NavMeshTriangle,
         NavMeshWorld, PathRequest, PathResult, PathStatus, PathfindingAlgorithm, SpatialHash,
-        clear_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
-        set_agent_destination, set_agent_speed, set_navmesh_debug_draw, spawn_navmesh_agent,
-        stop_agent,
+        clear_navmesh, find_closest_point_on_navmesh, get_agent_path_length, get_agent_state,
+        run_navmesh_systems, sample_navmesh_height, set_agent_destination, set_agent_speed,
+        set_navmesh_debug_draw, spawn_navmesh_agent, stop_agent,
     };
     #[cfg(feature = "navmesh")]
     pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
