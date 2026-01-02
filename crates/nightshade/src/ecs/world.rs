@@ -49,7 +49,7 @@ pub mod resources {
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::resources::PhysicsWorld;
-    pub use crate::ecs::prefab::resources::MeshCache;
+    pub use crate::ecs::prefab::resources::{AnimationCache, CachedPrefab, MeshCache, PrefabCache};
     #[cfg(feature = "scripting")]
     pub use crate::ecs::script::resources::ScriptRuntime;
     pub use crate::ecs::text::resources::TextCache;
@@ -136,6 +136,8 @@ freecs::ecs! {
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
         text_cache: crate::ecs::text::resources::TextCache,
         mesh_cache: crate::ecs::prefab::resources::MeshCache,
+        animation_cache: crate::ecs::prefab::resources::AnimationCache,
+        prefab_cache: crate::ecs::prefab::resources::PrefabCache,
         material_registry: crate::ecs::material::resources::MaterialRegistry,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,

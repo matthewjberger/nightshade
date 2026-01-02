@@ -13,6 +13,7 @@ pub struct AnimationClip {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationChannel {
     pub target_node: usize,
+    pub target_bone_name: Option<String>,
     pub target_property: AnimationProperty,
     pub sampler: AnimationSampler,
 }
@@ -70,6 +71,7 @@ pub struct AnimationPlayer {
     pub looping: bool,
     pub playing: bool,
     pub node_index_to_entity: HashMap<usize, Entity>,
+    pub bone_name_to_entity: HashMap<String, Entity>,
     pub blend_from_clip: Option<usize>,
     pub blend_from_time: f32,
     pub blend_factor: f32,
@@ -86,6 +88,7 @@ impl Default for AnimationPlayer {
             looping: true,
             playing: false,
             node_index_to_entity: HashMap::new(),
+            bone_name_to_entity: HashMap::new(),
             blend_from_clip: None,
             blend_from_time: 0.0,
             blend_factor: 1.0,
@@ -145,6 +148,25 @@ impl AnimationPlayer {
 
     pub fn is_blending(&self) -> bool {
         self.blend_from_clip.is_some() && self.blend_factor < 1.0
+    }
+
+    pub fn add_clip(&mut self, clip: AnimationClip) -> usize {
+        let index = self.clips.len();
+        self.clips.push(clip);
+        index
+    }
+
+    pub fn add_clips(&mut self, clips: impl IntoIterator<Item = AnimationClip>) {
+        self.clips.extend(clips);
+    }
+
+    pub fn resolve_target_entity(&self, channel: &AnimationChannel) -> Option<Entity> {
+        if let Some(ref bone_name) = channel.target_bone_name
+            && let Some(&entity) = self.bone_name_to_entity.get(bone_name)
+        {
+            return Some(entity);
+        }
+        self.node_index_to_entity.get(&channel.target_node).copied()
     }
 
     pub fn update(&mut self, delta_time: f32) {

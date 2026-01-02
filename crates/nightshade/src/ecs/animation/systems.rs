@@ -25,6 +25,7 @@ struct AnimationSampleData {
     from_time: f32,
     blend_factor: f32,
     node_mapping: HashMap<usize, Entity>,
+    bone_name_mapping: HashMap<String, Entity>,
 }
 
 pub fn apply_animations(world: &mut World) {
@@ -49,6 +50,7 @@ pub fn apply_animations(world: &mut World) {
                     from_time: player.blend_from_time,
                     blend_factor: player.blend_factor,
                     node_mapping: player.node_index_to_entity.clone(),
+                    bone_name_mapping: player.bone_name_to_entity.clone(),
                 })
             } else {
                 None
@@ -58,10 +60,20 @@ pub fn apply_animations(world: &mut World) {
         };
 
         if let Some(data) = animation_data {
-            let to_values = sample_clip(&data.to_clip, data.to_time, &data.node_mapping);
+            let to_values = sample_clip(
+                &data.to_clip,
+                data.to_time,
+                &data.node_mapping,
+                &data.bone_name_mapping,
+            );
 
             let final_values = if let Some(from_clip) = &data.from_clip {
-                let from_values = sample_clip(from_clip, data.from_time, &data.node_mapping);
+                let from_values = sample_clip(
+                    from_clip,
+                    data.from_time,
+                    &data.node_mapping,
+                    &data.bone_name_mapping,
+                );
                 blend_animation_values(&from_values, &to_values, data.blend_factor)
             } else {
                 to_values
@@ -91,11 +103,37 @@ fn sample_clip(
     clip: &AnimationClip,
     time: f32,
     node_mapping: &HashMap<usize, Entity>,
+    bone_name_mapping: &HashMap<String, Entity>,
 ) -> HashMap<Entity, AnimationAccumulator> {
+    static LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    let should_log = !LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed);
+
     let mut entity_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
+    let mut found_count = 0usize;
+    let mut not_found_count = 0usize;
 
     for channel in &clip.channels {
-        if let Some(&target_entity) = node_mapping.get(&channel.target_node)
+        let target_entity = if let Some(ref bone_name) = channel.target_bone_name {
+            bone_name_mapping.get(bone_name).copied()
+        } else {
+            None
+        }
+        .or_else(|| node_mapping.get(&channel.target_node).copied());
+
+        if target_entity.is_some() {
+            found_count += 1;
+        } else {
+            not_found_count += 1;
+            if should_log && not_found_count <= 3 {
+                tracing::warn!(
+                    "Animation channel target not found: node={}, bone_name={:?}",
+                    channel.target_node,
+                    channel.target_bone_name
+                );
+            }
+        }
+
+        if let Some(target_entity) = target_entity
             && let Some(value) = sample_animation_channel(channel, time)
         {
             let entry = entity_values.entry(target_entity).or_default();
@@ -116,6 +154,15 @@ fn sample_clip(
                 _ => {}
             }
         }
+    }
+
+    if should_log {
+        tracing::info!(
+            "Animation '{}': {} channels found targets, {} not found",
+            clip.name,
+            found_count,
+            not_found_count
+        );
     }
 
     entity_values
