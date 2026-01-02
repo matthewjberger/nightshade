@@ -6,7 +6,7 @@ use nightshade::ecs::text::components::TextProperties;
 use nightshade::prelude::*;
 use std::collections::HashSet;
 
-const FOX_MODEL: &[u8] = include_bytes!("../assets/fox.glb");
+const FOX_MODEL: &[u8] = include_bytes!("../../../assets/models/fox.glb");
 const FOX_SCALE: f32 = 0.01;
 
 const FIRST_NAMES: &[&str] = &[
