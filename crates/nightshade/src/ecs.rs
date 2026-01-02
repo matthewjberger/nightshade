@@ -8,6 +8,7 @@ pub mod generational_registry;
 pub mod gizmos;
 pub mod graphics;
 pub mod input;
+pub mod lattice;
 pub mod light;
 pub mod lines;
 pub mod map;

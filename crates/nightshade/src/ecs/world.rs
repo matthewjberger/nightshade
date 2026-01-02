@@ -9,6 +9,8 @@ pub mod components {
         Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, Smoothing,
     };
     pub use crate::ecs::input::components::Hovered;
+    #[cfg(feature = "lattice")]
+    pub use crate::ecs::lattice::components::{Lattice, LatticeInfluenced};
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{AlphaMode, Material, MaterialRef};
@@ -118,6 +120,8 @@ freecs::ecs! {
         joint: crate::ecs::skin::components::Joint => JOINT,
         morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
         navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
+        lattice: crate::ecs::lattice::components::Lattice => LATTICE,
+        lattice_influenced: crate::ecs::lattice::components::LatticeInfluenced => LATTICE_INFLUENCED,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

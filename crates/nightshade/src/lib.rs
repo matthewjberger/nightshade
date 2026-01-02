@@ -121,6 +121,14 @@ pub mod prelude {
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
+    #[cfg(feature = "lattice")]
+    pub use crate::ecs::lattice::{
+        debug::{LatticeDebugState, get_lattice_point_at_screen_position, lattice_debug_draw},
+        systems::{
+            create_lattice_entity, lattice_deformation_system,
+            register_entity_for_lattice_deformation,
+        },
+    };
     pub use crate::ecs::map::{
         Map, MapCamera, MapError, MapLight, MapNode, MapPrefab, NodeIndex, load_map,
         load_map_binary, load_map_json, save_map, save_map_binary, save_map_json, spawn_map,
