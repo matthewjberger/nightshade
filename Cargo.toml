@@ -35,7 +35,17 @@ tracing-tracy = "0.11"
 tracing-chrome = "0.7"
 freecs = "1.3.4"
 gilrs = "0.11.0"
-gltf = { version = "1.4.1", features = ["KHR_lights_punctual", "names", "KHR_materials_pbrSpecularGlossiness", "import"] }
+gltf = { version = "1.4.1", features = [
+    "KHR_lights_punctual",
+    "names",
+    "KHR_materials_pbrSpecularGlossiness",
+    "KHR_materials_transmission",
+    "KHR_materials_volume",
+    "KHR_materials_ior",
+    "KHR_materials_specular",
+    "KHR_materials_emissive_strength",
+    "import",
+] }
 half = "2.7.1"
 image = { version = "0.25", default-features = false, features = ["png", "hdr"] }
 kira = "0.11.0"

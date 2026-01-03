@@ -80,6 +80,30 @@ pub struct Material {
     pub unlit: bool,
     #[serde(default = "default_uv_scale")]
     pub uv_scale: [f32; 2],
+    #[serde(default)]
+    pub transmission_factor: f32,
+    #[serde(default)]
+    pub transmission_texture: Option<String>,
+    #[serde(default)]
+    pub thickness: f32,
+    #[serde(default)]
+    pub thickness_texture: Option<String>,
+    #[serde(default = "default_attenuation_color")]
+    pub attenuation_color: [f32; 3],
+    #[serde(default)]
+    pub attenuation_distance: f32,
+    #[serde(default = "default_ior")]
+    pub ior: f32,
+    #[serde(default = "default_specular_factor")]
+    pub specular_factor: f32,
+    #[serde(default = "default_specular_color_factor")]
+    pub specular_color_factor: [f32; 3],
+    #[serde(default)]
+    pub specular_texture: Option<String>,
+    #[serde(default)]
+    pub specular_color_texture: Option<String>,
+    #[serde(default = "default_emissive_strength")]
+    pub emissive_strength: f32,
 }
 
 fn default_uv_scale() -> [f32; 2] {
@@ -91,6 +115,26 @@ fn default_normal_scale() -> f32 {
 }
 
 fn default_occlusion_strength() -> f32 {
+    1.0
+}
+
+fn default_attenuation_color() -> [f32; 3] {
+    [1.0, 1.0, 1.0]
+}
+
+fn default_ior() -> f32 {
+    1.5
+}
+
+fn default_specular_factor() -> f32 {
+    1.0
+}
+
+fn default_specular_color_factor() -> [f32; 3] {
+    [1.0, 1.0, 1.0]
+}
+
+fn default_emissive_strength() -> f32 {
     1.0
 }
 
@@ -120,6 +164,18 @@ impl Default for Material {
             metallic: 0.0,
             unlit: false,
             uv_scale: [1.0, 1.0],
+            transmission_factor: 0.0,
+            transmission_texture: None,
+            thickness: 0.0,
+            thickness_texture: None,
+            attenuation_color: [1.0, 1.0, 1.0],
+            attenuation_distance: 0.0,
+            ior: 1.5,
+            specular_factor: 1.0,
+            specular_color_factor: [1.0, 1.0, 1.0],
+            specular_texture: None,
+            specular_color_texture: None,
+            emissive_strength: 1.0,
         }
     }
 }
