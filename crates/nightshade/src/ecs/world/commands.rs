@@ -279,8 +279,8 @@ pub fn spawn_mesh_at(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY,
+        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM,
+        LOCAL_TRANSFORM_DIRTY, MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY, WATER,
     };
 
     let entity = world.spawn_entities(
@@ -291,7 +291,9 @@ pub fn spawn_mesh_at(
             | MATERIAL_REF
             | BOUNDING_VOLUME
             | CASTS_SHADOW
-            | VISIBILITY,
+            | VISIBILITY
+            | LIGHT
+            | WATER,
         1,
     )[0];
 
@@ -479,23 +481,7 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
 
     world.set_render_mesh(entity, components::RenderMesh::new(mesh_name));
 
-    world.set_water(
-        entity,
-        Water {
-            base_color: [0.0, 0.09, 0.18, 1.0],
-            water_color: [0.48, 0.54, 0.36, 1.0],
-            base_height: 0.0,
-            wave_height: 0.6,
-            choppy: 4.0,
-            speed: 0.8,
-            frequency: 0.16,
-            specular_strength: 1.0,
-            fresnel_power: 3.0,
-            edge_feather_distance: 2.0,
-            enabled: true,
-            bounds: None,
-        },
-    );
+    world.set_water(entity, Water::default());
 
     if let Some(visibility) = world.get_visibility_mut(entity) {
         visibility.visible = true;
