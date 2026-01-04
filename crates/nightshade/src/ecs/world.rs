@@ -36,6 +36,7 @@ pub mod components {
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
     pub use crate::ecs::visibility::components::Visibility;
+    pub use crate::ecs::water::components::Water;
 }
 
 pub mod resources {
@@ -69,6 +70,7 @@ pub use commands::{
     spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
     spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
     spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
+    spawn_water_plane_at,
 };
 
 pub mod animation_systems {
@@ -122,6 +124,7 @@ freecs::ecs! {
         navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
         lattice: crate::ecs::lattice::components::Lattice => LATTICE,
         lattice_influenced: crate::ecs::lattice::components::LatticeInfluenced => LATTICE_INFLUENCED,
+        water: crate::ecs::water::components::Water => WATER,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

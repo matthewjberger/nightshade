@@ -424,6 +424,86 @@ pub fn spawn_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity
     )
 }
 
+pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
+    use crate::ecs::mesh::components::create_subdivided_plane_mesh;
+    use crate::ecs::water::Water;
+    use crate::ecs::world::components;
+    use crate::ecs::world::{
+        GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME, RENDER_MESH, VISIBILITY,
+        WATER,
+    };
+
+    let entity = world.spawn_entities(
+        NAME | LOCAL_TRANSFORM
+            | GLOBAL_TRANSFORM
+            | LOCAL_TRANSFORM_DIRTY
+            | RENDER_MESH
+            | VISIBILITY
+            | WATER,
+        1,
+    )[0];
+
+    world.set_name(entity, components::Name("Water Plane".to_string()));
+    world.set_local_transform(
+        entity,
+        components::LocalTransform {
+            translation: position,
+            scale: nalgebra_glm::Vec3::new(10.0, 1.0, 10.0),
+            rotation: nalgebra_glm::Quat::identity(),
+        },
+    );
+    world.set_global_transform(entity, components::GlobalTransform::default());
+    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+
+    let mesh_name = "WaterPlane";
+    if !world
+        .resources
+        .mesh_cache
+        .registry
+        .name_to_index
+        .contains_key(mesh_name)
+    {
+        let mesh = create_subdivided_plane_mesh(20.0, 1);
+        mesh_cache_insert(&mut world.resources.mesh_cache, mesh_name.to_string(), mesh);
+    }
+
+    if let Some(&index) = world
+        .resources
+        .mesh_cache
+        .registry
+        .name_to_index
+        .get(mesh_name)
+    {
+        world.resources.mesh_cache.registry.add_reference(index);
+    }
+
+    world.set_render_mesh(entity, components::RenderMesh::new(mesh_name));
+
+    world.set_water(
+        entity,
+        Water {
+            base_color: [0.0, 0.09, 0.18, 1.0],
+            water_color: [0.48, 0.54, 0.36, 1.0],
+            base_height: 0.0,
+            wave_height: 0.6,
+            choppy: 4.0,
+            speed: 0.8,
+            frequency: 0.16,
+            specular_strength: 1.0,
+            fresnel_power: 3.0,
+            edge_feather_distance: 2.0,
+            enabled: true,
+            bounds: None,
+        },
+    );
+
+    if let Some(visibility) = world.get_visibility_mut(entity) {
+        visibility.visible = true;
+    }
+
+    entity
+}
+
 pub fn spawn_3d_text_with_properties(
     world: &mut World,
     text: &str,

@@ -182,7 +182,7 @@ pub mod prelude {
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
-        spawn_sun_without_shadows, spawn_torus_at,
+        spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
     };
     pub use crate::render::wgpu::passes::geometry::UiLayer;
     #[cfg(feature = "egui")]
