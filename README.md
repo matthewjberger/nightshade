@@ -14,7 +14,9 @@
 <img width="2560" height="1440" alt="Screenshot 2025-12-28 121420" src="https://github.com/user-attachments/assets/5ac1e414-a615-4ceb-ac58-0e209cba60f1" />
 <img width="2560" height="1392" alt="Screenshot 2025-12-12 101751" src="https://github.com/user-attachments/assets/0ee6025c-4bfc-4dd3-9ea1-8cfd10b9ebad" />
 
- ### [View the gallery here](https://matthewberger.dev/nightshade) 🔎
+## Gallery
+
+[View the gallery here](https://matthewberger.dev/nightshade) 🔎
  
 <img width="1238" height="1346" alt="image" src="https://github.com/user-attachments/assets/dcfab536-f067-4988-b3f5-d8839444aaea" />
 
