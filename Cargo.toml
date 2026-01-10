@@ -54,18 +54,18 @@ nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
 nightshade = { version = "0.6.45", path = "crates/nightshade" }
 petgraph = { version = "0.8", features = ["serde-1"] }
-rapier3d = { version = "0.31.0", features = ["debug-render", "serde-serialize"] }
+rapier3d = { version = "0.30", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"
 thiserror = "2.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.48.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.49.0", features = ["rt-multi-thread"] }
 web-time = "1.1.0"
 wgpu = { version = "27.0.1", default-features = false }
-wgpu-hal = { version = "27.0.4", default-features = false }
+wgpu-hal = { version = "28.0.0", default-features = false }
 winit = { version = "0.30.12", features = ["serde"] }
 
-openxr = { version = "0.19", features = ["static", "loaded"] }
+openxr = { version = "0.21", features = ["static", "loaded"] }
 ash = "0.38"
 gpu-allocator = "0.28"
 clap = { version = "4", features = ["derive"] }
@@ -73,6 +73,11 @@ steamworks = "0.12"
 steamworks-sys = "0.12"
 noise = "0.9"
 ehttp = "0.6"
+
+# wgpu-hal 27.0.4 has a windows crate version conflict between itself (0.58) and gpu-allocator 0.27 (0.54).
+# This patch forces gpu-allocator 0.28 which uses windows 0.58. Remove when wgpu 28 + egui 0.34 are available.
+[patch.crates-io]
+gpu-allocator = { git = "https://github.com/Traverse-Research/gpu-allocator", tag = "0.28.0" }
 
 [profile.dev]
 opt-level = 1
