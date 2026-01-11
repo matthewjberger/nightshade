@@ -279,8 +279,8 @@ pub fn spawn_mesh_at(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM,
-        LOCAL_TRANSFORM_DIRTY, MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY, WATER,
+        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
+        MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY,
     };
 
     let entity = world.spawn_entities(
@@ -291,9 +291,7 @@ pub fn spawn_mesh_at(
             | MATERIAL_REF
             | BOUNDING_VOLUME
             | CASTS_SHADOW
-            | VISIBILITY
-            | LIGHT
-            | WATER,
+            | VISIBILITY,
         1,
     )[0];
 
