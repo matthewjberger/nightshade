@@ -8,6 +8,7 @@ pub mod components {
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, Smoothing,
     };
+    pub use crate::ecs::decal::components::Decal;
     pub use crate::ecs::input::components::Hovered;
     #[cfg(feature = "lattice")]
     pub use crate::ecs::lattice::components::{Lattice, LatticeInfluenced};
@@ -99,6 +100,7 @@ freecs::ecs! {
         light: crate::ecs::light::components::Light => LIGHT,
         lines: crate::ecs::lines::components::Lines => LINES,
         visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
+        decal: crate::ecs::decal::components::Decal => DECAL,
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
         render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
@@ -161,6 +163,7 @@ freecs::ecs! {
         steam: crate::steam::SteamResources,
         #[cfg(feature = "physics")]
         picking_world: crate::ecs::picking::resources::PickingWorld,
+        gpu_picking: crate::ecs::gpu_picking::GpuPicking,
     }
 }
 
