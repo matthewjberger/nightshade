@@ -21,7 +21,7 @@ pub mod name;
 pub mod navmesh;
 pub mod particles;
 pub mod physics;
-#[cfg(feature = "physics")]
+#[cfg(feature = "picking")]
 pub mod picking;
 pub mod prefab;
 pub mod render_layer;

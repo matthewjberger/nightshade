@@ -2,7 +2,6 @@ use crate::ecs::{
     camera::components::Projection,
     world::{Entity, Vec2, Vec3, Vec4, World},
 };
-use rapier3d::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct PickingRay {
@@ -252,11 +251,14 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
     visible_entities
 }
 
+#[cfg(feature = "physics")]
 pub fn pick_entities_trimesh(
     world: &World,
     screen_pos: Vec2,
     options: PickingOptions,
 ) -> Vec<PickingResult> {
+    use rapier3d::prelude::*;
+
     let ray = match PickingRay::from_screen_position(world, screen_pos) {
         Some(ray) => ray,
         None => return Vec::new(),
@@ -301,6 +303,7 @@ pub fn pick_entities_trimesh(
     results
 }
 
+#[cfg(feature = "physics")]
 pub fn pick_closest_entity_trimesh(world: &World, screen_pos: Vec2) -> Option<PickingResult> {
     pick_entities_trimesh(world, screen_pos, PickingOptions::default())
         .into_iter()

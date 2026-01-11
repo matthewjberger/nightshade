@@ -15,6 +15,7 @@ rust-version.workspace = true
 default = ["engine", "wgpu"]
 
 engine = [
+    "picking",
     "dep:bincode",
     "dep:bitflags",
     "dep:bytemuck",
@@ -52,6 +53,7 @@ egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 shell = ["egui"]
 audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
+picking = []
 lattice = []
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]

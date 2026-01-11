@@ -6,14 +6,17 @@
 //!
 //! ### Core Features
 //!
-//! - **`engine`** (default) - Full engine functionality including ECS, windowing, and all sub-features
-//!   below. This is the standard feature for building games.
+//! - **`engine`** (default) - Full engine functionality including ECS, windowing, picking, and all
+//!   sub-features below. This is the standard feature for building games.
 //!
 //! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, and `scripting`.
 //!   Use this when you want all optional functionality.
 //!
 //! - **`wgpu`** (default) - WebGPU-based rendering with support for DirectX 12, Metal, Vulkan, and
 //!   WebGPU backends.
+//!
+//! - **`picking`** - Ray-based entity picking using bounding volumes. Included in `engine` by default.
+//!   Trimesh picking requires both `picking` and `physics` features.
 //!
 //! ### Optional Features
 //!
@@ -149,13 +152,16 @@ pub mod prelude {
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
         PhysicsMaterial, PhysicsMaterialComponent, RigidBodyComponent,
     };
-    #[cfg(feature = "physics")]
+    #[cfg(feature = "picking")]
     pub use crate::ecs::picking::{
-        PickingOptions, PickingRay, PickingResult, PickingWorld, get_ground_position_from_screen,
-        pick_closest_entity, pick_closest_entity_trimesh, pick_entities, pick_entities_in_frustum,
-        pick_entities_trimesh, register_entity_for_trimesh_picking,
-        register_entity_hierarchy_for_trimesh_picking, unregister_entity_from_picking,
-        update_picking_transform,
+        PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
+        pick_closest_entity, pick_entities, pick_entities_in_frustum,
+    };
+    #[cfg(all(feature = "picking", feature = "physics"))]
+    pub use crate::ecs::picking::{
+        PickingWorld, pick_closest_entity_trimesh, pick_entities_trimesh,
+        register_entity_for_trimesh_picking, register_entity_hierarchy_for_trimesh_picking,
+        unregister_entity_from_picking, update_picking_transform,
     };
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::terrain::{
