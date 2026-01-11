@@ -9,6 +9,7 @@ pub struct GpuPickResult {
     pub world_position: nalgebra_glm::Vec3,
     pub world_normal: nalgebra_glm::Vec3,
     pub depth: f32,
+    pub entity_id: Option<u32>,
 }
 
 #[derive(Default)]
@@ -16,6 +17,7 @@ pub struct GpuPicking {
     pub pending_request: Option<GpuPickRequest>,
     pub result: Option<GpuPickResult>,
     pub depth_sample_buffer: Vec<f32>,
+    pub entity_id_sample_buffer: Vec<u32>,
     pub sample_width: u32,
     pub sample_height: u32,
     pub sample_center_x: u32,
@@ -44,13 +46,15 @@ impl GpuPicking {
 
     pub fn set_depth_samples(
         &mut self,
-        samples: Vec<f32>,
+        depth_samples: Vec<f32>,
+        entity_id_samples: Vec<u32>,
         width: u32,
         height: u32,
         center_x: u32,
         center_y: u32,
     ) {
-        self.depth_sample_buffer = samples;
+        self.depth_sample_buffer = depth_samples;
+        self.entity_id_sample_buffer = entity_id_samples;
         self.sample_width = width;
         self.sample_height = height;
         self.sample_center_x = center_x;
@@ -154,10 +158,18 @@ impl GpuPicking {
         self.previous_position = Some(smoothed_position);
         self.previous_normal = Some(smoothed_normal);
 
+        let entity_id = if center_index < self.entity_id_sample_buffer.len() {
+            let id = self.entity_id_sample_buffer[center_index];
+            if id > 0 { Some(id) } else { None }
+        } else {
+            None
+        };
+
         self.result = Some(GpuPickResult {
             world_position: smoothed_position,
             world_normal: smoothed_normal,
             depth: center_depth,
+            entity_id,
         });
     }
 }
