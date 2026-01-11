@@ -62,7 +62,7 @@ serde_json = "1.0"
 tokio = { version = "1.49.0", features = ["rt-multi-thread"] }
 web-time = "1.1.0"
 wgpu = { version = "27.0.1", default-features = false }
-wgpu-hal = { version = "28.0.0", default-features = false }
+wgpu-hal = { version = "27.0.0", features = ["vulkan"] }
 winit = { version = "0.30.12", features = ["serde"] }
 
 openxr = { version = "0.21", features = ["static", "loaded"] }
