@@ -23,6 +23,10 @@
 
 The fastest way to get started is with the [nightshade-template](https://github.com/matthewjberger/nightshade-template).
 
+## Examples
+
+For a collection of example projects showcasing Nightshade's features, see the [nightshade-examples](https://github.com/matthewjberger/nightshade-examples) repository.
+
 ## Quickstart
 
 ```bash
