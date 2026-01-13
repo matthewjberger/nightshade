@@ -1,12 +1,11 @@
 [workspace]
 members = [
-    "apps/*",
+    "apps/editor",
     "crates/*",
 ]
 exclude = [
     "site",
     "template",
-    "apps/plugins",
 ]
 resolver = "2"
 
