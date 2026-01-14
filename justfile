@@ -200,7 +200,7 @@ push-version:
 # Creates a GitHub release for the current version (Windows)
 [windows]
 publish-release:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; gh release create "v$version" --title "nightshade-v$version" --notes-file CHANGELOG.md
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file -
 
 # Creates a GitHub release for the current version (Unix)
 [unix]
@@ -208,7 +208,7 @@ publish-release:
     #!/usr/bin/env bash
     set -euo pipefail
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file CHANGELOG.md
+    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file -
 
 # Shows the GitHub release for the current version (Windows)
 [windows]
