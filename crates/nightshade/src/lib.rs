@@ -106,6 +106,9 @@ pub mod steam;
 #[cfg(all(feature = "plugin_runtime", not(target_arch = "wasm32")))]
 pub mod plugin_runtime;
 
+#[cfg(all(windows, feature = "windows-app-icon"))]
+pub mod build;
+
 #[cfg(feature = "engine")]
 pub use systems::*;
 

@@ -86,6 +86,7 @@ plugin_runtime = ["dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
 editor-plugin-host = ["dep:egui", "dep:egui_tiles"]
 editor-plugin-guest = []
+windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 
 [dependencies]
 serde = { workspace = true }
@@ -179,6 +180,10 @@ web-sys = { version = "0.3", features = [
     "Url",
     "Window",
 ], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+winresource = { version = "0.1", optional = true }
+ico = { version = "0.5", optional = true }
 
 [package.metadata.cargo-machete]
 ignored = ["nalgebra", "getrandom"]
