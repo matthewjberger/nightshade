@@ -191,18 +191,40 @@ pub mod prelude {
         spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
     };
     pub use crate::render::wgpu::passes::geometry::UiLayer;
+    pub use bincode;
     #[cfg(feature = "egui")]
     pub use egui;
+    #[cfg(feature = "egui")]
+    pub use egui_tiles;
     pub use freecs;
     pub use image;
     pub use rand::{self, Rng};
     pub use serde;
+    pub use serde_json;
+    pub use strum;
     pub use tracing;
+    pub use uuid;
     pub use winit::{
         event::{ElementState, ElementState as KeyState, MouseButton, WindowEvent},
         keyboard::KeyCode,
         window,
     };
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "plugin_runtime"))]
+    pub use anyhow;
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use dirs;
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use rfd;
+
+    #[cfg(target_arch = "wasm32")]
+    pub use js_sys;
+    #[cfg(target_arch = "wasm32")]
+    pub use wasm_bindgen;
+    #[cfg(target_arch = "wasm32")]
+    pub use wasm_bindgen_futures;
+    #[cfg(target_arch = "wasm32")]
+    pub use web_sys;
 
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::passes;
