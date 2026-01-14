@@ -43,6 +43,11 @@ fix:
 format:
     cargo fmt --all
 
+# Install Debian/Ubuntu dependencies for building
+[linux]
+install-debian-deps:
+    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
 # Install wasm tooling
 init-wasm:
     rustup target add wasm32-unknown-unknown
