@@ -84,8 +84,6 @@ chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
 plugin_runtime = ["dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
-editor-plugin-host = ["dep:egui", "dep:egui_tiles"]
-editor-plugin-guest = []
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 
 [dependencies]

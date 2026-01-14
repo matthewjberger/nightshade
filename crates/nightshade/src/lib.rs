@@ -57,10 +57,6 @@
 //!
 //! - **`plugin_runtime`** - WASM plugin runtime using Wasmtime. Enables hosting and executing plugins.
 //!
-//! - **`editor-plugin-host`** - Editor plugin host API with egui and egui_tiles.
-//!
-//! - **`editor-plugin-guest`** - Editor plugin guest API for WASM plugins.
-//!
 //! See [PROFILING.md](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) for
 //! detailed profiling documentation including Tracy setup and adding custom instrumentation.
 //!
@@ -81,9 +77,6 @@
 //! ```
 
 pub mod plugin;
-
-#[cfg(any(feature = "editor-plugin-host", feature = "editor-plugin-guest"))]
-pub mod editor_plugin;
 
 #[cfg(feature = "engine")]
 pub mod ecs;
