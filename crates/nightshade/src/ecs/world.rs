@@ -31,7 +31,8 @@ pub mod components {
     pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::text::components::{
-        HudAnchor, HudText, Text, TextAlignment, TextProperties, VerticalAlignment,
+        HudAnchor, HudText, Text, TextAlignment, TextCharacterColors, TextProperties,
+        VerticalAlignment,
     };
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
@@ -107,6 +108,7 @@ freecs::ecs! {
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
+        text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
         hovered: crate::ecs::input::components::Hovered => HOVERED,
         rotation: crate::ecs::transform::components::Rotation => ROTATION,
