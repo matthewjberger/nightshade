@@ -197,6 +197,19 @@ push-version:
     git push origin "v$VERSION"
     git push
 
+# Creates a GitHub release for the current version (Windows)
+[windows]
+publish-release:
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file -
+
+# Creates a GitHub release for the current version (Unix)
+[unix]
+publish-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file -
+
 # Shows the GitHub release for the current version (Windows)
 [windows]
 show-release:
@@ -321,7 +334,8 @@ publish-patch:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
+    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
 
 # Bumps patch version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -331,7 +345,8 @@ publish-patch:
     just publish-crate
     just push-template
     @echo ""
-    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
+    @echo "To create a GitHub release, run:"
+    @echo "  just publish-release"
 
 # Bumps minor version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -341,7 +356,8 @@ publish-minor:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
+    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
 
 # Bumps minor version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -351,7 +367,8 @@ publish-minor:
     just publish-crate
     just push-template
     @echo ""
-    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
+    @echo "To create a GitHub release, run:"
+    @echo "  just publish-release"
 
 # Bumps major version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -361,7 +378,8 @@ publish-major:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
+    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
+    Write-Host "  just publish-release" -ForegroundColor Green
 
 # Bumps major version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -371,7 +389,8 @@ publish-major:
     just publish-crate
     just push-template
     @echo ""
-    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
+    @echo "To create a GitHub release, run:"
+    @echo "  just publish-release"
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="nightshade-editor":
