@@ -197,19 +197,6 @@ push-version:
     git push origin "v$VERSION"
     git push
 
-# Pushes the version tag to trigger the release workflow (Windows)
-[windows]
-push-tag:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git push origin "v$version"
-
-# Pushes the version tag to trigger the release workflow (Unix)
-[unix]
-push-tag:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    git push origin "v$VERSION"
-
 # Shows the GitHub release for the current version (Windows)
 [windows]
 show-release:
@@ -334,8 +321,7 @@ publish-patch:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just push-tag" -ForegroundColor Green
+    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
 
 # Bumps patch version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -345,8 +331,7 @@ publish-patch:
     just publish-crate
     just push-template
     @echo ""
-    @echo "To publish a GitHub release for this version, run:"
-    @echo "  just push-tag"
+    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
 
 # Bumps minor version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -356,8 +341,7 @@ publish-minor:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just push-tag" -ForegroundColor Green
+    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
 
 # Bumps minor version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -367,8 +351,7 @@ publish-minor:
     just publish-crate
     just push-template
     @echo ""
-    @echo "To publish a GitHub release for this version, run:"
-    @echo "  just push-tag"
+    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
 
 # Bumps major version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -378,8 +361,7 @@ publish-major:
     just publish-crate
     just push-template
     Write-Host ""
-    Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just push-tag" -ForegroundColor Green
+    Write-Host "Release workflow triggered - artifacts will be built and attached to the GitHub release" -ForegroundColor Green
 
 # Bumps major version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -389,8 +371,7 @@ publish-major:
     just publish-crate
     just push-template
     @echo ""
-    @echo "To publish a GitHub release for this version, run:"
-    @echo "  just push-tag"
+    @echo "Release workflow triggered - artifacts will be built and attached to the GitHub release"
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="nightshade-editor":
