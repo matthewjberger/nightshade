@@ -197,18 +197,18 @@ push-version:
     git push origin "v$VERSION"
     git push
 
-# Creates a GitHub release for the current version (Windows)
+# Triggers release workflow by pushing the version tag (Windows)
 [windows]
 publish-release:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file -
+    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git push origin "v$version"
 
-# Creates a GitHub release for the current version (Unix)
+# Triggers release workflow by pushing the version tag (Unix)
 [unix]
 publish-release:
     #!/usr/bin/env bash
     set -euo pipefail
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file -
+    git push origin "v$VERSION"
 
 # Shows the GitHub release for the current version (Windows)
 [windows]
