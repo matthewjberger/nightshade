@@ -94,6 +94,12 @@ lint-wasm:
 push-template:
     git subtree push --prefix=template {{template_repo}} main
 
+# Force syncs template to nightshade-template repo (overwrites remote)
+sync-template:
+    git subtree split --prefix=template -b template-branch
+    git push --force {{template_repo}} template-branch:main
+    git branch -D template-branch
+
 # Pulls updates from nightshade-template repo
 pull-template:
     git subtree pull --prefix=template {{template_repo}} main --squash
