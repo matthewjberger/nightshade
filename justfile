@@ -197,14 +197,14 @@ push-version:
     git push origin "v$VERSION"
     git push
 
-# Triggers release workflow by pushing the version tag (Windows)
+# Pushes the version tag to trigger the release workflow (Windows)
 [windows]
-publish-release:
+push-tag:
     $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git push origin "v$version"
 
-# Triggers release workflow by pushing the version tag (Unix)
+# Pushes the version tag to trigger the release workflow (Unix)
 [unix]
-publish-release:
+push-tag:
     #!/usr/bin/env bash
     set -euo pipefail
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
@@ -335,7 +335,7 @@ publish-patch:
     just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    Write-Host "  just push-tag" -ForegroundColor Green
 
 # Bumps patch version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -346,7 +346,7 @@ publish-patch:
     just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
-    @echo "  just publish-release"
+    @echo "  just push-tag"
 
 # Bumps minor version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -357,7 +357,7 @@ publish-minor:
     just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    Write-Host "  just push-tag" -ForegroundColor Green
 
 # Bumps minor version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -368,7 +368,7 @@ publish-minor:
     just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
-    @echo "  just publish-release"
+    @echo "  just push-tag"
 
 # Bumps major version, pushes, and publishes to crates.io (Windows)
 [windows]
@@ -379,7 +379,7 @@ publish-major:
     just push-template
     Write-Host ""
     Write-Host "To publish a GitHub release for this version, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    Write-Host "  just push-tag" -ForegroundColor Green
 
 # Bumps major version, pushes, and publishes to crates.io (Unix)
 [unix]
@@ -390,7 +390,7 @@ publish-major:
     just push-template
     @echo ""
     @echo "To publish a GitHub release for this version, run:"
-    @echo "  just publish-release"
+    @echo "  just push-tag"
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="nightshade-editor":
