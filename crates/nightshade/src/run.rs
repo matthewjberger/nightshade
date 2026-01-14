@@ -1009,6 +1009,10 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
     }
 
+    fn about_to_wait(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
+        request_redraw_system(&mut self.world);
+    }
+
     fn exiting(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {}
 }
 
