@@ -9,6 +9,9 @@ pub struct RenderResources {
     pub depth: crate::render::wgpu::rendergraph::ResourceId,
     pub compute_output: crate::render::wgpu::rendergraph::ResourceId,
     pub swapchain: crate::render::wgpu::rendergraph::ResourceId,
+    pub view_normals: crate::render::wgpu::rendergraph::ResourceId,
+    pub ssao_raw: crate::render::wgpu::rendergraph::ResourceId,
+    pub ssao: crate::render::wgpu::rendergraph::ResourceId,
 }
 
 #[cfg(target_arch = "wasm32")]
