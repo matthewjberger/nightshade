@@ -63,8 +63,14 @@ pub struct Material {
     pub alpha_mode: AlphaMode,
     pub alpha_cutoff: f32,
     pub base_texture: Option<String>,
+    #[serde(default)]
+    pub base_texture_uv_set: u32,
     pub emissive_texture: Option<String>,
+    #[serde(default)]
+    pub emissive_texture_uv_set: u32,
     pub normal_texture: Option<String>,
+    #[serde(default)]
+    pub normal_texture_uv_set: u32,
     #[serde(default = "default_normal_scale")]
     pub normal_scale: f32,
     #[serde(default)]
@@ -72,7 +78,11 @@ pub struct Material {
     #[serde(default)]
     pub normal_map_two_component: bool,
     pub metallic_roughness_texture: Option<String>,
+    #[serde(default)]
+    pub metallic_roughness_texture_uv_set: u32,
     pub occlusion_texture: Option<String>,
+    #[serde(default)]
+    pub occlusion_texture_uv_set: u32,
     #[serde(default = "default_occlusion_strength")]
     pub occlusion_strength: f32,
     pub roughness: f32,
@@ -85,9 +95,13 @@ pub struct Material {
     #[serde(default)]
     pub transmission_texture: Option<String>,
     #[serde(default)]
+    pub transmission_texture_uv_set: u32,
+    #[serde(default)]
     pub thickness: f32,
     #[serde(default)]
     pub thickness_texture: Option<String>,
+    #[serde(default)]
+    pub thickness_texture_uv_set: u32,
     #[serde(default = "default_attenuation_color")]
     pub attenuation_color: [f32; 3],
     #[serde(default)]
@@ -101,7 +115,11 @@ pub struct Material {
     #[serde(default)]
     pub specular_texture: Option<String>,
     #[serde(default)]
+    pub specular_texture_uv_set: u32,
+    #[serde(default)]
     pub specular_color_texture: Option<String>,
+    #[serde(default)]
+    pub specular_color_texture_uv_set: u32,
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
 }
@@ -152,13 +170,18 @@ impl Default for Material {
             alpha_mode: AlphaMode::Opaque,
             alpha_cutoff: 0.5,
             base_texture: None,
+            base_texture_uv_set: 0,
             emissive_texture: None,
+            emissive_texture_uv_set: 0,
             normal_texture: None,
+            normal_texture_uv_set: 0,
             normal_scale: 1.0,
             normal_map_flip_y: false,
             normal_map_two_component: false,
             metallic_roughness_texture: None,
+            metallic_roughness_texture_uv_set: 0,
             occlusion_texture: None,
+            occlusion_texture_uv_set: 0,
             occlusion_strength: 1.0,
             roughness: 0.5,
             metallic: 0.0,
@@ -166,15 +189,19 @@ impl Default for Material {
             uv_scale: [1.0, 1.0],
             transmission_factor: 0.0,
             transmission_texture: None,
+            transmission_texture_uv_set: 0,
             thickness: 0.0,
             thickness_texture: None,
+            thickness_texture_uv_set: 0,
             attenuation_color: [1.0, 1.0, 1.0],
             attenuation_distance: 0.0,
             ior: 1.5,
             specular_factor: 1.0,
             specular_color_factor: [1.0, 1.0, 1.0],
             specular_texture: None,
+            specular_texture_uv_set: 0,
             specular_color_texture: None,
+            specular_color_texture_uv_set: 0,
             emissive_strength: 1.0,
         }
     }

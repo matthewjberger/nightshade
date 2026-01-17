@@ -84,7 +84,9 @@ pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
     pub tex_coords: [f32; 2],
+    pub tex_coords_1: [f32; 2],
     pub tangent: [f32; 4],
+    pub color: [f32; 4],
 }
 
 impl Vertex {
@@ -93,7 +95,9 @@ impl Vertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords: [0.0, 0.0],
+            tex_coords_1: [0.0, 0.0],
             tangent: [1.0, 0.0, 0.0, 1.0],
+            color: [1.0, 1.0, 1.0, 1.0],
         }
     }
 
@@ -102,7 +106,9 @@ impl Vertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords,
+            tex_coords_1: [0.0, 0.0],
             tangent: [1.0, 0.0, 0.0, 1.0],
+            color: [1.0, 1.0, 1.0, 1.0],
         }
     }
 
@@ -116,7 +122,27 @@ impl Vertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords,
+            tex_coords_1: [0.0, 0.0],
             tangent,
+            color: [1.0, 1.0, 1.0, 1.0],
+        }
+    }
+
+    pub fn with_all(
+        position: Vec3,
+        normal: Vec3,
+        tex_coords: [f32; 2],
+        tex_coords_1: [f32; 2],
+        tangent: [f32; 4],
+        color: [f32; 4],
+    ) -> Self {
+        Self {
+            position: [position.x, position.y, position.z],
+            normal: [normal.x, normal.y, normal.z],
+            tex_coords,
+            tex_coords_1,
+            tangent,
+            color,
         }
     }
 }
@@ -127,7 +153,9 @@ pub struct SkinnedVertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
     pub tex_coords: [f32; 2],
+    pub tex_coords_1: [f32; 2],
     pub tangent: [f32; 4],
+    pub color: [f32; 4],
     pub joint_indices: [u32; 4],
     pub joint_weights: [f32; 4],
 }
@@ -144,9 +172,32 @@ impl SkinnedVertex {
             position: [position.x, position.y, position.z],
             normal: [normal.x, normal.y, normal.z],
             tex_coords,
+            tex_coords_1: [0.0, 0.0],
             tangent: [1.0, 0.0, 0.0, 1.0],
+            color: [1.0, 1.0, 1.0, 1.0],
             joint_indices,
             joint_weights,
+        }
+    }
+
+    pub fn with_all(
+        position: Vec3,
+        normal: Vec3,
+        tex_coords: [f32; 2],
+        tex_coords_1: [f32; 2],
+        tangent: [f32; 4],
+        color: [f32; 4],
+        joints: ([u32; 4], [f32; 4]),
+    ) -> Self {
+        Self {
+            position: [position.x, position.y, position.z],
+            normal: [normal.x, normal.y, normal.z],
+            tex_coords,
+            tex_coords_1,
+            tangent,
+            color,
+            joint_indices: joints.0,
+            joint_weights: joints.1,
         }
     }
 }
@@ -157,7 +208,9 @@ impl Default for SkinnedVertex {
             position: [0.0, 0.0, 0.0],
             normal: [0.0, 1.0, 0.0],
             tex_coords: [0.0, 0.0],
+            tex_coords_1: [0.0, 0.0],
             tangent: [1.0, 0.0, 0.0, 1.0],
+            color: [1.0, 1.0, 1.0, 1.0],
             joint_indices: [0, 0, 0, 0],
             joint_weights: [1.0, 0.0, 0.0, 0.0],
         }
