@@ -1,4 +1,5 @@
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+use crate::ecs::graphics::Atmosphere;
 use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{
     material_registry_insert, material_registry_lookup_id, material_registry_remove_unused,
@@ -38,6 +39,10 @@ pub enum WorldCommand {
     LoadHdrSkyboxFromPath {
         path: std::path::PathBuf,
     },
+    CaptureProceduralAtmosphereIBL {
+        atmosphere: Atmosphere,
+        time: f32,
+    },
 }
 
 impl World {
@@ -56,7 +61,8 @@ pub fn process_commands_system(world: &mut World) {
             WorldCommand::UploadSpriteTexture { .. }
             | WorldCommand::LoadTexture { .. }
             | WorldCommand::LoadHdrSkybox { .. }
-            | WorldCommand::LoadHdrSkyboxFromPath { .. } => {
+            | WorldCommand::LoadHdrSkyboxFromPath { .. }
+            | WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {
                 sprite_texture_commands.push(command);
             }
             _ => {
@@ -84,6 +90,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
         WorldCommand::LoadTexture { .. } => {}
         WorldCommand::LoadHdrSkybox { .. } => {}
         WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
+        WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
     }
 }
 
@@ -738,6 +745,10 @@ pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
 
 pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
     world.queue_command(WorldCommand::LoadHdrSkyboxFromPath { path });
+}
+
+pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
+    world.queue_command(WorldCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
 }
 
 pub fn spawn_instanced_mesh(
