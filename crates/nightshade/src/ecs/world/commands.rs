@@ -43,6 +43,9 @@ pub enum WorldCommand {
         atmosphere: Atmosphere,
         time: f32,
     },
+    CaptureScreenshot {
+        path: Option<std::path::PathBuf>,
+    },
 }
 
 impl World {
@@ -62,7 +65,8 @@ pub fn process_commands_system(world: &mut World) {
             | WorldCommand::LoadTexture { .. }
             | WorldCommand::LoadHdrSkybox { .. }
             | WorldCommand::LoadHdrSkyboxFromPath { .. }
-            | WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {
+            | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
+            | WorldCommand::CaptureScreenshot { .. } => {
                 sprite_texture_commands.push(command);
             }
             _ => {
@@ -91,6 +95,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
         WorldCommand::LoadHdrSkybox { .. } => {}
         WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
         WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
+        WorldCommand::CaptureScreenshot { .. } => {}
     }
 }
 
@@ -749,6 +754,18 @@ pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
 
 pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
     world.queue_command(WorldCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn capture_screenshot(world: &mut World) {
+    world.queue_command(WorldCommand::CaptureScreenshot { path: None });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn capture_screenshot_to_path(world: &mut World, path: impl Into<std::path::PathBuf>) {
+    world.queue_command(WorldCommand::CaptureScreenshot {
+        path: Some(path.into()),
+    });
 }
 
 pub fn spawn_instanced_mesh(

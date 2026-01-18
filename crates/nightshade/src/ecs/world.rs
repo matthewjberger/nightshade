@@ -74,6 +74,8 @@ pub use commands::{
     spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
     spawn_water_plane_at,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use commands::{capture_screenshot, capture_screenshot_to_path};
 
 pub mod animation_systems {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
