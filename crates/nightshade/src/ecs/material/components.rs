@@ -88,6 +88,8 @@ pub struct Material {
     pub roughness: f32,
     pub metallic: f32,
     pub unlit: bool,
+    #[serde(default)]
+    pub double_sided: bool,
     #[serde(default = "default_uv_scale")]
     pub uv_scale: [f32; 2],
     #[serde(default)]
@@ -186,6 +188,7 @@ impl Default for Material {
             roughness: 0.5,
             metallic: 0.0,
             unlit: false,
+            double_sided: false,
             uv_scale: [1.0, 1.0],
             transmission_factor: 0.0,
             transmission_texture: None,

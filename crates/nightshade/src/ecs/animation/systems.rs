@@ -18,9 +18,9 @@ pub fn update_animation_players(world: &mut World, delta_time: f32) {
     }
 }
 
-struct AnimationSampleData {
-    to_clip: AnimationClip,
-    to_time: f32,
+struct AnimationSampleDataMulti {
+    clips: Vec<AnimationClip>,
+    time: f32,
     from_clip: Option<AnimationClip>,
     from_time: f32,
     blend_factor: f32,
@@ -37,47 +37,66 @@ pub fn apply_animations(world: &mut World) {
                 continue;
             }
 
-            if let Some(to_clip) = player.get_current_clip() {
-                let from_clip = player
-                    .blend_from_clip
-                    .and_then(|index| player.clips.get(index))
-                    .cloned();
-
-                Some(AnimationSampleData {
-                    to_clip: to_clip.clone(),
-                    to_time: player.time,
-                    from_clip,
-                    from_time: player.blend_from_time,
-                    blend_factor: player.blend_factor,
-                    node_mapping: player.node_index_to_entity.clone(),
-                    bone_name_mapping: player.bone_name_to_entity.clone(),
-                })
+            let clips_to_sample: Vec<AnimationClip> = if player.play_all {
+                player.clips.clone()
+            } else if let Some(to_clip) = player.get_current_clip() {
+                vec![to_clip.clone()]
             } else {
-                None
-            }
+                vec![]
+            };
+
+            let from_clip = player
+                .blend_from_clip
+                .and_then(|index| player.clips.get(index))
+                .cloned();
+
+            Some(AnimationSampleDataMulti {
+                clips: clips_to_sample,
+                time: player.time,
+                from_clip,
+                from_time: player.blend_from_time,
+                blend_factor: player.blend_factor,
+                node_mapping: player.node_index_to_entity.clone(),
+                bone_name_mapping: player.bone_name_to_entity.clone(),
+            })
         } else {
             None
         };
 
         if let Some(data) = animation_data {
-            let to_values = sample_clip(
-                &data.to_clip,
-                data.to_time,
-                &data.node_mapping,
-                &data.bone_name_mapping,
-            );
+            let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
 
-            let final_values = if let Some(from_clip) = &data.from_clip {
+            for clip in &data.clips {
+                let clip_values =
+                    sample_clip(clip, data.time, &data.node_mapping, &data.bone_name_mapping);
+
+                for (target_entity, values) in clip_values {
+                    let entry = final_values.entry(target_entity).or_default();
+                    if values.translation.is_some() {
+                        entry.translation = values.translation;
+                    }
+                    if values.rotation.is_some() {
+                        entry.rotation = values.rotation;
+                    }
+                    if values.scale.is_some() {
+                        entry.scale = values.scale;
+                    }
+                    if values.morph_weights.is_some() {
+                        entry.morph_weights = values.morph_weights;
+                    }
+                }
+            }
+
+            if let Some(from_clip) = &data.from_clip {
                 let from_values = sample_clip(
                     from_clip,
                     data.from_time,
                     &data.node_mapping,
                     &data.bone_name_mapping,
                 );
-                blend_animation_values(&from_values, &to_values, data.blend_factor)
-            } else {
-                to_values
-            };
+                final_values =
+                    blend_animation_values(&from_values, &final_values, data.blend_factor);
+            }
 
             for (target_entity, values) in final_values {
                 if let Some(transform) = world.mutate_local_transform(target_entity) {
@@ -112,7 +131,18 @@ fn sample_clip(
     let mut found_count = 0usize;
     let mut not_found_count = 0usize;
 
-    for channel in &clip.channels {
+    if should_log {
+        tracing::info!(
+            "sample_clip '{}': {} channels, time={:.3}s, {} node mappings, {} bone mappings",
+            clip.name,
+            clip.channels.len(),
+            time,
+            node_mapping.len(),
+            bone_name_mapping.len()
+        );
+    }
+
+    for (channel_index, channel) in clip.channels.iter().enumerate() {
         let target_entity = if let Some(ref bone_name) = channel.target_bone_name {
             bone_name_mapping.get(bone_name).copied()
         } else {
@@ -133,25 +163,56 @@ fn sample_clip(
             }
         }
 
-        if let Some(target_entity) = target_entity
-            && let Some(value) = sample_animation_channel(channel, time)
-        {
-            let entry = entity_values.entry(target_entity).or_default();
+        if let Some(target_entity) = target_entity {
+            let sampled_value = sample_animation_channel(channel, time);
+            if should_log {
+                if let Some(ref value) = sampled_value {
+                    tracing::info!(
+                        "  Ch{}: node={} entity={:?} prop={:?} interp={:?} keyframes={} value={:?}",
+                        channel_index,
+                        channel.target_node,
+                        target_entity,
+                        channel.target_property,
+                        channel.sampler.interpolation,
+                        channel.sampler.input.len(),
+                        match value {
+                            AnimationValue::Vec3(v) =>
+                                format!("Vec3({:.2}, {:.2}, {:.2})", v.x, v.y, v.z),
+                            AnimationValue::Quat(q) =>
+                                format!("Quat({:.2}, {:.2}, {:.2}, {:.2})", q.i, q.j, q.k, q.w),
+                            AnimationValue::Weights(w) => format!("Weights({} values)", w.len()),
+                        }
+                    );
+                } else {
+                    tracing::warn!(
+                        "  Ch{}: node={} entity={:?} prop={:?} interp={:?} keyframes={} - SAMPLING RETURNED NONE",
+                        channel_index,
+                        channel.target_node,
+                        target_entity,
+                        channel.target_property,
+                        channel.sampler.interpolation,
+                        channel.sampler.input.len(),
+                    );
+                }
+            }
+            if let Some(value) = sampled_value {
+                let entry = entity_values.entry(target_entity).or_default();
 
-            match (channel.target_property, value) {
-                (AnimationProperty::Translation, AnimationValue::Vec3(translation)) => {
-                    entry.translation = Some(translation);
+                match (channel.target_property, value) {
+                    (AnimationProperty::Translation, AnimationValue::Vec3(translation)) => {
+                        entry.translation = Some(translation);
+                    }
+                    (AnimationProperty::Rotation, AnimationValue::Quat(rotation)) => {
+                        entry.rotation = Some(rotation);
+                    }
+                    (AnimationProperty::Scale, AnimationValue::Vec3(scale)) => {
+                        entry.scale = Some(scale);
+                    }
+                    (AnimationProperty::MorphWeights, AnimationValue::Weights(weights)) => {
+                        entry.morph_weights = Some(weights);
+                    }
+                    _ => {}
                 }
-                (AnimationProperty::Rotation, AnimationValue::Quat(rotation)) => {
-                    entry.rotation = Some(rotation);
-                }
-                (AnimationProperty::Scale, AnimationValue::Vec3(scale)) => {
-                    entry.scale = Some(scale);
-                }
-                (AnimationProperty::MorphWeights, AnimationValue::Weights(weights)) => {
-                    entry.morph_weights = Some(weights);
-                }
-                _ => {}
             }
         }
     }
