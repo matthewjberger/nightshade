@@ -1,53 +1,80 @@
+//! Animation component definitions.
+
 use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// A named animation sequence with duration and channels.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationClip {
+    /// Name of the animation (e.g., "Walk", "Idle").
     pub name: String,
+    /// Total duration in seconds.
     pub duration: f32,
+    /// Channels targeting different properties on nodes.
     pub channels: Vec<AnimationChannel>,
 }
 
+/// Targets a specific property on a node for animation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationChannel {
+    /// Index of the target node in the glTF hierarchy.
     pub target_node: usize,
+    /// Optional bone name for skeleton-based lookup.
     pub target_bone_name: Option<String>,
+    /// Which property to animate.
     pub target_property: AnimationProperty,
+    /// Keyframe data and interpolation settings.
     pub sampler: AnimationSampler,
 }
 
+/// Properties that can be animated.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AnimationProperty {
+    /// Position offset.
     Translation,
+    /// Orientation.
     Rotation,
+    /// Scale factors.
     Scale,
+    /// Morph target blend weights.
     MorphWeights,
 }
 
+/// Keyframe data with times and output values.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationSampler {
+    /// Keyframe times in seconds.
     pub input: Vec<f32>,
+    /// Output values at each keyframe.
     pub output: AnimationSamplerOutput,
+    /// How to interpolate between keyframes.
     pub interpolation: AnimationInterpolation,
 }
 
+/// Output value types for animation samplers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AnimationSamplerOutput {
+    /// Translation or scale values.
     Vec3(Vec<Vec3>),
+    /// Rotation values.
     Quat(Vec<Quat>),
+    /// Morph weight arrays.
     Weights(Vec<Vec<f32>>),
+    /// Cubic spline Vec3 with tangents.
     CubicSplineVec3 {
         values: Vec<Vec3>,
         in_tangents: Vec<Vec3>,
         out_tangents: Vec<Vec3>,
     },
+    /// Cubic spline quaternion with tangents.
     CubicSplineQuat {
         values: Vec<Quat>,
         in_tangents: Vec<Quat>,
         out_tangents: Vec<Quat>,
     },
+    /// Cubic spline weights with tangents.
     CubicSplineWeights {
         values: Vec<Vec<f32>>,
         in_tangents: Vec<Vec<f32>>,
@@ -55,27 +82,48 @@ pub enum AnimationSamplerOutput {
     },
 }
 
+/// Interpolation method between keyframes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnimationInterpolation {
+    /// Linear interpolation (lerp for Vec3, slerp for Quat).
     Linear,
+    /// Immediate jump to next value.
     Step,
+    /// Hermite cubic spline interpolation.
     CubicSpline,
 }
 
+/// Component controlling animation playback on an entity hierarchy.
+///
+/// Manages one or more animation clips, playback state, and cross-fading.
+/// Maps animation targets to entities via node indices or bone names.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationPlayer {
+    /// All available animation clips.
     pub clips: Vec<AnimationClip>,
+    /// Index of the currently playing clip.
     pub current_clip: Option<usize>,
+    /// Current playback time in seconds.
     pub time: f32,
+    /// Playback speed multiplier (1.0 = normal).
     pub speed: f32,
+    /// Whether to loop when reaching the end.
     pub looping: bool,
+    /// Whether the animation is currently advancing.
     pub playing: bool,
+    /// Whether to play all clips sequentially.
     pub play_all: bool,
+    /// Maps glTF node indices to entities.
     pub node_index_to_entity: HashMap<usize, Entity>,
+    /// Maps bone names to entities for skeleton lookup.
     pub bone_name_to_entity: HashMap<String, Entity>,
+    /// Previous clip index for cross-fade blending.
     pub blend_from_clip: Option<usize>,
+    /// Time position in the previous clip during blend.
     pub blend_from_time: f32,
+    /// Current blend weight (0 = old clip, 1 = new clip).
     pub blend_factor: f32,
+    /// Duration of the cross-fade transition.
     pub blend_duration: f32,
 }
 
@@ -100,6 +148,7 @@ impl Default for AnimationPlayer {
 }
 
 impl AnimationPlayer {
+    /// Starts playing a clip from the beginning.
     pub fn play(&mut self, clip_index: usize) {
         if clip_index < self.clips.len() {
             self.current_clip = Some(clip_index);
@@ -111,6 +160,7 @@ impl AnimationPlayer {
         }
     }
 
+    /// Stops playback and resets to the beginning.
     pub fn stop(&mut self) {
         self.playing = false;
         self.time = 0.0;
@@ -119,18 +169,22 @@ impl AnimationPlayer {
         self.blend_factor = 1.0;
     }
 
+    /// Pauses playback at the current time.
     pub fn pause(&mut self) {
         self.playing = false;
     }
 
+    /// Resumes playback from the current time.
     pub fn resume(&mut self) {
         self.playing = true;
     }
 
+    /// Returns the currently playing clip, if any.
     pub fn get_current_clip(&self) -> Option<&AnimationClip> {
         self.current_clip.and_then(|index| self.clips.get(index))
     }
 
+    /// Cross-fades from the current clip to another over the specified duration.
     pub fn blend_to(&mut self, clip_index: usize, duration: f32) {
         if clip_index >= self.clips.len() {
             return;
@@ -148,20 +202,24 @@ impl AnimationPlayer {
         self.playing = true;
     }
 
+    /// Returns `true` if currently cross-fading between clips.
     pub fn is_blending(&self) -> bool {
         self.blend_from_clip.is_some() && self.blend_factor < 1.0
     }
 
+    /// Adds a clip and returns its index.
     pub fn add_clip(&mut self, clip: AnimationClip) -> usize {
         let index = self.clips.len();
         self.clips.push(clip);
         index
     }
 
+    /// Adds multiple clips.
     pub fn add_clips(&mut self, clips: impl IntoIterator<Item = AnimationClip>) {
         self.clips.extend(clips);
     }
 
+    /// Resolves an animation channel's target to an entity.
     pub fn resolve_target_entity(&self, channel: &AnimationChannel) -> Option<Entity> {
         if let Some(ref bone_name) = channel.target_bone_name
             && let Some(&entity) = self.bone_name_to_entity.get(bone_name)
@@ -171,6 +229,7 @@ impl AnimationPlayer {
         self.node_index_to_entity.get(&channel.target_node).copied()
     }
 
+    /// Advances playback time and handles looping/blending.
     pub fn update(&mut self, delta_time: f32) {
         if !self.playing {
             return;
@@ -215,13 +274,18 @@ impl AnimationPlayer {
     }
 }
 
+/// Sampled animation value at a point in time.
 #[derive(Debug, Clone)]
 pub enum AnimationValue {
+    /// Translation or scale value.
     Vec3(Vec3),
+    /// Rotation value.
     Quat(Quat),
+    /// Morph target weights.
     Weights(Vec<f32>),
 }
 
+/// Interpolates between two Vec3 values.
 pub fn interpolate_vec3(a: &Vec3, b: &Vec3, t: f32, interpolation: AnimationInterpolation) -> Vec3 {
     match interpolation {
         AnimationInterpolation::Linear => *a + (*b - *a) * t,
@@ -230,6 +294,7 @@ pub fn interpolate_vec3(a: &Vec3, b: &Vec3, t: f32, interpolation: AnimationInte
     }
 }
 
+/// Interpolates between two weight arrays.
 pub fn interpolate_weights(
     a: &[f32],
     b: &[f32],
@@ -306,6 +371,7 @@ fn cubic_spline_quat(p0: &Quat, m0: &Quat, p1: &Quat, m1: &Quat, t: f32, dt: f32
     Quat::new(w, i, j, k).normalize()
 }
 
+/// Interpolates between two quaternions using slerp.
 pub fn interpolate_quat(a: &Quat, b: &Quat, t: f32, interpolation: AnimationInterpolation) -> Quat {
     match interpolation {
         AnimationInterpolation::Linear => {
@@ -334,6 +400,7 @@ pub fn interpolate_quat(a: &Quat, b: &Quat, t: f32, interpolation: AnimationInte
     }
 }
 
+/// Samples an animation channel at the given time, returning the interpolated value.
 pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option<AnimationValue> {
     let sampler = &channel.sampler;
 

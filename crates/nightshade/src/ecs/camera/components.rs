@@ -1,3 +1,5 @@
+//! Camera component definitions.
+
 mod orthographic;
 mod pan_orbit;
 mod perspective;
@@ -10,9 +12,15 @@ pub use smoothing::*;
 
 use nalgebra_glm::Mat4;
 
+/// Primary camera component defining view projection.
+///
+/// Attach to an entity with a transform to create a viewpoint. The active camera
+/// is determined by the rendering system (typically the first entity with this component).
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Camera {
+    /// The projection mode (perspective or orthographic).
     pub projection: Projection,
+    /// Optional input smoothing for camera movement.
     pub smoothing: Option<Smoothing>,
 }
 
@@ -25,13 +33,17 @@ impl Default for Camera {
     }
 }
 
+/// Projection mode for a camera.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Projection {
+    /// Perspective projection with foreshortening (3D games, realistic rendering).
     Perspective(PerspectiveCamera),
+    /// Orthographic projection without foreshortening (2D games, CAD, isometric views).
     Orthographic(OrthographicCamera),
 }
 
 impl Projection {
+    /// Returns the projection matrix using default or stored aspect ratio.
     pub fn matrix(&self) -> Mat4 {
         match self {
             Projection::Perspective(camera) => camera.matrix(),
@@ -39,6 +51,10 @@ impl Projection {
         }
     }
 
+    /// Returns the projection matrix with the specified aspect ratio.
+    ///
+    /// For perspective cameras, this overrides the stored aspect ratio.
+    /// For orthographic cameras, aspect ratio is ignored.
     pub fn matrix_with_aspect(&self, aspect_ratio: f32) -> Mat4 {
         match self {
             Projection::Perspective(camera) => camera.matrix_with_aspect(aspect_ratio),

@@ -52,9 +52,13 @@ pub mod resources {
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::resources::PhysicsWorld;
-    pub use crate::ecs::prefab::resources::{AnimationCache, CachedPrefab, MeshCache, PrefabCache};
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::prefab::resources::CachedPrefab;
+    pub use crate::ecs::prefab::resources::{AnimationCache, MeshCache, PrefabCache};
     #[cfg(feature = "scripting")]
     pub use crate::ecs::script::resources::ScriptRuntime;
+    #[cfg(feature = "sdf_sculpt")]
+    pub use crate::ecs::sdf::resources::{SdfMaterial, SdfMaterialRegistry, SdfWorld};
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
     pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
@@ -168,6 +172,10 @@ freecs::ecs! {
         #[cfg(feature = "physics")]
         picking_world: crate::ecs::picking::resources::PickingWorld,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+        #[cfg(feature = "sdf_sculpt")]
+        sdf_world: crate::ecs::sdf::resources::SdfWorld,
+        #[cfg(feature = "sdf_sculpt")]
+        sdf_materials: crate::ecs::sdf::resources::SdfMaterialRegistry,
     }
 }
 

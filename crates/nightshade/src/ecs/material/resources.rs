@@ -1,10 +1,18 @@
+//! Material registry resource.
+
 use crate::ecs::asset_id::MaterialId;
 use crate::ecs::generational_registry::GenerationalRegistry;
 use crate::ecs::material::components::Material;
 use std::collections::HashMap;
 
+/// Global registry of named materials.
+///
+/// Materials are stored by name and assigned generational IDs for safe references.
+/// Includes default color materials (Red, Green, Blue, etc.) that cannot be removed.
 pub struct MaterialRegistry {
+    /// The underlying generational storage.
     pub registry: GenerationalRegistry<Material>,
+    /// Indices of built-in materials that should not be garbage collected.
     pub protected_indices: Vec<u32>,
 }
 
@@ -90,6 +98,7 @@ impl Default for MaterialRegistry {
     }
 }
 
+/// Inserts a material into the registry, returning its ID.
 pub fn material_registry_insert(
     registry: &mut MaterialRegistry,
     name: String,
@@ -99,6 +108,7 @@ pub fn material_registry_insert(
     MaterialId { index, generation }
 }
 
+/// Looks up a material ID by name.
 pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> Option<MaterialId> {
     registry
         .registry
@@ -106,6 +116,7 @@ pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> O
         .map(|(index, generation)| MaterialId { index, generation })
 }
 
+/// Removes materials with zero references (except protected materials).
 pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<String> {
     let mut removed = Vec::new();
 
@@ -129,6 +140,7 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
     removed
 }
 
+/// Iterates over all materials as (name, material) pairs.
 pub fn material_registry_iter(
     registry: &MaterialRegistry,
 ) -> impl Iterator<Item = (&String, &Material)> {
@@ -146,10 +158,12 @@ pub fn material_registry_iter(
         })
 }
 
+/// Returns an iterator over all material names.
 pub fn material_registry_names(registry: &MaterialRegistry) -> impl Iterator<Item = &String> {
     registry.registry.name_to_index.keys()
 }
 
+/// Loads materials from a HashMap into the registry.
 pub fn material_registry_load_from_map(
     registry: &mut MaterialRegistry,
     materials: HashMap<String, Material>,
@@ -159,6 +173,7 @@ pub fn material_registry_load_from_map(
     }
 }
 
+/// Exports all materials to a HashMap.
 pub fn material_registry_to_map(registry: &MaterialRegistry) -> HashMap<String, Material> {
     material_registry_iter(registry)
         .map(|(name, material)| (name.clone(), material.clone()))

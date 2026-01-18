@@ -1,16 +1,107 @@
+//! Application entry point and main loop.
+//!
+//! Launch a Nightshade application by implementing [`State`] and calling [`launch`]:
+//!
+//! ```ignore
+//! struct MyGame;
+//!
+//! impl State for MyGame {
+//!     fn title(&self) -> &str { "My Game" }
+//!
+//!     fn initialize(&mut self, world: &mut World) {
+//!         // Set up camera, lights, entities
+//!     }
+//!
+//!     fn run_systems(&mut self, world: &mut World) {
+//!         // Per-frame game logic
+//!     }
+//! }
+//!
+//! fn main() {
+//!     nightshade::launch(MyGame).unwrap();
+//! }
+//! ```
+//!
+//! # State Trait Methods
+//!
+//! The [`State`] trait provides hooks into the engine lifecycle:
+//!
+//! | Method | When Called | Use For |
+//! |--------|-------------|---------|
+//! | `title()` | Window creation | Window title (desktop) |
+//! | `icon_bytes()` | Window creation | Window icon PNG (desktop) |
+//! | `initialize()` | After renderer ready | Scene setup, spawn entities |
+//! | `run_systems()` | Every frame | Game logic, entity updates |
+//! | `ui()` | Every frame | egui panels and windows |
+//! | `immediate_ui()` | Every frame | Custom UI without egui |
+//! | `configure_render_graph()` | Once at startup | Custom post-processing |
+//! | `update_render_graph()` | Every frame | Dynamic render graph changes |
+//! | `handle_event()` | On event bus message | Cross-system communication |
+//! | `on_keyboard_input()` | On key press/release | Keyboard handling |
+//! | `on_mouse_input()` | On mouse button | Mouse button handling |
+//! | `on_gamepad_event()` | On gamepad event | Controller input |
+//! | `on_dropped_file()` | On file drop (desktop) | File path handling |
+//! | `on_dropped_file_data()` | On file drop (all) | File bytes handling |
+//! | `next_state()` | Every frame | State transitions |
+//!
+//! # Typical Initialize Pattern
+//!
+//! ```ignore
+//! fn initialize(&mut self, world: &mut World) {
+//!     // Configure graphics
+//!     world.resources.user_interface.enabled = true;
+//!     world.resources.graphics.atmosphere = Atmosphere::Sky;
+//!     world.resources.graphics.show_grid = true;
+//!
+//!     // Spawn camera
+//!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
+//!     world.resources.active_camera = Some(camera);
+//!
+//!     // Spawn lighting
+//!     spawn_sun(world);
+//!
+//!     // Spawn entities
+//!     let cube = spawn_cube_at(world, Vec3::new(0.0, 1.0, 0.0));
+//! }
+//! ```
+//!
+//! # State Transitions
+//!
+//! Switch between game states (menu, gameplay, pause) via `next_state()`:
+//!
+//! ```ignore
+//! fn next_state(&mut self, world: &mut World) -> Option<Box<dyn State>> {
+//!     if self.should_go_to_menu {
+//!         Some(Box::new(MenuState::default()))
+//!     } else {
+//!         None  // Stay in current state
+//!     }
+//! }
+//! ```
+
 use crate::ecs::world::World;
 use winit::{
     event::{DeviceEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 
+/// Resource IDs for render graph configuration.
+///
+/// Provided to [`State::configure_render_graph`] for custom pass setup.
 pub struct RenderResources {
+    /// Main HDR scene color target.
     pub scene_color: crate::render::wgpu::rendergraph::ResourceId,
+    /// Depth buffer (reverse-Z format).
     pub depth: crate::render::wgpu::rendergraph::ResourceId,
+    /// Compute shader output texture.
     pub compute_output: crate::render::wgpu::rendergraph::ResourceId,
+    /// Final swapchain output.
     pub swapchain: crate::render::wgpu::rendergraph::ResourceId,
+    /// View-space normals for SSAO.
     pub view_normals: crate::render::wgpu::rendergraph::ResourceId,
+    /// Raw SSAO output before blur.
     pub ssao_raw: crate::render::wgpu::rendergraph::ResourceId,
+    /// Blurred SSAO output.
     pub ssao: crate::render::wgpu::rendergraph::ResourceId,
 }
 
@@ -20,6 +111,9 @@ thread_local! {
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
+/// Launches the application with the given state.
+///
+/// Uses OpenXR if the `openxr` feature is enabled, otherwise creates a windowed application.
 pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "openxr")]
     {
@@ -32,6 +126,7 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
     }
 }
 
+/// Launches a windowed application (desktop or web).
 pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "tracing")))]
     tracing_subscriber::fmt::init();
@@ -671,17 +766,26 @@ fn forward_window_events(
     }
 }
 
+/// Application state trait for game logic and rendering.
+///
+/// Implement this trait to define your application behavior. The engine calls
+/// these methods at appropriate points in the frame loop.
 pub trait State {
+    /// Window title (desktop only).
     fn title(&self) -> &str {
         "Nightshade"
     }
+    /// Window icon as PNG bytes (desktop only).
     fn icon_bytes(&self) -> Option<&'static [u8]> {
         Some(include_bytes!("../images/icon.png"))
     }
+    /// Called once after the renderer is created to set up the initial scene.
     fn initialize(&mut self, _world: &mut World) {}
+    /// Returns a new state to transition to, or None to continue with current state.
     fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
         None
     }
+    /// Configure custom render passes. Called once during initialization.
     fn configure_render_graph(
         &mut self,
         graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
@@ -699,17 +803,23 @@ pub trait State {
             ],
         );
     }
+    /// Build egui UI (requires `egui` feature).
     #[cfg(feature = "egui")]
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
+    /// Build immediate-mode UI without egui.
     fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
+    /// Called every frame to run game logic.
     fn run_systems(&mut self, _world: &mut World) {}
+    /// Update render graph state each frame.
     fn update_render_graph(
         &mut self,
         _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
         _world: &World,
     ) {
     }
+    /// Handle events from the event bus.
     fn handle_event(&mut self, _world: &mut World, _message: &crate::ecs::world::events::Message) {}
+    /// Handle keyboard input (not consumed by UI).
     fn on_keyboard_input(
         &mut self,
         _world: &mut World,
@@ -717,12 +827,18 @@ pub trait State {
         _key_state: winit::event::ElementState,
     ) {
     }
+    /// Handle file dropped onto window (desktop only, provides path).
     fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
+    /// Handle file dropped onto window (web-compatible, provides data).
     fn on_dropped_file_data(&mut self, _world: &mut World, _name: &str, _data: &[u8]) {}
+    /// Handle file hover over window.
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
+    /// Handle file hover cancelled.
     fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
+    /// Handle gamepad events (requires `gamepad` feature).
     #[cfg(feature = "gamepad")]
     fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
+    /// Handle mouse button input (not consumed by UI).
     fn on_mouse_input(
         &mut self,
         _world: &mut World,
@@ -732,11 +848,16 @@ pub trait State {
     }
 }
 
+/// Application context for the winit event loop.
 pub struct WindowContext {
+    /// The ECS world containing all game state.
     pub world: World,
+    /// The current application state.
     pub state: Box<dyn State>,
+    /// The renderer (None until initialization completes).
     pub renderer: Option<Box<dyn crate::ecs::world::Render>>,
     #[cfg(target_arch = "wasm32")]
+    /// Receiver for async renderer creation on web.
     pub renderer_receiver:
         Option<futures::channel::oneshot::Receiver<Box<dyn crate::ecs::world::Render>>>,
 }
@@ -749,6 +870,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             attributes = attributes.with_title(self.state.title());
 
+            #[cfg(feature = "assets")]
             if let Some(icon_bytes) = self.state.icon_bytes()
                 && let Ok(icon_image) = image::load_from_memory(icon_bytes)
             {
@@ -810,10 +932,29 @@ impl winit::application::ApplicationHandler for WindowContext {
                 Some((dimension.width, dimension.height));
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "async_runtime"))]
         {
             let runtime = tokio::runtime::Runtime::new().unwrap();
             match runtime.block_on(crate::render::core::create_renderer(
+                window_handle.clone(),
+                dimension.width,
+                dimension.height,
+            )) {
+                Ok(mut renderer) => {
+                    if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
+                        tracing::error!("Failed to configure renderer with state: {error}");
+                    }
+                    self.renderer = Some(renderer);
+                }
+                Err(error) => {
+                    tracing::error!("Failed to create renderer: {error}");
+                }
+            }
+        }
+
+        #[cfg(all(not(target_arch = "wasm32"), not(feature = "async_runtime")))]
+        {
+            match pollster::block_on(crate::render::core::create_renderer(
                 window_handle.clone(),
                 dimension.width,
                 dimension.height,

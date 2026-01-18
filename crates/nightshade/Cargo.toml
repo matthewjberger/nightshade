@@ -14,43 +14,82 @@ rust-version.workspace = true
 [features]
 default = ["engine", "wgpu"]
 
-engine = [
-    "picking",
-    "dep:bincode",
-    "dep:bitflags",
-    "dep:bytemuck",
-    "dep:dirs",
-    "dep:fontdue",
+core = [
     "dep:freecs",
-    "dep:getrandom",
-    "dep:gltf",
-    "dep:half",
+    "dep:bytemuck",
+    "dep:bitflags",
     "dep:tracing",
-    "dep:mint",
+    "dep:tracing-subscriber",
+    "dep:thiserror",
     "dep:nalgebra",
     "dep:nalgebra-glm",
-    "dep:noise",
-    "dep:petgraph",
-    "dep:rand",
     "dep:raw-window-handle",
-    "dep:rfd",
-    "dep:serde_json",
-    "dep:strum",
-    "dep:thiserror",
-    "dep:uuid",
     "dep:web-time",
     "dep:winit",
-    "dep:tracing-subscriber",
-    "dep:image",
-    "dep:tokio",
+    "dep:mint",
+    "dep:strum",
+    "dep:uuid",
+    "dep:getrandom",
     "dep:console_error_panic_hook",
     "dep:tracing-web",
+    "dep:pollster",
+    "dep:petgraph",
+]
+
+assets = [
+    "core",
+    "dep:gltf",
+    "dep:half",
+    "dep:image",
+    "dep:bincode",
+    "dep:serde_json",
+]
+
+text = [
+    "core",
+    "dep:fontdue",
+]
+
+scene_graph = ["assets"]
+
+terrain = [
+    "core",
+    "dep:noise",
+]
+
+file_dialog = [
+    "core",
+    "dep:rfd",
+    "dep:dirs",
+]
+
+async_runtime = [
+    "core",
+    "dep:tokio",
+]
+
+runtime = [
+    "core",
+    "text",
+]
+
+engine = [
+    "runtime",
+    "assets",
+    "scene_graph",
+    "picking",
+    "file_dialog",
+    "async_runtime",
+    "terrain",
+    "screenshot",
+    "dep:rand",
+    "dep:rayon",
+    "dep:ehttp",
     "dep:futures",
     "dep:js-sys",
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
     "dep:web-sys",
-    "dep:ehttp",
 ]
 
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu", "dep:egui_tiles"]
@@ -59,20 +98,26 @@ audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
 picking = []
 lattice = []
+sdf_sculpt = []
+screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
-fbx = []
-base = ["egui", "gamepad", "physics"]
+fbx = ["assets", "dep:ufbx"]
 
 full = [
     "engine",
     "wgpu",
     "egui",
+    "shell",
     "audio",
     "physics",
     "gamepad",
     "navmesh",
     "scripting",
+    "fbx",
+    "lattice",
+    "sdf_sculpt",
+    "plugins",
 ]
 
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
@@ -82,7 +127,7 @@ tracing = ["dep:tracing-appender"]
 tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
-plugin_runtime = ["dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
+plugin_runtime = ["assets", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 
@@ -109,6 +154,7 @@ nalgebra = { workspace = true, optional = true }
 nalgebra-glm = { workspace = true, optional = true }
 petgraph = { workspace = true, optional = true }
 rand = { version = "0.9", optional = true }
+rayon = { version = "1.10", optional = true }
 rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.30", optional = true }
 noise = { workspace = true, optional = true }
@@ -117,6 +163,7 @@ raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 strum = { version = "0.27", features = ["derive"], optional = true }
 thiserror = { workspace = true, optional = true }
+pollster = { version = "0.4", optional = true }
 uuid = { version = "1.0", features = ["v4"], optional = true }
 web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
@@ -146,7 +193,7 @@ steamworks-sys = { workspace = true, optional = true }
 wasmtime = { version = "40.0", optional = true }
 wasmtime-wasi = { version = "40.0", optional = true }
 anyhow = { version = "1.0", optional = true }
-ufbx = { version = "0.10" }
+ufbx = { version = "0.10", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "1.0", features = ["v4", "js"], optional = true }

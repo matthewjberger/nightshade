@@ -1,3 +1,5 @@
+//! Transform component definitions.
+
 mod ignore_parent_scale;
 mod local_transform;
 mod local_transform_dirty;
@@ -12,6 +14,14 @@ pub use rotation::*;
 
 use nalgebra_glm::{Mat4, Vec3};
 
+/// World-space transformation matrix computed from the entity hierarchy.
+///
+/// This component is automatically updated by the transform propagation system
+/// whenever [`LocalTransform`] or [`Parent`] relationships change. It represents
+/// the final world-space transformation used for rendering and physics.
+///
+/// For entities without a [`Parent`], this equals the local transform matrix.
+/// For entities with parents, this is the product of all ancestor transforms.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GlobalTransform(pub Mat4);
 

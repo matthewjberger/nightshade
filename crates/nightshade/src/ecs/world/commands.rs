@@ -1,3 +1,62 @@
+//! Deferred command system for GPU-dependent operations.
+//!
+//! Some operations (texture uploads, skybox loading, screenshots) require GPU access
+//! and cannot execute immediately. Queue them with [`WorldCommand`] for processing
+//! during the render phase.
+//!
+//! # Queuing Commands
+//!
+//! ```ignore
+//! // Queue a command for deferred execution
+//! world.queue_command(WorldCommand::LoadTexture {
+//!     name: "my_texture".to_string(),
+//!     rgba_data: image_bytes,
+//!     width: 512,
+//!     height: 512,
+//! });
+//! ```
+//!
+//! # Available Commands
+//!
+//! | Command | Description |
+//! |---------|-------------|
+//! | `DespawnRecursive` | Delete entity and all children |
+//! | `UploadSpriteTexture` | Upload texture to sprite atlas slot |
+//! | `LoadTexture` | Load texture into cache by name |
+//! | `LoadHdrSkybox` | Load HDR skybox from bytes |
+//! | `LoadHdrSkyboxFromPath` | Load HDR skybox from file path |
+//! | `CaptureProceduralAtmosphereIBL` | Generate IBL from procedural sky |
+//! | `CaptureScreenshot` | Save screenshot to file |
+//!
+//! # Example: Dynamic Texture Loading
+//!
+//! ```ignore
+//! fn load_custom_texture(&mut self, world: &mut World, image_data: &[u8]) {
+//!     // Decode image (using image crate)
+//!     let img = image::load_from_memory(image_data).unwrap().to_rgba8();
+//!     let (width, height) = img.dimensions();
+//!
+//!     world.queue_command(WorldCommand::LoadTexture {
+//!         name: "custom_texture".to_string(),
+//!         rgba_data: img.into_raw(),
+//!         width,
+//!         height,
+//!     });
+//!
+//!     // Texture will be available in texture cache next frame
+//! }
+//! ```
+//!
+//! # Example: Screenshot
+//!
+//! ```ignore
+//! fn capture_screenshot(&mut self, world: &mut World) {
+//!     world.queue_command(WorldCommand::CaptureScreenshot {
+//!         path: Some("screenshot.png".into()),
+//!     });
+//! }
+//! ```
+
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
 use crate::ecs::graphics::Atmosphere;
 use crate::ecs::material::components::MaterialRef;
@@ -16,6 +75,9 @@ use crate::render::wgpu::texture_cache::{
 
 pub type CommandQueue = Vec<WorldCommand>;
 
+/// Deferred commands for operations requiring GPU access.
+///
+/// Queue commands via `world.queue_command(cmd)`. They execute during the render phase.
 #[derive(Debug, Clone)]
 pub enum WorldCommand {
     DespawnRecursive {

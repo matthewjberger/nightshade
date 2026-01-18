@@ -1,3 +1,86 @@
+//! GPU-based picking for precise world position and normal sampling.
+//!
+//! Read back depth buffer data to get exact 3D world positions from screen coordinates.
+//! This is used for features like placing decals at cursor position or terrain painting.
+//!
+//! - [`GpuPicking`]: Resource managing pick requests and results
+//! - [`GpuPickRequest`]: Screen coordinates to sample
+//! - [`GpuPickResult`]: World position, normal, depth, and entity ID
+//!
+//! Unlike ray-based picking, GPU picking reads the actual rendered depth buffer,
+//! giving pixel-perfect results that match what's visible on screen.
+//!
+//! # Basic Usage
+//!
+//! ```ignore
+//! fn on_mouse_input(&mut self, world: &mut World, button: MouseButton, state: KeyState) {
+//!     if button == MouseButton::Left && state == KeyState::Pressed {
+//!         let mouse = world.resources.input.mouse.position;
+//!         world.resources.gpu_picking.request_pick(mouse.x as u32, mouse.y as u32);
+//!     }
+//! }
+//!
+//! fn run_systems(&mut self, world: &mut World) {
+//!     // Check for pick result (available next frame after request)
+//!     if let Some(result) = world.resources.gpu_picking.take_result() {
+//!         let hit_position = result.world_position;
+//!         let surface_normal = result.world_normal;
+//!         let depth = result.depth;
+//!
+//!         // Place a decal at the hit position
+//!         spawn_decal_at(world, hit_position, surface_normal);
+//!
+//!         // Or check which entity was clicked
+//!         if let Some(entity_id) = result.entity_id {
+//!             println!("Clicked entity ID: {}", entity_id);
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! # Continuous Picking (Hover/Drag)
+//!
+//! For real-time cursor tracking:
+//!
+//! ```ignore
+//! fn run_systems(&mut self, world: &mut World) {
+//!     let mouse = world.resources.input.mouse.position;
+//!
+//!     // Request pick every frame for continuous tracking
+//!     world.resources.gpu_picking.request_pick(mouse.x as u32, mouse.y as u32);
+//!
+//!     // Results are smoothed automatically to reduce jitter
+//!     if let Some(result) = world.resources.gpu_picking.take_result() {
+//!         // Update preview decal position
+//!         self.preview_position = result.world_position;
+//!         self.preview_normal = result.world_normal;
+//!     }
+//! }
+//! ```
+//!
+//! # GpuPickResult Fields
+//!
+//! | Field | Type | Description |
+//! |-------|------|-------------|
+//! | `world_position` | Vec3 | 3D world coordinates at cursor |
+//! | `world_normal` | Vec3 | Surface normal (computed from depth gradients) |
+//! | `depth` | f32 | Raw depth buffer value (0-1, reverse-Z) |
+//! | `entity_id` | `Option<u32>` | Entity ID if entity ID buffer is enabled |
+//!
+//! # How It Works
+//!
+//! 1. Call `request_pick(x, y)` with screen coordinates
+//! 2. Renderer samples a small region of the depth buffer around that point
+//! 3. `compute_result()` reconstructs world position from depth + inverse view-projection
+//! 4. Normal is computed from neighboring depth samples
+//! 5. Results are smoothed across frames to reduce jitter
+//!
+//! # Performance Notes
+//!
+//! - Only one pick request is processed per frame
+//! - Depth buffer readback has ~1 frame latency
+//! - Position/normal smoothing reduces noise from depth precision limits
+
 #[derive(Debug, Clone, Copy)]
 pub struct GpuPickRequest {
     pub screen_x: u32,

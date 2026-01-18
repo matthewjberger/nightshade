@@ -27,6 +27,45 @@ The fastest way to get started is with the [nightshade-template](https://github.
 
 For a collection of example projects showcasing Nightshade's features, see the [nightshade-examples](https://github.com/matthewjberger/nightshade-examples) repository.
 
+## Features
+
+Nightshade uses a modular feature system for fine-grained dependency control.
+
+### Feature Hierarchy
+
+```
+nightshade features:
+├── core ─────────────── Minimal: windowing, math, ECS, time
+├── text ─────────────── 3D text rendering (fontdue)
+├── assets ───────────── Asset loading (gltf, image, half, bincode)
+├── runtime ──────────── core + text (minimal runnable app)
+├── engine (default) ─── runtime + assets + scene_graph + picking + more
+└── full ─────────────── Everything including audio, physics, navmesh, scripting
+```
+
+### Binary Size by Feature
+
+| Configuration | Size | Delta |
+|--------------|------|-------|
+| runtime+wgpu (baseline) | 9.71 MB | - |
+| +egui | 15.82 MB | +6.11 MB |
+| +physics (rapier3d) | 10.95 MB | +1.24 MB |
+| +assets | 10.28 MB | +0.57 MB |
+| +gamepad | 10.21 MB | +0.50 MB |
+| +terrain | 10.21 MB | +0.50 MB |
+| +audio (kira) | 10.11 MB | +0.40 MB |
+| +navmesh | 9.71 MB | +0.00 MB |
+| engine (default) | 10.79 MB | +1.08 MB |
+| full | 22.63 MB | +12.92 MB |
+
+### Minimal Build
+
+For a lightweight egui app without asset loading:
+
+```toml
+nightshade = { default-features = false, features = ["runtime", "wgpu", "egui"] }
+```
+
 ## Quickstart
 
 ```bash

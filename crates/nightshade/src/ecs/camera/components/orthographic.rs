@@ -1,10 +1,18 @@
 use nalgebra_glm::Mat4;
 
+/// Orthographic projection settings following glTF conventions.
+///
+/// Creates a parallel projection where objects appear the same size
+/// regardless of distance. Uses reverse-Z depth buffer.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OrthographicCamera {
+    /// Half-width of the view volume (horizontal extent is ±x_mag).
     pub x_mag: f32,
+    /// Half-height of the view volume (vertical extent is ±y_mag).
     pub y_mag: f32,
+    /// Far clipping plane distance.
     pub z_far: f32,
+    /// Near clipping plane distance.
     pub z_near: f32,
 }
 
@@ -20,6 +28,7 @@ impl Default for OrthographicCamera {
 }
 
 impl OrthographicCamera {
+    /// Returns the orthographic projection matrix.
     pub fn matrix(&self) -> Mat4 {
         reverse_z_ortho(
             -self.x_mag,

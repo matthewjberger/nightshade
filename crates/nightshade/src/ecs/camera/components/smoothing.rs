@@ -1,14 +1,28 @@
+/// Input smoothing parameters for camera movement.
+///
+/// Applies exponential smoothing to input devices for fluid camera control.
+/// Lower smoothness values = more responsive, higher values = smoother but laggier.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Smoothing {
+    /// Mouse look speed multiplier.
     pub mouse_sensitivity: f32,
+    /// Mouse input smoothing factor (0 = instant, 1 = no change).
     pub mouse_smoothness: f32,
+    /// DPI scaling factor for mouse input.
     pub mouse_dpi_scale: f32,
+    /// Keyboard movement smoothing factor.
     pub keyboard_smoothness: f32,
+    /// Gamepad stick look speed multiplier.
     pub gamepad_sensitivity: f32,
+    /// Gamepad input smoothing factor.
     pub gamepad_smoothness: f32,
+    /// Gamepad stick deadzone threshold.
     pub gamepad_deadzone: f32,
+    /// Smoothed mouse delta (internal state).
     pub smoothed_mouse_delta: nalgebra_glm::Vec2,
+    /// Smoothed movement direction (internal state).
     pub smoothed_movement: nalgebra_glm::Vec3,
+    /// Smoothed gamepad input (internal state).
     pub smoothed_gamepad_input: nalgebra_glm::Vec2,
 }
 
