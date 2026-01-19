@@ -49,7 +49,7 @@
 //! )
 //!     .with_yaw_pitch(0.5, 0.3)  // Initial angles in radians
 //!     .with_zoom_limits(1.0, Some(100.0))  // Min/max zoom
-//!     .with_smoothness(0.1)  // Camera motion smoothing
+//!     .with_smoothness(0.1, 0.02, 0.1)  // Orbit, pan, zoom smoothing
 //! );
 //!
 //! world.resources.active_camera = Some(entity);
@@ -61,8 +61,8 @@
 //!
 //! | Input | Action |
 //! |-------|--------|
-//! | Right mouse drag | Orbit around focus |
-//! | Middle mouse drag | Pan focus point |
+//! | Left mouse drag | Orbit around focus |
+//! | Right mouse drag | Pan focus point |
 //! | Scroll wheel | Zoom in/out |
 //! | Gamepad right stick | Orbit |
 //! | Gamepad left stick | Pan |
@@ -76,8 +76,40 @@
 //! pan_orbit.pan_sensitivity = 1.0;     // Mouse pan speed
 //! pan_orbit.zoom_sensitivity = 0.8;    // Scroll zoom speed
 //! pan_orbit.gamepad_deadzone = 0.15;   // Stick deadzone
-//! pan_orbit.smoothness = 0.1;          // Motion interpolation (0=instant)
+//! pan_orbit.orbit_smoothness = 0.1;    // Orbit interpolation (0=instant)
+//! pan_orbit.pan_smoothness = 0.02;     // Pan interpolation (0=instant)
+//! pan_orbit.zoom_smoothness = 0.1;     // Zoom interpolation (0=instant)
 //! ```
+//!
+//! # Customizing Button Bindings
+//!
+//! Change which mouse buttons control orbit and pan:
+//!
+//! ```ignore
+//! use nightshade::ecs::camera::{PanOrbitCamera, PanOrbitButton, PanOrbitModifier};
+//!
+//! // Use middle mouse for orbit, right mouse for pan (like some 3D software)
+//! let pan_orbit = PanOrbitCamera::default()
+//!     .with_buttons(PanOrbitButton::Middle, PanOrbitButton::Right);
+//!
+//! // Require Shift key for orbit, Ctrl key for pan
+//! let pan_orbit = PanOrbitCamera::default()
+//!     .with_modifiers(Some(PanOrbitModifier::Shift), Some(PanOrbitModifier::Control));
+//!
+//! // Allow camera to go upside down (pitch beyond ±90°)
+//! let pan_orbit = PanOrbitCamera::default()
+//!     .with_upside_down(true);
+//! ```
+//!
+//! # Touch Controls
+//!
+//! On touch devices, `PanOrbitCamera` supports:
+//!
+//! | Gesture | Action |
+//! |---------|--------|
+//! | Single finger drag | Orbit around focus |
+//! | Two finger drag | Pan focus point |
+//! | Pinch | Zoom in/out |
 //!
 //! # Orthographic Camera
 //!
