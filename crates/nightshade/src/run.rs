@@ -793,12 +793,23 @@ pub trait State {
         surface_format: wgpu::TextureFormat,
         resources: RenderResources,
     ) {
-        let blit_pass = crate::render::wgpu::passes::BlitPass::new(device, surface_format);
-
+        let compute_blit_pass = crate::render::wgpu::passes::BlitPass::new(device, surface_format)
+            .with_name("default_compute_blit");
         let _ = graph.add_pass(
-            Box::new(blit_pass),
+            Box::new(compute_blit_pass),
             &[
                 ("input", resources.scene_color),
+                ("output", resources.compute_output),
+            ],
+        );
+
+        let swapchain_blit_pass =
+            crate::render::wgpu::passes::BlitPass::new(device, surface_format)
+                .with_name("default_swapchain_blit");
+        let _ = graph.add_pass(
+            Box::new(swapchain_blit_pass),
+            &[
+                ("input", resources.compute_output),
                 ("output", resources.swapchain),
             ],
         );

@@ -176,6 +176,7 @@ freecs::ecs! {
         sdf_world: crate::ecs::sdf::resources::SdfWorld,
         #[cfg(feature = "sdf_sculpt")]
         sdf_materials: crate::ecs::sdf::resources::SdfMaterialRegistry,
+        mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
     }
 }
 

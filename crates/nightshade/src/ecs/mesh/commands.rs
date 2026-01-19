@@ -33,6 +33,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     world.set_global_transform(entity, GlobalTransform::default());
     world.set_local_transform_dirty(entity, LocalTransformDirty);
     world.set_render_mesh(entity, RenderMesh::new(mesh_name));
+    world.resources.mesh_render_state.mark_entity_added(entity);
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
         &mut world.resources.material_registry,

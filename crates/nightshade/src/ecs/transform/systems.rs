@@ -94,6 +94,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
     let mut visited = std::collections::HashSet::new();
+    let mut render_dirty_entities = Vec::new();
 
     for entity in dirty_entities {
         visited.clear();
@@ -103,6 +104,17 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
         world.remove_local_transform_dirty(entity);
+
+        if world.entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
+            render_dirty_entities.push(entity);
+        }
+    }
+
+    for entity in render_dirty_entities {
+        world
+            .resources
+            .mesh_render_state
+            .mark_transform_dirty(entity);
     }
 }
 

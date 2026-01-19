@@ -207,6 +207,10 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
             {
                 world.resources.mesh_cache.registry.remove_reference(index);
             }
+            world
+                .resources
+                .mesh_render_state
+                .mark_entity_removed(entity);
         }
 
         if let Some(material_ref) = world.get_material_ref(entity) {
@@ -415,6 +419,7 @@ pub fn spawn_mesh_at(
     }
 
     world.set_render_mesh(entity, render_mesh);
+    world.resources.mesh_render_state.mark_entity_added(entity);
 
     if let Some(&index) = world
         .resources
@@ -552,6 +557,7 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
     }
 
     world.set_render_mesh(entity, components::RenderMesh::new(mesh_name));
+    world.resources.mesh_render_state.mark_entity_added(entity);
 
     world.set_water(entity, Water::default());
 
