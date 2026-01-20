@@ -220,6 +220,10 @@
 //!
 //! - **`steam`** - Steamworks integration.
 //!
+//! - **`webview`** - Bidirectional IPC for hosting web frontends (Leptos, Yew, etc.).
+//!   On native (with `runtime` + `egui`), provides `WebviewContext` and `serve_embedded_dir`.
+//!   On WASM, provides `connect` and `send` for the frontend bridge.
+//!
 //! ### Profiling Features
 //!
 //! - **`tracing`** - Rolling log files and `RUST_LOG` support.
@@ -458,6 +462,66 @@
 //! }
 //! ```
 //!
+//! ### Webview (`webview` feature)
+//!
+//! Host a web frontend (Leptos, Yew, etc.) inside a nightshade window with bidirectional IPC.
+//!
+//! **Native side** (use `webview` with `runtime` and `egui`):
+//!
+//! ```ignore
+//! use include_dir::{Dir, include_dir};
+//! use nightshade::prelude::*;
+//! use nightshade::webview::{WebviewContext, serve_embedded_dir};
+//!
+//! static DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/site/dist");
+//!
+//! struct App {
+//!     port: u16,
+//!     ctx: WebviewContext<FrontendCommand, BackendEvent>,
+//! }
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     launch(App {
+//!         port: serve_embedded_dir(&DIST),
+//!         ctx: WebviewContext::default(),
+//!     })
+//! }
+//!
+//! impl State for App {
+//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
+//!         // Handle messages from frontend
+//!         for cmd in self.ctx.drain_messages() {
+//!             match cmd {
+//!                 FrontendCommand::Ready => self.ctx.send(BackendEvent::Connected),
+//!                 // ...
+//!             }
+//!         }
+//!
+//!         // Render webview in a panel
+//!         egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx, |ui| {
+//!             if let Some(handle) = &world.resources.window.handle {
+//!                 self.ctx.ensure_webview(handle.clone(), self.port, ui.available_rect_before_wrap());
+//!             }
+//!         });
+//!     }
+//! }
+//! ```
+//!
+//! **WASM frontend** (use `webview` with `default-features = false`):
+//!
+//! ```ignore
+//! use nightshade::webview::{connect, send};
+//!
+//! fn main() {
+//!     connect(FrontendCommand::Ready, |event: BackendEvent| {
+//!         // Handle events from native app
+//!     });
+//!
+//!     // Send commands to native app
+//!     send(&FrontendCommand::DoSomething);
+//! }
+//! ```
+//!
 //! ### Debug Lines
 //!
 //! ```ignore
@@ -618,6 +682,9 @@
 //! - **XR** (with `openxr`): Vulkan backend required. Use `launch_xr()` entry point.
 
 pub mod plugin;
+
+#[cfg(feature = "webview")]
+pub mod webview;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
