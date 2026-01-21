@@ -28,8 +28,6 @@ pub mod input;
 pub mod lattice;
 pub mod light;
 pub mod lines;
-#[cfg(feature = "scene_graph")]
-pub mod map;
 pub mod material;
 pub mod mesh;
 pub mod morph;

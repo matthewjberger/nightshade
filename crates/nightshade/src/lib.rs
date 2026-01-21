@@ -180,7 +180,7 @@
 //!
 //! - **`assets`** - Asset loading: gltf, image, half, bincode, serde_json. Requires `core`.
 //!
-//! - **`scene_graph`** - Map/scene hierarchy system. Requires `assets`.
+//! - **`scene_graph`** - Scene hierarchy system. Requires `assets`.
 //!
 //! - **`terrain`** - Procedural terrain generation using noise. Requires `core`.
 //!
@@ -734,12 +734,6 @@ pub mod prelude {
             register_entity_for_lattice_deformation,
         },
     };
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::map::{
-        Map, MapCamera, MapError, MapLight, MapNode, MapPrefab, NodeIndex, SpawnMapResult,
-        load_map, load_map_binary, load_map_json, save_map, save_map_binary, save_map_json,
-        spawn_map, unload_map,
-    };
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::navmesh::{
@@ -770,6 +764,14 @@ pub mod prelude {
         unregister_entity_from_picking, update_picking_transform,
     };
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::scene::{
+        AssetMode, AssetUuid, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType, SceneCamera,
+        SceneCollider, SceneComponents, SceneEntity, SceneError, SceneHdrSkybox,
+        SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, SceneNavMesh,
+        ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene,
+        world_to_scene,
+    };
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
         NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,

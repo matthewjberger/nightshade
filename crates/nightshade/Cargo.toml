@@ -43,6 +43,7 @@ assets = [
     "dep:image",
     "dep:bincode",
     "dep:serde_json",
+    "dep:lz4_flex",
 ]
 
 text = [
@@ -162,6 +163,7 @@ noise = { workspace = true, optional = true }
 rapier3d = { workspace = true, optional = true }
 raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
+lz4_flex = { version = "0.11", optional = true }
 strum = { version = "0.27", features = ["derive"], optional = true }
 thiserror = { workspace = true, optional = true }
 pollster = { version = "0.4", optional = true }
