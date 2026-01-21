@@ -213,6 +213,19 @@ fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
                 .mark_entity_removed(entity);
         }
 
+        if let Some(instanced_mesh) = world.get_instanced_mesh(entity) {
+            let mesh_name = instanced_mesh.mesh_name.clone();
+            if let Some(&index) = world
+                .resources
+                .mesh_cache
+                .registry
+                .name_to_index
+                .get(&mesh_name)
+            {
+                world.resources.mesh_cache.registry.remove_reference(index);
+            }
+        }
+
         if let Some(material_ref) = world.get_material_ref(entity) {
             let material_name = material_ref.name.clone();
             if let Some(material) =

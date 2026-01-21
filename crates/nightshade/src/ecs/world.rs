@@ -127,6 +127,7 @@ freecs::ecs! {
         instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
         particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
         prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
+        prefab_instance: crate::ecs::prefab::components::PrefabInstance => PREFAB_INSTANCE,
         script: crate::ecs::script::components::Script => SCRIPT,
         skin: crate::ecs::skin::components::Skin => SKIN,
         joint: crate::ecs::skin::components::Joint => JOINT,
@@ -177,6 +178,8 @@ freecs::ecs! {
         #[cfg(feature = "sdf_sculpt")]
         sdf_materials: crate::ecs::sdf::resources::SdfMaterialRegistry,
         mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
+        #[cfg(feature = "scene_graph")]
+        asset_registry: crate::ecs::scene::registry::AssetRegistry,
     }
 }
 

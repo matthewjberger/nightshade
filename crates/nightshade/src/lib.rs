@@ -736,8 +736,9 @@ pub mod prelude {
     };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::map::{
-        Map, MapCamera, MapError, MapLight, MapNode, MapPrefab, NodeIndex, load_map,
-        load_map_binary, load_map_json, save_map, save_map_binary, save_map_json, spawn_map,
+        Map, MapCamera, MapError, MapLight, MapNode, MapPrefab, NodeIndex, SpawnMapResult,
+        load_map, load_map_binary, load_map_json, save_map, save_map_binary, save_map_json,
+        spawn_map, unload_map,
     };
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;

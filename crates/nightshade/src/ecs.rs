@@ -41,6 +41,8 @@ pub mod physics;
 pub mod picking;
 pub mod prefab;
 pub mod render_layer;
+#[cfg(feature = "scene_graph")]
+pub mod scene;
 pub mod script;
 #[cfg(feature = "sdf_sculpt")]
 pub mod sdf;
