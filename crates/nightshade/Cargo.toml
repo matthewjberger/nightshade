@@ -34,6 +34,7 @@ core = [
     "dep:tracing-web",
     "dep:pollster",
     "dep:petgraph",
+    "dep:serde_json",
 ]
 
 assets = [
