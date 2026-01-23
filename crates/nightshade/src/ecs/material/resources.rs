@@ -4,6 +4,7 @@ use crate::ecs::asset_id::MaterialId;
 use crate::ecs::generational_registry::GenerationalRegistry;
 use crate::ecs::material::components::Material;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 /// Global registry of named materials.
 ///
@@ -14,6 +15,8 @@ pub struct MaterialRegistry {
     pub registry: GenerationalRegistry<Material>,
     /// Indices of built-in materials that should not be garbage collected.
     pub protected_indices: Vec<u32>,
+    /// Maps content hash to material name for deduplication.
+    pub content_hash_to_name: HashMap<u64, String>,
 }
 
 impl Default for MaterialRegistry {
@@ -21,6 +24,7 @@ impl Default for MaterialRegistry {
         let mut instance = Self {
             registry: GenerationalRegistry::new(),
             protected_indices: Vec::new(),
+            content_hash_to_name: HashMap::new(),
         };
 
         let default_materials = [
@@ -178,4 +182,74 @@ pub fn material_registry_to_map(registry: &MaterialRegistry) -> HashMap<String, 
     material_registry_iter(registry)
         .map(|(name, material)| (name.clone(), material.clone()))
         .collect()
+}
+
+fn compute_material_content_hash(material: &Material) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for component in &material.base_color {
+        component.to_bits().hash(&mut hasher);
+    }
+    for component in &material.emissive_factor {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.alpha_mode.hash(&mut hasher);
+    material.alpha_cutoff.to_bits().hash(&mut hasher);
+    material.base_texture.hash(&mut hasher);
+    material.base_texture_uv_set.hash(&mut hasher);
+    material.emissive_texture.hash(&mut hasher);
+    material.emissive_texture_uv_set.hash(&mut hasher);
+    material.normal_texture.hash(&mut hasher);
+    material.normal_texture_uv_set.hash(&mut hasher);
+    material.normal_scale.to_bits().hash(&mut hasher);
+    material.normal_map_flip_y.hash(&mut hasher);
+    material.normal_map_two_component.hash(&mut hasher);
+    material.metallic_roughness_texture.hash(&mut hasher);
+    material.metallic_roughness_texture_uv_set.hash(&mut hasher);
+    material.occlusion_texture.hash(&mut hasher);
+    material.occlusion_texture_uv_set.hash(&mut hasher);
+    material.occlusion_strength.to_bits().hash(&mut hasher);
+    material.roughness.to_bits().hash(&mut hasher);
+    material.metallic.to_bits().hash(&mut hasher);
+    material.unlit.hash(&mut hasher);
+    material.double_sided.hash(&mut hasher);
+    for component in &material.uv_scale {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.transmission_factor.to_bits().hash(&mut hasher);
+    material.transmission_texture.hash(&mut hasher);
+    material.transmission_texture_uv_set.hash(&mut hasher);
+    material.thickness.to_bits().hash(&mut hasher);
+    material.thickness_texture.hash(&mut hasher);
+    material.thickness_texture_uv_set.hash(&mut hasher);
+    for component in &material.attenuation_color {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.attenuation_distance.to_bits().hash(&mut hasher);
+    material.ior.to_bits().hash(&mut hasher);
+    material.specular_factor.to_bits().hash(&mut hasher);
+    for component in &material.specular_color_factor {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.specular_texture.hash(&mut hasher);
+    material.specular_texture_uv_set.hash(&mut hasher);
+    material.specular_color_texture.hash(&mut hasher);
+    material.specular_color_texture_uv_set.hash(&mut hasher);
+    material.emissive_strength.to_bits().hash(&mut hasher);
+    hasher.finish()
+}
+
+pub fn material_registry_find_or_insert(
+    registry: &mut MaterialRegistry,
+    fallback_name: String,
+    material: Material,
+) -> String {
+    let content_hash = compute_material_content_hash(&material);
+    if let Some(existing_name) = registry.content_hash_to_name.get(&content_hash) {
+        return existing_name.clone();
+    }
+    registry
+        .content_hash_to_name
+        .insert(content_hash, fallback_name.clone());
+    material_registry_insert(registry, fallback_name.clone(), material);
+    fallback_name
 }
