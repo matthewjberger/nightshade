@@ -238,6 +238,9 @@
 //!
 //! - **`plugin_runtime`** - WASM plugin hosting via Wasmtime. Requires `assets`.
 //!
+//! - **`mosaic`** - Multi-pane desktop application framework with tile-based layouts,
+//!   services, themes, and built-in viewport widgets. Re-exports `nightshade_mosaic` as `mosaic`.
+//!
 //! ## Feature Quick Reference
 //!
 //! ### Audio (`audio` feature)
@@ -519,6 +522,49 @@
 //!
 //!     // Send commands to native app
 //!     send(&FrontendCommand::DoSomething);
+//! }
+//! ```
+//!
+//! ### Mosaic Framework (`mosaic` feature)
+//!
+//! Build multi-pane desktop applications with dockable widgets:
+//!
+//! ```ignore
+//! use nightshade::mosaic::prelude::*;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     launch_mosaic(MyApp)
+//! }
+//!
+//! #[derive(Default)]
+//! struct MyApp;
+//!
+//! impl MosaicApp for MyApp {
+//!     type Widget = AppWidget;
+//!     type WidgetKind = AppWidgetKind;
+//!
+//!     fn title(&self) -> &str { "My App" }
+//!
+//!     fn initialize(&mut self, world: &mut World, _ctx: &mut MosaicContext<Self>) {
+//!         let camera = spawn_pan_orbit_camera(world, Vec3::ZERO, 10.0, 0.0, 0.5, "Camera".into());
+//!         world.resources.active_camera = Some(camera);
+//!     }
+//!
+//!     fn default_tile_tree(&self) -> egui_tiles::Tree<Pane<Self::Widget>> {
+//!         let mut tiles = egui_tiles::Tiles::default();
+//!         let pane = tiles.insert_pane(Pane::new(AppWidget::Viewport(ViewportWidget::new("Scene"))));
+//!         egui_tiles::Tree::new("tiles", tiles.insert_tab_tile(vec![pane]), tiles)
+//!     }
+//!
+//!     fn run_systems(&mut self, world: &mut World) {
+//!         pan_orbit_camera_system(world);
+//!     }
+//! }
+//!
+//! define_widgets! {
+//!     AppWidget, AppWidgetKind {
+//!         Viewport(ViewportWidget),
+//!     }
 //! }
 //! ```
 //!
