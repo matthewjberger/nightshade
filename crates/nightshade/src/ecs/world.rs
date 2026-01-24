@@ -9,6 +9,9 @@ pub mod components {
         Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, Smoothing,
     };
     pub use crate::ecs::decal::components::Decal;
+    pub use crate::ecs::grass::components::{
+        GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
+    };
     pub use crate::ecs::input::components::Hovered;
     #[cfg(feature = "lattice")]
     pub use crate::ecs::lattice::components::{Lattice, LatticeInfluenced};
@@ -136,6 +139,8 @@ freecs::ecs! {
         lattice: crate::ecs::lattice::components::Lattice => LATTICE,
         lattice_influenced: crate::ecs::lattice::components::LatticeInfluenced => LATTICE_INFLUENCED,
         water: crate::ecs::water::components::Water => WATER,
+        grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
+        grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
     }
     Resources {
         window: crate::ecs::window::resources::Window,

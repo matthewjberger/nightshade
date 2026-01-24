@@ -24,6 +24,7 @@ pub mod generational_registry;
 pub mod gizmos;
 pub mod gpu_picking;
 pub mod graphics;
+pub mod grass;
 pub mod input;
 pub mod lattice;
 pub mod light;

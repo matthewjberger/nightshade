@@ -124,25 +124,9 @@ fn sample_clip(
     node_mapping: &HashMap<usize, Entity>,
     bone_name_mapping: &HashMap<String, Entity>,
 ) -> HashMap<Entity, AnimationAccumulator> {
-    static LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    let should_log = !LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed);
-
     let mut entity_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
-    let mut found_count = 0usize;
-    let mut not_found_count = 0usize;
 
-    if should_log {
-        tracing::info!(
-            "sample_clip '{}': {} channels, time={:.3}s, {} node mappings, {} bone mappings",
-            clip.name,
-            clip.channels.len(),
-            time,
-            node_mapping.len(),
-            bone_name_mapping.len()
-        );
-    }
-
-    for (channel_index, channel) in clip.channels.iter().enumerate() {
+    for channel in clip.channels.iter() {
         let target_entity = if let Some(ref bone_name) = channel.target_bone_name {
             bone_name_mapping.get(bone_name).copied()
         } else {
@@ -150,51 +134,8 @@ fn sample_clip(
         }
         .or_else(|| node_mapping.get(&channel.target_node).copied());
 
-        if target_entity.is_some() {
-            found_count += 1;
-        } else {
-            not_found_count += 1;
-            if should_log && not_found_count <= 3 {
-                tracing::warn!(
-                    "Animation channel target not found: node={}, bone_name={:?}",
-                    channel.target_node,
-                    channel.target_bone_name
-                );
-            }
-        }
-
         if let Some(target_entity) = target_entity {
             let sampled_value = sample_animation_channel(channel, time);
-            if should_log {
-                if let Some(ref value) = sampled_value {
-                    tracing::info!(
-                        "  Ch{}: node={} entity={:?} prop={:?} interp={:?} keyframes={} value={:?}",
-                        channel_index,
-                        channel.target_node,
-                        target_entity,
-                        channel.target_property,
-                        channel.sampler.interpolation,
-                        channel.sampler.input.len(),
-                        match value {
-                            AnimationValue::Vec3(v) =>
-                                format!("Vec3({:.2}, {:.2}, {:.2})", v.x, v.y, v.z),
-                            AnimationValue::Quat(q) =>
-                                format!("Quat({:.2}, {:.2}, {:.2}, {:.2})", q.i, q.j, q.k, q.w),
-                            AnimationValue::Weights(w) => format!("Weights({} values)", w.len()),
-                        }
-                    );
-                } else {
-                    tracing::warn!(
-                        "  Ch{}: node={} entity={:?} prop={:?} interp={:?} keyframes={} - SAMPLING RETURNED NONE",
-                        channel_index,
-                        channel.target_node,
-                        target_entity,
-                        channel.target_property,
-                        channel.sampler.interpolation,
-                        channel.sampler.input.len(),
-                    );
-                }
-            }
             if let Some(value) = sampled_value {
                 let entry = entity_values.entry(target_entity).or_default();
 
@@ -215,15 +156,6 @@ fn sample_clip(
                 }
             }
         }
-    }
-
-    if should_log {
-        tracing::info!(
-            "Animation '{}': {} channels found targets, {} not found",
-            clip.name,
-            found_count,
-            not_found_count
-        );
     }
 
     entity_values
