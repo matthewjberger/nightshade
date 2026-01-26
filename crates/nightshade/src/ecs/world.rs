@@ -98,7 +98,6 @@ freecs::ecs! {
     World {
         animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
         name: crate::ecs::name::components::Name => NAME,
-        behavior_flags: crate::ecs::behavior::components::BehaviorFlags => BEHAVIOR_FLAGS,
         local_transform: crate::ecs::transform::components::LocalTransform => LOCAL_TRANSFORM,
         global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
         local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,

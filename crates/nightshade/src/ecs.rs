@@ -16,7 +16,6 @@
 pub mod animation;
 pub mod asset_id;
 pub mod audio;
-pub mod behavior;
 pub mod bounding_volume;
 pub mod camera;
 pub mod decal;
