@@ -1412,7 +1412,16 @@ struct SpawnEntityParams {
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 fn mcp_spawn_entity(world: &mut World, params: SpawnEntityParams) -> crate::mcp::McpResponse {
-    let SpawnEntityParams { name, mesh, position, scale, color, emissive, parent_name, alpha_mode } = params;
+    let SpawnEntityParams {
+        name,
+        mesh,
+        position,
+        scale,
+        color,
+        emissive,
+        parent_name,
+        alpha_mode,
+    } = params;
     use crate::ecs::transform::components::Parent;
     use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, PARENT};
     use crate::mcp::McpResponse;
@@ -2625,7 +2634,7 @@ fn mcp_remove_script(world: &mut World, name: String) -> crate::mcp::McpResponse
     McpResponse::Success(format!("Script removed from '{}'", name))
 }
 
-#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+#[cfg(all(feature = "mcp", feature = "scripting", not(target_arch = "wasm32")))]
 fn mcp_set_game_state(
     world: &mut World,
     values: std::collections::HashMap<String, f64>,
@@ -2638,7 +2647,19 @@ fn mcp_set_game_state(
     McpResponse::Success("Game state updated".to_string())
 }
 
-#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "mcp",
+    not(feature = "scripting"),
+    not(target_arch = "wasm32")
+))]
+fn mcp_set_game_state(
+    _world: &mut World,
+    _values: std::collections::HashMap<String, f64>,
+) -> crate::mcp::McpResponse {
+    crate::mcp::McpResponse::Error("Scripting feature not enabled".to_string())
+}
+
+#[cfg(all(feature = "mcp", feature = "scripting", not(target_arch = "wasm32")))]
 fn mcp_get_game_state(world: &mut World, keys: Option<Vec<String>>) -> crate::mcp::McpResponse {
     use crate::mcp::McpResponse;
 
@@ -2656,6 +2677,15 @@ fn mcp_get_game_state(world: &mut World, keys: Option<Vec<String>>) -> crate::mc
     };
 
     McpResponse::GameState(state)
+}
+
+#[cfg(all(
+    feature = "mcp",
+    not(feature = "scripting"),
+    not(target_arch = "wasm32")
+))]
+fn mcp_get_game_state(_world: &mut World, _keys: Option<Vec<String>>) -> crate::mcp::McpResponse {
+    crate::mcp::McpResponse::Error("Scripting feature not enabled".to_string())
 }
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
@@ -3192,7 +3222,15 @@ struct SetMaterialParams {
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 fn mcp_set_material(world: &mut World, params: SetMaterialParams) -> crate::mcp::McpResponse {
-    let SetMaterialParams { name, base_color, emissive, roughness, metallic, alpha_mode, alpha_cutoff } = params;
+    let SetMaterialParams {
+        name,
+        base_color,
+        emissive,
+        roughness,
+        metallic,
+        alpha_mode,
+        alpha_cutoff,
+    } = params;
     use crate::ecs::generational_registry::registry_entry_by_name_mut;
     use crate::ecs::material::components::AlphaMode;
     use crate::mcp::McpResponse;
@@ -3341,9 +3379,19 @@ fn process_mcp_commands(world: &mut World) {
                 emissive,
                 parent,
                 alpha,
-            } => mcp_spawn_entity(world, SpawnEntityParams {
-                name, mesh, position, scale, color, emissive, parent_name: parent, alpha_mode: alpha,
-            }),
+            } => mcp_spawn_entity(
+                world,
+                SpawnEntityParams {
+                    name,
+                    mesh,
+                    position,
+                    scale,
+                    color,
+                    emissive,
+                    parent_name: parent,
+                    alpha_mode: alpha,
+                },
+            ),
             McpCommand::DespawnEntity { name } => mcp_despawn_entity(world, name),
             McpCommand::SetPosition { name, position } => mcp_set_position(world, name, position),
             McpCommand::SetRotation { name, rotation } => mcp_set_rotation(world, name, rotation),
@@ -3780,9 +3828,18 @@ fn process_mcp_commands(world: &mut World) {
                 metallic,
                 alpha_mode,
                 alpha_cutoff,
-            } => mcp_set_material(world, SetMaterialParams {
-                name, base_color, emissive, roughness, metallic, alpha_mode, alpha_cutoff,
-            }),
+            } => mcp_set_material(
+                world,
+                SetMaterialParams {
+                    name,
+                    base_color,
+                    emissive,
+                    roughness,
+                    metallic,
+                    alpha_mode,
+                    alpha_cutoff,
+                },
+            ),
             McpCommand::SetCastsShadow { name, casts_shadow } => {
                 mcp_set_casts_shadow(world, name, casts_shadow)
             }
@@ -3823,16 +3880,19 @@ fn process_batch_operations(
                 };
                 let position = operation.position.unwrap_or([0.0, 0.0, 0.0]);
                 let scale = operation.scale.unwrap_or([1.0, 1.0, 1.0]);
-                mcp_spawn_entity(world, SpawnEntityParams {
-                    name,
-                    mesh,
-                    position,
-                    scale,
-                    color: operation.color,
-                    emissive: operation.emissive,
-                    parent_name: operation.parent,
-                    alpha_mode: operation.alpha,
-                })
+                mcp_spawn_entity(
+                    world,
+                    SpawnEntityParams {
+                        name,
+                        mesh,
+                        position,
+                        scale,
+                        color: operation.color,
+                        emissive: operation.emissive,
+                        parent_name: operation.parent,
+                        alpha_mode: operation.alpha,
+                    },
+                )
             }
             "despawn_entity" => {
                 let Some(name) = operation.name else {
@@ -4035,9 +4095,19 @@ fn process_text_commands(world: &mut World, commands: &str) -> Vec<crate::mcp::M
                         }
                     }
 
-                    mcp_spawn_entity(world, SpawnEntityParams {
-                        name, mesh, position, scale, color, emissive, parent_name: parent, alpha_mode: alpha,
-                    })
+                    mcp_spawn_entity(
+                        world,
+                        SpawnEntityParams {
+                            name,
+                            mesh,
+                            position,
+                            scale,
+                            color,
+                            emissive,
+                            parent_name: parent,
+                            alpha_mode: alpha,
+                        },
+                    )
                 }
             }
             "despawn" | "d" => {

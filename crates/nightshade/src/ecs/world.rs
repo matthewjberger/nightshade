@@ -189,7 +189,6 @@ freecs::ecs! {
         mcp_command_queue: crate::mcp::CommandQueue,
         #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
         mcp_response_queue: crate::mcp::ResponseQueue,
-        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
         entity_names: std::collections::HashMap<String, freecs::Entity>,
     }
 }
