@@ -1355,8 +1355,497 @@ fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'st
 }
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-fn process_mcp_commands(world: &mut World) {
+fn find_mesh_child(world: &World, pivot: freecs::Entity) -> Option<freecs::Entity> {
+    use crate::ecs::world::{MATERIAL_REF, PARENT};
+
+    if world.entity_has_components(pivot, MATERIAL_REF) {
+        return Some(pivot);
+    }
+
+    world.query_entities(PARENT | MATERIAL_REF).find(|&child| {
+        world
+            .get_parent(child)
+            .map(|p| p.0 == Some(pivot))
+            .unwrap_or(false)
+    })
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn behavior_name_to_flag(name: &str) -> Option<u64> {
+    use crate::ecs::behavior::components::{
+        BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE, BEHAVIOR_SINE_WAVE,
+    };
+    match name.to_lowercase().as_str() {
+        "rotate" => Some(BEHAVIOR_ROTATE),
+        "bob" => Some(BEHAVIOR_BOB),
+        "orbit" => Some(BEHAVIOR_ORBIT),
+        "scale_pulse" => Some(BEHAVIOR_SCALE_PULSE),
+        "sine_wave" => Some(BEHAVIOR_SINE_WAVE),
+        _ => None,
+    }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn flags_to_behavior_names(flags: u64) -> Vec<String> {
+    use crate::ecs::behavior::components::{
+        BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE, BEHAVIOR_SINE_WAVE,
+    };
+    let mut active = Vec::new();
+    if flags & BEHAVIOR_ROTATE != 0 {
+        active.push("rotate".to_string());
+    }
+    if flags & BEHAVIOR_BOB != 0 {
+        active.push("bob".to_string());
+    }
+    if flags & BEHAVIOR_ORBIT != 0 {
+        active.push("orbit".to_string());
+    }
+    if flags & BEHAVIOR_SCALE_PULSE != 0 {
+        active.push("scale_pulse".to_string());
+    }
+    if flags & BEHAVIOR_SINE_WAVE != 0 {
+        active.push("sine_wave".to_string());
+    }
+    active
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn spawn_mesh_by_type(world: &mut World, mesh_type: &str) -> Option<freecs::Entity> {
+    match mesh_type.to_lowercase().as_str() {
+        "cube" => Some(crate::ecs::world::spawn_cube_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        "sphere" => Some(crate::ecs::world::spawn_sphere_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        "cylinder" => Some(crate::ecs::world::spawn_cylinder_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        "cone" => Some(crate::ecs::world::spawn_cone_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        "plane" => Some(crate::ecs::world::spawn_plane_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        "torus" => Some(crate::ecs::world::spawn_torus_at(
+            world,
+            nalgebra_glm::Vec3::zeros(),
+        )),
+        _ => None,
+    }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_spawn_entity(
+    world: &mut World,
+    name: String,
+    mesh: String,
+    position: [f32; 3],
+    scale: [f32; 3],
+) -> crate::mcp::McpResponse {
+    use crate::ecs::transform::components::Parent;
+    use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, PARENT};
+    use crate::mcp::McpResponse;
+
+    if world.resources.entity_names.contains_key(&name) {
+        return McpResponse::Error(format!("Entity '{}' already exists", name));
+    }
+
+    let pivot = world.spawn_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
+    if let Some(transform) = world.get_local_transform_mut(pivot) {
+        transform.translation = nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
+    }
+    crate::ecs::transform::commands::mark_local_transform_dirty(world, pivot);
+
+    let Some(entity) = spawn_mesh_by_type(world, &mesh) else {
+        crate::ecs::world::commands::despawn_recursive_immediate(world, pivot);
+        return McpResponse::Error(format!(
+            "Unknown mesh type '{}'. Valid types: Cube, Sphere, Cylinder, Cone, Plane, Torus",
+            mesh
+        ));
+    };
+
+    world.add_components(entity, PARENT);
+    world.set_parent(entity, Parent(Some(pivot)));
+
+    if scale != [1.0, 1.0, 1.0] {
+        if let Some(transform) = world.get_local_transform_mut(pivot) {
+            transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
+        }
+        crate::ecs::transform::commands::mark_local_transform_dirty(world, pivot);
+    }
+
+    let material_name = name.clone();
+    crate::ecs::material::resources::material_registry_insert(
+        &mut world.resources.material_registry,
+        material_name.clone(),
+        crate::ecs::material::components::Material::default(),
+    );
+    if let Some(&index) = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&material_name)
+    {
+        world
+            .resources
+            .material_registry
+            .registry
+            .add_reference(index);
+    }
+    world.set_material_ref(
+        entity,
+        crate::ecs::material::components::MaterialRef::new(material_name),
+    );
+
+    world.add_components(pivot, NAME);
+    world.set_name(pivot, crate::ecs::name::components::Name(name.clone()));
+    world.resources.entity_names.insert(name.clone(), pivot);
+
+    McpResponse::Success(format!(
+        "Spawned entity '{}' with {} mesh at {:?}",
+        name, mesh, position
+    ))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_despawn_entity(world: &mut World, name: String) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    if let Some(entity) = world.resources.entity_names.remove(&name) {
+        crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
+        McpResponse::Success(format!("Despawned entity '{}'", name))
+    } else {
+        McpResponse::Error(format!("Entity '{}' not found", name))
+    }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_set_position(
+    world: &mut World,
+    name: String,
+    position: [f32; 3],
+) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    let Some(&entity) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(transform) = world.get_local_transform_mut(entity) else {
+        return McpResponse::Error(format!("Entity '{}' has no transform", name));
+    };
+
+    transform.translation = nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
+    crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+    McpResponse::Success(format!("Set position of '{}' to {:?}", name, position))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_set_rotation(
+    world: &mut World,
+    name: String,
+    rotation: [f32; 3],
+) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    let Some(&entity) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(transform) = world.get_local_transform_mut(entity) else {
+        return McpResponse::Error(format!("Entity '{}' has no transform", name));
+    };
+
+    let qx = nalgebra_glm::quat_angle_axis(rotation[0], &nalgebra_glm::Vec3::x());
+    let qy = nalgebra_glm::quat_angle_axis(rotation[1], &nalgebra_glm::Vec3::y());
+    let qz = nalgebra_glm::quat_angle_axis(rotation[2], &nalgebra_glm::Vec3::z());
+    transform.rotation = nalgebra_glm::quat_normalize(&(qz * qy * qx));
+    crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+    McpResponse::Success(format!("Set rotation of '{}' to {:?}", name, rotation))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_set_scale(world: &mut World, name: String, scale: [f32; 3]) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    let Some(&entity) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(transform) = world.get_local_transform_mut(entity) else {
+        return McpResponse::Error(format!("Entity '{}' has no transform", name));
+    };
+
+    transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
+    crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+    McpResponse::Success(format!("Set scale of '{}' to {:?}", name, scale))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_set_material_color(
+    world: &mut World,
+    name: String,
+    color: [f32; 4],
+) -> crate::mcp::McpResponse {
     use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+    use crate::mcp::McpResponse;
+
+    let Some(&pivot) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(mesh) = find_mesh_child(world, pivot) else {
+        return McpResponse::Error(format!("Entity '{}' has no mesh with material", name));
+    };
+
+    let Some(material_ref) = world.get_material_ref(mesh) else {
+        return McpResponse::Error(format!("Entity '{}' has no material reference", name));
+    };
+
+    let current_material_name = material_ref.name.clone();
+    let ref_count = world
+        .resources
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&current_material_name)
+        .map(|&index| {
+            world
+                .resources
+                .material_registry
+                .registry
+                .reference_count(index)
+        })
+        .unwrap_or(0);
+
+    let target_material_name = if ref_count > 1 {
+        let unique_name = name.clone();
+        if !world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .contains_key(&unique_name)
+        {
+            let new_material = registry_entry_by_name(
+                &world.resources.material_registry.registry,
+                &current_material_name,
+            )
+            .cloned()
+            .unwrap_or_default();
+            crate::ecs::material::resources::material_registry_insert(
+                &mut world.resources.material_registry,
+                unique_name.clone(),
+                new_material,
+            );
+        }
+        if let Some(&old_index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&current_material_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .remove_reference(old_index);
+        }
+        if let Some(&new_index) = world
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&unique_name)
+        {
+            world
+                .resources
+                .material_registry
+                .registry
+                .add_reference(new_index);
+        }
+        world.set_material_ref(
+            mesh,
+            crate::ecs::material::components::MaterialRef::new(unique_name.clone()),
+        );
+        unique_name
+    } else {
+        current_material_name
+    };
+
+    let Some(material) = registry_entry_by_name_mut(
+        &mut world.resources.material_registry.registry,
+        &target_material_name,
+    ) else {
+        return McpResponse::Error(format!(
+            "Material '{}' not found for entity '{}'",
+            target_material_name, name
+        ));
+    };
+
+    material.base_color = [color[0], color[1], color[2], color[3]];
+    McpResponse::Success(format!("Set material color of '{}' to {:?}", name, color))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_set_behavior(world: &mut World, name: String, flags: u64) -> crate::mcp::McpResponse {
+    use crate::ecs::behavior::components::BehaviorFlags;
+    use crate::ecs::world::BEHAVIOR_FLAGS;
+    use crate::mcp::McpResponse;
+
+    let Some(&pivot) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(mesh) = find_mesh_child(world, pivot) else {
+        return McpResponse::Error(format!("Entity '{}' has no mesh", name));
+    };
+
+    if !world.entity_has_components(mesh, BEHAVIOR_FLAGS) {
+        world.add_components(mesh, BEHAVIOR_FLAGS);
+    }
+    world.set_behavior_flags(mesh, BehaviorFlags(flags));
+    McpResponse::Success(format!("Set behavior flags of '{}' to {}", name, flags))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_add_behavior(world: &mut World, name: String, behavior: String) -> crate::mcp::McpResponse {
+    use crate::ecs::behavior::components::BehaviorFlags;
+    use crate::ecs::world::BEHAVIOR_FLAGS;
+    use crate::mcp::McpResponse;
+
+    let Some(flag) = behavior_name_to_flag(&behavior) else {
+        return McpResponse::Error(format!(
+            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
+            behavior
+        ));
+    };
+
+    let Some(&pivot) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(mesh) = find_mesh_child(world, pivot) else {
+        return McpResponse::Error(format!("Entity '{}' has no mesh", name));
+    };
+
+    if !world.entity_has_components(mesh, BEHAVIOR_FLAGS) {
+        world.add_components(mesh, BEHAVIOR_FLAGS);
+    }
+    let current = world.get_behavior_flags(mesh).map(|f| f.0).unwrap_or(0);
+    world.set_behavior_flags(mesh, BehaviorFlags(current | flag));
+    McpResponse::Success(format!("Added '{}' behavior to '{}'", behavior, name))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_remove_behavior(
+    world: &mut World,
+    name: String,
+    behavior: String,
+) -> crate::mcp::McpResponse {
+    use crate::ecs::behavior::components::BehaviorFlags;
+    use crate::ecs::world::BEHAVIOR_FLAGS;
+    use crate::mcp::McpResponse;
+
+    let Some(flag) = behavior_name_to_flag(&behavior) else {
+        return McpResponse::Error(format!(
+            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
+            behavior
+        ));
+    };
+
+    let Some(&pivot) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(mesh) = find_mesh_child(world, pivot) else {
+        return McpResponse::Error(format!("Entity '{}' has no mesh", name));
+    };
+
+    if !world.entity_has_components(mesh, BEHAVIOR_FLAGS) {
+        return McpResponse::Success(format!("Entity '{}' has no behaviors to remove", name));
+    }
+
+    let current = world.get_behavior_flags(mesh).map(|f| f.0).unwrap_or(0);
+    world.set_behavior_flags(mesh, BehaviorFlags(current & !flag));
+    McpResponse::Success(format!("Removed '{}' behavior from '{}'", behavior, name))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_get_behavior(world: &World, name: String) -> crate::mcp::McpResponse {
+    use crate::ecs::world::BEHAVIOR_FLAGS;
+    use crate::mcp::McpResponse;
+
+    let Some(&pivot) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let mesh = find_mesh_child(world, pivot);
+    let flags = mesh
+        .filter(|&m| world.entity_has_components(m, BEHAVIOR_FLAGS))
+        .and_then(|m| world.get_behavior_flags(m))
+        .map(|f| f.0)
+        .unwrap_or(0);
+
+    McpResponse::BehaviorInfo {
+        name,
+        flags,
+        active_behaviors: flags_to_behavior_names(flags),
+    }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_query_entity(world: &World, name: String) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    let Some(&entity) = world.resources.entity_names.get(&name) else {
+        return McpResponse::Error(format!("Entity '{}' not found", name));
+    };
+
+    let Some(transform) = world.get_local_transform(entity) else {
+        return McpResponse::Error(format!("Entity '{}' has no transform", name));
+    };
+
+    McpResponse::EntityInfo {
+        name,
+        position: [
+            transform.translation.x,
+            transform.translation.y,
+            transform.translation.z,
+        ],
+        rotation: [
+            transform.rotation.i,
+            transform.rotation.j,
+            transform.rotation.k,
+            transform.rotation.w,
+        ],
+        scale: [transform.scale.x, transform.scale.y, transform.scale.z],
+    }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn mcp_clear_scene(world: &mut World) -> crate::mcp::McpResponse {
+    use crate::mcp::McpResponse;
+
+    let entities_to_despawn: Vec<_> = world.resources.entity_names.values().copied().collect();
+    let count = entities_to_despawn.len();
+    for entity in entities_to_despawn {
+        crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
+    }
+    world.resources.entity_names.clear();
+    McpResponse::Success(format!("Cleared {} entities from scene", count))
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn process_mcp_commands(world: &mut World) {
     use crate::ecs::world::NAME;
     use crate::mcp::{McpCommand, McpResponse};
 
@@ -1371,412 +1860,26 @@ fn process_mcp_commands(world: &mut World) {
                 let names: Vec<String> = world.resources.entity_names.keys().cloned().collect();
                 McpResponse::EntityList(names)
             }
-            McpCommand::QueryEntity { name } => {
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if let Some(transform) = world.get_local_transform(entity) {
-                        McpResponse::EntityInfo {
-                            name,
-                            position: [
-                                transform.translation.x,
-                                transform.translation.y,
-                                transform.translation.z,
-                            ],
-                            rotation: [
-                                transform.rotation.i,
-                                transform.rotation.j,
-                                transform.rotation.k,
-                                transform.rotation.w,
-                            ],
-                            scale: [transform.scale.x, transform.scale.y, transform.scale.z],
-                        }
-                    } else {
-                        McpResponse::Error(format!("Entity '{}' has no transform", name))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
+            McpCommand::QueryEntity { name } => mcp_query_entity(world, name),
             McpCommand::SpawnEntity {
                 name,
                 mesh,
                 position,
                 scale,
-            } => {
-                use crate::ecs::transform::components::Parent;
-                use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT};
-
-                if world.resources.entity_names.contains_key(&name) {
-                    McpResponse::Error(format!("Entity '{}' already exists", name))
-                } else {
-                    let pivot =
-                        world.spawn_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
-                    if let Some(transform) = world.get_local_transform_mut(pivot) {
-                        transform.translation =
-                            nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
-                    }
-                    crate::ecs::transform::commands::mark_local_transform_dirty(world, pivot);
-
-                    let entity = match mesh.to_lowercase().as_str() {
-                        "cube" => {
-                            crate::ecs::world::spawn_cube_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        "sphere" => {
-                            crate::ecs::world::spawn_sphere_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        "cylinder" => {
-                            crate::ecs::world::spawn_cylinder_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        "cone" => {
-                            crate::ecs::world::spawn_cone_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        "plane" => {
-                            crate::ecs::world::spawn_plane_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        "torus" => {
-                            crate::ecs::world::spawn_torus_at(world, nalgebra_glm::Vec3::zeros())
-                        }
-                        _ => {
-                            crate::ecs::world::commands::despawn_recursive_immediate(world, pivot);
-                            let mut response = world.resources.mcp_response_queue.write().unwrap();
-                            *response = Some(McpResponse::Error(format!(
-                                "Unknown mesh type '{}'. Valid types: Cube, Sphere, Cylinder, Cone, Plane, Torus",
-                                mesh
-                            )));
-                            continue;
-                        }
-                    };
-
-                    world.add_components(entity, PARENT);
-                    world.set_parent(entity, Parent(Some(pivot)));
-
-                    if scale != [1.0, 1.0, 1.0]
-                        && let Some(transform) = world.get_local_transform_mut(entity)
-                    {
-                        transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
-                    }
-
-                    let material_name = name.clone();
-                    crate::ecs::material::resources::material_registry_insert(
-                        &mut world.resources.material_registry,
-                        material_name.clone(),
-                        crate::ecs::material::components::Material::default(),
-                    );
-                    if let Some(&index) = world
-                        .resources
-                        .material_registry
-                        .registry
-                        .name_to_index
-                        .get(&material_name)
-                    {
-                        world
-                            .resources
-                            .material_registry
-                            .registry
-                            .add_reference(index);
-                    }
-                    world.set_material_ref(
-                        entity,
-                        crate::ecs::material::components::MaterialRef::new(material_name),
-                    );
-
-                    world.add_components(entity, NAME);
-                    world.set_name(entity, crate::ecs::name::components::Name(name.clone()));
-                    world.resources.entity_names.insert(name.clone(), entity);
-
-                    McpResponse::Success(format!(
-                        "Spawned entity '{}' with {} mesh at {:?}",
-                        name, mesh, position
-                    ))
-                }
-            }
-            McpCommand::DespawnEntity { name } => {
-                if let Some(entity) = world.resources.entity_names.remove(&name) {
-                    crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
-                    McpResponse::Success(format!("Despawned entity '{}'", name))
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
-            McpCommand::SetPosition { name, position } => {
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if let Some(transform) = world.get_local_transform_mut(entity) {
-                        transform.translation =
-                            nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
-                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
-                        McpResponse::Success(format!(
-                            "Set position of '{}' to {:?}",
-                            name, position
-                        ))
-                    } else {
-                        McpResponse::Error(format!("Entity '{}' has no transform", name))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
-            McpCommand::SetRotation { name, rotation } => {
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if let Some(transform) = world.get_local_transform_mut(entity) {
-                        let qx =
-                            nalgebra_glm::quat_angle_axis(rotation[0], &nalgebra_glm::Vec3::x());
-                        let qy =
-                            nalgebra_glm::quat_angle_axis(rotation[1], &nalgebra_glm::Vec3::y());
-                        let qz =
-                            nalgebra_glm::quat_angle_axis(rotation[2], &nalgebra_glm::Vec3::z());
-                        transform.rotation = nalgebra_glm::quat_normalize(&(qz * qy * qx));
-                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
-                        McpResponse::Success(format!(
-                            "Set rotation of '{}' to {:?}",
-                            name, rotation
-                        ))
-                    } else {
-                        McpResponse::Error(format!("Entity '{}' has no transform", name))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
-            McpCommand::SetScale { name, scale } => {
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if let Some(transform) = world.get_local_transform_mut(entity) {
-                        transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
-                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
-                        McpResponse::Success(format!("Set scale of '{}' to {:?}", name, scale))
-                    } else {
-                        McpResponse::Error(format!("Entity '{}' has no transform", name))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
+            } => mcp_spawn_entity(world, name, mesh, position, scale),
+            McpCommand::DespawnEntity { name } => mcp_despawn_entity(world, name),
+            McpCommand::SetPosition { name, position } => mcp_set_position(world, name, position),
+            McpCommand::SetRotation { name, rotation } => mcp_set_rotation(world, name, rotation),
+            McpCommand::SetScale { name, scale } => mcp_set_scale(world, name, scale),
             McpCommand::SetMaterialColor { name, color } => {
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if let Some(material_ref) = world.get_material_ref(entity) {
-                        let current_material_name = material_ref.name.clone();
-                        let ref_count = world
-                            .resources
-                            .material_registry
-                            .registry
-                            .name_to_index
-                            .get(&current_material_name)
-                            .map(|&index| {
-                                world
-                                    .resources
-                                    .material_registry
-                                    .registry
-                                    .reference_count(index)
-                            })
-                            .unwrap_or(0);
-
-                        let target_material_name = if ref_count > 1 {
-                            let unique_name = name.clone();
-                            if !world
-                                .resources
-                                .material_registry
-                                .registry
-                                .name_to_index
-                                .contains_key(&unique_name)
-                            {
-                                let new_material = registry_entry_by_name(
-                                    &world.resources.material_registry.registry,
-                                    &current_material_name,
-                                )
-                                .cloned()
-                                .unwrap_or_default();
-                                crate::ecs::material::resources::material_registry_insert(
-                                    &mut world.resources.material_registry,
-                                    unique_name.clone(),
-                                    new_material,
-                                );
-                            }
-                            if let Some(&old_index) = world
-                                .resources
-                                .material_registry
-                                .registry
-                                .name_to_index
-                                .get(&current_material_name)
-                            {
-                                world
-                                    .resources
-                                    .material_registry
-                                    .registry
-                                    .remove_reference(old_index);
-                            }
-                            if let Some(&new_index) = world
-                                .resources
-                                .material_registry
-                                .registry
-                                .name_to_index
-                                .get(&unique_name)
-                            {
-                                world
-                                    .resources
-                                    .material_registry
-                                    .registry
-                                    .add_reference(new_index);
-                            }
-                            world.set_material_ref(
-                                entity,
-                                crate::ecs::material::components::MaterialRef::new(
-                                    unique_name.clone(),
-                                ),
-                            );
-                            unique_name
-                        } else {
-                            current_material_name
-                        };
-
-                        if let Some(material) = registry_entry_by_name_mut(
-                            &mut world.resources.material_registry.registry,
-                            &target_material_name,
-                        ) {
-                            material.base_color = [color[0], color[1], color[2], color[3]];
-                            McpResponse::Success(format!(
-                                "Set material color of '{}' to {:?}",
-                                name, color
-                            ))
-                        } else {
-                            McpResponse::Error(format!(
-                                "Material '{}' not found for entity '{}'",
-                                target_material_name, name
-                            ))
-                        }
-                    } else {
-                        McpResponse::Error(format!("Entity '{}' has no material reference", name))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
+                mcp_set_material_color(world, name, color)
             }
-            McpCommand::SetBehavior { name, flags } => {
-                use crate::ecs::behavior::components::BehaviorFlags;
-                use crate::ecs::world::BEHAVIOR_FLAGS;
-
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if !world.entity_has_components(entity, BEHAVIOR_FLAGS) {
-                        world.add_components(entity, BEHAVIOR_FLAGS);
-                    }
-                    world.set_behavior_flags(entity, BehaviorFlags(flags));
-                    McpResponse::Success(format!("Set behavior flags of '{}' to {}", name, flags))
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
-            McpCommand::AddBehavior { name, behavior } => {
-                use crate::ecs::behavior::components::{
-                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
-                    BEHAVIOR_SINE_WAVE, BehaviorFlags,
-                };
-                use crate::ecs::world::BEHAVIOR_FLAGS;
-
-                let flag = match behavior.to_lowercase().as_str() {
-                    "rotate" => BEHAVIOR_ROTATE,
-                    "bob" => BEHAVIOR_BOB,
-                    "orbit" => BEHAVIOR_ORBIT,
-                    "scale_pulse" => BEHAVIOR_SCALE_PULSE,
-                    "sine_wave" => BEHAVIOR_SINE_WAVE,
-                    _ => {
-                        let mut response = world.resources.mcp_response_queue.write().unwrap();
-                        *response = Some(McpResponse::Error(format!(
-                            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
-                            behavior
-                        )));
-                        continue;
-                    }
-                };
-
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if !world.entity_has_components(entity, BEHAVIOR_FLAGS) {
-                        world.add_components(entity, BEHAVIOR_FLAGS);
-                    }
-                    let current = world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0);
-                    world.set_behavior_flags(entity, BehaviorFlags(current | flag));
-                    McpResponse::Success(format!("Added '{}' behavior to '{}'", behavior, name))
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
+            McpCommand::SetBehavior { name, flags } => mcp_set_behavior(world, name, flags),
+            McpCommand::AddBehavior { name, behavior } => mcp_add_behavior(world, name, behavior),
             McpCommand::RemoveBehavior { name, behavior } => {
-                use crate::ecs::behavior::components::{
-                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
-                    BEHAVIOR_SINE_WAVE, BehaviorFlags,
-                };
-                use crate::ecs::world::BEHAVIOR_FLAGS;
-
-                let flag = match behavior.to_lowercase().as_str() {
-                    "rotate" => BEHAVIOR_ROTATE,
-                    "bob" => BEHAVIOR_BOB,
-                    "orbit" => BEHAVIOR_ORBIT,
-                    "scale_pulse" => BEHAVIOR_SCALE_PULSE,
-                    "sine_wave" => BEHAVIOR_SINE_WAVE,
-                    _ => {
-                        let mut response = world.resources.mcp_response_queue.write().unwrap();
-                        *response = Some(McpResponse::Error(format!(
-                            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
-                            behavior
-                        )));
-                        continue;
-                    }
-                };
-
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    if world.entity_has_components(entity, BEHAVIOR_FLAGS) {
-                        let current = world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0);
-                        world.set_behavior_flags(entity, BehaviorFlags(current & !flag));
-                        McpResponse::Success(format!(
-                            "Removed '{}' behavior from '{}'",
-                            behavior, name
-                        ))
-                    } else {
-                        McpResponse::Success(format!(
-                            "Entity '{}' has no behaviors to remove",
-                            name
-                        ))
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
+                mcp_remove_behavior(world, name, behavior)
             }
-            McpCommand::GetBehavior { name } => {
-                use crate::ecs::behavior::components::{
-                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
-                    BEHAVIOR_SINE_WAVE,
-                };
-                use crate::ecs::world::BEHAVIOR_FLAGS;
-
-                if let Some(&entity) = world.resources.entity_names.get(&name) {
-                    let flags = if world.entity_has_components(entity, BEHAVIOR_FLAGS) {
-                        world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0)
-                    } else {
-                        0
-                    };
-
-                    let mut active = Vec::new();
-                    if flags & BEHAVIOR_ROTATE != 0 {
-                        active.push("rotate".to_string());
-                    }
-                    if flags & BEHAVIOR_BOB != 0 {
-                        active.push("bob".to_string());
-                    }
-                    if flags & BEHAVIOR_ORBIT != 0 {
-                        active.push("orbit".to_string());
-                    }
-                    if flags & BEHAVIOR_SCALE_PULSE != 0 {
-                        active.push("scale_pulse".to_string());
-                    }
-                    if flags & BEHAVIOR_SINE_WAVE != 0 {
-                        active.push("sine_wave".to_string());
-                    }
-
-                    McpResponse::BehaviorInfo {
-                        name,
-                        flags,
-                        active_behaviors: active,
-                    }
-                } else {
-                    McpResponse::Error(format!("Entity '{}' not found", name))
-                }
-            }
+            McpCommand::GetBehavior { name } => mcp_get_behavior(world, name),
             McpCommand::LoadAsset { path, asset_name } => {
                 use crate::ecs::prefab::resources::{
                     CachedPrefab, mesh_cache_insert, prefab_cache_insert,
@@ -1937,19 +2040,142 @@ fn process_mcp_commands(world: &mut World) {
                     .collect();
                 McpResponse::AssetList(names)
             }
-            McpCommand::ClearScene => {
-                let entities_to_despawn: Vec<_> =
-                    world.resources.entity_names.values().copied().collect();
-                let count = entities_to_despawn.len();
-                for entity in entities_to_despawn {
-                    crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
-                }
-                world.resources.entity_names.clear();
-                McpResponse::Success(format!("Cleared {} entities from scene", count))
+            McpCommand::ClearScene => mcp_clear_scene(world),
+            McpCommand::Batch(operations) => {
+                let results = process_batch_operations(world, operations);
+                McpResponse::BatchResult(results)
             }
         };
 
         let mut response_queue = world.resources.mcp_response_queue.write().unwrap();
         *response_queue = Some(response);
     }
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn process_batch_operations(
+    world: &mut World,
+    operations: Vec<crate::mcp::BatchOperation>,
+) -> Vec<crate::mcp::McpResponse> {
+    use crate::mcp::McpResponse;
+
+    let mut results = Vec::with_capacity(operations.len());
+
+    for operation in operations {
+        let response = match operation.operation.to_lowercase().as_str() {
+            "spawn_entity" => {
+                let (Some(name), Some(mesh)) = (operation.name, operation.mesh) else {
+                    results.push(McpResponse::Error(
+                        "spawn_entity requires 'name' and 'mesh' fields".to_string(),
+                    ));
+                    continue;
+                };
+                let position = operation.position.unwrap_or([0.0, 0.0, 0.0]);
+                let scale = operation.scale.unwrap_or([1.0, 1.0, 1.0]);
+                mcp_spawn_entity(world, name, mesh, position, scale)
+            }
+            "despawn_entity" => {
+                let Some(name) = operation.name else {
+                    results.push(McpResponse::Error(
+                        "despawn_entity requires 'name' field".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_despawn_entity(world, name)
+            }
+            "set_position" => {
+                let (Some(name), Some(position)) = (operation.name, operation.position) else {
+                    results.push(McpResponse::Error(
+                        "set_position requires 'name' and 'position' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_set_position(world, name, position)
+            }
+            "set_rotation" => {
+                let (Some(name), Some(rotation)) = (operation.name, operation.rotation) else {
+                    results.push(McpResponse::Error(
+                        "set_rotation requires 'name' and 'rotation' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_set_rotation(world, name, rotation)
+            }
+            "set_scale" => {
+                let (Some(name), Some(scale)) = (operation.name, operation.scale) else {
+                    results.push(McpResponse::Error(
+                        "set_scale requires 'name' and 'scale' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_set_scale(world, name, scale)
+            }
+            "set_material_color" => {
+                let (Some(name), Some(color)) = (operation.name, operation.color) else {
+                    results.push(McpResponse::Error(
+                        "set_material_color requires 'name' and 'color' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_set_material_color(world, name, color)
+            }
+            "set_behavior" => {
+                let (Some(name), Some(flags)) = (operation.name, operation.flags) else {
+                    results.push(McpResponse::Error(
+                        "set_behavior requires 'name' and 'flags' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_set_behavior(world, name, flags)
+            }
+            "add_behavior" => {
+                let (Some(name), Some(behavior)) = (operation.name, operation.behavior) else {
+                    results.push(McpResponse::Error(
+                        "add_behavior requires 'name' and 'behavior' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_add_behavior(world, name, behavior)
+            }
+            "remove_behavior" => {
+                let (Some(name), Some(behavior)) = (operation.name, operation.behavior) else {
+                    results.push(McpResponse::Error(
+                        "remove_behavior requires 'name' and 'behavior' fields".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_remove_behavior(world, name, behavior)
+            }
+            "clear_scene" => mcp_clear_scene(world),
+            "list_entities" => {
+                let names: Vec<String> = world.resources.entity_names.keys().cloned().collect();
+                McpResponse::EntityList(names)
+            }
+            "query_entity" => {
+                let Some(name) = operation.name else {
+                    results.push(McpResponse::Error(
+                        "query_entity requires 'name' field".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_query_entity(world, name)
+            }
+            "get_behavior" => {
+                let Some(name) = operation.name else {
+                    results.push(McpResponse::Error(
+                        "get_behavior requires 'name' field".to_string(),
+                    ));
+                    continue;
+                };
+                mcp_get_behavior(world, name)
+            }
+            _ => McpResponse::Error(format!(
+                "Unknown operation '{}'. Valid operations: spawn_entity, despawn_entity, set_position, set_rotation, set_scale, set_material_color, add_behavior, remove_behavior, set_behavior, get_behavior, query_entity, list_entities, clear_scene",
+                operation.operation
+            )),
+        };
+        results.push(response);
+    }
+
+    results
 }

@@ -147,9 +147,11 @@ Connect Claude Code:
 claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
 ```
 
-Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_behavior`, `add_behavior`, `remove_behavior`, `get_behavior`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `clear_scene`
+Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_behavior`, `add_behavior`, `remove_behavior`, `get_behavior`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `clear_scene`, `batch`
 
 Asset loading: Use `load_asset` to load .glb, .gltf, or .fbx files, then `spawn_prefab` to instantiate them.
+
+Batch operations: Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency. Supports: `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `add_behavior`, `remove_behavior`, `set_behavior`, `get_behavior`, `query_entity`, `list_entities`, `clear_scene`.
 
 The editor enables MCP by default for AI-assisted development workflows.
 
