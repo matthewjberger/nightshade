@@ -267,9 +267,20 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
 
     let state = Box::new(state);
 
+    #[allow(unused_mut)]
+    let mut world = World::default();
+
+    #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+    {
+        let (command_queue, response_queue) = crate::mcp::create_mcp_queues();
+        world.resources.mcp_command_queue = command_queue.clone();
+        world.resources.mcp_response_queue = response_queue.clone();
+        crate::mcp::start_mcp_server(command_queue, response_queue);
+    }
+
     let mut context = WindowContext {
         state,
-        world: World::default(),
+        world,
         renderer: None,
         #[cfg(target_arch = "wasm32")]
         renderer_receiver: None,
@@ -374,6 +385,10 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 
 pub(crate) fn run_frame_systems(world: &mut World) {
     let _span = tracing::info_span!("systems").entered();
+
+    #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+    process_mcp_commands(world);
+
     #[cfg(feature = "audio")]
     {
         crate::ecs::audio::systems::initialize_audio_system(world);
@@ -393,6 +408,9 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     let delta_time = world.resources.window.timing.delta_time;
     crate::ecs::animation::systems::update_animation_players(world, delta_time);
     crate::ecs::animation::systems::apply_animations(world);
+
+    #[cfg(feature = "behaviors")]
+    crate::ecs::behavior::systems::run_behavior_system(world);
 
     crate::ecs::transform::systems::run_systems(world);
     crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);
@@ -1334,4 +1352,604 @@ fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'st
 
     world.resources.immediate_ui.end_frame();
     world.resources.input.keyboard.clear_frame_input();
+}
+
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+fn process_mcp_commands(world: &mut World) {
+    use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+    use crate::ecs::world::NAME;
+    use crate::mcp::{McpCommand, McpResponse};
+
+    let commands: Vec<McpCommand> = {
+        let mut queue = world.resources.mcp_command_queue.write().unwrap();
+        queue.drain(..).collect()
+    };
+
+    for cmd in commands {
+        let response = match cmd {
+            McpCommand::ListEntities => {
+                let names: Vec<String> = world.resources.entity_names.keys().cloned().collect();
+                McpResponse::EntityList(names)
+            }
+            McpCommand::QueryEntity { name } => {
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if let Some(transform) = world.get_local_transform(entity) {
+                        McpResponse::EntityInfo {
+                            name,
+                            position: [
+                                transform.translation.x,
+                                transform.translation.y,
+                                transform.translation.z,
+                            ],
+                            rotation: [
+                                transform.rotation.i,
+                                transform.rotation.j,
+                                transform.rotation.k,
+                                transform.rotation.w,
+                            ],
+                            scale: [transform.scale.x, transform.scale.y, transform.scale.z],
+                        }
+                    } else {
+                        McpResponse::Error(format!("Entity '{}' has no transform", name))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SpawnEntity {
+                name,
+                mesh,
+                position,
+                scale,
+            } => {
+                use crate::ecs::transform::components::Parent;
+                use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT};
+
+                if world.resources.entity_names.contains_key(&name) {
+                    McpResponse::Error(format!("Entity '{}' already exists", name))
+                } else {
+                    let pivot =
+                        world.spawn_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
+                    if let Some(transform) = world.get_local_transform_mut(pivot) {
+                        transform.translation =
+                            nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
+                    }
+                    crate::ecs::transform::commands::mark_local_transform_dirty(world, pivot);
+
+                    let entity = match mesh.to_lowercase().as_str() {
+                        "cube" => {
+                            crate::ecs::world::spawn_cube_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        "sphere" => {
+                            crate::ecs::world::spawn_sphere_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        "cylinder" => {
+                            crate::ecs::world::spawn_cylinder_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        "cone" => {
+                            crate::ecs::world::spawn_cone_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        "plane" => {
+                            crate::ecs::world::spawn_plane_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        "torus" => {
+                            crate::ecs::world::spawn_torus_at(world, nalgebra_glm::Vec3::zeros())
+                        }
+                        _ => {
+                            crate::ecs::world::commands::despawn_recursive_immediate(world, pivot);
+                            let mut response = world.resources.mcp_response_queue.write().unwrap();
+                            *response = Some(McpResponse::Error(format!(
+                                "Unknown mesh type '{}'. Valid types: Cube, Sphere, Cylinder, Cone, Plane, Torus",
+                                mesh
+                            )));
+                            continue;
+                        }
+                    };
+
+                    world.add_components(entity, PARENT);
+                    world.set_parent(entity, Parent(Some(pivot)));
+
+                    if scale != [1.0, 1.0, 1.0]
+                        && let Some(transform) = world.get_local_transform_mut(entity)
+                    {
+                        transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
+                    }
+
+                    let material_name = name.clone();
+                    crate::ecs::material::resources::material_registry_insert(
+                        &mut world.resources.material_registry,
+                        material_name.clone(),
+                        crate::ecs::material::components::Material::default(),
+                    );
+                    if let Some(&index) = world
+                        .resources
+                        .material_registry
+                        .registry
+                        .name_to_index
+                        .get(&material_name)
+                    {
+                        world
+                            .resources
+                            .material_registry
+                            .registry
+                            .add_reference(index);
+                    }
+                    world.set_material_ref(
+                        entity,
+                        crate::ecs::material::components::MaterialRef::new(material_name),
+                    );
+
+                    world.add_components(entity, NAME);
+                    world.set_name(entity, crate::ecs::name::components::Name(name.clone()));
+                    world.resources.entity_names.insert(name.clone(), entity);
+
+                    McpResponse::Success(format!(
+                        "Spawned entity '{}' with {} mesh at {:?}",
+                        name, mesh, position
+                    ))
+                }
+            }
+            McpCommand::DespawnEntity { name } => {
+                if let Some(entity) = world.resources.entity_names.remove(&name) {
+                    crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
+                    McpResponse::Success(format!("Despawned entity '{}'", name))
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SetPosition { name, position } => {
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if let Some(transform) = world.get_local_transform_mut(entity) {
+                        transform.translation =
+                            nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
+                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+                        McpResponse::Success(format!(
+                            "Set position of '{}' to {:?}",
+                            name, position
+                        ))
+                    } else {
+                        McpResponse::Error(format!("Entity '{}' has no transform", name))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SetRotation { name, rotation } => {
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if let Some(transform) = world.get_local_transform_mut(entity) {
+                        let qx =
+                            nalgebra_glm::quat_angle_axis(rotation[0], &nalgebra_glm::Vec3::x());
+                        let qy =
+                            nalgebra_glm::quat_angle_axis(rotation[1], &nalgebra_glm::Vec3::y());
+                        let qz =
+                            nalgebra_glm::quat_angle_axis(rotation[2], &nalgebra_glm::Vec3::z());
+                        transform.rotation = nalgebra_glm::quat_normalize(&(qz * qy * qx));
+                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+                        McpResponse::Success(format!(
+                            "Set rotation of '{}' to {:?}",
+                            name, rotation
+                        ))
+                    } else {
+                        McpResponse::Error(format!("Entity '{}' has no transform", name))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SetScale { name, scale } => {
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if let Some(transform) = world.get_local_transform_mut(entity) {
+                        transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
+                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+                        McpResponse::Success(format!("Set scale of '{}' to {:?}", name, scale))
+                    } else {
+                        McpResponse::Error(format!("Entity '{}' has no transform", name))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SetMaterialColor { name, color } => {
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if let Some(material_ref) = world.get_material_ref(entity) {
+                        let current_material_name = material_ref.name.clone();
+                        let ref_count = world
+                            .resources
+                            .material_registry
+                            .registry
+                            .name_to_index
+                            .get(&current_material_name)
+                            .map(|&index| {
+                                world
+                                    .resources
+                                    .material_registry
+                                    .registry
+                                    .reference_count(index)
+                            })
+                            .unwrap_or(0);
+
+                        let target_material_name = if ref_count > 1 {
+                            let unique_name = name.clone();
+                            if !world
+                                .resources
+                                .material_registry
+                                .registry
+                                .name_to_index
+                                .contains_key(&unique_name)
+                            {
+                                let new_material = registry_entry_by_name(
+                                    &world.resources.material_registry.registry,
+                                    &current_material_name,
+                                )
+                                .cloned()
+                                .unwrap_or_default();
+                                crate::ecs::material::resources::material_registry_insert(
+                                    &mut world.resources.material_registry,
+                                    unique_name.clone(),
+                                    new_material,
+                                );
+                            }
+                            if let Some(&old_index) = world
+                                .resources
+                                .material_registry
+                                .registry
+                                .name_to_index
+                                .get(&current_material_name)
+                            {
+                                world
+                                    .resources
+                                    .material_registry
+                                    .registry
+                                    .remove_reference(old_index);
+                            }
+                            if let Some(&new_index) = world
+                                .resources
+                                .material_registry
+                                .registry
+                                .name_to_index
+                                .get(&unique_name)
+                            {
+                                world
+                                    .resources
+                                    .material_registry
+                                    .registry
+                                    .add_reference(new_index);
+                            }
+                            world.set_material_ref(
+                                entity,
+                                crate::ecs::material::components::MaterialRef::new(
+                                    unique_name.clone(),
+                                ),
+                            );
+                            unique_name
+                        } else {
+                            current_material_name
+                        };
+
+                        if let Some(material) = registry_entry_by_name_mut(
+                            &mut world.resources.material_registry.registry,
+                            &target_material_name,
+                        ) {
+                            material.base_color = [color[0], color[1], color[2], color[3]];
+                            McpResponse::Success(format!(
+                                "Set material color of '{}' to {:?}",
+                                name, color
+                            ))
+                        } else {
+                            McpResponse::Error(format!(
+                                "Material '{}' not found for entity '{}'",
+                                target_material_name, name
+                            ))
+                        }
+                    } else {
+                        McpResponse::Error(format!("Entity '{}' has no material reference", name))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::SetBehavior { name, flags } => {
+                use crate::ecs::behavior::components::BehaviorFlags;
+                use crate::ecs::world::BEHAVIOR_FLAGS;
+
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if !world.entity_has_components(entity, BEHAVIOR_FLAGS) {
+                        world.add_components(entity, BEHAVIOR_FLAGS);
+                    }
+                    world.set_behavior_flags(entity, BehaviorFlags(flags));
+                    McpResponse::Success(format!("Set behavior flags of '{}' to {}", name, flags))
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::AddBehavior { name, behavior } => {
+                use crate::ecs::behavior::components::{
+                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
+                    BEHAVIOR_SINE_WAVE, BehaviorFlags,
+                };
+                use crate::ecs::world::BEHAVIOR_FLAGS;
+
+                let flag = match behavior.to_lowercase().as_str() {
+                    "rotate" => BEHAVIOR_ROTATE,
+                    "bob" => BEHAVIOR_BOB,
+                    "orbit" => BEHAVIOR_ORBIT,
+                    "scale_pulse" => BEHAVIOR_SCALE_PULSE,
+                    "sine_wave" => BEHAVIOR_SINE_WAVE,
+                    _ => {
+                        let mut response = world.resources.mcp_response_queue.write().unwrap();
+                        *response = Some(McpResponse::Error(format!(
+                            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
+                            behavior
+                        )));
+                        continue;
+                    }
+                };
+
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if !world.entity_has_components(entity, BEHAVIOR_FLAGS) {
+                        world.add_components(entity, BEHAVIOR_FLAGS);
+                    }
+                    let current = world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0);
+                    world.set_behavior_flags(entity, BehaviorFlags(current | flag));
+                    McpResponse::Success(format!("Added '{}' behavior to '{}'", behavior, name))
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::RemoveBehavior { name, behavior } => {
+                use crate::ecs::behavior::components::{
+                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
+                    BEHAVIOR_SINE_WAVE, BehaviorFlags,
+                };
+                use crate::ecs::world::BEHAVIOR_FLAGS;
+
+                let flag = match behavior.to_lowercase().as_str() {
+                    "rotate" => BEHAVIOR_ROTATE,
+                    "bob" => BEHAVIOR_BOB,
+                    "orbit" => BEHAVIOR_ORBIT,
+                    "scale_pulse" => BEHAVIOR_SCALE_PULSE,
+                    "sine_wave" => BEHAVIOR_SINE_WAVE,
+                    _ => {
+                        let mut response = world.resources.mcp_response_queue.write().unwrap();
+                        *response = Some(McpResponse::Error(format!(
+                            "Unknown behavior '{}'. Valid behaviors: rotate, bob, orbit, scale_pulse, sine_wave",
+                            behavior
+                        )));
+                        continue;
+                    }
+                };
+
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    if world.entity_has_components(entity, BEHAVIOR_FLAGS) {
+                        let current = world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0);
+                        world.set_behavior_flags(entity, BehaviorFlags(current & !flag));
+                        McpResponse::Success(format!(
+                            "Removed '{}' behavior from '{}'",
+                            behavior, name
+                        ))
+                    } else {
+                        McpResponse::Success(format!(
+                            "Entity '{}' has no behaviors to remove",
+                            name
+                        ))
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::GetBehavior { name } => {
+                use crate::ecs::behavior::components::{
+                    BEHAVIOR_BOB, BEHAVIOR_ORBIT, BEHAVIOR_ROTATE, BEHAVIOR_SCALE_PULSE,
+                    BEHAVIOR_SINE_WAVE,
+                };
+                use crate::ecs::world::BEHAVIOR_FLAGS;
+
+                if let Some(&entity) = world.resources.entity_names.get(&name) {
+                    let flags = if world.entity_has_components(entity, BEHAVIOR_FLAGS) {
+                        world.get_behavior_flags(entity).map(|f| f.0).unwrap_or(0)
+                    } else {
+                        0
+                    };
+
+                    let mut active = Vec::new();
+                    if flags & BEHAVIOR_ROTATE != 0 {
+                        active.push("rotate".to_string());
+                    }
+                    if flags & BEHAVIOR_BOB != 0 {
+                        active.push("bob".to_string());
+                    }
+                    if flags & BEHAVIOR_ORBIT != 0 {
+                        active.push("orbit".to_string());
+                    }
+                    if flags & BEHAVIOR_SCALE_PULSE != 0 {
+                        active.push("scale_pulse".to_string());
+                    }
+                    if flags & BEHAVIOR_SINE_WAVE != 0 {
+                        active.push("sine_wave".to_string());
+                    }
+
+                    McpResponse::BehaviorInfo {
+                        name,
+                        flags,
+                        active_behaviors: active,
+                    }
+                } else {
+                    McpResponse::Error(format!("Entity '{}' not found", name))
+                }
+            }
+            McpCommand::LoadAsset { path, asset_name } => {
+                use crate::ecs::prefab::resources::{
+                    CachedPrefab, mesh_cache_insert, prefab_cache_insert,
+                };
+                use crate::ecs::world::commands::WorldCommand;
+
+                let extension = std::path::Path::new(&path)
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase());
+
+                let process_result =
+                    |world: &mut World,
+                     prefabs: Vec<crate::ecs::prefab::Prefab>,
+                     meshes: std::collections::HashMap<
+                        String,
+                        crate::ecs::mesh::components::Mesh,
+                    >,
+                     textures: std::collections::HashMap<String, (Vec<u8>, u32, u32)>,
+                     animations: Vec<crate::ecs::animation::components::AnimationClip>,
+                     skins: Vec<crate::ecs::prefab::GltfSkin>,
+                     asset_name: &str,
+                     path: &str| {
+                        for (name, (rgba_data, width, height)) in textures {
+                            world.queue_command(WorldCommand::LoadTexture {
+                                name,
+                                rgba_data,
+                                width,
+                                height,
+                            });
+                        }
+
+                        for (name, mesh) in meshes {
+                            mesh_cache_insert(&mut world.resources.mesh_cache, name, mesh);
+                        }
+
+                        let prefab_count = prefabs.len();
+                        for (index, prefab) in prefabs.into_iter().enumerate() {
+                            let name = if prefab_count == 1 {
+                                asset_name.to_string()
+                            } else {
+                                format!("{}_{}", asset_name, index)
+                            };
+                            prefab_cache_insert(
+                                &mut world.resources.prefab_cache,
+                                name,
+                                CachedPrefab {
+                                    prefab,
+                                    animations: animations.clone(),
+                                    skins: skins.clone(),
+                                    source_path: Some(path.to_string()),
+                                },
+                            );
+                        }
+
+                        McpResponse::Success(format!(
+                            "Loaded asset '{}' from '{}' ({} prefab(s))",
+                            asset_name, path, prefab_count
+                        ))
+                    };
+
+                match extension.as_deref() {
+                    Some("glb") | Some("gltf") => match std::fs::read(&path) {
+                        Ok(bytes) => match crate::ecs::prefab::import_gltf_from_bytes(&bytes) {
+                            Ok(result) => process_result(
+                                world,
+                                result.prefabs,
+                                result.meshes,
+                                result.textures,
+                                result.animations,
+                                result.skins,
+                                &asset_name,
+                                &path,
+                            ),
+                            Err(e) => {
+                                McpResponse::Error(format!("Failed to load '{}': {}", path, e))
+                            }
+                        },
+                        Err(e) => McpResponse::Error(format!("Failed to read '{}': {}", path, e)),
+                    },
+                    #[cfg(feature = "fbx")]
+                    Some("fbx") => {
+                        match crate::ecs::prefab::import_fbx_from_path(std::path::Path::new(&path))
+                        {
+                            Ok(result) => process_result(
+                                world,
+                                result.prefabs,
+                                result.meshes,
+                                result.textures,
+                                result.animations,
+                                result.skins,
+                                &asset_name,
+                                &path,
+                            ),
+                            Err(e) => {
+                                McpResponse::Error(format!("Failed to load '{}': {}", path, e))
+                            }
+                        }
+                    }
+                    _ => McpResponse::Error(
+                        "Unsupported file extension. Supported: .glb, .gltf, .fbx".to_string(),
+                    ),
+                }
+            }
+            McpCommand::SpawnPrefab {
+                asset_name,
+                entity_name,
+                position,
+                scale,
+            } => {
+                use crate::ecs::prefab::resources::prefab_cache_get;
+                use crate::ecs::prefab::spawn_prefab_with_skins;
+
+                if world.resources.entity_names.contains_key(&entity_name) {
+                    McpResponse::Error(format!("Entity '{}' already exists", entity_name))
+                } else if let Some(cached) =
+                    prefab_cache_get(&world.resources.prefab_cache, &asset_name)
+                {
+                    let prefab = cached.prefab.clone();
+                    let animations = cached.animations.clone();
+                    let skins = cached.skins.clone();
+                    let pos = nalgebra_glm::Vec3::new(position[0], position[1], position[2]);
+
+                    let entity = spawn_prefab_with_skins(world, &prefab, &animations, &skins, pos);
+
+                    if scale != [1.0, 1.0, 1.0]
+                        && let Some(transform) = world.get_local_transform_mut(entity)
+                    {
+                        transform.scale = nalgebra_glm::Vec3::new(scale[0], scale[1], scale[2]);
+                        crate::ecs::transform::systems::mark_local_transform_dirty(world, entity);
+                    }
+
+                    world.add_components(entity, NAME);
+                    world.set_name(
+                        entity,
+                        crate::ecs::name::components::Name(entity_name.clone()),
+                    );
+                    world
+                        .resources
+                        .entity_names
+                        .insert(entity_name.clone(), entity);
+
+                    McpResponse::Success(format!(
+                        "Spawned prefab '{}' as entity '{}' at {:?}",
+                        asset_name, entity_name, position
+                    ))
+                } else {
+                    McpResponse::Error(format!(
+                        "Asset '{}' not found. Use load_asset first.",
+                        asset_name
+                    ))
+                }
+            }
+            McpCommand::ListLoadedAssets => {
+                use crate::ecs::prefab::resources::prefab_cache_names;
+                let names: Vec<String> = prefab_cache_names(&world.resources.prefab_cache)
+                    .cloned()
+                    .collect();
+                McpResponse::AssetList(names)
+            }
+            McpCommand::ClearScene => {
+                let entities_to_despawn: Vec<_> =
+                    world.resources.entity_names.values().copied().collect();
+                let count = entities_to_despawn.len();
+                for entity in entities_to_despawn {
+                    crate::ecs::world::commands::despawn_recursive_immediate(world, entity);
+                }
+                world.resources.entity_names.clear();
+                McpResponse::Success(format!("Cleared {} entities from scene", count))
+            }
+        };
+
+        let mut response_queue = world.resources.mcp_response_queue.write().unwrap();
+        *response_queue = Some(response);
+    }
 }

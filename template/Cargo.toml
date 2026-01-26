@@ -17,6 +17,7 @@ scripting = ["nightshade/scripting"]
 openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]
+mcp = ["nightshade/mcp"]
 
 # For very small final binary size,
 # uncomment the following release profile and build with it

@@ -73,6 +73,7 @@ async_runtime = [
 runtime = [
     "core",
     "text",
+    "behaviors",
 ]
 
 engine = [
@@ -99,6 +100,7 @@ shell = ["egui"]
 audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
 picking = []
+behaviors = []
 lattice = []
 sdf_sculpt = []
 screenshot = ["dep:image"]
@@ -131,6 +133,7 @@ chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
 plugin_runtime = ["assets", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
+mcp = ["async_runtime", "behaviors", "dep:axum", "dep:rmcp", "dep:schemars"]
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 webview = ["dep:wry", "dep:tiny_http", "dep:include_dir", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 
@@ -187,7 +190,7 @@ tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 egui-winit = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["signal"] }
 openxr = { workspace = true, optional = true }
 ash = { workspace = true, optional = true }
 wgpu-hal = { workspace = true, optional = true }
@@ -201,6 +204,9 @@ ufbx = { version = "0.10", optional = true }
 wry = { version = "0.54", optional = true }
 tiny_http = { version = "0.12", optional = true }
 include_dir = { version = "0.7", optional = true }
+axum = { version = "0.8", features = ["macros"], optional = true }
+rmcp = { version = "0.2", features = ["server", "transport-sse-server", "transport-streamable-http-server"], optional = true }
+schemars = { version = "0.8", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "1.0", features = ["v4", "js", "serde"], optional = true }

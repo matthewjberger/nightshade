@@ -38,6 +38,60 @@ Enable features with `cargo run --features <feature>`:
 | `tracing` | File logging to `logs/nightshade.log` | [Profiling](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) |
 | `openxr` | VR headset support | |
 | `steam` | Steamworks integration | [Steam](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md) |
+| `mcp` | MCP server for AI-assisted scene manipulation | See below |
+
+## MCP Integration (Native Only)
+
+The `mcp` feature exposes an MCP (Model Context Protocol) server that allows AI assistants like Claude to interact with your running application. This enables AI-driven scene manipulation, entity spawning, and real-time control without recompilation.
+
+> **Note:** MCP is only supported on native platforms (Windows, macOS, Linux). It is not available for WASM builds.
+
+### Enabling MCP
+
+Add the feature to your dependencies:
+
+```toml
+nightshade = { version = "0.6", features = ["egui", "mcp"] }
+```
+
+Or run with the feature flag:
+
+```bash
+cargo run --features mcp
+```
+
+When enabled, the engine automatically starts an MCP server on `http://127.0.0.1:3333/mcp`.
+
+### Connecting Claude Code
+
+```bash
+claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_entities` | List all named entities in the scene |
+| `query_entity` | Get position, rotation, scale of an entity by name |
+| `spawn_entity` | Spawn a new entity (Cube, Sphere, Cylinder, Cone, Plane, Torus) |
+| `despawn_entity` | Remove an entity by name |
+| `set_position` | Set entity position [x, y, z] |
+| `set_rotation` | Set entity rotation as euler angles [pitch, yaw, roll] in radians |
+| `set_scale` | Set entity scale [x, y, z] |
+| `set_material_color` | Set entity material base color [r, g, b, a] |
+
+### Example
+
+With MCP enabled and Claude Code connected, you can say:
+
+> "Spawn a red cube called 'player' at position [0, 1, 0]"
+
+Claude will use the MCP tools to execute:
+1. `spawn_entity(name: "player", mesh: "Cube", position: [0, 1, 0])`
+2. `set_material_color(name: "player", color: [1.0, 0.0, 0.0, 1.0])`
+
+The editor enables MCP by default for AI-assisted development workflows.
 
 See also: [Steam Deck Deployment](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM_DECK.md)
 

@@ -98,6 +98,7 @@ freecs::ecs! {
     World {
         animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
         name: crate::ecs::name::components::Name => NAME,
+        behavior_flags: crate::ecs::behavior::components::BehaviorFlags => BEHAVIOR_FLAGS,
         local_transform: crate::ecs::transform::components::LocalTransform => LOCAL_TRANSFORM,
         global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
         local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,
@@ -185,6 +186,12 @@ freecs::ecs! {
         mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
         #[cfg(feature = "scene_graph")]
         asset_registry: crate::ecs::scene::registry::AssetRegistry,
+        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+        mcp_command_queue: crate::mcp::CommandQueue,
+        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+        mcp_response_queue: crate::mcp::ResponseQueue,
+        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+        entity_names: std::collections::HashMap<String, freecs::Entity>,
     }
 }
 

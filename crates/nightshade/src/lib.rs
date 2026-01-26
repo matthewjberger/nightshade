@@ -747,6 +747,9 @@ pub mod xr;
 #[cfg(feature = "shell")]
 pub mod shell;
 
+#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+pub mod mcp;
+
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
 

@@ -39,8 +39,9 @@ Nightshade uses a modular feature system for fine-grained dependency control.
 nightshade features:
 ├── core ─────────────── Minimal: windowing, math, ECS, time
 ├── text ─────────────── 3D text rendering (fontdue)
+├── behaviors ───────────Built-in entity behaviors (stateless, WASM-compatible)
 ├── assets ───────────── Asset loading (gltf, image, half, bincode)
-├── runtime ──────────── core + text (minimal runnable app)
+├── runtime ──────────── core + text + behaviors (minimal runnable app)
 ├── engine (default) ─── runtime + assets + scene_graph + picking + more
 └── full ─────────────── Everything including audio, physics, navmesh, scripting
 ```
@@ -131,6 +132,26 @@ See [PLUGINS.md](docs/PLUGINS.md) for runtime WASI plugin support.
 ### Scripting
 
 See [SCRIPTING.md](docs/SCRIPTING.md) for Rhai scripting support.
+
+### MCP Integration (Native Only)
+
+The `mcp` feature exposes an MCP (Model Context Protocol) server for AI-assisted scene manipulation. When enabled, the engine automatically starts an MCP server on `http://127.0.0.1:3333/mcp`.
+
+```toml
+nightshade = { features = ["mcp"] }
+```
+
+Connect Claude Code:
+
+```bash
+claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
+```
+
+Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_behavior`, `add_behavior`, `remove_behavior`, `get_behavior`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `clear_scene`
+
+Asset loading: Use `load_asset` to load .glb, .gltf, or .fbx files, then `spawn_prefab` to instantiate them.
+
+The editor enables MCP by default for AI-assisted development workflows.
 
 ## Contributing
 
