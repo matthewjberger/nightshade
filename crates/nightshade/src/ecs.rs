@@ -15,6 +15,8 @@
 
 pub mod animation;
 pub mod asset_id;
+#[cfg(feature = "engine")]
+pub mod async_loader;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
