@@ -94,6 +94,9 @@ pub use render_trait::{Render, UiOutput, UiPrimitives};
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
+pub mod clone;
+pub use clone::clone_for_runtime;
+
 freecs::ecs! {
     World {
         animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
@@ -143,6 +146,8 @@ freecs::ecs! {
         grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
     }
     Resources {
+        world_id: u64,
+        is_runtime: bool,
         window: crate::ecs::window::resources::Window,
         user_interface: crate::ecs::ui::resources::UserInterface,
         immediate_ui: crate::ecs::ui::immediate::ImmediateUi,

@@ -354,6 +354,8 @@ pub(crate) fn step(
                     tracing::error!("Failed to update render graph: {error}");
                 }
 
+                state.pre_render(&mut **renderer, world);
+
                 #[cfg(feature = "egui")]
                 let (ui_output, ui_primitives) = match ui_frame_output {
                     Some((output, primitives)) => (Some(output), Some(primitives)),
@@ -836,6 +838,8 @@ pub trait State {
     fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
     /// Called every frame to run game logic.
     fn run_systems(&mut self, _world: &mut World) {}
+    /// Called before main rendering to allow custom world rendering.
+    fn pre_render(&mut self, _renderer: &mut dyn crate::ecs::world::Render, _world: &mut World) {}
     /// Update render graph state each frame.
     fn update_render_graph(
         &mut self,

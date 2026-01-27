@@ -10,6 +10,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// Materials are stored by name and assigned generational IDs for safe references.
 /// Includes default color materials (Red, Green, Blue, etc.) that cannot be removed.
+#[derive(Clone)]
 pub struct MaterialRegistry {
     /// The underlying generational storage.
     pub registry: GenerationalRegistry<Material>,

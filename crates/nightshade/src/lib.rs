@@ -890,6 +890,8 @@ pub mod prelude {
     pub use web_sys;
 
     #[cfg(feature = "wgpu")]
+    pub use crate::render::wgpu::WgpuRenderer;
+    #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::passes;
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::rendergraph::{
