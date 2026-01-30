@@ -57,6 +57,7 @@ scene_graph = ["assets"]
 terrain = [
     "core",
     "dep:noise",
+    "dep:rand",
 ]
 
 file_dialog = [
