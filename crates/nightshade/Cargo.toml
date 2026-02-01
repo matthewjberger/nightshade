@@ -99,6 +99,7 @@ engine = [
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu", "dep:egui_tiles"]
 shell = ["egui"]
 audio = ["dep:kira"]
+fft = ["dep:rustfft"]
 physics = ["dep:rapier3d"]
 picking = []
 behaviors = []
@@ -155,6 +156,7 @@ gilrs = { workspace = true, optional = true }
 gltf = { workspace = true, optional = true }
 half = { workspace = true, optional = true }
 kira = { workspace = true, optional = true }
+rustfft = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
 mint = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }

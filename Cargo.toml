@@ -77,6 +77,7 @@ steamworks = "0.12"
 steamworks-sys = "0.12"
 noise = "0.9"
 ehttp = "0.6"
+rustfft = "6.2"
 
 # wgpu-hal 27.0.4 has a windows crate version conflict between itself (0.58) and gpu-allocator 0.27 (0.54).
 # This patch forces gpu-allocator 0.28 which uses windows 0.58. Remove when wgpu 28 + egui 0.34 are available.

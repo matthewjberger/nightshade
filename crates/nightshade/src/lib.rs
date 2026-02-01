@@ -917,4 +917,7 @@ pub mod prelude {
 
     #[cfg(feature = "shell")]
     pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_ui};
+
+    #[cfg(feature = "fft")]
+    pub use crate::ecs::audio::AudioAnalyzer;
 }
