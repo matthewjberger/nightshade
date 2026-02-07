@@ -729,6 +729,9 @@
 
 pub mod plugin;
 
+#[cfg(any(feature = "tui", feature = "terminal"))]
+pub mod tui;
+
 #[cfg(feature = "webview")]
 pub mod webview;
 
@@ -867,6 +870,7 @@ pub mod prelude {
     pub use strum;
     pub use tracing;
     pub use uuid;
+    pub use winit;
     pub use winit::{
         event::{ElementState, ElementState as KeyState, MouseButton, WindowEvent},
         keyboard::KeyCode,
