@@ -8,6 +8,7 @@ pub mod components {
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, Smoothing,
     };
+
     pub use crate::ecs::decal::components::Decal;
     pub use crate::ecs::grass::components::{
         GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
@@ -33,6 +34,7 @@ pub mod components {
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::sprite::components::Sprite;
+    pub use crate::ecs::sprite_animator::components::{LoopMode, SpriteAnimator, SpriteFrame};
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextCharacterColors, TextProperties,
         VerticalAlignment,
@@ -117,7 +119,9 @@ freecs::ecs! {
         render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
         material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
         render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
+
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
+        sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
@@ -166,6 +170,7 @@ freecs::ecs! {
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,
         active_camera: Option<freecs::Entity>,
+
         event_bus: crate::ecs::event_bus::resources::EventBus,
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,

@@ -20,6 +20,7 @@ pub mod async_loader;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
+
 pub mod decal;
 pub mod event_bus;
 pub mod generational_registry;
@@ -51,6 +52,7 @@ pub mod shadow;
 pub mod shell;
 pub mod skin;
 pub mod sprite;
+pub mod sprite_animator;
 #[cfg(feature = "terrain")]
 pub mod terrain;
 pub mod text;

@@ -777,6 +777,8 @@ pub mod prelude {
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
+    pub use crate::ecs::camera::commands::spawn_ortho_camera;
+    pub use crate::ecs::camera::systems::ortho_camera_system;
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     #[cfg(feature = "lattice")]
     pub use crate::ecs::lattice::{
@@ -823,6 +825,10 @@ pub mod prelude {
         SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, SceneNavMesh,
         ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene,
         world_to_scene,
+    };
+    pub use crate::ecs::sprite::commands::spawn_sprite;
+    pub use crate::ecs::sprite_animator::{
+        LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
