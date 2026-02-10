@@ -851,12 +851,13 @@ pub mod prelude {
         UiWidget, WidgetState,
     };
     pub use crate::ecs::world::commands::{
-        capture_procedural_atmosphere_ibl, despawn_recursive_immediate, load_hdr_skybox,
-        load_hdr_skybox_from_path, load_procedural_textures, set_material_with_textures,
-        spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
-        spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
-        spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
-        spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
+        capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
+        load_hdr_skybox, load_hdr_skybox_from_path, load_procedural_textures,
+        set_material_with_textures, spawn_3d_billboard_text_with_properties,
+        spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
+        spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_material, spawn_mesh_at,
+        spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
+        spawn_water_plane_at,
     };
     pub use crate::render::wgpu::passes::geometry::UiLayer;
     #[cfg(feature = "assets")]

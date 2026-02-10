@@ -105,6 +105,10 @@ pub enum WorldCommand {
         atmosphere: Atmosphere,
         time: f32,
     },
+    CaptureIblSnapshots {
+        atmosphere: Atmosphere,
+        hours: Vec<f32>,
+    },
     CaptureScreenshot {
         path: Option<std::path::PathBuf>,
     },
@@ -128,6 +132,7 @@ pub fn process_commands_system(world: &mut World) {
             | WorldCommand::LoadHdrSkybox { .. }
             | WorldCommand::LoadHdrSkyboxFromPath { .. }
             | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
+            | WorldCommand::CaptureIblSnapshots { .. }
             | WorldCommand::CaptureScreenshot { .. } => {
                 sprite_texture_commands.push(command);
             }
@@ -157,6 +162,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
         WorldCommand::LoadHdrSkybox { .. } => {}
         WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
         WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
+        WorldCommand::CaptureIblSnapshots { .. } => {}
         WorldCommand::CaptureScreenshot { .. } => {}
     }
 }
@@ -841,6 +847,10 @@ pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
 
 pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
     world.queue_command(WorldCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
+}
+
+pub fn capture_ibl_snapshots(world: &mut World, atmosphere: Atmosphere, hours: Vec<f32>) {
+    world.queue_command(WorldCommand::CaptureIblSnapshots { atmosphere, hours });
 }
 
 #[cfg(not(target_arch = "wasm32"))]
