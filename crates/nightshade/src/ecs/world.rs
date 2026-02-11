@@ -36,8 +36,8 @@ pub mod components {
     pub use crate::ecs::sprite::components::Sprite;
     pub use crate::ecs::sprite_animator::components::{LoopMode, SpriteAnimator, SpriteFrame};
     pub use crate::ecs::text::components::{
-        HudAnchor, HudText, Text, TextAlignment, TextCharacterColors, TextProperties,
-        VerticalAlignment,
+        HudAnchor, HudText, Text, TextAlignment, TextCharacterBackgroundColors,
+        TextCharacterColors, TextProperties, VerticalAlignment,
     };
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
@@ -125,6 +125,7 @@ freecs::ecs! {
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
+        text_character_background_colors: crate::ecs::text::components::TextCharacterBackgroundColors => TEXT_CHARACTER_BACKGROUND_COLORS,
         bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
         hovered: crate::ecs::input::components::Hovered => HOVERED,
         rotation: crate::ecs::transform::components::Rotation => ROTATION,
