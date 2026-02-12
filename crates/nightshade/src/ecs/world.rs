@@ -24,6 +24,7 @@ pub mod components {
     pub use crate::ecs::name::components::Name;
     pub use crate::ecs::particles::components::{
         ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
+        ParticleTextureUpload,
     };
     pub use crate::ecs::physics::components::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
@@ -201,6 +202,7 @@ freecs::ecs! {
         #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
         mcp_response_queue: crate::mcp::ResponseQueue,
         entity_names: std::collections::HashMap<String, freecs::Entity>,
+        pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
     }
 }
 

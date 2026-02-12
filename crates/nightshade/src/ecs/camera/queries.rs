@@ -1,4 +1,4 @@
-use crate::ecs::world::{Entity, Mat4, Vec3, World};
+use crate::ecs::world::{Entity, Mat4, Vec3, Vec4, World};
 
 #[derive(Clone)]
 pub struct CameraMatrices {
@@ -49,4 +49,41 @@ pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {
     let (width, height) = world.resources.window.cached_viewport_size?;
     let aspect_ratio = width as f32 / height.max(1) as f32;
     Some(aspect_ratio)
+}
+
+#[derive(Clone)]
+pub struct CameraFrustumCorners {
+    pub near_top_left: Vec3,
+    pub near_top_right: Vec3,
+    pub near_bottom_left: Vec3,
+    pub near_bottom_right: Vec3,
+    pub far_top_left: Vec3,
+    pub far_top_right: Vec3,
+    pub far_bottom_left: Vec3,
+    pub far_bottom_right: Vec3,
+}
+
+pub fn query_camera_frustum(world: &World, entity: Entity) -> Option<CameraFrustumCorners> {
+    let matrices = query_camera_matrices(world, entity)?;
+    let view_proj = matrices.projection * matrices.view;
+    let inv_view_proj = view_proj.try_inverse()?;
+
+    let near_z = 1.0_f32;
+    let far_z = 0.0_f32;
+
+    Some(CameraFrustumCorners {
+        near_top_left: unproject_ndc(&inv_view_proj, Vec3::new(-1.0, 1.0, near_z)),
+        near_top_right: unproject_ndc(&inv_view_proj, Vec3::new(1.0, 1.0, near_z)),
+        near_bottom_left: unproject_ndc(&inv_view_proj, Vec3::new(-1.0, -1.0, near_z)),
+        near_bottom_right: unproject_ndc(&inv_view_proj, Vec3::new(1.0, -1.0, near_z)),
+        far_top_left: unproject_ndc(&inv_view_proj, Vec3::new(-1.0, 1.0, far_z)),
+        far_top_right: unproject_ndc(&inv_view_proj, Vec3::new(1.0, 1.0, far_z)),
+        far_bottom_left: unproject_ndc(&inv_view_proj, Vec3::new(-1.0, -1.0, far_z)),
+        far_bottom_right: unproject_ndc(&inv_view_proj, Vec3::new(1.0, -1.0, far_z)),
+    })
+}
+
+fn unproject_ndc(inv_view_proj: &Mat4, ndc: Vec3) -> Vec3 {
+    let clip = inv_view_proj * Vec4::new(ndc.x, ndc.y, ndc.z, 1.0);
+    Vec3::new(clip.x / clip.w, clip.y / clip.w, clip.z / clip.w)
 }
