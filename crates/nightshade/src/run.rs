@@ -107,6 +107,10 @@ pub struct RenderResources {
     pub ssgi_raw: crate::render::wgpu::rendergraph::ResourceId,
     /// Blurred SSGI output.
     pub ssgi: crate::render::wgpu::rendergraph::ResourceId,
+    /// Raw SSR output before blur.
+    pub ssr_raw: crate::render::wgpu::rendergraph::ResourceId,
+    /// Blurred SSR output.
+    pub ssr: crate::render::wgpu::rendergraph::ResourceId,
 }
 
 #[cfg(target_arch = "wasm32")]
