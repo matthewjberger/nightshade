@@ -292,6 +292,12 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         renderer: None,
         #[cfg(target_arch = "wasm32")]
         renderer_receiver: None,
+        #[cfg(not(target_arch = "wasm32"))]
+        snapshot_path: std::env::var("NIGHTSHADE_SNAPSHOT_PATH")
+            .ok()
+            .map(std::path::PathBuf::from),
+        #[cfg(not(target_arch = "wasm32"))]
+        snapshot_queued: false,
     };
 
     let event_loop = EventLoop::builder().build()?;
@@ -917,6 +923,10 @@ pub struct WindowContext {
     /// Receiver for async renderer creation on web.
     pub renderer_receiver:
         Option<futures::channel::oneshot::Receiver<Box<dyn crate::ecs::world::Render>>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub snapshot_path: Option<std::path::PathBuf>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub snapshot_queued: bool,
 }
 
 impl winit::application::ApplicationHandler for WindowContext {
@@ -1192,6 +1202,20 @@ impl winit::application::ApplicationHandler for WindowContext {
             crate::run::step(&mut self.world, &mut self.state, &mut self.renderer, &event)
         {
             self.state = new_state;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(path) = &self.snapshot_path {
+            let uptime = self.world.resources.window.timing.uptime_milliseconds;
+            if !self.snapshot_queued && uptime >= 4000 {
+                crate::ecs::world::commands::capture_screenshot_to_path(
+                    &mut self.world,
+                    path.clone(),
+                );
+                self.snapshot_queued = true;
+            } else if self.snapshot_queued && uptime >= 5000 {
+                self.world.resources.window.should_exit = true;
+            }
         }
 
         request_redraw_system(&mut self.world);
