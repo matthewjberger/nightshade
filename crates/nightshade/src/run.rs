@@ -818,12 +818,31 @@ pub trait State {
         surface_format: wgpu::TextureFormat,
         resources: RenderResources,
     ) {
-        let compute_blit_pass = crate::render::wgpu::passes::BlitPass::new(device, surface_format)
-            .with_name("default_compute_blit");
+        let (width, height) = (1920, 1080);
+        let bloom_width = width / 2;
+        let bloom_height = height / 2;
+
+        let bloom_texture = graph
+            .add_color_texture("bloom")
+            .format(wgpu::TextureFormat::Rgba16Float)
+            .size(bloom_width, bloom_height)
+            .clear_color(wgpu::Color::BLACK)
+            .transient();
+
+        let bloom_pass = crate::render::wgpu::passes::BloomPass::new(device, width, height);
         let _ = graph.add_pass(
-            Box::new(compute_blit_pass),
+            Box::new(bloom_pass),
+            &[("hdr", resources.scene_color), ("bloom", bloom_texture)],
+        );
+
+        let postprocess_pass =
+            crate::render::wgpu::passes::PostProcessPass::new(device, surface_format, 1.0);
+        let _ = graph.add_pass(
+            Box::new(postprocess_pass),
             &[
-                ("input", resources.scene_color),
+                ("hdr", resources.scene_color),
+                ("bloom", bloom_texture),
+                ("ssao", resources.ssao),
                 ("output", resources.compute_output),
             ],
         );

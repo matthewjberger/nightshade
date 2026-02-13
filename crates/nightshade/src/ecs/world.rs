@@ -52,7 +52,8 @@ pub mod resources {
     pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
-        Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, TonemapAlgorithm, VertexSnap,
+        Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, IblViews, TonemapAlgorithm,
+        VertexSnap,
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::material::resources::MaterialRegistry;
@@ -203,6 +204,7 @@ freecs::ecs! {
         mcp_response_queue: crate::mcp::ResponseQueue,
         entity_names: std::collections::HashMap<String, freecs::Entity>,
         pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
+        ibl_views: crate::ecs::graphics::resources::IblViews,
     }
 }
 
