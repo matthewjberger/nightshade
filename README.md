@@ -44,27 +44,30 @@ Nightshade uses a modular feature system for fine-grained dependency control.
 nightshade features:
 ├── core ─────────────── Minimal: windowing, math, ECS, time
 ├── text ─────────────── 3D text rendering (fontdue)
-├── behaviors ───────────Built-in entity behaviors (stateless, WASM-compatible)
-├── assets ───────────── Asset loading (gltf, image, half, bincode)
-├── runtime ──────────── core + text + behaviors (minimal runnable app)
-├── engine (default) ─── runtime + assets + scene_graph + picking + more
-└── full ─────────────── Everything including audio, physics, navmesh, scripting
+├── behaviors ────────── Built-in entity behaviors (stateless, WASM-compatible)
+├── assets ───────────── Asset loading (gltf, image, bincode, lz4)
+├── runtime ──────────── core + text + behaviors
+├── engine (default) ─── runtime + assets + scene_graph + terrain + picking + file_dialog + more
+├── full ─────────────── engine + egui + audio + physics + scripting + fbx + more
+│
+│ Add-on features:
+├── wgpu ─────────────── GPU rendering (dx12, metal, vulkan, webgpu)
+├── egui ─────────────── Immediate mode UI (egui + tiles)
+├── audio ────────────── Audio playback (kira)
+├── fft ──────────────── FFT audio analysis (rustfft)
+├── physics ──────────── 3D physics (rapier3d)
+├── gamepad ──────────── Controller input (gilrs)
+├── navmesh ──────────── Navigation mesh (rerecast)
+├── scripting ────────── Rhai scripting
+├── fbx ──────────────── FBX asset format (ufbx)
+├── lattice ──────────── Lattice deformation
+├── sdf_sculpt ───────── SDF sculpting
+├── openxr ───────────── VR/AR support
+├── steam ────────────── Steam integration
+├── mcp ──────────────── AI scene manipulation (MCP server)
+├── webview ──────────── Embedded webview with IPC
+└── plugins ──────────── WASI plugin system
 ```
-
-### Binary Size by Feature
-
-| Configuration | Size | Delta |
-|--------------|------|-------|
-| runtime+wgpu (baseline) | 9.71 MB | - |
-| +egui | 15.82 MB | +6.11 MB |
-| +physics (rapier3d) | 10.95 MB | +1.24 MB |
-| +assets | 10.28 MB | +0.57 MB |
-| +gamepad | 10.21 MB | +0.50 MB |
-| +terrain | 10.21 MB | +0.50 MB |
-| +audio (kira) | 10.11 MB | +0.40 MB |
-| +navmesh | 9.71 MB | +0.00 MB |
-| engine (default) | 10.79 MB | +1.08 MB |
-| full | 22.63 MB | +12.92 MB |
 
 ### Minimal Build
 
@@ -152,11 +155,13 @@ Connect Claude Code:
 claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
 ```
 
-Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_behavior`, `add_behavior`, `remove_behavior`, `get_behavior`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `clear_scene`, `batch`
+Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_emissive`, `set_parent`, `set_material`, `set_casts_shadow`, `set_visibility`, `set_camera`, `set_atmosphere`, `set_graphics`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `load_hdr`, `spawn_light`, `set_light`, `spawn_water`, `spawn_3d_text`, `spawn_hud_text`, `set_hud_text`, `spawn_decal`, `spawn_particles`, `set_particles`, `add_rigid_body`, `add_collider`, `apply_impulse`, `apply_force`, `set_velocity`, `set_script`, `remove_script`, `set_game_state`, `get_game_state`, `play_animation`, `stop_animation`, `list_animations`, `add_line`, `add_lines`, `clear_lines`, `get_input`, `get_time`, `clear_scene`, `batch`, `run`
 
 Asset loading: Use `load_asset` to load .glb, .gltf, or .fbx files, then `spawn_prefab` to instantiate them.
 
-Batch operations: Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency. Supports: `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `add_behavior`, `remove_behavior`, `set_behavior`, `get_behavior`, `query_entity`, `list_entities`, `clear_scene`.
+Batch operations: Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency. Supports: `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_emissive`, `set_parent`, `query_entity`, `list_entities`, `clear_scene`, `set_atmosphere`.
+
+Concise commands: Use `run` for shorthand text commands (e.g. `spawn sun Sphere 0,0,0 scale:2 emissive:5,4,0`).
 
 The editor enables MCP by default for AI-assisted development workflows.
 
