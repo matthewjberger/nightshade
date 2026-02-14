@@ -87,25 +87,42 @@ impl World {
 }
 
 pub fn update_global_transforms_system(world: &mut World) {
-    let dirty_entities: Vec<freecs::Entity> = world
+    let mut dirty_entities = std::mem::take(&mut world.resources.transform_dirty_entities);
+
+    let spawned_dirty: Vec<freecs::Entity> = world
         .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
         .collect();
+    for entity in &spawned_dirty {
+        dirty_entities.push(*entity);
+        world.remove_local_transform_dirty(*entity);
+    }
+
+    dirty_entities.sort_unstable_by_key(|entity| (entity.id, entity.generation));
+    dirty_entities.dedup();
 
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
     let mut visited = std::collections::HashSet::new();
-    let mut render_dirty_entities = Vec::new();
+    let mut render_dirty_entities = Vec::with_capacity(dirty_entities.len());
 
-    for entity in dirty_entities {
-        visited.clear();
-        let new_global_transform =
-            global_transform_of_with_cycle_detection(entity, world, &mut visited);
+    for entity in dirty_entities.iter().copied() {
+        let new_global_transform = if world.entity_has_components(entity, PARENT) {
+            visited.clear();
+            global_transform_of_with_cycle_detection(entity, world, &mut visited)
+        } else {
+            match world.get_local_transform(entity) {
+                Some(local_transform) => local_transform.as_matrix(),
+                None => nalgebra_glm::Mat4::identity(),
+            }
+        };
+
         if let Some(global_transform) = world.get_global_transform_mut(entity) {
             *global_transform = GlobalTransform(new_global_transform);
         }
-        world.remove_local_transform_dirty(entity);
 
-        if world.entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
+        if world.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
+            && !world.entity_has_components(entity, crate::ecs::world::SPRITE)
+        {
             render_dirty_entities.push(entity);
         }
     }
@@ -116,6 +133,9 @@ pub fn update_global_transforms_system(world: &mut World) {
             .mesh_render_state
             .mark_transform_dirty(entity);
     }
+
+    dirty_entities.clear();
+    world.resources.transform_dirty_entities = dirty_entities;
 }
 
 pub fn global_transform_of(entity: freecs::Entity, world: &World) -> nalgebra_glm::Mat4 {

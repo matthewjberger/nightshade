@@ -62,12 +62,21 @@ impl LocalTransform {
         }
     }
 
-    /// Computes the 4x4 transformation matrix (Translation × Rotation × Scale).
     pub fn as_matrix(&self) -> Mat4 {
-        let translation_matrix = nalgebra_glm::translation(&self.translation);
-        let rotation_matrix = quat_to_mat4(&self.rotation.normalize());
-        let scale_matrix = nalgebra_glm::scaling(&self.scale);
-        translation_matrix * rotation_matrix * scale_matrix
+        let mut matrix = quat_to_mat4(&self.rotation.normalize());
+        matrix[(0, 0)] *= self.scale.x;
+        matrix[(1, 0)] *= self.scale.x;
+        matrix[(2, 0)] *= self.scale.x;
+        matrix[(0, 1)] *= self.scale.y;
+        matrix[(1, 1)] *= self.scale.y;
+        matrix[(2, 1)] *= self.scale.y;
+        matrix[(0, 2)] *= self.scale.z;
+        matrix[(1, 2)] *= self.scale.z;
+        matrix[(2, 2)] *= self.scale.z;
+        matrix[(0, 3)] = self.translation.x;
+        matrix[(1, 3)] = self.translation.y;
+        matrix[(2, 3)] = self.translation.z;
+        matrix
     }
 
     /// Returns the local +X axis direction.

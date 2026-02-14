@@ -188,7 +188,7 @@ fn query_descendents(world: &World, target_entity: Entity) -> Vec<Entity> {
     descendents
 }
 
-fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
+pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     let mut has_parent_entities = false;
     let is_runtime = world.resources.is_runtime;
 
