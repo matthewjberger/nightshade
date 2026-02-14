@@ -286,23 +286,25 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         crate::mcp::start_mcp_server(command_queue, response_queue);
     }
 
-    let mut context = WindowContext {
-        state,
-        world,
-        renderer: None,
-        #[cfg(target_arch = "wasm32")]
-        renderer_receiver: None,
-        #[cfg(not(target_arch = "wasm32"))]
-        snapshot_path: std::env::var("NIGHTSHADE_SNAPSHOT_PATH")
-            .ok()
-            .map(std::path::PathBuf::from),
-        #[cfg(not(target_arch = "wasm32"))]
-        snapshot_queued: false,
-    };
-
     let event_loop = EventLoop::builder().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
-    event_loop.run_app(&mut context)?;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut context = crate::multi_window::MultiWindowContext::new(state, world);
+        event_loop.run_app(&mut context)?;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        let mut context = WindowContext {
+            state,
+            world,
+            renderer: None,
+            renderer_receiver: None,
+        };
+        event_loop.run_app(&mut context)?;
+    }
 
     Ok(())
 }
@@ -867,6 +869,15 @@ pub trait State {
     /// Build egui UI (requires `egui` feature).
     #[cfg(feature = "egui")]
     fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
+    /// Build egui UI for a secondary application window.
+    #[cfg(feature = "egui")]
+    fn secondary_ui(
+        &mut self,
+        _world: &mut World,
+        _window_index: usize,
+        _ui_context: &egui::Context,
+    ) {
+    }
     /// Build immediate-mode UI without egui.
     fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
     /// Called every frame to run game logic.
@@ -1241,7 +1252,7 @@ impl winit::application::ApplicationHandler for WindowContext {
     fn exiting(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {}
 }
 
-fn request_redraw_system(world: &mut World) {
+pub(crate) fn request_redraw_system(world: &mut World) {
     let Some(window_handle) = world.resources.window.handle.as_mut() else {
         return;
     };
@@ -1253,7 +1264,7 @@ fn request_redraw_system(world: &mut World) {
 }
 
 #[cfg(feature = "egui")]
-fn initialize_user_interface(world: &mut World) {
+pub(crate) fn initialize_user_interface(world: &mut World) {
     let window_handle = {
         let Some(window_handle) = world.resources.window.handle.as_mut() else {
             return;

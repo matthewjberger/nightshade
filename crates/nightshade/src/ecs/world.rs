@@ -68,7 +68,10 @@ pub mod resources {
     pub use crate::ecs::sdf::resources::{SdfMaterial, SdfMaterialRegistry, SdfWorld};
     pub use crate::ecs::text::resources::TextCache;
     pub use crate::ecs::ui::resources::UserInterface;
-    pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
+    pub use crate::ecs::window::resources::{
+        SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, ViewportRect, Window,
+        WindowSpawnRequest, WindowTiming,
+    };
     pub use crate::render::wgpu::texture_cache::TextureCache;
 }
 
@@ -156,6 +159,7 @@ freecs::ecs! {
         world_id: u64,
         is_runtime: bool,
         window: crate::ecs::window::resources::Window,
+        secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         user_interface: crate::ecs::ui::resources::UserInterface,
         immediate_ui: crate::ecs::ui::immediate::ImmediateUi,
         graphics: crate::ecs::graphics::resources::Graphics,

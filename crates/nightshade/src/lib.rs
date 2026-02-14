@@ -738,6 +738,8 @@ pub mod webview;
 #[cfg(feature = "runtime")]
 pub mod ecs;
 #[cfg(feature = "runtime")]
+pub mod multi_window;
+#[cfg(feature = "runtime")]
 pub mod render;
 #[cfg(feature = "runtime")]
 pub mod run;
@@ -767,6 +769,9 @@ pub use systems::*;
 
 #[cfg(feature = "runtime")]
 pub mod prelude {
+    pub use crate::ecs::window::resources::{
+        SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, WindowSpawnRequest,
+    };
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
