@@ -126,6 +126,34 @@ build-wasm $project="editor":
 run-wasm $project="editor":
     trunk serve --release --open --config apps/{{project}}/Trunk.toml
 
+# Syncs site/index.html copy-dir lines with ../nightshade-examples/examples/ (Windows)
+[windows]
+sync-site-examples:
+    $examples = Get-ChildItem -Directory ../nightshade-examples/examples | Sort-Object Name | ForEach-Object { $_.Name }; $html = Get-Content site/index.html -Raw; $begin = '  <!-- BEGIN EXAMPLE COPY-DIRS -->'; $end = '  <!-- END EXAMPLE COPY-DIRS -->'; $lines = $examples | ForEach-Object { "  <link data-trunk rel=`"copy-dir`" href=`"public/$_`" />" }; $block = @($begin) + $lines + @($end); $pattern = '(?s)  <!-- BEGIN EXAMPLE COPY-DIRS -->.*?  <!-- END EXAMPLE COPY-DIRS -->'; $html = $html -replace $pattern, ($block -join "`n"); Set-Content site/index.html $html -NoNewline; Write-Host "Synced $($examples.Count) examples to site/index.html"
+
+# Syncs site/index.html copy-dir lines with ../nightshade-examples/examples/ (Unix)
+[unix]
+sync-site-examples:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    examples=$(ls -d ../nightshade-examples/examples/*/ | xargs -I{} basename {} | sort)
+    begin='  <!-- BEGIN EXAMPLE COPY-DIRS -->'
+    end='  <!-- END EXAMPLE COPY-DIRS -->'
+    block="$begin"
+    for name in $examples; do
+        block="$block"$'\n'"  <link data-trunk rel=\"copy-dir\" href=\"public/$name\" />"
+    done
+    block="$block"$'\n'"$end"
+    tmpfile=$(mktemp)
+    awk -v block="$block" '
+        /<!-- BEGIN EXAMPLE COPY-DIRS -->/{print block; skip=1; next}
+        /<!-- END EXAMPLE COPY-DIRS -->/{skip=0; next}
+        !skip{print}
+    ' site/index.html > "$tmpfile"
+    mv "$tmpfile" site/index.html
+    count=$(echo "$examples" | wc -l | tr -d ' ')
+    echo "Synced $count examples to site/index.html"
+
 # Runs all tests
 test:
     cargo test --all -- --nocapture
