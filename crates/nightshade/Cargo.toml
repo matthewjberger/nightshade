@@ -142,7 +142,7 @@ plugin_runtime = ["assets", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
 mcp = ["async_runtime", "behaviors", "dep:axum", "dep:rmcp", "dep:schemars"]
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
-webview = ["dep:wry", "dep:tiny_http", "dep:include_dir", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+webview = ["dep:wry", "dep:tiny_http", "dep:include_dir", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
 
 [dependencies]
 serde = { workspace = true }
