@@ -239,7 +239,7 @@
 //! - **`plugin_runtime`** - WASM plugin hosting via Wasmtime. Requires `assets`.
 //!
 //! - **`mosaic`** - Multi-pane desktop application framework with tile-based layouts,
-//!   services, themes, and built-in viewport widgets. Re-exports `nightshade_mosaic` as `mosaic`.
+//!   themes, modals, notifications, and built-in viewport widgets. Requires `egui`.
 //!
 //! ## Feature Quick Reference
 //!
@@ -527,43 +527,53 @@
 //!
 //! ### Mosaic Framework (`mosaic` feature)
 //!
-//! Build multi-pane desktop applications with dockable widgets:
+//! Build multi-pane desktop applications with dockable, serializable widgets:
 //!
 //! ```ignore
-//! use nightshade::mosaic::prelude::*;
+//! use nightshade::prelude::*;
+//! use nightshade::mosaic::{Mosaic, ViewportWidget, Widget, WidgetContext, WidgetEntry, Pane};
 //!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     launch_mosaic(MyApp)
+//! #[derive(Clone, serde::Serialize, serde::Deserialize)]
+//! enum AppWidget {
+//!     Viewport(ViewportWidget),
 //! }
 //!
-//! #[derive(Default)]
-//! struct MyApp;
+//! impl Widget for AppWidget {
+//!     fn title(&self) -> String {
+//!         match self {
+//!             AppWidget::Viewport(v) => v.title(),
+//!         }
+//!     }
 //!
-//! impl MosaicApp for MyApp {
-//!     type Widget = AppWidget;
-//!     type WidgetKind = AppWidgetKind;
+//!     fn ui(&mut self, ui: &mut egui::Ui, context: &mut WidgetContext) {
+//!         match self {
+//!             AppWidget::Viewport(v) => v.ui(ui, context),
+//!         }
+//!     }
 //!
+//!     fn catalog() -> Vec<WidgetEntry<Self>> {
+//!         vec![WidgetEntry {
+//!             name: "Viewport".to_string(),
+//!             create: || AppWidget::Viewport(ViewportWidget::default()),
+//!         }]
+//!     }
+//! }
+//!
+//! struct MyApp {
+//!     mosaic: Mosaic<AppWidget>,
+//! }
+//!
+//! impl State for MyApp {
 //!     fn title(&self) -> &str { "My App" }
 //!
-//!     fn initialize(&mut self, world: &mut World, _ctx: &mut MosaicContext<Self>) {
-//!         let camera = spawn_pan_orbit_camera(world, Vec3::ZERO, 10.0, 0.0, 0.5, "Camera".into());
-//!         world.resources.active_camera = Some(camera);
+//!     fn initialize(&mut self, world: &mut World) {
+//!         self.mosaic = Mosaic::with_panes(vec![
+//!             AppWidget::Viewport(ViewportWidget::default()),
+//!         ]);
 //!     }
 //!
-//!     fn default_tile_tree(&self) -> egui_tiles::Tree<Pane<Self::Widget>> {
-//!         let mut tiles = egui_tiles::Tiles::default();
-//!         let pane = tiles.insert_pane(Pane::new(AppWidget::Viewport(ViewportWidget::new("Scene"))));
-//!         egui_tiles::Tree::new("tiles", tiles.insert_tab_tile(vec![pane]), tiles)
-//!     }
-//!
-//!     fn run_systems(&mut self, world: &mut World) {
-//!         pan_orbit_camera_system(world);
-//!     }
-//! }
-//!
-//! define_widgets! {
-//!     AppWidget, AppWidgetKind {
-//!         Viewport(ViewportWidget),
+//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
+//!         self.mosaic.show(world, ctx, &mut ());
 //!     }
 //! }
 //! ```
@@ -751,6 +761,9 @@ pub mod xr;
 
 #[cfg(feature = "shell")]
 pub mod shell;
+
+#[cfg(feature = "mosaic")]
+pub mod mosaic;
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 pub mod mcp;

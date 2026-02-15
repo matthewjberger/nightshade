@@ -108,6 +108,7 @@ picking = []
 behaviors = []
 lattice = []
 sdf_sculpt = []
+mosaic = ["egui"]
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
@@ -126,6 +127,7 @@ full = [
     "fbx",
     "lattice",
     "sdf_sculpt",
+    "mosaic",
     "plugins",
 ]
 

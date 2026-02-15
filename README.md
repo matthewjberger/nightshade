@@ -62,6 +62,7 @@ nightshade features:
 ├── fbx ──────────────── FBX asset format (ufbx)
 ├── lattice ──────────── Lattice deformation
 ├── sdf_sculpt ───────── SDF sculpting
+├── mosaic ──────────── Multi-pane desktop app framework (egui_tiles)
 ├── openxr ───────────── VR/AR support
 ├── steam ────────────── Steam integration
 ├── mcp ──────────────── AI scene manipulation (MCP server)
