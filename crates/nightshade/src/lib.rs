@@ -737,6 +737,7 @@
 //! - **WebAssembly**: WebGPU backend. Files via drag-and-drop or HTTP. No WASI plugins. Async initialization.
 //! - **XR** (with `openxr`): Vulkan backend required. Use `launch_xr()` entry point.
 
+pub mod filesystem;
 pub mod plugin;
 
 #[cfg(any(feature = "tui", feature = "terminal"))]
