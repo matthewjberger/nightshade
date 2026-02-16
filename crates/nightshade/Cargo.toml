@@ -108,7 +108,7 @@ picking = []
 behaviors = []
 lattice = []
 sdf_sculpt = []
-mosaic = ["egui", "dep:serde_json", "dep:bincode"]
+mosaic = ["egui", "dep:serde_json", "dep:bincode", "dep:indexmap"]
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
@@ -161,6 +161,7 @@ getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }
 gltf = { workspace = true, optional = true }
 half = { workspace = true, optional = true }
+indexmap = { version = "2.0", optional = true }
 kira = { workspace = true, optional = true }
 rustfft = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }

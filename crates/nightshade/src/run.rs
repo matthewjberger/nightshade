@@ -111,6 +111,10 @@ pub struct RenderResources {
     pub ssr_raw: crate::render::wgpu::rendergraph::ResourceId,
     /// Blurred SSR output.
     pub ssr: crate::render::wgpu::rendergraph::ResourceId,
+    /// Current surface width in pixels.
+    pub surface_width: u32,
+    /// Current surface height in pixels.
+    pub surface_height: u32,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2433,6 +2437,7 @@ fn mcp_spawn_water(
         entity,
         crate::ecs::mesh::components::RenderMesh::new(mesh_name),
     );
+    world.resources.mesh_render_state.mark_entity_added(entity);
 
     let mut water = Water::default();
     if let Some(bc) = base_color {
