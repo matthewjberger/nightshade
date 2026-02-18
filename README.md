@@ -48,7 +48,7 @@ nightshade features:
 ├── assets ───────────── Asset loading (gltf, image, bincode, lz4)
 ├── runtime ──────────── core + text + behaviors
 ├── engine (default) ─── runtime + assets + scene_graph + terrain + picking + file_dialog + more
-├── full ─────────────── engine + egui + audio + physics + scripting + fbx + more
+├── full ─────────────── engine + egui + audio + physics + scripting + fbx + editor + more
 │
 │ Add-on features:
 ├── wgpu ─────────────── GPU rendering (dx12, metal, vulkan, webgpu)
@@ -63,6 +63,7 @@ nightshade features:
 ├── lattice ──────────── Lattice deformation
 ├── sdf_sculpt ───────── SDF sculpting
 ├── mosaic ──────────── Multi-pane desktop app framework (egui_tiles)
+├── editor ──────────── Scene editor infrastructure (gizmo, undo, inspector, picking)
 ├── openxr ───────────── VR/AR support
 ├── steam ────────────── Steam integration
 ├── mcp ──────────────── AI scene manipulation (MCP server)

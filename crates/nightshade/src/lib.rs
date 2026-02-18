@@ -766,6 +766,9 @@ pub mod shell;
 #[cfg(feature = "mosaic")]
 pub mod mosaic;
 
+#[cfg(feature = "editor")]
+pub mod editor;
+
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 pub mod mcp;
 
