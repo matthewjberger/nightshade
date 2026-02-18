@@ -7,6 +7,7 @@ readme = "README.md"
 homepage.workspace = true
 repository.workspace = true
 keywords = ["gamedev", "engine", "ecs", "wgpu", "webgpu"]
+categories = ["game-engines", "graphics", "rendering::engine"]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -131,6 +132,8 @@ full = [
     "mosaic",
     "editor",
     "plugins",
+    "claude",
+    "mcp",
 ]
 
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
@@ -142,6 +145,7 @@ chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
 plugin_runtime = ["assets", "dep:wasmtime", "dep:wasmtime-wasi", "dep:anyhow"]
 scripting = ["dep:rhai"]
+claude = ["dep:serde_json"]
 mcp = ["async_runtime", "behaviors", "dep:axum", "dep:rmcp", "dep:schemars"]
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 webview = ["dep:wry", "dep:tiny_http", "dep:include_dir", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
@@ -202,7 +206,7 @@ tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 egui-winit = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["signal"] }
+tokio = { workspace = true, optional = true, features = ["signal", "sync", "time"] }
 openxr = { workspace = true, optional = true }
 ash = { workspace = true, optional = true }
 wgpu-hal = { workspace = true, optional = true }

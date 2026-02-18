@@ -32,7 +32,7 @@
 //! Common debug shapes can be drawn with helper patterns:
 //!
 //! ```ignore
-//! fn draw_debug_shapes(world: &mut World, lines_entity: EntityHandle) {
+//! fn draw_debug_shapes(world: &mut World, lines_entity: Entity) {
 //!     let Some(lines) = world.get_lines_mut(lines_entity) else { return };
 //!
 //!     // Draw a box/cube wireframe

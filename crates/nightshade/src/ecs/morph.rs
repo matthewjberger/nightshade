@@ -42,7 +42,7 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     let dt = world.resources.time.delta_seconds;
+//!     let dt = world.resources.window.timing.delta_time;
 //!
 //!     if let Some(weights) = world.get_morph_weights_mut(face_entity) {
 //!         // Animate smile weight

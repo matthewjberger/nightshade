@@ -137,7 +137,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
 pub fn save_file(filename: &str, data: &[u8], _filters: &[FileFilter]) -> Result<(), FileError> {
     use wasm_bindgen::JsCast;
 
@@ -174,7 +174,7 @@ pub fn save_file(filename: &str, data: &[u8], _filters: &[FileFilter]) -> Result
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
 pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     use wasm_bindgen::JsCast;
     use wasm_bindgen::prelude::*;

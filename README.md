@@ -67,6 +67,7 @@ nightshade features:
 ├── openxr ───────────── VR/AR support
 ├── steam ────────────── Steam integration
 ├── mcp ──────────────── AI scene manipulation (MCP server)
+├── claude ──────────── Claude Code CLI integration
 ├── webview ──────────── Embedded webview with IPC
 └── plugins ──────────── WASI plugin system
 ```
@@ -143,9 +144,13 @@ See [PLUGINS.md](docs/PLUGINS.md) for runtime WASI plugin support.
 
 See [SCRIPTING.md](docs/SCRIPTING.md) for Rhai scripting support.
 
-### MCP Integration (Native Only)
+### AI Integration (Native Only)
 
-The `mcp` feature exposes an MCP (Model Context Protocol) server for AI-assisted scene manipulation. When enabled, the engine automatically starts an MCP server on `http://127.0.0.1:3333/mcp`.
+Nightshade has two features for AI integration: `mcp` for exposing the engine as an MCP server, and `claude` for spawning and communicating with Claude Code CLI as a subprocess.
+
+#### MCP Server (`mcp` feature)
+
+The `mcp` feature starts an HTTP-based [Model Context Protocol](https://modelcontextprotocol.io) server on `http://127.0.0.1:3333/mcp` when the application launches. Any MCP client (Claude Code, Claude Desktop, or custom tooling) can connect and manipulate the running scene in real time.
 
 ```toml
 nightshade = { features = ["mcp"] }
@@ -157,15 +162,44 @@ Connect Claude Code:
 claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
 ```
 
-Available tools: `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_emissive`, `set_parent`, `set_material`, `set_casts_shadow`, `set_visibility`, `set_camera`, `set_atmosphere`, `set_graphics`, `load_asset`, `spawn_prefab`, `list_loaded_assets`, `load_hdr`, `spawn_light`, `set_light`, `spawn_water`, `spawn_3d_text`, `spawn_hud_text`, `set_hud_text`, `spawn_decal`, `spawn_particles`, `set_particles`, `add_rigid_body`, `add_collider`, `apply_impulse`, `apply_force`, `set_velocity`, `set_script`, `remove_script`, `set_game_state`, `get_game_state`, `play_animation`, `stop_animation`, `list_animations`, `add_line`, `add_lines`, `clear_lines`, `get_input`, `get_time`, `clear_scene`, `batch`, `run`
+**Available tools (50+):**
 
-Asset loading: Use `load_asset` to load .glb, .gltf, or .fbx files, then `spawn_prefab` to instantiate them.
+| Category | Tools |
+|----------|-------|
+| Entities | `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `clear_scene` |
+| Transforms | `set_position`, `set_rotation`, `set_scale`, `set_parent`, `set_visibility` |
+| Materials | `set_material_color`, `set_emissive`, `set_material`, `set_casts_shadow` |
+| Lighting | `spawn_light`, `set_light` |
+| Camera | `set_camera` |
+| Assets | `load_asset`, `spawn_prefab`, `list_loaded_assets` |
+| Environment | `set_atmosphere`, `load_hdr`, `set_graphics` |
+| Effects | `spawn_water`, `spawn_particles`, `set_particles`, `spawn_decal` |
+| Text | `spawn_hud_text`, `set_hud_text`, `spawn_3d_text` |
+| Physics | `add_rigid_body`, `add_collider`, `apply_impulse`, `apply_force`, `set_velocity` |
+| Animation | `play_animation`, `stop_animation`, `list_animations` |
+| Scripting | `set_script`, `remove_script`, `set_game_state`, `get_game_state` |
+| Debug | `add_line`, `add_lines`, `clear_lines`, `get_input`, `get_time` |
+| Batch | `batch` (atomic multi-operation), `run` (concise text commands) |
 
-Batch operations: Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency. Supports: `spawn_entity`, `despawn_entity`, `set_position`, `set_rotation`, `set_scale`, `set_material_color`, `set_emissive`, `set_parent`, `query_entity`, `list_entities`, `clear_scene`, `set_atmosphere`.
+**Batch operations:** Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency.
 
-Concise commands: Use `run` for shorthand text commands (e.g. `spawn sun Sphere 0,0,0 scale:2 emissive:5,4,0`).
+**Concise commands:** Use `run` for shorthand text commands (e.g. `spawn sun Sphere 0,0,0 scale:2 emissive:5,4,0`).
 
-The editor enables MCP by default for AI-assisted development workflows.
+**State hook:** Applications can intercept MCP commands before the engine processes them by implementing `handle_mcp_command` on the `State` trait. Return `Some(response)` to handle a command yourself, or `None` to let the engine handle it with default behavior.
+
+#### Claude Code CLI (`claude` feature)
+
+The `claude` feature provides types and a worker thread for spawning Claude Code as a subprocess and streaming its output. This lets applications embed an AI assistant panel that can send queries, receive streamed responses (text, thinking, tool use events), and optionally auto-configure MCP so Claude can manipulate the scene.
+
+```toml
+nightshade = { features = ["claude"] }
+```
+
+Key types: `ClaudeConfig` (system prompt, allowed/disallowed tools, MCP config, custom CLI args), `CliCommand` (StartQuery, Cancel), `CliEvent` (SessionStarted, TextDelta, ThinkingDelta, ToolUseStarted, ToolUseFinished, TurnComplete, Complete, Error).
+
+When both `claude` and `mcp` features are enabled, `McpConfig::Auto` automatically configures Claude Code to connect to the engine's MCP server — no manual `mcp add` step needed.
+
+The editor enables both features by default for AI-assisted development workflows.
 
 ## Contributing
 

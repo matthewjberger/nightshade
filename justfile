@@ -83,7 +83,7 @@ uninstall-hooks:
     rm -f .git/hooks/pre-commit
 
 # Runs linter and displays warnings
-lint:
+lint: lint-wasm
     cargo clippy --all --tests -- -D warnings
 
 # Runs linter for wasm32 target

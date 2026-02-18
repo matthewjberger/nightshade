@@ -17,12 +17,12 @@
 //! use nightshade::prelude::*;
 //!
 //! struct Game {
-//!     camera: EntityHandle,
+//!     camera: Option<Entity>,
 //! }
 //!
 //! impl Default for Game {
 //!     fn default() -> Self {
-//!         Self { camera: EntityHandle::dangling() }
+//!         Self { camera: None }
 //!     }
 //! }
 //!
@@ -35,15 +35,16 @@
 //!         spawn_sun(world);
 //!
 //!         // Camera
-//!         self.camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!         world.resources.active_camera = Some(self.camera);
+//!         let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
+//!         world.resources.active_camera = Some(camera);
+//!         self.camera = Some(camera);
 //!
 //!         // Spawn objects
 //!         spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
 //!     }
 //!
 //!     fn run_systems(&mut self, world: &mut World) {
-//!         let _dt = world.resources.time.delta_seconds;
+//!         let _dt = world.resources.window.timing.delta_time;
 //!     }
 //! }
 //!
@@ -56,10 +57,10 @@
 //!
 //! ```ignore
 //! let model_data = include_bytes!("../assets/character.glb");
-//! let prefab = import_gltf_from_bytes(world, model_data, "character").unwrap();
-//! let entity = spawn_prefab_with_animations(world, &prefab, Vec3::zeros());
+//! let result = import_gltf_from_bytes(model_data).unwrap();
+//! let prefab = &result.prefabs[0];
+//! let entity = spawn_prefab_with_animations(world, prefab, &result.animations, Vec3::zeros());
 //!
-//! // Play animation
 //! if let Some(player) = world.get_animation_player_mut(entity) {
 //!     player.play(0);
 //!     player.looping = true;
@@ -72,9 +73,9 @@
 //!
 //! The [`World`](ecs::world::World) contains all game state:
 //!
-//! - **Entities**: Handles (`EntityHandle`) identifying objects
+//! - **Entities**: Unsigned integer handles (`Entity`) identifying objects
 //! - **Components**: Data attached to entities (transforms, meshes, physics, etc.)
-//! - **Resources**: Global singletons (`world.resources.time`, `.input`, `.graphics`, `.physics`)
+//! - **Resources**: Global singletons (`world.resources.window.timing`, `.input`, `.graphics`, `.physics`)
 //!
 //! ### Component Flags
 //!
@@ -107,9 +108,10 @@
 //! ### Resources
 //!
 //! ```ignore
-//! // Time
-//! let dt = world.resources.time.delta_seconds;
-//! let elapsed = world.resources.time.elapsed_seconds;
+//! // Timing
+//! let dt = world.resources.window.timing.delta_time;
+//! let fps = world.resources.window.timing.frames_per_second;
+//! let uptime_ms = world.resources.window.timing.uptime_milliseconds;
 //!
 //! // Input
 //! let keyboard = &world.resources.input.keyboard;
@@ -241,6 +243,16 @@
 //! - **`mosaic`** - Multi-pane desktop application framework with tile-based layouts,
 //!   themes, modals, notifications, and built-in viewport widgets. Requires `egui`.
 //!
+//! - **`editor`** - Scene editor infrastructure with gizmos, undo/redo, component inspectors,
+//!   entity picking, selection management, and scene tree UI. Requires `mosaic` and `picking`.
+//!
+//! - **`mcp`** - HTTP-based Model Context Protocol server on `http://127.0.0.1:3333/mcp`.
+//!   Exposes 50+ tools for AI clients to manipulate the running scene. Native only.
+//!   Requires `async_runtime` and `behaviors`.
+//!
+//! - **`claude`** - Background worker for spawning Claude Code CLI as a subprocess and
+//!   streaming its JSON output. Lets applications embed an AI chat interface. Native only.
+//!
 //! ## Feature Quick Reference
 //!
 //! ### Audio (`audio` feature)
@@ -275,8 +287,8 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     world.resources.physics.step(world.resources.time.delta_seconds);
-//!     sync_physics_transforms(world);  // Copy physics transforms to ECS
+//!     world.resources.physics.step(world.resources.window.timing.delta_time);
+//!     sync_physics_transforms(world);
 //! }
 //! ```
 //!
@@ -296,7 +308,7 @@
 //!
 //! // Update each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     run_navmesh_systems(world, world.resources.time.delta_seconds);
+//!     run_navmesh_systems(world, world.resources.window.timing.delta_time);
 //! }
 //! ```
 //!
@@ -323,9 +335,9 @@
 //!
 //! ```ignore
 //! impl State for Game {
-//!     fn ui(&mut self, ctx: &egui::Context, world: &mut World) {
+//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
 //!         egui::Window::new("Debug").show(ctx, |ui| {
-//!             ui.label(format!("FPS: {:.0}", 1.0 / world.resources.time.delta_seconds));
+//!             ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
 //!             if ui.button("Spawn Cube").clicked() {
 //!                 spawn_cube_at(world, Vec3::zeros());
 //!             }
@@ -629,7 +641,7 @@
 //! world.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
 //!
 //! // Update each frame
-//! update_particle_emitters(world, world.resources.time.delta_seconds);
+//! update_particle_emitters(world, world.resources.window.timing.delta_time);
 //! ```
 //!
 //! ### Sprites
@@ -719,11 +731,12 @@
 //! 3. Calculate delta time
 //! 4. Run egui frame (if enabled)
 //! 5. Call [`State::run_systems()`](run::State::run_systems)
-//! 6. Dispatch event bus messages
-//! 7. Update animation players, apply to transforms
-//! 8. Propagate transform hierarchy
-//! 9. Step physics simulation, sync transforms (if enabled)
-//! 10. Execute render graph passes
+//! 6. Process MCP commands (if `mcp` feature enabled)
+//! 7. Dispatch event bus messages
+//! 8. Update animation players, apply to transforms
+//! 9. Propagate transform hierarchy
+//! 10. Step physics simulation, sync transforms (if enabled)
+//! 11. Execute render graph passes
 //!
 //! ## Threading Model
 //!
@@ -768,6 +781,9 @@ pub mod mosaic;
 
 #[cfg(feature = "editor")]
 pub mod editor;
+
+#[cfg(all(feature = "claude", not(target_arch = "wasm32")))]
+pub mod claude;
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 pub mod mcp;
