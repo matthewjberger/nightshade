@@ -225,6 +225,7 @@ freecs::ecs! {
         entity_names: std::collections::HashMap<String, freecs::Entity>,
         pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
         ibl_views: crate::ecs::graphics::resources::IblViews,
+        frame_schedule: crate::schedule::FrameSchedule,
     }
 }
 

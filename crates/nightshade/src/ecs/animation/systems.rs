@@ -6,11 +6,12 @@ use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
 
-pub fn update_animation_players(world: &mut World, delta_time: f32) {
+pub fn update_animation_players(world: &mut World) {
     let entities_with_animations: Vec<_> = world.query_entities(ANIMATION_PLAYER).collect();
     let _span =
         tracing::info_span!("animation", players = entities_with_animations.len()).entered();
 
+    let delta_time = world.resources.window.timing.delta_time;
     for entity in entities_with_animations {
         if let Some(animation_player) = world.get_animation_player_mut(entity) {
             animation_player.update(delta_time);

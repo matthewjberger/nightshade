@@ -731,12 +731,24 @@
 //! 3. Calculate delta time
 //! 4. Run egui frame (if enabled)
 //! 5. Call [`State::run_systems()`](run::State::run_systems)
-//! 6. Process MCP commands (if `mcp` feature enabled)
-//! 7. Dispatch event bus messages
-//! 8. Update animation players, apply to transforms
-//! 9. Propagate transform hierarchy
-//! 10. Step physics simulation, sync transforms (if enabled)
-//! 11. Execute render graph passes
+//! 6. Dispatch event bus messages
+//! 7. Process MCP commands (if `mcp` feature enabled)
+//! 8. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
+//!    - Initialize and update audio (if `audio` enabled)
+//!    - Update camera aspect ratios
+//!    - Step physics simulation (if `physics` enabled)
+//!    - Run scripts (if `scripting` enabled)
+//!    - Update animation players, apply to transforms
+//!    - Propagate transform hierarchy
+//!    - Update instanced mesh caches, sync text
+//!    - Reset input state
+//!    - Process deferred commands, cleanup
+//! 9. Execute render graph passes
+//!
+//! The frame schedule is a resource at `world.resources.frame_schedule`. Modify it
+//! in [`State::initialize()`](run::State::initialize) to insert, remove, or reorder
+//! engine systems. See [`system_names`](schedule::system_names) for the available
+//! system name constants.
 //!
 //! ## Threading Model
 //!
@@ -767,6 +779,8 @@ pub mod multi_window;
 pub mod render;
 #[cfg(feature = "runtime")]
 pub mod run;
+#[cfg(feature = "runtime")]
+pub mod schedule;
 #[cfg(feature = "runtime")]
 mod systems;
 
@@ -809,6 +823,7 @@ pub mod prelude {
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
     pub use crate::run::*;
+    pub use crate::schedule::{FrameSchedule, FrameScheduleEntry, SystemFn, system_names};
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

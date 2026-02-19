@@ -411,36 +411,9 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 pub(crate) fn run_frame_systems(world: &mut World) {
-    let _span = tracing::info_span!("systems").entered();
-
-    #[cfg(feature = "audio")]
-    {
-        crate::ecs::audio::systems::initialize_audio_system(world);
-        crate::ecs::audio::systems::update_audio_system(world);
-    }
-    crate::ecs::camera::systems::update_camera_aspect_ratios(world);
-    #[cfg(feature = "physics")]
-    crate::ecs::physics::systems::run_physics_systems(world);
-
-    #[cfg(feature = "scripting")]
-    {
-        let mut runtime = std::mem::take(&mut world.resources.script_runtime);
-        crate::ecs::script::systems::run_scripts_system(world, &mut runtime);
-        world.resources.script_runtime = runtime;
-    }
-
-    let delta_time = world.resources.window.timing.delta_time;
-    crate::ecs::animation::systems::update_animation_players(world, delta_time);
-    crate::ecs::animation::systems::apply_animations(world);
-
-    crate::ecs::transform::systems::run_systems(world);
-    crate::ecs::mesh::systems::update_instanced_mesh_caches_system(world);
-    crate::ecs::text::systems::sync_hud_text_system(world);
-    crate::ecs::text::systems::sync_immediate_ui_text_system(world);
-    crate::ecs::input::systems::reset_mouse_system(world);
-    crate::ecs::input::systems::reset_touch_system(world);
-    crate::ecs::world::process_commands_system(world);
-    crate::ecs::world::cleanup_unused_resources_system(world);
+    let schedule = std::mem::take(&mut world.resources.frame_schedule);
+    schedule.run(world);
+    world.resources.frame_schedule = schedule;
 }
 
 #[cfg(feature = "egui")]
@@ -1107,6 +1080,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             #[cfg(feature = "egui")]
             initialize_user_interface(&mut self.world);
+            self.world.resources.frame_schedule = crate::schedule::build_default_frame_schedule();
             self.state.initialize(&mut self.world);
             crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
 
@@ -1140,6 +1114,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 #[cfg(feature = "egui")]
                 initialize_user_interface(&mut self.world);
+                self.world.resources.frame_schedule =
+                    crate::schedule::build_default_frame_schedule();
                 self.state.initialize(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
 
