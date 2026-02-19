@@ -328,6 +328,8 @@ pub(crate) fn step(
 
     match event {
         WindowEvent::RedrawRequested => {
+            world.increment_tick();
+
             #[cfg(feature = "gamepad")]
             crate::ecs::input::systems::gamepad_input_system(world);
             process_dropped_files(world, state);
@@ -1004,12 +1006,6 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         let dimension = window_handle.inner_size();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.world.resources.window.cached_viewport_size =
-                Some((dimension.width, dimension.height));
-        }
-
         #[cfg(all(not(target_arch = "wasm32"), feature = "async_runtime"))]
         {
             let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -1180,6 +1176,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                         canvas.set_height(height);
                     }
                 }
+
+                self.world.resources.window.cached_viewport_size = Some((width, height));
 
                 if let Some(renderer) = &mut self.renderer
                     && let Err(error) = renderer.resize_surface(width, height)

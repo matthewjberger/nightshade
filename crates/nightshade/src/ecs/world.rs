@@ -51,15 +51,23 @@ pub mod components {
     pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
-    pub use crate::ecs::sprite::components::Sprite;
+    pub use crate::ecs::sprite::components::{NineSlice, Sprite, SpriteBlendMode};
     pub use crate::ecs::sprite_animator::components::{LoopMode, SpriteAnimator, SpriteFrame};
+    pub use crate::ecs::sprite_particles::components::{
+        ColorRange2D, EmitterShape2D, SpriteParticleEmitter,
+    };
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextCharacterBackgroundColors,
         TextCharacterColors, TextProperties, VerticalAlignment,
     };
+    pub use crate::ecs::tilemap::components::{TileData, Tilemap};
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
+    pub use crate::ecs::tween::components::{
+        Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
+    };
+    pub use crate::ecs::tween::easing::EasingFunction;
     pub use crate::ecs::visibility::components::Visibility;
     pub use crate::ecs::water::components::Water;
 }
@@ -144,6 +152,7 @@ freecs::ecs! {
 
         sprite: crate::ecs::sprite::components::Sprite => SPRITE,
         sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
+        tilemap: crate::ecs::tilemap::components::Tilemap => TILEMAP,
         text: crate::ecs::text::components::Text => TEXT,
         hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
         text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
@@ -171,6 +180,8 @@ freecs::ecs! {
         water: crate::ecs::water::components::Water => WATER,
         grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
         grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
+        tween: crate::ecs::tween::components::Tween => TWEEN,
+        sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
     }
     Resources {
         world_id: u64,

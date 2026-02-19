@@ -45,6 +45,7 @@ pub mod prefab;
 pub mod render_layer;
 #[cfg(feature = "scene_graph")]
 pub mod scene;
+pub mod scene_2d;
 pub mod script;
 #[cfg(feature = "sdf_sculpt")]
 pub mod sdf;
@@ -53,12 +54,15 @@ pub mod shell;
 pub mod skin;
 pub mod sprite;
 pub mod sprite_animator;
+pub mod sprite_particles;
 #[cfg(feature = "terrain")]
 pub mod terrain;
 pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;
+pub mod tilemap;
 pub mod transform;
+pub mod tween;
 pub mod ui;
 pub mod visibility;
 pub mod water;

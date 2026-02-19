@@ -879,10 +879,15 @@ pub mod prelude {
         ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene,
         world_to_scene,
     };
+    pub use crate::ecs::scene_2d::{
+        Scene2D, Scene2DError, SceneEntity2D, load_scene_2d, save_scene_2d, spawn_scene_2d,
+        world_to_scene_2d,
+    };
     pub use crate::ecs::sprite::commands::spawn_sprite;
     pub use crate::ecs::sprite_animator::{
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
+    pub use crate::ecs::sprite_particles::{ColorRange2D, EmitterShape2D, SpriteParticleEmitter};
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
         NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,
@@ -898,6 +903,10 @@ pub mod prelude {
         AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
         TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
+    };
+    pub use crate::ecs::tilemap::commands::spawn_tilemap;
+    pub use crate::ecs::tween::{
+        EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
     pub use crate::ecs::ui::{
         Anchor, ImmediateUi, Layout, LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle,
