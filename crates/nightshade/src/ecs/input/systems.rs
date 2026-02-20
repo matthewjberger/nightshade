@@ -86,6 +86,12 @@ pub fn gamepad_input_system(world: &mut World) {
     }
 }
 
+pub fn reset_keyboard_system(world: &mut World) {
+    let keyboard = &mut world.resources.input.keyboard;
+    keyboard.just_pressed_keys.clear();
+    keyboard.just_released_keys.clear();
+}
+
 pub fn escape_key_exit_system(world: &mut World) {
     if world
         .resources

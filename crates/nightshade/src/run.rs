@@ -449,6 +449,14 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
         ..
     } = window_event
     {
+        let was_pressed = world
+            .resources
+            .input
+            .keyboard
+            .keystates
+            .get(key_code)
+            .is_some_and(|previous| *previous == winit::event::ElementState::Pressed);
+
         *world
             .resources
             .input
@@ -464,6 +472,22 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             .keyboard
             .frame_keys
             .push((*key_code, pressed));
+
+        if pressed && !was_pressed {
+            world
+                .resources
+                .input
+                .keyboard
+                .just_pressed_keys
+                .insert(*key_code);
+        } else if !pressed && was_pressed {
+            world
+                .resources
+                .input
+                .keyboard
+                .just_released_keys
+                .insert(*key_code);
+        }
 
         if pressed && let Some(text) = text {
             for character in text.chars() {

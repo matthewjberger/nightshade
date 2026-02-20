@@ -884,6 +884,13 @@ pub mod prelude {
         world_to_scene_2d,
     };
     pub use crate::ecs::sprite::commands::spawn_sprite;
+    pub use crate::ecs::sprite::components::SpriteBlendMode;
+    pub use crate::ecs::sprite::shapes::{
+        CubicBezier, SpriteShape, shape_texture_info, spawn_arrow, spawn_capsule, spawn_circle,
+        spawn_cubic_bezier, spawn_line, spawn_outlined_rect, spawn_path, spawn_quadratic_bezier,
+        spawn_rect, spawn_ring, spawn_shape, spawn_triangle, tessellate_cubic_bezier,
+        tessellate_quadratic_bezier,
+    };
     pub use crate::ecs::sprite_animator::{
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
