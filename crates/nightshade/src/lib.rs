@@ -888,6 +888,8 @@ pub mod prelude {
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
     pub use crate::ecs::sprite_particles::{ColorRange2D, EmitterShape2D, SpriteParticleEmitter};
+    pub use crate::ecs::sprite_text::commands::spawn_sprite_text;
+    pub use crate::ecs::sprite_text::{SpriteText, SpriteTextAlignment};
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
         NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,

@@ -56,6 +56,7 @@ pub mod components {
     pub use crate::ecs::sprite_particles::components::{
         ColorRange2D, EmitterShape2D, SpriteParticleEmitter,
     };
+    pub use crate::ecs::sprite_text::components::{SpriteText, SpriteTextAlignment};
     pub use crate::ecs::text::components::{
         HudAnchor, HudText, Text, TextAlignment, TextCharacterBackgroundColors,
         TextCharacterColors, TextProperties, VerticalAlignment,
@@ -182,6 +183,7 @@ freecs::ecs! {
         grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
         tween: crate::ecs::tween::components::Tween => TWEEN,
         sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
+        sprite_text: crate::ecs::sprite_text::components::SpriteText => SPRITE_TEXT,
     }
     Resources {
         world_id: u64,
