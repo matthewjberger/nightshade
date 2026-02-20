@@ -51,7 +51,9 @@ pub mod components {
     pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
-    pub use crate::ecs::sprite::components::{NineSlice, Sprite, SpriteBlendMode};
+    pub use crate::ecs::sprite::components::{
+        NineSlice, Sprite, SpriteBlendMode, SpriteStencilMode,
+    };
     pub use crate::ecs::sprite_animator::components::{LoopMode, SpriteAnimator, SpriteFrame};
     pub use crate::ecs::sprite_particles::components::{
         ColorRange2D, EmitterShape2D, SpriteParticleEmitter,
@@ -239,6 +241,7 @@ freecs::ecs! {
         pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
         ibl_views: crate::ecs::graphics::resources::IblViews,
         frame_schedule: crate::schedule::FrameSchedule,
+        sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
     }
 }
 

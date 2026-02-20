@@ -884,13 +884,20 @@ pub mod prelude {
         world_to_scene_2d,
     };
     pub use crate::ecs::sprite::commands::spawn_sprite;
-    pub use crate::ecs::sprite::components::SpriteBlendMode;
+    pub use crate::ecs::sprite::components::{SpriteBlendMode, SpriteGradient, SpriteStencilMode};
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::sprite::shapes::spawn_sprite_from_image_bytes;
     pub use crate::ecs::sprite::shapes::{
-        CubicBezier, SpriteShape, shape_texture_info, spawn_arrow, spawn_capsule, spawn_circle,
-        spawn_cubic_bezier, spawn_line, spawn_outlined_rect, spawn_path, spawn_quadratic_bezier,
-        spawn_rect, spawn_ring, spawn_shape, spawn_triangle, tessellate_cubic_bezier,
+        BlurSource, CubicBezier, SpriteShape, screen_pixels_to_world_size, shape_texture_info,
+        spawn_arrow, spawn_capsule, spawn_circle, spawn_cubic_bezier, spawn_dashed_line,
+        spawn_ellipse, spawn_filled_and_stroked_circle, spawn_filled_and_stroked_ellipse,
+        spawn_filled_and_stroked_rect, spawn_filled_path, spawn_filled_polygon, spawn_glow,
+        spawn_line, spawn_outlined_rect, spawn_path, spawn_quadratic_bezier, spawn_rect,
+        spawn_ring, spawn_rounded_rect, spawn_shadow, spawn_shape, spawn_shape_with_aa,
+        spawn_triangle, spawn_variable_width_path, tessellate_cubic_bezier,
         tessellate_quadratic_bezier,
     };
+    pub use crate::ecs::sprite::slot_allocator::{allocate_sprite_slot, sized_slot_uv};
     pub use crate::ecs::sprite_animator::{
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
