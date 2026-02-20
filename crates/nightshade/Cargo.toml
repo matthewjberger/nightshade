@@ -235,10 +235,10 @@ tracing-web = { workspace = true, optional = true }
 egui-winit = { workspace = true, default-features = false, optional = true }
 futures = { version = "0.3.31", optional = true }
 image = { workspace = true, optional = true }
-js-sys = { version = "0.3", optional = true }
-wasm-bindgen = { version = "0.2", optional = true }
-wasm-bindgen-futures = { version = "0.4.56", optional = true }
-web-sys = { version = "0.3", features = [
+js-sys = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+wasm-bindgen-futures = { workspace = true, optional = true }
+web-sys = { workspace = true, features = [
     "Blob",
     "BlobPropertyBag",
     "DataTransfer",
