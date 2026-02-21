@@ -913,6 +913,7 @@ pub mod prelude {
         load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties, spawn_ui_text,
         spawn_ui_text_with_properties,
     };
+    pub use crate::ecs::text::components::{TextAlignment, VerticalAlignment};
     pub use crate::ecs::text::systems::sync_text_meshes_system;
     #[cfg(feature = "assets")]
     pub use crate::ecs::texture_loader::{
@@ -933,10 +934,13 @@ pub mod prelude {
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
     };
     pub use crate::ecs::ui_layout::{
-        Ab, Em, Rh, Rl, Rw, ScalingMode, StateTransition, UiBase, UiButtonData, UiDepthMode,
-        UiDisabled, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiNodeColor,
-        UiNodeContent, UiNodeInteraction, UiPressed, UiSelected, UiStateWeights, UiTreeBuilder,
-        UiValue, UiWidgetState, Vh, Vp, Vw,
+        Ab, Em, ResizeEdge, Rh, Rl, Rw, ScalingMode, StateTransition, UiBase, UiButtonData,
+        UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled,
+        UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData,
+        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
+        UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
+        UiTabBarData, UiTextInputData, UiToggleData, UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp,
+        Vw,
     };
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,

@@ -1024,6 +1024,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         };
 
         let window_handle = std::sync::Arc::new(window);
+        self.world.resources.window.cached_scale_factor = window_handle.scale_factor() as f32;
         self.world.resources.window.handle = Some(window_handle.clone());
 
         #[cfg(target_arch = "wasm32")]
@@ -1175,6 +1176,9 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         match event {
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
+                if let Some(handle) = self.world.resources.window.handle.as_ref() {
+                    self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
+                }
                 #[cfg(feature = "egui")]
                 if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
                     #[cfg(not(target_arch = "wasm32"))]
@@ -1212,6 +1216,9 @@ impl winit::application::ApplicationHandler for WindowContext {
                 }
 
                 self.world.resources.window.cached_viewport_size = Some((width, height));
+                if let Some(handle) = self.world.resources.window.handle.as_ref() {
+                    self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
+                }
 
                 if let Some(renderer) = &mut self.renderer
                     && let Err(error) = renderer.resize_surface(width, height)

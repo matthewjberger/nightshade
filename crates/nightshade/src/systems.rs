@@ -9,3 +9,4 @@ pub use crate::ecs::tween::systems::*;
 pub use crate::ecs::ui_layout::picking::*;
 pub use crate::ecs::ui_layout::render_sync::*;
 pub use crate::ecs::ui_layout::systems::*;
+pub use crate::ecs::ui_layout::widget_systems::ui_retained_input_sync_system;
