@@ -1434,6 +1434,12 @@ fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'st
             .add_key_input(*key_code, *pressed);
     }
 
+    world.resources.immediate_ui.font_atlas =
+        world.resources.text_cache.font_manager.get_font_arc(0);
+    world.resources.immediate_ui.delta_time = world.resources.window.timing.delta_time;
+    world.resources.immediate_ui.current_time =
+        world.resources.window.timing.uptime_milliseconds as f64 / 1000.0;
+
     let mut ui = std::mem::take(&mut world.resources.immediate_ui);
     state.immediate_ui(world, &mut ui);
     world.resources.immediate_ui = ui;
