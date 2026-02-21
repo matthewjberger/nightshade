@@ -369,6 +369,16 @@ pub(crate) fn step(
             }
 
             let window_handle = world.resources.window.handle.as_ref()?;
+
+            if world.resources.retained_ui.enabled {
+                let cursor = world
+                    .resources
+                    .retained_ui
+                    .requested_cursor
+                    .unwrap_or(winit::window::CursorIcon::Default);
+                window_handle.set_cursor(cursor);
+            }
+
             let renderer = renderer.as_mut()?;
 
             #[cfg(feature = "egui")]

@@ -6,3 +6,6 @@ pub use crate::ecs::input::systems::*;
 pub use crate::ecs::sprite_animator::systems::*;
 pub use crate::ecs::transform::systems::*;
 pub use crate::ecs::tween::systems::*;
+pub use crate::ecs::ui_layout::picking::*;
+pub use crate::ecs::ui_layout::render_sync::*;
+pub use crate::ecs::ui_layout::systems::*;

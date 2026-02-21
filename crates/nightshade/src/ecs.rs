@@ -65,6 +65,7 @@ pub mod tilemap;
 pub mod transform;
 pub mod tween;
 pub mod ui;
+pub mod ui_layout;
 pub mod visibility;
 pub mod water;
 pub mod window;

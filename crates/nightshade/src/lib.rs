@@ -924,9 +924,19 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
+    pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
     pub use crate::ecs::ui::{
         ANIM_ACTIVE, ANIM_FOCUS, ANIM_HOVER, ANIM_OPEN, Anchor, ImmediateUi, Layout,
         LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle, UiWidget,
+    };
+    pub use crate::ecs::ui_layout::layout_types::{
+        BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
+    };
+    pub use crate::ecs::ui_layout::{
+        Ab, Em, Rh, Rl, Rw, ScalingMode, StateTransition, UiBase, UiButtonData, UiDepthMode,
+        UiDisabled, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiNodeColor,
+        UiNodeContent, UiNodeInteraction, UiPressed, UiSelected, UiStateWeights, UiTreeBuilder,
+        UiValue, UiWidgetState, Vh, Vp, Vw,
     };
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
