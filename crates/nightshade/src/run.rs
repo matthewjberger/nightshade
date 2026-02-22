@@ -114,9 +114,7 @@ pub struct RenderResources {
     pub ssr_raw: crate::render::wgpu::rendergraph::ResourceId,
     /// Blurred SSR output.
     pub ssr: crate::render::wgpu::rendergraph::ResourceId,
-    /// Current surface width in pixels.
     pub surface_width: u32,
-    /// Current surface height in pixels.
     pub surface_height: u32,
 }
 
@@ -841,9 +839,8 @@ pub trait State {
         surface_format: wgpu::TextureFormat,
         resources: RenderResources,
     ) {
-        let (width, height) = (1920, 1080);
-        let bloom_width = width / 2;
-        let bloom_height = height / 2;
+        let bloom_width = resources.surface_width / 2;
+        let bloom_height = resources.surface_height / 2;
 
         let bloom_texture = graph
             .add_color_texture("bloom")
@@ -852,7 +849,11 @@ pub trait State {
             .clear_color(wgpu::Color::BLACK)
             .transient();
 
-        let bloom_pass = crate::render::wgpu::passes::BloomPass::new(device, width, height);
+        let bloom_pass = crate::render::wgpu::passes::BloomPass::new(
+            device,
+            resources.surface_width,
+            resources.surface_height,
+        );
         let _ = graph.add_pass(
             Box::new(bloom_pass),
             &[("hdr", resources.scene_color), ("bloom", bloom_texture)],
@@ -870,15 +871,27 @@ pub trait State {
             ],
         );
 
+        let fxaa_output = graph
+            .add_color_texture("fxaa_output")
+            .format(surface_format)
+            .size(
+                resources.surface_width.max(1),
+                resources.surface_height.max(1),
+            )
+            .transient();
+
+        let fxaa_pass = crate::render::wgpu::passes::FxaaPass::new(device, surface_format);
+        let _ = graph.add_pass(
+            Box::new(fxaa_pass),
+            &[("input", resources.compute_output), ("output", fxaa_output)],
+        );
+
         let swapchain_blit_pass =
             crate::render::wgpu::passes::BlitPass::new(device, surface_format)
                 .with_name("default_swapchain_blit");
         let _ = graph.add_pass(
             Box::new(swapchain_blit_pass),
-            &[
-                ("input", resources.compute_output),
-                ("output", resources.swapchain),
-            ],
+            &[("input", fxaa_output), ("output", resources.swapchain)],
         );
     }
     /// Build egui UI (requires `egui` feature).
