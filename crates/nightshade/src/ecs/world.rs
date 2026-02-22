@@ -133,9 +133,6 @@ pub use render_trait::{Render, UiOutput, UiPrimitives};
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
-pub mod clone;
-pub use clone::clone_for_runtime;
-
 freecs::ecs! {
     World {
         animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
