@@ -60,14 +60,12 @@
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
 use crate::ecs::graphics::Atmosphere;
 use crate::ecs::material::components::MaterialRef;
-use crate::ecs::material::resources::{
-    material_registry_insert, material_registry_lookup_id, material_registry_remove_unused,
-};
+use crate::ecs::material::resources::{material_registry_insert, material_registry_remove_unused};
 use crate::ecs::mesh::components::{
     create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
     create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
-use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_lookup_id};
+use crate::ecs::prefab::resources::mesh_cache_insert;
 use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
@@ -996,64 +994,6 @@ pub fn spawn_instanced_mesh_with_material(
     world.set_casts_shadow(entity, components::CastsShadow);
 
     entity
-}
-
-pub fn resolve_asset_references(world: &mut World) {
-    use crate::ecs::world::{MATERIAL_REF, RENDER_MESH};
-
-    let entities_with_material_ref: Vec<Entity> = world.query_entities(MATERIAL_REF).collect();
-
-    for entity in entities_with_material_ref {
-        if let Some(material_ref) = world.get_material_ref(entity)
-            && material_ref.id.is_none()
-        {
-            let name = material_ref.name.clone();
-            if let Some(id) = material_registry_lookup_id(&world.resources.material_registry, &name)
-                && let Some(material_ref_mut) = world.get_material_ref_mut(entity)
-            {
-                material_ref_mut.id = Some(id);
-            }
-        }
-    }
-
-    let entities_with_render_mesh: Vec<Entity> = world.query_entities(RENDER_MESH).collect();
-
-    for entity in entities_with_render_mesh {
-        if let Some(render_mesh) = world.get_render_mesh(entity)
-            && render_mesh.id.is_none()
-        {
-            let name = render_mesh.name.clone();
-            if let Some(id) = mesh_cache_lookup_id(&world.resources.mesh_cache, &name)
-                && let Some(render_mesh_mut) = world.get_render_mesh_mut(entity)
-            {
-                render_mesh_mut.id = Some(id);
-            }
-        }
-    }
-}
-
-pub fn resolve_entity_asset_references(world: &mut World, entity: Entity) {
-    if let Some(material_ref) = world.get_material_ref(entity)
-        && material_ref.id.is_none()
-    {
-        let name = material_ref.name.clone();
-        if let Some(id) = material_registry_lookup_id(&world.resources.material_registry, &name)
-            && let Some(material_ref_mut) = world.get_material_ref_mut(entity)
-        {
-            material_ref_mut.id = Some(id);
-        }
-    }
-
-    if let Some(render_mesh) = world.get_render_mesh(entity)
-        && render_mesh.id.is_none()
-    {
-        let name = render_mesh.name.clone();
-        if let Some(id) = mesh_cache_lookup_id(&world.resources.mesh_cache, &name)
-            && let Some(render_mesh_mut) = world.get_render_mesh_mut(entity)
-        {
-            render_mesh_mut.id = Some(id);
-        }
-    }
 }
 
 pub fn find_entity_by_name(world: &World, name: &str) -> Option<Entity> {

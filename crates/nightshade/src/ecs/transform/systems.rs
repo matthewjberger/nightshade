@@ -138,11 +138,6 @@ pub fn update_global_transforms_system(world: &mut World) {
     world.resources.transform_dirty_entities = dirty_entities;
 }
 
-pub fn global_transform_of(entity: freecs::Entity, world: &World) -> nalgebra_glm::Mat4 {
-    let mut visited = std::collections::HashSet::new();
-    global_transform_of_with_cycle_detection(entity, world, &mut visited)
-}
-
 const MAX_HIERARCHY_DEPTH: usize = 256;
 
 fn global_transform_of_with_cycle_detection(

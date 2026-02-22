@@ -178,7 +178,7 @@
 //!
 //! - **`core`** - Foundation: ECS (freecs), math (nalgebra), windowing (winit), time, petgraph.
 //!
-//! - **`text`** - 3D text rendering using fontdue. Requires `core`.
+//! - **`text`** - MSDF text rendering using ttf-parser. Requires `core`.
 //!
 //! - **`assets`** - Asset loading: gltf, image, half, bincode, serde_json. Requires `core`.
 //!

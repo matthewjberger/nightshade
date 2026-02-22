@@ -163,28 +163,6 @@ pub fn material_registry_iter(
         })
 }
 
-/// Returns an iterator over all material names.
-pub fn material_registry_names(registry: &MaterialRegistry) -> impl Iterator<Item = &String> {
-    registry.registry.name_to_index.keys()
-}
-
-/// Loads materials from a HashMap into the registry.
-pub fn material_registry_load_from_map(
-    registry: &mut MaterialRegistry,
-    materials: HashMap<String, Material>,
-) {
-    for (name, material) in materials {
-        material_registry_insert(registry, name, material);
-    }
-}
-
-/// Exports all materials to a HashMap.
-pub fn material_registry_to_map(registry: &MaterialRegistry) -> HashMap<String, Material> {
-    material_registry_iter(registry)
-        .map(|(name, material)| (name.clone(), material.clone()))
-        .collect()
-}
-
 fn compute_material_content_hash(material: &Material) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     for component in &material.base_color {

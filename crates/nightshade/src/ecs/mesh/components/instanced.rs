@@ -29,20 +29,6 @@ impl Default for InstanceCustomData {
     }
 }
 
-/// GPU instance object metadata.
-#[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct InstanceObjectData {
-    /// Index into the transform buffer.
-    pub transform_index: u32,
-    /// Mesh identifier.
-    pub mesh_id: u32,
-    /// Material identifier.
-    pub material_id: u32,
-    /// Visibility flag (0 = hidden, non-zero = visible).
-    pub visible: u32,
-}
-
 /// Transform data for a single instance within an [`InstancedMesh`].
 #[derive(Debug, Clone, Copy)]
 pub struct InstanceTransform {

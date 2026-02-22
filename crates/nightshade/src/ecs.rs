@@ -50,7 +50,6 @@ pub mod script;
 #[cfg(feature = "sdf_sculpt")]
 pub mod sdf;
 pub mod shadow;
-pub mod shell;
 pub mod skin;
 pub mod sprite;
 pub mod sprite_animator;
