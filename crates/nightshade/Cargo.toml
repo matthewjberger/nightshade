@@ -46,6 +46,7 @@ assets = [
     "dep:bincode",
     "dep:serde_json",
     "dep:lz4_flex",
+    "dep:notify",
 ]
 
 text = [
@@ -182,6 +183,7 @@ rayon = { version = "1.10", optional = true }
 rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.30", optional = true }
 noise = { workspace = true, optional = true }
+notify = { workspace = true, optional = true }
 rapier3d = { workspace = true, optional = true }
 raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -208,6 +210,7 @@ tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 egui-winit = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
+notify = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true, features = ["signal", "sync", "time"] }
 openxr = { workspace = true, optional = true }
 ash = { workspace = true, optional = true }

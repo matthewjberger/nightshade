@@ -44,8 +44,8 @@ pub mod components {
         ParticleTextureUpload,
     };
     pub use crate::ecs::physics::components::{
-        CharacterControllerComponent, ColliderComponent, ColliderShape, PhysicsInterpolation,
-        RigidBodyComponent,
+        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
+        PhysicsInterpolation, RigidBodyComponent,
     };
     pub use crate::ecs::render_layer::components::RenderLayer;
     pub use crate::ecs::script::components::{Script, ScriptSource};
@@ -170,6 +170,7 @@ freecs::ecs! {
         physics_material: crate::ecs::physics::material::PhysicsMaterialComponent => PHYSICS_MATERIAL,
         character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
         physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
+        collision_listener: crate::ecs::physics::components::CollisionListener => COLLISION_LISTENER,
         instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
         particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
         prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
@@ -251,6 +252,8 @@ freecs::ecs! {
         retained_ui: crate::ecs::ui_layout::resources::RetainedUiState,
         frame_schedule: crate::schedule::FrameSchedule,
         sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
+        #[cfg(all(feature = "assets", not(target_arch = "wasm32")))]
+        asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
     }
 }
 

@@ -110,6 +110,12 @@ pub enum WorldCommand {
     CaptureScreenshot {
         path: Option<std::path::PathBuf>,
     },
+    ReloadTexture {
+        name: String,
+        rgba_data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
 }
 
 impl World {
@@ -131,7 +137,8 @@ pub fn process_commands_system(world: &mut World) {
             | WorldCommand::LoadHdrSkyboxFromPath { .. }
             | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
             | WorldCommand::CaptureIblSnapshots { .. }
-            | WorldCommand::CaptureScreenshot { .. } => {
+            | WorldCommand::CaptureScreenshot { .. }
+            | WorldCommand::ReloadTexture { .. } => {
                 sprite_texture_commands.push(command);
             }
             _ => {
@@ -162,6 +169,7 @@ fn process_command(world: &mut World, command: WorldCommand) {
         WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
         WorldCommand::CaptureIblSnapshots { .. } => {}
         WorldCommand::CaptureScreenshot { .. } => {}
+        WorldCommand::ReloadTexture { .. } => {}
     }
 }
 

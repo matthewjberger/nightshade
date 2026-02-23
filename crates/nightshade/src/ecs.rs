@@ -15,6 +15,8 @@
 
 pub mod animation;
 pub mod asset_id;
+#[cfg(all(feature = "assets", not(target_arch = "wasm32")))]
+pub mod asset_watcher;
 #[cfg(feature = "engine")]
 pub mod async_loader;
 pub mod audio;
