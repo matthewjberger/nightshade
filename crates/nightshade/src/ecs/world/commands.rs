@@ -116,6 +116,10 @@ pub enum WorldCommand {
         width: u32,
         height: u32,
     },
+    ReloadMaterial {
+        name: String,
+        material: Box<crate::ecs::material::components::Material>,
+    },
 }
 
 impl World {
@@ -170,6 +174,58 @@ fn process_command(world: &mut World, command: WorldCommand) {
         WorldCommand::CaptureIblSnapshots { .. } => {}
         WorldCommand::CaptureScreenshot { .. } => {}
         WorldCommand::ReloadTexture { .. } => {}
+        WorldCommand::ReloadMaterial { name, material } => {
+            reload_material_command(world, name, *material);
+        }
+    }
+}
+
+fn reload_material_command(
+    world: &mut World,
+    name: String,
+    new_material: crate::ecs::material::components::Material,
+) {
+    use crate::ecs::world::MATERIAL_REF;
+
+    let old_textures = registry_entry_by_name(&world.resources.material_registry.registry, &name)
+        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+
+    if let Some((old_base, old_emissive)) = &old_textures {
+        if let Some(base_texture) = old_base {
+            texture_cache_remove_reference(&mut world.resources.texture_cache, base_texture);
+        }
+        if let Some(emissive_texture) = old_emissive {
+            texture_cache_remove_reference(&mut world.resources.texture_cache, emissive_texture);
+        }
+    }
+
+    if let Some(base_texture) = &new_material.base_texture {
+        texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
+    }
+    if let Some(emissive_texture) = &new_material.emissive_texture {
+        texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
+    }
+
+    if let Some(existing) =
+        registry_entry_by_name_mut(&mut world.resources.material_registry.registry, &name)
+    {
+        *existing = new_material;
+    }
+
+    let entities_to_dirty: Vec<Entity> = world
+        .query_entities(MATERIAL_REF)
+        .filter(|&entity| {
+            world
+                .get_material_ref(entity)
+                .is_some_and(|mat_ref| mat_ref.name == name)
+        })
+        .collect();
+
+    for entity in entities_to_dirty {
+        world
+            .resources
+            .mesh_render_state
+            .mark_material_dirty(entity);
     }
 }
 

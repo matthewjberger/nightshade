@@ -856,9 +856,7 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::events::{
-        CollisionEvent, CollisionEventKind, ContactForceEvent,
-    };
+    pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, PhysicsMaterial, PhysicsMaterialComponent, RigidBodyComponent,

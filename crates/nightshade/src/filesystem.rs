@@ -137,6 +137,34 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn open_directory(path: &std::path::Path) {
+    let directory = if path.is_dir() {
+        path
+    } else {
+        path.parent().unwrap_or(path)
+    };
+
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("explorer")
+            .arg(directory)
+            .spawn();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(directory).spawn();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg(directory)
+            .spawn();
+    }
+}
+
 #[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
 pub fn save_file(filename: &str, data: &[u8], _filters: &[FileFilter]) -> Result<(), FileError> {
     use wasm_bindgen::JsCast;
