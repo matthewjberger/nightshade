@@ -932,13 +932,16 @@ pub mod prelude {
         ANIM_ACTIVE, ANIM_FOCUS, ANIM_HOVER, ANIM_OPEN, Anchor, ImmediateUi, Layout,
         LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle, UiWidget,
     };
+    pub use crate::ecs::ui_layout::layout_types::GridLayout;
     pub use crate::ecs::ui_layout::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
     };
+    pub use crate::ecs::ui_layout::resources::{ToastSeverity, UiEvent};
     pub use crate::ecs::ui_layout::{
-        Ab, Em, ResizeEdge, Rh, Rl, Rw, ScalingMode, StateTransition, UiBase, UiButtonData,
-        UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled,
-        UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData,
+        Ab, AutoSizeMode, Em, ResizeEdge, Rh, Rl, Rw, ScalingMode, StateTransition,
+        UiAnimationPhase, UiAnimationType, UiBase, UiButtonData, UiCheckboxData,
+        UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled, UiDropdownData,
+        UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData, UiNodeAnimation,
         UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
         UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
         UiTabBarData, UiTextInputData, UiToggleData, UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp,
@@ -953,7 +956,7 @@ pub mod prelude {
         spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
         spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
     };
-    pub use crate::render::wgpu::passes::geometry::UiLayer;
+    pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]
@@ -1022,6 +1025,9 @@ pub mod prelude {
 
     #[cfg(feature = "shell")]
     pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_ui};
+
+    #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+    pub use crate::ecs::file_watcher::FileWatcher;
 
     #[cfg(feature = "fft")]
     pub use crate::ecs::audio::AudioAnalyzer;

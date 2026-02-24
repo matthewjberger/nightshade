@@ -1475,7 +1475,6 @@ fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'st
     world.resources.immediate_ui = ui;
 
     world.resources.immediate_ui.end_frame();
-    world.resources.input.keyboard.clear_frame_input();
 }
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]

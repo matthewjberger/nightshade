@@ -46,6 +46,9 @@ assets = [
     "dep:bincode",
     "dep:serde_json",
     "dep:lz4_flex",
+]
+
+file_watcher = [
     "dep:notify",
 ]
 

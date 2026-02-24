@@ -89,6 +89,8 @@ pub fn reset_keyboard_system(world: &mut World) {
     let keyboard = &mut world.resources.input.keyboard;
     keyboard.just_pressed_keys.clear();
     keyboard.just_released_keys.clear();
+    keyboard.frame_chars.clear();
+    keyboard.frame_keys.clear();
 }
 
 pub fn escape_key_exit_system(world: &mut World) {

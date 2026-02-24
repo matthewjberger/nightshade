@@ -82,6 +82,10 @@ impl World {
             }
         }
 
+        for children in self.resources.children_cache.values_mut() {
+            children.sort_by_key(|entity| entity.id);
+        }
+
         self.resources.children_cache_valid = true;
     }
 }

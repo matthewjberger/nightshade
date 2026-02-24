@@ -252,7 +252,9 @@ freecs::ecs! {
         retained_ui: crate::ecs::ui_layout::resources::RetainedUiState,
         frame_schedule: crate::schedule::FrameSchedule,
         sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
-        #[cfg(all(feature = "assets", not(target_arch = "wasm32")))]
+        #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+        file_watcher: crate::ecs::file_watcher::FileWatcher,
+        #[cfg(all(feature = "assets", feature = "file_watcher", not(target_arch = "wasm32")))]
         asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
     }
 }

@@ -15,13 +15,19 @@
 
 pub mod animation;
 pub mod asset_id;
-#[cfg(all(feature = "assets", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "assets",
+    feature = "file_watcher",
+    not(target_arch = "wasm32")
+))]
 pub mod asset_watcher;
 #[cfg(feature = "engine")]
 pub mod async_loader;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
+#[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+pub mod file_watcher;
 
 pub mod decal;
 pub mod event_bus;
