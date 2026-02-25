@@ -73,7 +73,7 @@ pub mod components {
     pub use crate::ecs::tween::easing::EasingFunction;
     pub use crate::ecs::ui_layout::components::{
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
-        UiNodeContent, UiNodeInteraction, UiStateWeights, UiWidgetState,
+        UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding, UiWidgetState,
     };
     pub use crate::ecs::visibility::components::Visibility;
     pub use crate::ecs::water::components::Water;
@@ -191,6 +191,7 @@ freecs::ecs! {
         ui_layout_root: crate::ecs::ui_layout::components::UiLayoutRoot => UI_LAYOUT_ROOT,
         ui_layout_node: crate::ecs::ui_layout::components::UiLayoutNode => UI_LAYOUT_NODE,
         ui_node_color: crate::ecs::ui_layout::components::UiNodeColor => UI_NODE_COLOR,
+        ui_theme_binding: crate::ecs::ui_layout::components::UiThemeBinding => UI_THEME_BINDING,
         ui_node_content: crate::ecs::ui_layout::components::UiNodeContent => UI_NODE_CONTENT,
         ui_node_interaction: crate::ecs::ui_layout::components::UiNodeInteraction => UI_NODE_INTERACTION,
         ui_state_weights: crate::ecs::ui_layout::components::UiStateWeights => UI_STATE_WEIGHTS,

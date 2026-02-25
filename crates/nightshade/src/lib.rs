@@ -932,20 +932,24 @@ pub mod prelude {
         ANIM_ACTIVE, ANIM_FOCUS, ANIM_HOVER, ANIM_OPEN, Anchor, ImmediateUi, Layout,
         LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle, UiWidget,
     };
+    pub use crate::ecs::ui_layout::composite::CompositeWidget;
     pub use crate::ecs::ui_layout::layout_types::GridLayout;
     pub use crate::ecs::ui_layout::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
     };
-    pub use crate::ecs::ui_layout::resources::{ToastSeverity, UiEvent};
+    pub use crate::ecs::ui_layout::reactive::{UiDerivedProperty, UiProperty};
+    pub use crate::ecs::ui_layout::resources::{
+        BubbledUiEvent, DrawRectParams, ReservedAreas, ToastSeverity, UiEvent, blend_color,
+    };
     pub use crate::ecs::ui_layout::{
-        Ab, AutoSizeMode, Em, ResizeEdge, Rh, Rl, Rw, ScalingMode, StateTransition,
-        UiAnimationPhase, UiAnimationType, UiBase, UiButtonData, UiCheckboxData,
-        UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled, UiDropdownData,
-        UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData, UiNodeAnimation,
-        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
-        UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
-        UiTabBarData, UiTextInputData, UiToggleData, UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp,
-        Vw,
+        Ab, AutoSizeMode, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh, Rl, Rw, ThemeColor,
+        ScalingMode, StateTransition, TextSpan, Ui, UiAnimationPhase, UiAnimationType, UiBase,
+        UiButtonData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiDepthMode,
+        UiDisabled, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType,
+        UiMenuData, UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData,
+        UiPanelKind, UiPressed, UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected,
+        UiSliderData, UiStateWeights, UiTabBarData, UiTextInputData, UiToggleData, UiTreeBuilder,
+        UiValue, UiWidgetState, Vh, Vp, Vw,
     };
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
