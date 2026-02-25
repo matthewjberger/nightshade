@@ -940,14 +940,15 @@ pub mod prelude {
         blend_color,
     };
     pub use crate::ecs::ui_layout::{
-        Ab, AutoSizeMode, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh, Rl, Rw,
-        ScalingMode, StateTransition, TextSpan, ThemeColor, Ui, UiAnimationPhase, UiAnimationType,
-        UiBase, UiButtonData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
-        UiDepthMode, UiDisabled, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot,
-        UiLayoutType, UiMenuData, UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction,
-        UiPanelData, UiPanelKind, UiPressed, UiProgressBarData, UiRadioData, UiScrollAreaData,
-        UiSelected, UiSliderData, UiStateWeights, UiTabBarData, UiTextInputData, UiToggleData,
-        UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp, Vw,
+        Ab, AutoSizeMode, CanvasCommand, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh,
+        Rl, Rw, ScalingMode, StateTransition, TextSpan, ThemeColor, Ui, UiAnimationPhase,
+        UiAnimationType, UiBase, UiButtonData, UiCanvasData, UiCheckboxData,
+        UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled, UiDropdownData,
+        UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData, UiNodeAnimation,
+        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
+        UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
+        UiTabBarData, UiTextAreaData, UiTextInputData, UiToggleData, UiTreeBuilder, UiValue,
+        UiWidgetState, Vh, Vp, Vw,
     };
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
