@@ -203,7 +203,6 @@ freecs::ecs! {
         window: crate::ecs::window::resources::Window,
         secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         user_interface: crate::ecs::ui::resources::UserInterface,
-        immediate_ui: crate::ecs::ui::immediate::ImmediateUi,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         #[cfg(feature = "audio")]

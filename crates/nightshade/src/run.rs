@@ -33,7 +33,6 @@
 //! | `initialize()` | After renderer ready | Scene setup, spawn entities |
 //! | `run_systems()` | Every frame | Game logic, entity updates |
 //! | `ui()` | Every frame | egui panels and windows |
-//! | `immediate_ui()` | Every frame | Custom UI without egui |
 //! | `configure_render_graph()` | Once at startup | Custom post-processing |
 //! | `update_render_graph()` | Every frame | Dynamic render graph changes |
 //! | `handle_event()` | On event bus message | Cross-system communication |
@@ -338,8 +337,6 @@ pub(crate) fn step(
 
             #[cfg(feature = "egui")]
             create_ui_system(world, state);
-            create_immediate_ui_system(world, state);
-
             #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
             world.resources.steam.run_callbacks();
 
@@ -906,8 +903,6 @@ pub trait State {
         _ui_context: &egui::Context,
     ) {
     }
-    /// Build immediate-mode UI without egui.
-    fn immediate_ui(&mut self, _world: &mut World, _ui: &mut crate::ecs::ui::ImmediateUi) {}
     /// Called every frame to run game logic.
     fn run_systems(&mut self, _world: &mut World) {}
     /// Called before main rendering to allow custom world rendering.
@@ -1406,75 +1401,6 @@ fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
     gui_state.handle_platform_output(window_handle, output.platform_output.clone());
     let paint_jobs = ui.tessellate(output.shapes.clone(), output.pixels_per_point);
     world.resources.user_interface.frame_output = Some((output, paint_jobs));
-}
-
-fn create_immediate_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
-    let _span = tracing::info_span!("immediate_ui").entered();
-
-    if !world.resources.immediate_ui.enabled {
-        return;
-    }
-
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
-        return;
-    };
-
-    let size = window_handle.inner_size();
-    let screen_size = crate::ecs::world::Vec2::new(size.width as f32, size.height as f32);
-    let mouse_pos = crate::ecs::world::Vec2::new(
-        world.resources.input.mouse.position.x,
-        world.resources.input.mouse.position.y,
-    );
-    let mouse_down = world
-        .resources
-        .input
-        .mouse
-        .state
-        .contains(crate::ecs::world::resources::MouseState::LEFT_CLICKED);
-    let mouse_just_pressed = world
-        .resources
-        .input
-        .mouse
-        .state
-        .contains(crate::ecs::world::resources::MouseState::LEFT_JUST_PRESSED);
-    let mouse_just_released = world
-        .resources
-        .input
-        .mouse
-        .state
-        .contains(crate::ecs::world::resources::MouseState::LEFT_JUST_RELEASED);
-
-    let scroll_delta = world.resources.input.mouse.wheel_delta;
-    world.resources.immediate_ui.begin_frame(
-        screen_size,
-        mouse_pos,
-        mouse_down,
-        mouse_just_pressed,
-        mouse_just_released,
-        scroll_delta,
-    );
-
-    for character in &world.resources.input.keyboard.frame_chars {
-        world.resources.immediate_ui.add_char_input(*character);
-    }
-    for (key_code, pressed) in &world.resources.input.keyboard.frame_keys {
-        world
-            .resources
-            .immediate_ui
-            .add_key_input(*key_code, *pressed);
-    }
-
-    world.resources.immediate_ui.font_atlas =
-        world.resources.text_cache.font_manager.get_font_arc(0);
-    world.resources.immediate_ui.delta_time = world.resources.window.timing.delta_time;
-    world.resources.immediate_ui.current_time =
-        world.resources.window.timing.uptime_milliseconds as f64 / 1000.0;
-
-    let mut ui = std::mem::take(&mut world.resources.immediate_ui);
-    state.immediate_ui(world, &mut ui);
-    world.resources.immediate_ui = ui;
-
-    world.resources.immediate_ui.end_frame();
 }
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]

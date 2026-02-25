@@ -928,10 +928,7 @@ pub mod prelude {
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
     pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
-    pub use crate::ecs::ui::{
-        ANIM_ACTIVE, ANIM_FOCUS, ANIM_HOVER, ANIM_OPEN, Anchor, ImmediateUi, Layout,
-        LayoutAlignment, LayoutStack, Rect, UiId, UiResponse, UiStyle, UiWidget,
-    };
+    pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::ui_layout::composite::CompositeWidget;
     pub use crate::ecs::ui_layout::layout_types::GridLayout;
     pub use crate::ecs::ui_layout::layout_types::{
@@ -939,17 +936,18 @@ pub mod prelude {
     };
     pub use crate::ecs::ui_layout::reactive::{UiDerivedProperty, UiProperty};
     pub use crate::ecs::ui_layout::resources::{
-        BubbledUiEvent, DrawRectParams, ReservedAreas, ToastSeverity, UiEvent, blend_color,
+        BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastSeverity, UiEvent,
+        blend_color,
     };
     pub use crate::ecs::ui_layout::{
-        Ab, AutoSizeMode, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh, Rl, Rw, ThemeColor,
-        ScalingMode, StateTransition, TextSpan, Ui, UiAnimationPhase, UiAnimationType, UiBase,
-        UiButtonData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiDepthMode,
-        UiDisabled, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType,
-        UiMenuData, UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData,
-        UiPanelKind, UiPressed, UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected,
-        UiSliderData, UiStateWeights, UiTabBarData, UiTextInputData, UiToggleData, UiTreeBuilder,
-        UiValue, UiWidgetState, Vh, Vp, Vw,
+        Ab, AutoSizeMode, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh, Rl, Rw,
+        ScalingMode, StateTransition, TextSpan, ThemeColor, Ui, UiAnimationPhase, UiAnimationType,
+        UiBase, UiButtonData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
+        UiDepthMode, UiDisabled, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot,
+        UiLayoutType, UiMenuData, UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction,
+        UiPanelData, UiPanelKind, UiPressed, UiProgressBarData, UiRadioData, UiScrollAreaData,
+        UiSelected, UiSliderData, UiStateWeights, UiTabBarData, UiTextInputData, UiToggleData,
+        UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp, Vw,
     };
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
@@ -1028,7 +1026,9 @@ pub mod prelude {
     pub use steamworks::SteamId;
 
     #[cfg(feature = "shell")]
-    pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_ui};
+    pub use crate::shell::{
+        Command, CommandRegistry, OutputLine, ShellState, shell_retained_ui, shell_ui,
+    };
 
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::ecs::file_watcher::FileWatcher;
