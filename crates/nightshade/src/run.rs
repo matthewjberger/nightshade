@@ -78,6 +78,12 @@
 //! }
 //! ```
 
+#[cfg(feature = "egui")]
+mod egui_support;
+#[cfg(all(feature = "egui", not(target_arch = "wasm32")))]
+pub(crate) use egui_support::initialize_user_interface;
+#[cfg(feature = "egui")]
+pub(crate) use egui_support::update_egui_scale_factor;
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 mod mcp_commands;
 
@@ -336,7 +342,7 @@ pub(crate) fn step(
             }
 
             #[cfg(feature = "egui")]
-            create_ui_system(world, state);
+            egui_support::create_ui_system(world, state);
             #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
             world.resources.steam.run_callbacks();
 
@@ -412,7 +418,7 @@ pub(crate) fn step(
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("event_handling").entered();
     #[cfg(feature = "egui")]
-    ui_event_system(world, event);
+    egui_support::ui_event_system(world, event);
     input_event_system(world, event);
     timing_system(world, event);
 }
@@ -421,20 +427,6 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     let schedule = std::mem::take(&mut world.resources.frame_schedule);
     schedule.run(world);
     world.resources.frame_schedule = schedule;
-}
-
-#[cfg(feature = "egui")]
-fn ui_event_system(world: &mut World, window_event: &WindowEvent) {
-    let _span = tracing::info_span!("ui_event").entered();
-    let Some(gui_state) = &mut world.resources.user_interface.state else {
-        return;
-    };
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
-        return;
-    };
-    world.resources.user_interface.consumed_event = gui_state
-        .on_window_event(window_handle, window_event)
-        .consumed;
 }
 
 fn input_event_system(world: &mut World, window_event: &WindowEvent) {
@@ -1118,7 +1110,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             #[cfg(feature = "egui")]
-            initialize_user_interface(&mut self.world);
+            egui_support::initialize_user_interface(&mut self.world);
             self.world.resources.frame_schedule = crate::schedule::build_default_frame_schedule();
             self.state.initialize(&mut self.world);
             crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
@@ -1152,7 +1144,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 }
                 self.renderer = Some(renderer);
                 #[cfg(feature = "egui")]
-                initialize_user_interface(&mut self.world);
+                egui_support::initialize_user_interface(&mut self.world);
                 self.world.resources.frame_schedule =
                     crate::schedule::build_default_frame_schedule();
                 self.state.initialize(&mut self.world);
@@ -1188,26 +1180,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
                 #[cfg(feature = "egui")]
-                if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        let scale_factor =
-                            self.world.resources.graphics.ui_scale.unwrap_or_else(|| {
-                                self.world
-                                    .resources
-                                    .window
-                                    .handle
-                                    .as_ref()
-                                    .map(|w| w.scale_factor() as f32)
-                                    .unwrap_or(1.0)
-                            });
-                        gui_state.egui_ctx().set_pixels_per_point(scale_factor);
-                    }
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        gui_state.egui_ctx().set_pixels_per_point(1.0);
-                    }
-                }
+                egui_support::update_egui_scale_factor(&mut self.world);
             }
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
                 if width > 0 && height > 0 =>
@@ -1235,26 +1208,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 }
 
                 #[cfg(feature = "egui")]
-                if let Some(gui_state) = self.world.resources.user_interface.state.as_mut() {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        let scale_factor =
-                            self.world.resources.graphics.ui_scale.unwrap_or_else(|| {
-                                self.world
-                                    .resources
-                                    .window
-                                    .handle
-                                    .as_ref()
-                                    .map(|w| w.scale_factor() as f32)
-                                    .unwrap_or(1.0)
-                            });
-                        gui_state.egui_ctx().set_pixels_per_point(scale_factor);
-                    }
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        gui_state.egui_ctx().set_pixels_per_point(1.0);
-                    }
-                }
+                egui_support::update_egui_scale_factor(&mut self.world);
             }
             _ => {}
         }
@@ -1311,96 +1265,6 @@ pub(crate) fn request_redraw_system(world: &mut World) {
         return;
     }
     window_handle.request_redraw();
-}
-
-#[cfg(feature = "egui")]
-pub(crate) fn initialize_user_interface(world: &mut World) {
-    let window_handle = {
-        let Some(window_handle) = world.resources.window.handle.as_mut() else {
-            return;
-        };
-        window_handle.clone()
-    };
-
-    let gui_context = egui::Context::default();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        gui_context.set_pixels_per_point(1.0);
-    }
-
-    let viewport_id = gui_context.viewport_id();
-    let gui_state = egui_winit::State::new(
-        gui_context,
-        viewport_id,
-        &window_handle,
-        Some(window_handle.scale_factor() as _),
-        Some(winit::window::Theme::Dark),
-        None,
-    );
-
-    egui_extras::install_image_loaders(gui_state.egui_ctx());
-
-    world.resources.user_interface.state = Some(gui_state);
-}
-
-#[cfg(feature = "egui")]
-fn create_ui_system(world: &mut World, state: &mut Box<dyn State + 'static>) {
-    let _span = tracing::info_span!("ui").entered();
-    if !world.resources.user_interface.enabled {
-        return;
-    }
-
-    let ui = {
-        let Some(gui_state) = world.resources.user_interface.state.as_mut() else {
-            return;
-        };
-        let Some(window_handle) = world.resources.window.handle.as_ref() else {
-            return;
-        };
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let scale_factor = world
-                .resources
-                .graphics
-                .ui_scale
-                .unwrap_or_else(|| window_handle.scale_factor() as f32);
-            gui_state.egui_ctx().set_pixels_per_point(scale_factor);
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let gui_input = gui_state.take_egui_input(window_handle);
-
-        #[cfg(target_arch = "wasm32")]
-        let gui_input = {
-            use winit::platform::web::WindowExtWebSys;
-            let mut input = gui_state.take_egui_input(window_handle);
-            if let Some(canvas) = window_handle.canvas() {
-                let dpr = window_handle.scale_factor() as f32;
-                let canvas_size =
-                    egui::vec2(canvas.width() as f32 / dpr, canvas.height() as f32 / dpr);
-                input.screen_rect = Some(egui::Rect::from_min_size(egui::Pos2::ZERO, canvas_size));
-            }
-            input
-        };
-
-        gui_state.egui_ctx().begin_pass(gui_input);
-        gui_state.egui_ctx().clone()
-    };
-
-    state.ui(world, &ui);
-
-    let Some(gui_state) = world.resources.user_interface.state.as_mut() else {
-        return;
-    };
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
-        return;
-    };
-    let output = ui.end_pass();
-    gui_state.handle_platform_output(window_handle, output.platform_output.clone());
-    let paint_jobs = ui.tessellate(output.shapes.clone(), output.pixels_per_point);
-    world.resources.user_interface.frame_output = Some((output, paint_jobs));
 }
 
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
