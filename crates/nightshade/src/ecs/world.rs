@@ -196,6 +196,8 @@ freecs::ecs! {
         ui_node_interaction: crate::ecs::ui::components::UiNodeInteraction => UI_NODE_INTERACTION,
         ui_state_weights: crate::ecs::ui::components::UiStateWeights => UI_STATE_WEIGHTS,
         ui_widget_state: crate::ecs::ui::components::UiWidgetState => UI_WIDGET_STATE,
+        ui_drag_source: crate::ecs::ui::components::UiDragSource => UI_DRAG_SOURCE,
+        ui_drop_target: crate::ecs::ui::components::UiDropTarget => UI_DROP_TARGET,
     }
     Resources {
         world_id: u64,

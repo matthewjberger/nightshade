@@ -929,10 +929,11 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
-    pub use crate::ecs::ui::composite::CompositeWidget;
+    pub use crate::ecs::ui::composite::{CompositeWidget, UiInteractionContext};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
-        BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
+        BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
+        SolidLayout, WindowLayout,
     };
     pub use crate::ecs::ui::reactive::{UiDerivedProperty, UiProperty};
     pub use crate::ecs::ui::resources::{
