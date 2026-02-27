@@ -115,6 +115,7 @@ behaviors = []
 lattice = []
 sdf_sculpt = []
 mosaic = ["egui", "dep:serde_json", "dep:bincode", "dep:indexmap"]
+syntax_highlighting = ["dep:syntect"]
 editor = ["mosaic", "picking", "dep:syntect", "dep:arboard"]
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
@@ -139,6 +140,7 @@ full = [
     "plugins",
     "claude",
     "mcp",
+    "syntax_highlighting",
 ]
 
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
@@ -201,6 +203,7 @@ ehttp = { workspace = true, optional = true }
 egui-wgpu = { workspace = true, optional = true }
 egui_tiles = { version = "0.14", optional = true }
 wgpu = { workspace = true, optional = true }
+syntect = { version = "5.3", default-features = false, features = ["default-syntaxes", "default-themes", "regex-fancy"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dirs = { version = "6.0", optional = true }
@@ -223,7 +226,6 @@ steamworks-sys = { workspace = true, optional = true }
 wasmtime = { version = "40.0", optional = true }
 wasmtime-wasi = { version = "40.0", optional = true }
 anyhow = { version = "1.0", optional = true }
-syntect = { version = "5.3", default-features = false, features = ["default-fancy"], optional = true }
 arboard = { version = "3.0", optional = true }
 ufbx = { version = "0.10", optional = true }
 wry = { version = "0.54", optional = true }

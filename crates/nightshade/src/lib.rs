@@ -823,7 +823,9 @@ pub mod prelude {
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
     pub use crate::run::*;
-    pub use crate::schedule::{FrameSchedule, FrameScheduleEntry, SystemFn, system_names};
+    pub use crate::schedule::{
+        FrameSchedule, FrameScheduleEntry, SystemFn, run_retained_ui_systems, system_names,
+    };
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -927,29 +929,30 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
-    pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
-    pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
-    pub use crate::ecs::ui_layout::composite::CompositeWidget;
-    pub use crate::ecs::ui_layout::layout_types::GridLayout;
-    pub use crate::ecs::ui_layout::layout_types::{
+    pub use crate::ecs::ui::composite::CompositeWidget;
+    pub use crate::ecs::ui::layout_types::GridLayout;
+    pub use crate::ecs::ui::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, SolidLayout, WindowLayout,
     };
-    pub use crate::ecs::ui_layout::reactive::{UiDerivedProperty, UiProperty};
-    pub use crate::ecs::ui_layout::resources::{
+    pub use crate::ecs::ui::reactive::{UiDerivedProperty, UiProperty};
+    pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastSeverity, UiEvent,
         blend_color,
     };
-    pub use crate::ecs::ui_layout::{
-        Ab, AutoSizeMode, CanvasCommand, ContextMenuBuilder, DataGridColumn, Em, ResizeEdge, Rh,
-        Rl, Rw, ScalingMode, SplitDirection, StateTransition, TextSpan, ThemeColor, TileBuilder,
-        TileId, TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiButtonData,
-        UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiDepthMode,
-        UiDisabled, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType,
-        UiMenuData, UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData,
-        UiPanelKind, UiPressed, UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected,
-        UiSliderData, UiStateWeights, UiTabBarData, UiTextAreaData, UiTextInputData,
-        UiTileContainerData, UiToggleData, UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp, Vw,
+    pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
+    pub use crate::ecs::ui::{
+        Ab, AutoSizeMode, CanvasCommand, ContextMenuBuilder, DataGridColumn, DragValueConfig, Em,
+        ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig, SplitDirection, StateTransition,
+        TextSpan, ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode, TileNode, Ui,
+        UiAnimationPhase, UiAnimationType, UiBase, UiButtonData, UiCanvasData, UiCheckboxData,
+        UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled, UiDropdownData,
+        UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData, UiNodeAnimation,
+        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
+        UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
+        UiTabBarData, UiTextAreaData, UiTextInputData, UiTileContainerData, UiToggleData,
+        UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp, Vw,
     };
+    pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{
         capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
         force_resource_cleanup, load_hdr_skybox, load_hdr_skybox_from_path,

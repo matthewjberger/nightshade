@@ -71,7 +71,7 @@ pub mod components {
         Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
     pub use crate::ecs::tween::easing::EasingFunction;
-    pub use crate::ecs::ui_layout::components::{
+    pub use crate::ecs::ui::components::{
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
         UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding, UiWidgetState,
     };
@@ -99,7 +99,7 @@ pub mod resources {
     #[cfg(feature = "sdf_sculpt")]
     pub use crate::ecs::sdf::resources::{SdfMaterial, SdfMaterialRegistry, SdfWorld};
     pub use crate::ecs::text::resources::TextCache;
-    pub use crate::ecs::ui::resources::UserInterface;
+    pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::window::resources::{
         SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, ViewportRect, Window,
         WindowSpawnRequest, WindowTiming,
@@ -188,21 +188,21 @@ freecs::ecs! {
         tween: crate::ecs::tween::components::Tween => TWEEN,
         sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
         sprite_text: crate::ecs::sprite_text::components::SpriteText => SPRITE_TEXT,
-        ui_layout_root: crate::ecs::ui_layout::components::UiLayoutRoot => UI_LAYOUT_ROOT,
-        ui_layout_node: crate::ecs::ui_layout::components::UiLayoutNode => UI_LAYOUT_NODE,
-        ui_node_color: crate::ecs::ui_layout::components::UiNodeColor => UI_NODE_COLOR,
-        ui_theme_binding: crate::ecs::ui_layout::components::UiThemeBinding => UI_THEME_BINDING,
-        ui_node_content: crate::ecs::ui_layout::components::UiNodeContent => UI_NODE_CONTENT,
-        ui_node_interaction: crate::ecs::ui_layout::components::UiNodeInteraction => UI_NODE_INTERACTION,
-        ui_state_weights: crate::ecs::ui_layout::components::UiStateWeights => UI_STATE_WEIGHTS,
-        ui_widget_state: crate::ecs::ui_layout::components::UiWidgetState => UI_WIDGET_STATE,
+        ui_layout_root: crate::ecs::ui::components::UiLayoutRoot => UI_LAYOUT_ROOT,
+        ui_layout_node: crate::ecs::ui::components::UiLayoutNode => UI_LAYOUT_NODE,
+        ui_node_color: crate::ecs::ui::components::UiNodeColor => UI_NODE_COLOR,
+        ui_theme_binding: crate::ecs::ui::components::UiThemeBinding => UI_THEME_BINDING,
+        ui_node_content: crate::ecs::ui::components::UiNodeContent => UI_NODE_CONTENT,
+        ui_node_interaction: crate::ecs::ui::components::UiNodeInteraction => UI_NODE_INTERACTION,
+        ui_state_weights: crate::ecs::ui::components::UiStateWeights => UI_STATE_WEIGHTS,
+        ui_widget_state: crate::ecs::ui::components::UiWidgetState => UI_WIDGET_STATE,
     }
     Resources {
         world_id: u64,
         is_runtime: bool,
         window: crate::ecs::window::resources::Window,
         secondary_windows: crate::ecs::window::resources::SecondaryWindows,
-        user_interface: crate::ecs::ui::resources::UserInterface,
+        user_interface: crate::ecs::ui::UserInterface,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         #[cfg(feature = "audio")]
@@ -249,7 +249,7 @@ freecs::ecs! {
         entity_names: std::collections::HashMap<String, freecs::Entity>,
         pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
         ibl_views: crate::ecs::graphics::resources::IblViews,
-        retained_ui: crate::ecs::ui_layout::resources::RetainedUiState,
+        retained_ui: crate::ecs::ui::resources::RetainedUiState,
         frame_schedule: crate::schedule::FrameSchedule,
         sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
