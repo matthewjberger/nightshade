@@ -935,23 +935,27 @@ pub mod prelude {
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
         SolidLayout, WindowLayout,
     };
-    pub use crate::ecs::ui::reactive::{UiDerivedProperty, UiProperty};
     pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastSeverity, UiEvent,
         blend_color,
     };
     pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
     pub use crate::ecs::ui::{
-        Ab, AutoSizeMode, CanvasCommand, ContextMenuBuilder, DataGridColumn, DragValueConfig, Em,
-        ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig, SplitDirection, StateTransition,
-        TextSpan, ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode, TileNode, Ui,
-        UiAnimationPhase, UiAnimationType, UiBase, UiButtonData, UiCanvasData, UiCheckboxData,
-        UiCollapsingHeaderData, UiColorPickerData, UiDepthMode, UiDisabled, UiDropdownData,
-        UiFocused, UiHover, UiLayoutNode, UiLayoutRoot, UiLayoutType, UiMenuData, UiNodeAnimation,
-        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
-        UiProgressBarData, UiRadioData, UiScrollAreaData, UiSelected, UiSliderData, UiStateWeights,
-        UiTabBarData, UiTextAreaData, UiTextInputData, UiTileContainerData, UiToggleData,
-        UiTreeBuilder, UiValue, UiWidgetState, Vh, Vp, Vw,
+        Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
+        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, FromPropertyValue, FromWidgetState,
+        InputMask, IntoPropertyValue, ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig,
+        SplitDirection, StateTransition, TextSpan, ThemeColor, TileBuilder, TileId, TileLayout,
+        TileLayoutNode, TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData,
+        UiButtonData, UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
+        UiCommandPaletteData, UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode,
+        UiDisabled, UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode,
+        UiLayoutRoot, UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData,
+        UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind,
+        UiPressed, UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData,
+        UiRichTextData, UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected,
+        UiSliderData, UiSplitterData, UiStateWeights, UiTabBarData, UiTextAreaData,
+        UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
+        UiTreeViewData, UiValue, UiVirtualListData, UiWidgetState, ValidationRule, Vh, Vp, Vw,
     };
     pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{

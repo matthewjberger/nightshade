@@ -54,7 +54,7 @@ file_watcher = [
 
 text = [
     "core",
-    "dep:fontdue",
+    "dep:swash",
     "dep:ttf-parser",
 ]
 
@@ -168,7 +168,7 @@ bitflags = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 egui = { workspace = true, optional = true }
 egui_extras = { workspace = true, optional = true }
-fontdue = { version = "0.9", optional = true }
+swash = { version = "0.2", optional = true }
 ttf-parser = { version = "0.25", optional = true }
 freecs = { workspace = true, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
