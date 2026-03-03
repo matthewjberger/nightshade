@@ -84,8 +84,8 @@ pub mod resources {
     pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
-        Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, IblViews, TonemapAlgorithm,
-        VertexSnap,
+        Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, IblViews, MeshLodChain,
+        MeshLodLevel, TonemapAlgorithm, VertexSnap,
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::material::resources::MaterialRegistry;
