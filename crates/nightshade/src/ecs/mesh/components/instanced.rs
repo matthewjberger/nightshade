@@ -1,6 +1,5 @@
 use nalgebra_glm::{Mat3, Mat4, Quat, Vec3};
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::collections::HashSet;
 
 /// GPU instance data containing model and normal matrices.
@@ -158,7 +157,7 @@ pub struct InstancedMesh {
     #[serde(skip)]
     pub custom_data: Vec<InstanceCustomData>,
     #[serde(skip)]
-    dirty_custom_data_indices: RefCell<HashSet<usize>>,
+    dirty_custom_data_indices: HashSet<usize>,
     #[serde(skip)]
     pub dirty: bool,
     #[serde(skip)]
@@ -173,6 +172,8 @@ pub struct InstancedMesh {
     local_matrices_valid: bool,
     #[serde(skip)]
     cached_model_matrices: Vec<InstanceModelMatrix>,
+    #[serde(skip)]
+    local_matrices_gpu_dirty: bool,
 }
 
 impl Default for InstancedMesh {
@@ -181,7 +182,7 @@ impl Default for InstancedMesh {
             mesh_name: "Cube".to_string(),
             instances: Vec::new(),
             custom_data: Vec::new(),
-            dirty_custom_data_indices: RefCell::new(HashSet::new()),
+            dirty_custom_data_indices: HashSet::new(),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -189,6 +190,7 @@ impl Default for InstancedMesh {
             cached_parent_transform: Mat4::identity(),
             local_matrices_valid: false,
             cached_model_matrices: Vec::new(),
+            local_matrices_gpu_dirty: true,
         }
     }
 }
@@ -199,9 +201,7 @@ impl Clone for InstancedMesh {
             mesh_name: self.mesh_name.clone(),
             instances: self.instances.clone(),
             custom_data: self.custom_data.clone(),
-            dirty_custom_data_indices: RefCell::new(
-                self.dirty_custom_data_indices.borrow().clone(),
-            ),
+            dirty_custom_data_indices: self.dirty_custom_data_indices.clone(),
             dirty: self.dirty,
             cached_local_matrices: self.cached_local_matrices.clone(),
             cached_world_matrices: self.cached_world_matrices.clone(),
@@ -209,6 +209,7 @@ impl Clone for InstancedMesh {
             cached_parent_transform: self.cached_parent_transform,
             local_matrices_valid: self.local_matrices_valid,
             cached_model_matrices: self.cached_model_matrices.clone(),
+            local_matrices_gpu_dirty: self.local_matrices_gpu_dirty,
         }
     }
 }
@@ -220,7 +221,7 @@ impl InstancedMesh {
             mesh_name: mesh_name.to_string(),
             instances: Vec::new(),
             custom_data: Vec::new(),
-            dirty_custom_data_indices: RefCell::new(HashSet::new()),
+            dirty_custom_data_indices: HashSet::new(),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -228,17 +229,17 @@ impl InstancedMesh {
             cached_parent_transform: Mat4::identity(),
             local_matrices_valid: false,
             cached_model_matrices: Vec::new(),
+            local_matrices_gpu_dirty: true,
         }
     }
 
-    /// Creates an instanced mesh with initial instance transforms.
     pub fn with_instances(mesh_name: &str, instances: Vec<InstanceTransform>) -> Self {
         let instance_count = instances.len();
         Self {
             mesh_name: mesh_name.to_string(),
             instances,
             custom_data: vec![InstanceCustomData::default(); instance_count],
-            dirty_custom_data_indices: RefCell::new(HashSet::new()),
+            dirty_custom_data_indices: HashSet::new(),
             dirty: true,
             cached_local_matrices: Vec::new(),
             cached_world_matrices: Vec::new(),
@@ -246,6 +247,7 @@ impl InstancedMesh {
             cached_parent_transform: Mat4::identity(),
             local_matrices_valid: false,
             cached_model_matrices: Vec::new(),
+            local_matrices_gpu_dirty: true,
         }
     }
 
@@ -255,6 +257,7 @@ impl InstancedMesh {
         self.custom_data.push(InstanceCustomData::default());
         self.dirty = true;
         self.local_matrices_valid = false;
+        self.local_matrices_gpu_dirty = true;
     }
 
     /// Adds multiple instances at once.
@@ -266,6 +269,7 @@ impl InstancedMesh {
             .extend(std::iter::repeat_n(InstanceCustomData::default(), count));
         self.dirty = true;
         self.local_matrices_valid = false;
+        self.local_matrices_gpu_dirty = true;
     }
 
     /// Removes all instances.
@@ -276,9 +280,10 @@ impl InstancedMesh {
         self.cached_world_matrices.clear();
         self.cached_normal_matrices.clear();
         self.cached_model_matrices.clear();
-        self.dirty_custom_data_indices.borrow_mut().clear();
+        self.dirty_custom_data_indices.clear();
         self.dirty = true;
         self.local_matrices_valid = false;
+        self.local_matrices_gpu_dirty = true;
     }
 
     /// Replaces all instances with the given transforms.
@@ -286,9 +291,10 @@ impl InstancedMesh {
         let count = instances.len();
         self.instances = instances;
         self.custom_data = vec![InstanceCustomData::default(); count];
-        self.dirty_custom_data_indices.borrow_mut().clear();
+        self.dirty_custom_data_indices.clear();
         self.dirty = true;
         self.local_matrices_valid = false;
+        self.local_matrices_gpu_dirty = true;
     }
 
     /// Returns the number of instances.
@@ -311,6 +317,7 @@ impl InstancedMesh {
             *existing = transform;
             self.dirty = true;
             self.local_matrices_valid = false;
+            self.local_matrices_gpu_dirty = true;
         }
     }
 
@@ -319,7 +326,8 @@ impl InstancedMesh {
         if index < self.instances.len() {
             self.dirty = true;
             self.local_matrices_valid = false;
-            self.dirty_custom_data_indices.borrow_mut().clear();
+            self.local_matrices_gpu_dirty = true;
+            self.dirty_custom_data_indices.clear();
             self.custom_data.remove(index);
             Some(self.instances.remove(index))
         } else {
@@ -338,7 +346,7 @@ impl InstancedMesh {
             && data.tint != tint
         {
             data.tint = tint;
-            self.dirty_custom_data_indices.borrow_mut().insert(index);
+            self.dirty_custom_data_indices.insert(index);
         }
     }
 
@@ -347,17 +355,23 @@ impl InstancedMesh {
         &self.custom_data
     }
 
-    /// Takes and returns the set of dirty custom data indices, clearing the internal set.
-    pub fn take_dirty_custom_data_indices(&self) -> HashSet<usize> {
-        std::mem::take(&mut *self.dirty_custom_data_indices.borrow_mut())
+    pub fn take_dirty_custom_data_indices(&mut self) -> HashSet<usize> {
+        std::mem::take(&mut self.dirty_custom_data_indices)
     }
 
-    /// Returns `true` if any instance custom data has been modified.
     pub fn has_dirty_custom_data(&self) -> bool {
-        !self.dirty_custom_data_indices.borrow().is_empty()
+        !self.dirty_custom_data_indices.is_empty()
     }
 
-    fn ensure_local_matrices_cached(&mut self) {
+    pub fn local_matrices_gpu_dirty(&self) -> bool {
+        self.local_matrices_gpu_dirty
+    }
+
+    pub fn clear_local_matrices_gpu_dirty(&mut self) {
+        self.local_matrices_gpu_dirty = false;
+    }
+
+    pub fn ensure_local_matrices_cached(&mut self) {
         if !self.local_matrices_valid || self.cached_local_matrices.len() != self.instances.len() {
             self.cached_local_matrices.clear();
             self.cached_local_matrices.reserve(self.instances.len());
@@ -368,15 +382,23 @@ impl InstancedMesh {
         }
     }
 
-    /// Recomputes world matrices if the parent transform or instances changed.
-    pub fn update_world_matrices(&mut self, parent_transform: &Mat4) {
+    pub fn cached_local_matrices(&self) -> &[Mat4] {
+        &self.cached_local_matrices
+    }
+
+    pub fn update_world_matrices(&mut self, parent_transform: &Mat4) -> bool {
         self.ensure_local_matrices_cached();
 
         let parent_changed = self.cached_parent_transform != *parent_transform;
-        let needs_world_update =
-            parent_changed || self.cached_world_matrices.len() != self.cached_local_matrices.len();
+        let count_changed = self.cached_world_matrices.len() != self.cached_local_matrices.len();
 
-        if needs_world_update {
+        if !self.dirty && !count_changed && parent_changed {
+            self.cached_parent_transform = *parent_transform;
+            self.dirty = false;
+            return true;
+        }
+
+        if self.dirty || parent_changed || count_changed {
             self.cached_world_matrices.clear();
             self.cached_world_matrices
                 .reserve(self.cached_local_matrices.len());
@@ -400,6 +422,7 @@ impl InstancedMesh {
             self.cached_parent_transform = *parent_transform;
         }
         self.dirty = false;
+        false
     }
 
     /// Returns the cached world-space matrices for all instances.

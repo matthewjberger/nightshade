@@ -124,7 +124,8 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if world.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
+        if (world.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
+            || world.entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
             && !world.entity_has_components(entity, crate::ecs::world::SPRITE)
         {
             render_dirty_entities.push(entity);
