@@ -12,7 +12,7 @@ Use the [nightshade-template](https://github.com/matthewjberger/nightshade-templ
 
 ```toml
 [dependencies]
-nightshade = "0.8.0"
+nightshade = "0.8.1"
 ```
 
 ### Basic Example
