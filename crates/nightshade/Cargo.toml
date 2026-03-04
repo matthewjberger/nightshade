@@ -146,7 +146,7 @@ full = [
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
-tracing = ["dep:tracing-appender"]
+tracing = ["dep:tracing-appender", "dep:chrono"]
 tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
 plugins = []
@@ -211,6 +211,7 @@ rfd = { version = "0.17", optional = true }
 rhai = { version = "1.23", optional = true, features = ["sync"] }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-appender = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 egui-winit = { workspace = true, optional = true }

@@ -149,32 +149,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
     let (log_config, log_file_name) = {
         let config = state.log_config();
-        let title = state.title();
-        let sanitized: String = title
-            .chars()
-            .map(|character| {
-                if character.is_alphanumeric() || character == '-' || character == '_' {
-                    character
-                } else {
-                    '_'
-                }
-            })
-            .collect();
-        let base_name = if sanitized.is_empty() {
-            "app".to_string()
-        } else {
-            sanitized.to_lowercase()
-        };
-        let file_name = match config.rotation {
-            LogRotation::PerSession => {
-                let session_timestamp = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-                format!("{base_name}_{session_timestamp}.log")
-            }
-            LogRotation::Daily | LogRotation::Never => format!("{base_name}.log"),
-        };
+        let file_name = log_file_name(state.title(), &config);
         (config, file_name)
     };
 
@@ -873,6 +848,9 @@ pub struct LogConfig {
     pub rotation: LogRotation,
     /// Default `RUST_LOG` filter when the environment variable is not set.
     pub default_filter: String,
+    /// chrono format string for per-session log timestamps.
+    /// Default: `"%Y-%m-%d_%H-%M-%S"` produces `2026-03-04_14-30-00`.
+    pub timestamp_format: String,
 }
 
 impl Default for LogConfig {
@@ -881,7 +859,34 @@ impl Default for LogConfig {
             directory: "logs".to_string(),
             rotation: LogRotation::PerSession,
             default_filter: "info".to_string(),
+            timestamp_format: "%Y-%m-%d_%H-%M-%S".to_string(),
         }
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
+pub fn log_file_name(title: &str, config: &LogConfig) -> String {
+    let sanitized: String = title
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() || character == '-' || character == '_' {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let base_name = if sanitized.is_empty() {
+        "app".to_string()
+    } else {
+        sanitized.to_lowercase()
+    };
+    match config.rotation {
+        LogRotation::PerSession => {
+            let timestamp = chrono::Local::now().format(&config.timestamp_format);
+            format!("{base_name}_{timestamp}.log")
+        }
+        LogRotation::Daily | LogRotation::Never => format!("{base_name}.log"),
     }
 }
 
