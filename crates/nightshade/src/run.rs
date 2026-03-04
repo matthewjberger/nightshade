@@ -146,6 +146,38 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 
 /// Launches a windowed application (desktop or web).
 pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
+    let (log_config, log_file_name) = {
+        let config = state.log_config();
+        let title = state.title();
+        let sanitized: String = title
+            .chars()
+            .map(|character| {
+                if character.is_alphanumeric() || character == '-' || character == '_' {
+                    character
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let base_name = if sanitized.is_empty() {
+            "app".to_string()
+        } else {
+            sanitized.to_lowercase()
+        };
+        let file_name = match config.rotation {
+            LogRotation::PerSession => {
+                let session_timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                format!("{base_name}_{session_timestamp}.log")
+            }
+            LogRotation::Daily | LogRotation::Never => format!("{base_name}.log"),
+        };
+        (config, file_name)
+    };
+
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "tracing")))]
     tracing_subscriber::fmt::init();
 
@@ -160,11 +192,16 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
+        let file_appender = match log_config.rotation {
+            LogRotation::Daily => {
+                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
+            }
+            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
+        };
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-        let env_filter =
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
 
         tracing_subscriber::registry()
             .with(env_filter)
@@ -189,11 +226,16 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
+        let file_appender = match log_config.rotation {
+            LogRotation::Daily => {
+                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
+            }
+            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
+        };
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-        let env_filter =
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
 
         tracing_subscriber::registry()
             .with(env_filter)
@@ -219,11 +261,16 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
+        let file_appender = match log_config.rotation {
+            LogRotation::Daily => {
+                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
+            }
+            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
+        };
         let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
 
-        let env_filter =
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
 
         let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
             .file("logs/trace.json")
@@ -249,11 +296,16 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let file_appender = tracing_appender::rolling::never("logs", "nightshade.log");
+        let file_appender = match log_config.rotation {
+            LogRotation::Daily => {
+                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
+            }
+            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
+        };
         let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
 
-        let env_filter =
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
 
         let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
             .file("logs/trace.json")
@@ -801,6 +853,38 @@ fn forward_window_events(
     }
 }
 
+/// Controls how log files are rotated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogRotation {
+    /// New log file each application launch (timestamp in filename).
+    PerSession,
+    /// One log file per day.
+    Daily,
+    /// Single log file, appended to on each launch.
+    Never,
+}
+
+/// Configuration for file-based logging (desktop only, requires `tracing` feature).
+#[derive(Debug, Clone)]
+pub struct LogConfig {
+    /// Directory for log files (relative to working directory).
+    pub directory: String,
+    /// Log rotation strategy.
+    pub rotation: LogRotation,
+    /// Default `RUST_LOG` filter when the environment variable is not set.
+    pub default_filter: String,
+}
+
+impl Default for LogConfig {
+    fn default() -> Self {
+        Self {
+            directory: "logs".to_string(),
+            rotation: LogRotation::PerSession,
+            default_filter: "info".to_string(),
+        }
+    }
+}
+
 /// Application state trait for game logic and rendering.
 ///
 /// Implement this trait to define your application behavior. The engine calls
@@ -809,6 +893,11 @@ pub trait State {
     /// Window title (desktop only).
     fn title(&self) -> &str {
         "Nightshade"
+    }
+
+    /// Logging configuration (desktop only, requires `tracing` feature).
+    fn log_config(&self) -> LogConfig {
+        LogConfig::default()
     }
     /// Window icon as PNG bytes (desktop only).
     fn icon_bytes(&self) -> Option<&'static [u8]> {
