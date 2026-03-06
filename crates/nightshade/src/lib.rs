@@ -939,7 +939,7 @@ pub mod prelude {
         BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastSeverity, UiEvent,
         blend_color,
     };
-    pub use crate::ecs::ui::testing::{UiTestDriver, UiTestResult};
+    pub use crate::ecs::ui::testing::{UiTestDriver, UiTestResult, setup_test_scene};
     pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
     pub use crate::ecs::ui::{
         Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
