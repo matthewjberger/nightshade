@@ -861,7 +861,7 @@ pub mod prelude {
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
-        PhysicsInterpolation, PhysicsMaterial, PhysicsMaterialComponent, RigidBodyComponent,
+        PhysicsInterpolation, RigidBodyComponent,
     };
     #[cfg(feature = "picking")]
     pub use crate::ecs::picking::{

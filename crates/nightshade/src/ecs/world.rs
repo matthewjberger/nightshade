@@ -167,7 +167,6 @@ freecs::ecs! {
         casts_shadow: crate::ecs::shadow::components::CastsShadow => CASTS_SHADOW,
         rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
         collider: crate::ecs::physics::components::ColliderComponent => COLLIDER,
-        physics_material: crate::ecs::physics::material::PhysicsMaterialComponent => PHYSICS_MATERIAL,
         character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
         physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
         collision_listener: crate::ecs::physics::components::CollisionListener => COLLISION_LISTENER,
