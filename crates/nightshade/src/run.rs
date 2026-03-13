@@ -41,6 +41,8 @@
 //! | `on_gamepad_event()` | On gamepad event | Controller input |
 //! | `on_dropped_file()` | On file drop (desktop) | File path handling |
 //! | `on_dropped_file_data()` | On file drop (all) | File bytes handling |
+//! | `on_suspend()` | App suspended (Android) | Release resources |
+//! | `on_resume()` | App resumed (Android) | Restore resources |
 //! | `next_state()` | Every frame | State transitions |
 //!
 //! # Typical Initialize Pattern
@@ -142,6 +144,40 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
     {
         launch_windowed(state)
     }
+}
+
+#[cfg(all(target_os = "android", feature = "android"))]
+pub fn launch_android(
+    app: android_activity::AndroidApp,
+    state: impl State + 'static,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+
+    tracing_subscriber::registry()
+        .with(tracing_android::layer("nightshade").expect("Failed to create Android log layer"))
+        .init();
+
+    let state = Box::new(state);
+    let mut world = World::default();
+    world.resources.android_app = Some(app.clone());
+    crate::filesystem::set_android_app(app.clone());
+
+    let event_loop = EventLoop::builder().with_android_app(app).build()?;
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    let mut context = WindowContext {
+        state,
+        world,
+        renderer: None,
+        snapshot_path: None,
+        snapshot_queued: false,
+        initialized: false,
+    };
+    event_loop.run_app(&mut context)?;
+
+    Ok(())
 }
 
 /// Launches a windowed application (desktop or web).
@@ -338,6 +374,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
             world,
             renderer: None,
             renderer_receiver: None,
+            initialized: false,
         };
         event_loop.run_app(&mut context)?;
     }
@@ -1021,6 +1058,10 @@ pub trait State {
     /// Handle gamepad events (requires `gamepad` feature).
     #[cfg(feature = "gamepad")]
     fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
+    /// Called when the application is suspended (Android lifecycle).
+    fn on_suspend(&mut self, _world: &mut World) {}
+    /// Called when the application is resumed (Android lifecycle).
+    fn on_resume(&mut self, _world: &mut World) {}
     /// Handle mouse button input (not consumed by UI).
     fn on_mouse_input(
         &mut self,
@@ -1068,10 +1109,21 @@ pub struct WindowContext {
     pub snapshot_path: Option<std::path::PathBuf>,
     #[cfg(not(target_arch = "wasm32"))]
     pub snapshot_queued: bool,
+    pub initialized: bool,
 }
 
 impl winit::application::ApplicationHandler for WindowContext {
+    fn suspended(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
+        self.state.on_suspend(&mut self.world);
+        self.renderer = None;
+        self.world.resources.window.handle = None;
+    }
+
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if self.world.resources.window.handle.is_some() {
+            return;
+        }
+
         let mut attributes = winit::window::Window::default_attributes();
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -1205,9 +1257,16 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             #[cfg(feature = "egui")]
             egui_support::initialize_user_interface(&mut self.world);
-            self.world.resources.frame_schedule = crate::schedule::build_default_frame_schedule();
-            self.state.initialize(&mut self.world);
-            crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
+
+            if !self.initialized {
+                self.world.resources.frame_schedule =
+                    crate::schedule::build_default_frame_schedule();
+                self.state.initialize(&mut self.world);
+                crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
+                self.initialized = true;
+            }
+
+            self.state.on_resume(&mut self.world);
 
             if self.world.resources.graphics.use_fullscreen
                 && let Some(window_handle) = &self.world.resources.window.handle
@@ -1269,6 +1328,9 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
 
         match event {
+            winit::event::WindowEvent::Focused(focused) => {
+                self.world.resources.window.is_focused = focused;
+            }
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;

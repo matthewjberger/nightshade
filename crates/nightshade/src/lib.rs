@@ -995,9 +995,17 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "plugin_runtime"))]
     pub use anyhow;
-    #[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        feature = "file_dialog"
+    ))]
     pub use dirs;
-    #[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        feature = "file_dialog"
+    ))]
     pub use rfd;
 
     #[cfg(target_arch = "wasm32")]
@@ -1045,4 +1053,11 @@ pub mod prelude {
 
     #[cfg(feature = "fft")]
     pub use crate::ecs::audio::AudioAnalyzer;
+
+    #[cfg(all(target_os = "android", feature = "android"))]
+    pub use crate::filesystem::{get_android_app, read_android_asset};
+    #[cfg(all(target_os = "android", feature = "android"))]
+    pub use crate::run::launch_android;
+    #[cfg(all(target_os = "android", feature = "android"))]
+    pub use android_activity::AndroidApp;
 }

@@ -53,6 +53,34 @@ init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
 
+# Install Android tooling
+init-android:
+    rustup target add aarch64-linux-android
+    rustup target add x86_64-linux-android
+    cargo install --locked xbuild
+
+# Build the app for Android (arm64)
+[unix]
+build-android $project="nightshade-editor":
+    x build --release --platform android --arch arm64 -p {{project}} --features android
+
+[windows]
+build-android $project="nightshade-editor":
+    x build --release --platform android --arch arm64 -p {{project}} --features android
+
+# Install the app on connected Android device
+install-android device $project="nightshade-editor":
+    x build --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
+    adb -s {{device}} install -r target/x/release/android/app.apk
+
+# Run the app on connected Android device
+run-android device $project="nightshade-editor":
+    x run --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
+
+# List connected Android devices
+list-android:
+    adb devices
+
 # Install development tools
 install-tools:
     cargo install cargo-license

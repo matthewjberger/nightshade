@@ -70,6 +70,8 @@ wgpu = { version = "27.0.1", default-features = false }
 wgpu-hal = { version = "28.0.1", features = ["vulkan"] }
 winit = { version = "0.30.13", features = ["serde"] }
 
+android-activity = { version = "0.6", features = ["native-activity"] }
+tracing-android = "0.2"
 openxr = { version = "0.21", features = ["static", "loaded"] }
 ash = "0.38"
 gpu-allocator = "0.28"

@@ -259,6 +259,8 @@ freecs::ecs! {
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         #[cfg(all(feature = "assets", feature = "file_watcher", not(target_arch = "wasm32")))]
         asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
+        #[cfg(all(target_os = "android", feature = "android"))]
+        android_app: Option<android_activity::AndroidApp>,
     }
 }
 

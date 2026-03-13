@@ -4,6 +4,9 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 nightshade = { version = "0.8.2", features = ["egui"] }
 
@@ -18,6 +21,7 @@ openxr = ["nightshade/openxr"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]
 mcp = ["nightshade/mcp"]
+android = ["nightshade/android"]
 
 # For very small final binary size,
 # uncomment the following release profile and build with it

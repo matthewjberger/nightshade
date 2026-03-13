@@ -13,6 +13,10 @@ just run-wasm
 
 # openxr (vr headset)
 just run-openxr
+
+# android
+just init-android   # one-time setup
+just build-android project=template
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
@@ -38,6 +42,7 @@ Enable features with `cargo run --features <feature>`:
 | `tracing` | File logging to `logs/nightshade.log` | [Profiling](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) |
 | `openxr` | VR headset support | |
 | `steam` | Steamworks integration | [Steam](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md) |
+| `android` | Android mobile support (API 24+) | |
 | `mcp` | MCP server for AI-assisted scene manipulation | See below |
 
 ## MCP Integration (Native Only)
@@ -51,7 +56,7 @@ The `mcp` feature exposes an MCP (Model Context Protocol) server that allows AI 
 Add the feature to your dependencies:
 
 ```toml
-nightshade = { version = "0.6", features = ["egui", "mcp"] }
+nightshade = { version = "0.8", features = ["egui", "mcp"] }
 ```
 
 Or run with the feature flag:
