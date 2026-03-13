@@ -647,8 +647,9 @@
 //! ### Sprites
 //!
 //! ```ignore
-//! let sprite_entity = world.spawn_entities(SPRITE, 1)[0];
-//! world.core.set_sprite(sprite_entity, Sprite::new(
+//! let sprite_entity = world.spawn();
+//! world.sprite2d.add_components(sprite_entity, SPRITE);
+//! world.sprite2d.set_sprite(sprite_entity, Sprite::new(
 //!     Vec2::new(100.0, 100.0),  // Screen position
 //!     Vec2::new(64.0, 64.0),    // Size
 //! )

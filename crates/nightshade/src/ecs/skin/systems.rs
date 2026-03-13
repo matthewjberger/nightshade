@@ -212,7 +212,9 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
                 bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                     let index = bone_index;
 
-                    if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
+                    if let Some(joint_global_transform) =
+                        world.core.get_global_transform(joint_entity)
+                    {
                         bone_transforms.push(joint_global_transform.0);
                     } else {
                         bone_transforms.push(Mat4::identity());

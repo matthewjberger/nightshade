@@ -154,9 +154,6 @@ freecs::ecs! {
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
             material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
             render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
-            sprite: crate::ecs::sprite::components::Sprite => SPRITE,
-            sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
-            tilemap: crate::ecs::tilemap::components::Tilemap => TILEMAP,
             text: crate::ecs::text::components::Text => TEXT,
             hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
@@ -185,8 +182,6 @@ freecs::ecs! {
             grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
             grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
             tween: crate::ecs::tween::components::Tween => TWEEN,
-            sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
-            sprite_text: crate::ecs::sprite_text::components::SpriteText => SPRITE_TEXT,
         }
         Ui {
             ui_layout_root: crate::ecs::ui::components::UiLayoutRoot => UI_LAYOUT_ROOT,
@@ -199,6 +194,13 @@ freecs::ecs! {
             ui_widget_state: crate::ecs::ui::components::UiWidgetState => UI_WIDGET_STATE,
             ui_drag_source: crate::ecs::ui::components::UiDragSource => UI_DRAG_SOURCE,
             ui_drop_target: crate::ecs::ui::components::UiDropTarget => UI_DROP_TARGET,
+        }
+        Sprite2d {
+            sprite: crate::ecs::sprite::components::Sprite => SPRITE,
+            sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
+            tilemap: crate::ecs::tilemap::components::Tilemap => TILEMAP,
+            sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
+            sprite_text: crate::ecs::sprite_text::components::SpriteText => SPRITE_TEXT,
         }
     }
     Resources {

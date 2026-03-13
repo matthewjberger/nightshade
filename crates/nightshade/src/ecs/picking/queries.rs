@@ -119,7 +119,10 @@ pub fn pick_entities(
 
     let mut results = Vec::new();
 
-    for entity in world.core.query_entities(crate::ecs::world::BOUNDING_VOLUME) {
+    for entity in world
+        .core
+        .query_entities(crate::ecs::world::BOUNDING_VOLUME)
+    {
         let bounding_volume = match world.core.get_bounding_volume(entity) {
             Some(bv) => bv,
             None => continue,

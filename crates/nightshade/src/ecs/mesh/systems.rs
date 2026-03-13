@@ -9,7 +9,8 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
     let mut needs_compute_dispatch = false;
     for entity in entities {
         let parent_transform = world
-            .core.get_global_transform(entity)
+            .core
+            .get_global_transform(entity)
             .map(|t| t.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
 

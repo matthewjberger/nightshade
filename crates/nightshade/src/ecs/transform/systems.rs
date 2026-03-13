@@ -69,7 +69,8 @@ impl World {
     pub fn validate_and_rebuild_children_cache(&mut self) {
         self.resources.children_cache.clear();
 
-        let all_entities_with_parent: Vec<freecs::Entity> = self.core.query_entities(PARENT).collect();
+        let all_entities_with_parent: Vec<freecs::Entity> =
+            self.core.query_entities(PARENT).collect();
         for child in all_entities_with_parent {
             if let Some(parent) = self.core.get_parent(child)
                 && let Some(parent_entity) = parent.0
@@ -94,7 +95,8 @@ pub fn update_global_transforms_system(world: &mut World) {
     let mut dirty_entities = std::mem::take(&mut world.resources.transform_dirty_entities);
 
     let spawned_dirty: Vec<freecs::Entity> = world
-        .core.query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
+        .core
+        .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
         .collect();
     for entity in &spawned_dirty {
         dirty_entities.push(*entity);
@@ -124,9 +126,15 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if (world.core.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
-            || world.core.entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
-            && !world.core.entity_has_components(entity, crate::ecs::world::SPRITE)
+        if (world
+            .core
+            .entity_has_components(entity, crate::ecs::world::RENDER_MESH)
+            || world
+                .core
+                .entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
+            && !world
+                .core
+                .entity_has_components(entity, crate::ecs::world::SPRITE)
         {
             render_dirty_entities.push(entity);
         }
