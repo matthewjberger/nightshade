@@ -358,7 +358,7 @@ pub(crate) fn step(
 
     match event {
         WindowEvent::RedrawRequested => {
-            world.increment_tick();
+            world.core.increment_tick();
 
             #[cfg(feature = "gamepad")]
             crate::ecs::input::systems::gamepad_input_system(world);

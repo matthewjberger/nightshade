@@ -28,8 +28,8 @@ impl PickingRay {
 
         let camera_entity = world.resources.active_camera?;
 
-        let camera = world.get_camera(camera_entity)?;
-        let global_transform = world.get_global_transform(camera_entity)?;
+        let camera = world.core.get_camera(camera_entity)?;
+        let global_transform = world.core.get_global_transform(camera_entity)?;
 
         let ndc_x = (2.0 * local_pos.x) / viewport_width - 1.0;
         let ndc_y = 1.0 - (2.0 * local_pos.y) / viewport_height;
@@ -119,19 +119,19 @@ pub fn pick_entities(
 
     let mut results = Vec::new();
 
-    for entity in world.query_entities(crate::ecs::world::BOUNDING_VOLUME) {
-        let bounding_volume = match world.get_bounding_volume(entity) {
+    for entity in world.core.query_entities(crate::ecs::world::BOUNDING_VOLUME) {
+        let bounding_volume = match world.core.get_bounding_volume(entity) {
             Some(bv) => bv,
             None => continue,
         };
 
-        let global_transform = match world.get_global_transform(entity) {
+        let global_transform = match world.core.get_global_transform(entity) {
             Some(gt) => gt,
             None => continue,
         };
 
         if options.ignore_invisible
-            && let Some(visible) = world.get_visibility(entity)
+            && let Some(visible) = world.core.get_visibility(entity)
             && !visible.visible
         {
             continue;
@@ -189,12 +189,12 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
         None => return Vec::new(),
     };
 
-    let camera = match world.get_camera(camera_entity) {
+    let camera = match world.core.get_camera(camera_entity) {
         Some(cam) => cam,
         None => return Vec::new(),
     };
 
-    let global_transform = match world.get_global_transform(camera_entity) {
+    let global_transform = match world.core.get_global_transform(camera_entity) {
         Some(gt) => gt,
         None => return Vec::new(),
     };
@@ -216,12 +216,12 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
     let mut visible_entities = Vec::new();
 
     for &entity in entities {
-        let bounding_volume = match world.get_bounding_volume(entity) {
+        let bounding_volume = match world.core.get_bounding_volume(entity) {
             Some(bv) => bv,
             None => continue,
         };
 
-        let global_transform = match world.get_global_transform(entity) {
+        let global_transform = match world.core.get_global_transform(entity) {
             Some(gt) => gt,
             None => continue,
         };
@@ -279,7 +279,7 @@ pub fn pick_entities_trimesh(
         };
 
         if options.ignore_invisible
-            && let Some(visible) = world.get_visibility(entity)
+            && let Some(visible) = world.core.get_visibility(entity)
             && !visible.visible
         {
             continue;

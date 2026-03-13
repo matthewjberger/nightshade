@@ -123,6 +123,22 @@ pub enum WorldCommand {
 }
 
 impl World {
+    pub fn spawn_entities(&mut self, core_mask: u64, count: usize) -> Vec<Entity> {
+        let entities = self.spawn_count(count);
+        for &entity in &entities {
+            self.core.add_components(entity, core_mask);
+        }
+        entities
+    }
+
+    pub fn spawn_entities_ui(&mut self, ui_mask: u64, count: usize) -> Vec<Entity> {
+        let entities = self.spawn_count(count);
+        for &entity in &entities {
+            self.ui.add_components(entity, ui_mask);
+        }
+        entities
+    }
+
     pub fn queue_command(&mut self, command: WorldCommand) {
         self.resources.command_queue.push(command);
     }
@@ -213,10 +229,10 @@ fn reload_material_command(
     }
 
     let entities_to_dirty: Vec<Entity> = world
-        .query_entities(MATERIAL_REF)
+        .core.query_entities(MATERIAL_REF)
         .filter(|&entity| {
             world
-                .get_material_ref(entity)
+                .core.get_material_ref(entity)
                 .is_some_and(|mat_ref| mat_ref.name == name)
         })
         .collect();
@@ -255,14 +271,14 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
     let is_runtime = world.resources.is_runtime;
 
     for &entity in entities {
-        if let Some(name) = world.get_name(entity) {
+        if let Some(name) = world.core.get_name(entity) {
             let name_string = name.0.clone();
             world.resources.entity_names.remove(&name_string);
         }
 
         world.resources.children_cache.remove(&entity);
 
-        if let Some(parent_component) = world.get_parent(entity)
+        if let Some(parent_component) = world.core.get_parent(entity)
             && let Some(parent_entity) = parent_component.0
             && let Some(children) = world.resources.children_cache.get_mut(&parent_entity)
         {
@@ -270,7 +286,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             has_parent_entities = true;
         }
 
-        if let Some(render_mesh) = world.get_render_mesh(entity) {
+        if let Some(render_mesh) = world.core.get_render_mesh(entity) {
             if !is_runtime {
                 let mesh_name = render_mesh.name.clone();
                 if let Some(&index) = world
@@ -290,7 +306,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         }
 
         if !is_runtime {
-            if let Some(instanced_mesh) = world.get_instanced_mesh(entity) {
+            if let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) {
                 let mesh_name = instanced_mesh.mesh_name.clone();
                 if let Some(&index) = world
                     .resources
@@ -303,7 +319,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 }
             }
 
-            if let Some(material_ref) = world.get_material_ref(entity) {
+            if let Some(material_ref) = world.core.get_material_ref(entity) {
                 let material_name = material_ref.name.clone();
                 if let Some(material) = registry_entry_by_name(
                     &world.resources.material_registry.registry,
@@ -365,8 +381,8 @@ pub fn spawn_sun(world: &mut World) -> Entity {
         1,
     )[0];
 
-    world.set_name(entity, components::Name("Sun".to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name("Sun".to_string()));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
@@ -380,9 +396,9 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_light(
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_light(
         entity,
         components::Light {
             light_type: components::LightType::Directional,
@@ -410,8 +426,8 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
         1,
     )[0];
 
-    world.set_name(entity, components::Name("Sun".to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name("Sun".to_string()));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
@@ -422,9 +438,9 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_light(
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_light(
         entity,
         components::Light {
             light_type: components::LightType::Directional,
@@ -465,8 +481,8 @@ pub fn spawn_mesh_at(
         1,
     )[0];
 
-    world.set_name(entity, components::Name(mesh_name.to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name(mesh_name.to_string()));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: position,
@@ -474,8 +490,8 @@ pub fn spawn_mesh_at(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
     let render_mesh = components::RenderMesh::new(mesh_name);
 
     if !world
@@ -510,7 +526,7 @@ pub fn spawn_mesh_at(
         world.resources.mesh_cache.registry.add_reference(index);
     }
 
-    world.set_render_mesh(entity, render_mesh);
+    world.core.set_render_mesh(entity, render_mesh);
     world.resources.mesh_render_state.mark_entity_added(entity);
 
     if let Some(&index) = world
@@ -526,15 +542,15 @@ pub fn spawn_mesh_at(
             .registry
             .add_reference(index);
     }
-    world.set_material_ref(entity, components::MaterialRef::new("Default"));
+    world.core.set_material_ref(entity, components::MaterialRef::new("Default"));
 
-    world.set_bounding_volume(
+    world.core.set_bounding_volume(
         entity,
         components::BoundingVolume::from_mesh_type(mesh_name),
     );
-    world.set_casts_shadow(entity, components::CastsShadow);
+    world.core.set_casts_shadow(entity, components::CastsShadow);
 
-    if let Some(visibility) = world.get_visibility_mut(entity) {
+    if let Some(visibility) = world.core.get_visibility_mut(entity) {
         visibility.visible = true;
     }
 
@@ -614,8 +630,8 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
         1,
     )[0];
 
-    world.set_name(entity, components::Name("Water Plane".to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name("Water Plane".to_string()));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: position,
@@ -623,8 +639,8 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
 
     let mesh_name = "WaterPlane";
     if !world
@@ -648,12 +664,12 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
         world.resources.mesh_cache.registry.add_reference(index);
     }
 
-    world.set_render_mesh(entity, components::RenderMesh::new(mesh_name));
+    world.core.set_render_mesh(entity, components::RenderMesh::new(mesh_name));
     world.resources.mesh_render_state.mark_entity_added(entity);
 
-    world.set_water(entity, Water::default());
+    world.core.set_water(entity, Water::default());
 
-    if let Some(visibility) = world.get_visibility_mut(entity) {
+    if let Some(visibility) = world.core.get_visibility_mut(entity) {
         visibility.visible = true;
     }
 
@@ -697,8 +713,8 @@ fn spawn_3d_text_impl(
         1,
     )[0];
 
-    world.set_name(entity, components::Name(text.to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name(text.to_string()));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: position,
@@ -706,9 +722,9 @@ fn spawn_3d_text_impl(
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_text(
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_text(
         entity,
         components::Text {
             text_index,
@@ -719,7 +735,7 @@ fn spawn_3d_text_impl(
             billboard,
         },
     );
-    world.set_visibility(entity, components::Visibility { visible: true });
+    world.core.set_visibility(entity, components::Visibility { visible: true });
 
     entity
 }
@@ -747,7 +763,7 @@ pub fn set_material_with_textures(
     entity: Entity,
     material: crate::ecs::material::components::Material,
 ) {
-    let material_ref = world.get_material_ref(entity).cloned();
+    let material_ref = world.core.get_material_ref(entity).cloned();
 
     if let Some(ref mat_ref) = material_ref {
         let old_textures =
@@ -801,7 +817,7 @@ pub fn set_material_with_textures(
                 .registry
                 .add_reference(index);
         }
-        world.set_material_ref(
+        world.core.set_material_ref(
             entity,
             crate::ecs::material::components::MaterialRef::new(material_name),
         );
@@ -945,8 +961,8 @@ pub fn spawn_instanced_mesh(
         1,
     )[0];
 
-    world.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
@@ -954,10 +970,10 @@ pub fn spawn_instanced_mesh(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
 
-    world.set_instanced_mesh(
+    world.core.set_instanced_mesh(
         entity,
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
@@ -975,10 +991,10 @@ pub fn spawn_instanced_mesh(
             .registry
             .add_reference(index);
     }
-    world.set_material_ref(entity, components::MaterialRef::new("Default"));
+    world.core.set_material_ref(entity, components::MaterialRef::new("Default"));
 
-    world.set_visibility(entity, components::Visibility { visible: true });
-    world.set_casts_shadow(entity, components::CastsShadow);
+    world.core.set_visibility(entity, components::Visibility { visible: true });
+    world.core.set_casts_shadow(entity, components::CastsShadow);
 
     entity
 }
@@ -1006,8 +1022,8 @@ pub fn spawn_instanced_mesh_with_material(
         1,
     )[0];
 
-    world.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
-    world.set_local_transform(
+    world.core.set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.core.set_local_transform(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
@@ -1015,10 +1031,10 @@ pub fn spawn_instanced_mesh_with_material(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world.set_global_transform(entity, components::GlobalTransform::default());
-    world.set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world.core.set_global_transform(entity, components::GlobalTransform::default());
+    world.core.set_local_transform_dirty(entity, components::LocalTransformDirty);
 
-    world.set_instanced_mesh(
+    world.core.set_instanced_mesh(
         entity,
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
@@ -1048,18 +1064,18 @@ pub fn spawn_instanced_mesh_with_material(
         }
     }
 
-    world.set_material_ref(entity, components::MaterialRef::new(material_name));
+    world.core.set_material_ref(entity, components::MaterialRef::new(material_name));
 
-    world.set_visibility(entity, components::Visibility { visible: true });
-    world.set_casts_shadow(entity, components::CastsShadow);
+    world.core.set_visibility(entity, components::Visibility { visible: true });
+    world.core.set_casts_shadow(entity, components::CastsShadow);
 
     entity
 }
 
 pub fn find_entity_by_name(world: &World, name: &str) -> Option<Entity> {
     world
-        .query_entities(NAME)
-        .find(|&entity| world.get_name(entity).is_some_and(|n| n.0 == name))
+        .core.query_entities(NAME)
+        .find(|&entity| world.core.get_name(entity).is_some_and(|n| n.0 == name))
 }
 
 pub fn spawn_material(
@@ -1086,5 +1102,5 @@ pub fn spawn_material(
             .registry
             .add_reference(index);
     }
-    world.set_material_ref(entity, MaterialRef::new(name));
+    world.core.set_material_ref(entity, MaterialRef::new(name));
 }

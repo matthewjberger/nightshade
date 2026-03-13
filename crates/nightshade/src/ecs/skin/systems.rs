@@ -47,7 +47,7 @@ impl SkinningCache {
             return true;
         }
 
-        let current_entities: Vec<Entity> = world.query_entities(SKIN | RENDER_MESH).collect();
+        let current_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
 
         if current_entities.len() != self.skinned_entity_ids.len() {
             return true;
@@ -64,7 +64,7 @@ impl SkinningCache {
     }
 
     pub fn rebuild_static_data(&mut self, world: &World) {
-        let skinned_entities: Vec<Entity> = world.query_entities(SKIN | RENDER_MESH).collect();
+        let skinned_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
 
         self.skinned_entity_ids = skinned_entities.iter().map(|e| e.id).collect();
         self.inverse_bind_matrices.clear();
@@ -82,7 +82,7 @@ impl SkinningCache {
         let mut bone_index = 0u32;
 
         for &entity in &skinned_entities {
-            if let Some(skin) = world.get_skin(entity) {
+            if let Some(skin) = world.core.get_skin(entity) {
                 for &joint_entity in &skin.joints {
                     bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                         let index = bone_index;
@@ -100,7 +100,7 @@ impl SkinningCache {
         let mut current_output_offset = 0u32;
 
         for &entity in &skinned_entities {
-            if let Some(skin) = world.get_skin(entity) {
+            if let Some(skin) = world.core.get_skin(entity) {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 for joint in skin.joints.iter() {
                     use std::hash::Hash;
@@ -166,7 +166,7 @@ impl SkinningCache {
         let mut bone_transforms = Vec::with_capacity(self.joint_entities.len());
 
         for &joint_entity in &self.joint_entities {
-            if let Some(joint_global_transform) = world.get_global_transform(joint_entity) {
+            if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
                 bone_transforms.push(joint_global_transform.0);
             } else {
                 bone_transforms.push(Mat4::identity());
@@ -186,7 +186,7 @@ impl SkinningCache {
 }
 
 pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
-    let skinned_entities: Vec<Entity> = world.query_entities(SKIN | RENDER_MESH).collect();
+    let skinned_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
 
     if skinned_entities.is_empty() {
         return SkinningUploadData {
@@ -207,12 +207,12 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
     let mut bone_index = 0u32;
 
     for &entity in &skinned_entities {
-        if let Some(skin) = world.get_skin(entity) {
+        if let Some(skin) = world.core.get_skin(entity) {
             for &joint_entity in &skin.joints {
                 bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                     let index = bone_index;
 
-                    if let Some(joint_global_transform) = world.get_global_transform(joint_entity) {
+                    if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
                         bone_transforms.push(joint_global_transform.0);
                     } else {
                         bone_transforms.push(Mat4::identity());
@@ -231,7 +231,7 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
     let mut current_output_offset = 0u32;
 
     for &entity in &skinned_entities {
-        if let Some(skin) = world.get_skin(entity) {
+        if let Some(skin) = world.core.get_skin(entity) {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             for joint in skin.joints.iter() {
                 use std::hash::Hash;

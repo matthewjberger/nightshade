@@ -18,7 +18,7 @@
 //! let debug_lines = world.spawn_entities(LINES, 1)[0];
 //!
 //! // Get the lines component and add lines
-//! if let Some(lines) = world.get_lines_mut(debug_lines) {
+//! if let Some(lines) = world.core.get_lines_mut(debug_lines) {
 //!     lines.push(Line {
 //!         start: Vec3::new(0.0, 0.0, 0.0),
 //!         end: Vec3::new(1.0, 1.0, 1.0),
@@ -33,7 +33,7 @@
 //!
 //! ```ignore
 //! fn draw_debug_shapes(world: &mut World, lines_entity: Entity) {
-//!     let Some(lines) = world.get_lines_mut(lines_entity) else { return };
+//!     let Some(lines) = world.core.get_lines_mut(lines_entity) else { return };
 //!
 //!     // Draw a box/cube wireframe
 //!     let min = Vec3::new(-1.0, 0.0, -1.0);
@@ -99,14 +99,14 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(lines) = world.get_lines_mut(self.debug_lines) {
+//!     if let Some(lines) = world.core.get_lines_mut(self.debug_lines) {
 //!         lines.clear();
 //!
 //!         // Draw current frame's debug info
-//!         for entity in world.query_entities(RIGID_BODY | LOCAL_TRANSFORM) {
-//!             if let Some(transform) = world.get_local_transform(entity) {
+//!         for entity in world.core.query_entities(RIGID_BODY | LOCAL_TRANSFORM) {
+//!             if let Some(transform) = world.core.get_local_transform(entity) {
 //!                 // Draw velocity vector
-//!                 if let Some(rb) = world.get_rigid_body(entity) {
+//!                 if let Some(rb) = world.core.get_rigid_body(entity) {
 //!                     lines.push(Line {
 //!                         start: transform.translation,
 //!                         end: transform.translation + rb.linear_velocity,

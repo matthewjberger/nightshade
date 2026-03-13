@@ -23,7 +23,7 @@
 //! Models with morph targets get a [`MorphWeights`] component:
 //!
 //! ```ignore
-//! if let Some(weights) = world.get_morph_weights_mut(entity) {
+//! if let Some(weights) = world.core.get_morph_weights_mut(entity) {
 //!     // Check how many targets exist
 //!     let count = weights.weight_count();
 //!
@@ -44,7 +44,7 @@
 //! fn run_systems(&mut self, world: &mut World) {
 //!     let dt = world.resources.window.timing.delta_time;
 //!
-//!     if let Some(weights) = world.get_morph_weights_mut(face_entity) {
+//!     if let Some(weights) = world.core.get_morph_weights_mut(face_entity) {
 //!         // Animate smile weight
 //!         let current = weights.get_weight(SMILE_INDEX);
 //!         let target = if happy { 1.0 } else { 0.0 };
@@ -75,7 +75,7 @@
 //! let entity = spawn_prefab_with_animations(world, &prefab, Vec3::zeros());
 //!
 //! // Play facial animation
-//! if let Some(player) = world.get_animation_player_mut(entity) {
+//! if let Some(player) = world.core.get_animation_player_mut(entity) {
 //!     player.play(TALK_ANIMATION);
 //! }
 //! // Morph weights are updated automatically by animation system
@@ -87,7 +87,7 @@
 //!
 //! ```ignore
 //! let weights = MorphWeights::from_count(3, "my_mesh");  // 3 morph targets
-//! world.set_morph_weights(entity, weights);
+//! world.core.set_morph_weights(entity, weights);
 //! ```
 //!
 //! [`MorphWeights`]: components::MorphWeights

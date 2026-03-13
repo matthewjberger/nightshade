@@ -61,7 +61,7 @@
 //! let prefab = &result.prefabs[0];
 //! let entity = spawn_prefab_with_animations(world, prefab, &result.animations, Vec3::zeros());
 //!
-//! if let Some(player) = world.get_animation_player_mut(entity) {
+//! if let Some(player) = world.core.get_animation_player_mut(entity) {
 //!     player.play(0);
 //!     player.looping = true;
 //! }
@@ -264,8 +264,8 @@
 //!
 //! // 3D spatial audio
 //! let source = world.spawn_entities(AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.set_audio_source(source, AudioSource::new(sound).with_spatial(true));
-//! world.set_local_transform(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
+//! world.core.set_audio_source(source, AudioSource::new(sound).with_spatial(true));
+//! world.core.set_local_transform(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
 //! ```
 //!
 //! ### Physics (`physics` feature)
@@ -276,14 +276,14 @@
 //!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
 //!     1
 //! )[0];
-//! world.set_rigid_body(entity, RigidBodyComponent::new_dynamic());
-//! world.set_collider(entity, ColliderComponent::cuboid(1.0, 1.0, 1.0));
-//! world.set_local_transform(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
+//! world.core.set_rigid_body(entity, RigidBodyComponent::new_dynamic());
+//! world.core.set_collider(entity, ColliderComponent::cuboid(1.0, 1.0, 1.0));
+//! world.core.set_local_transform(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
 //!
 //! // Static floor
 //! let floor = world.spawn_entities(RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.set_rigid_body(floor, RigidBodyComponent::new_static());
-//! world.set_collider(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
+//! world.core.set_rigid_body(floor, RigidBodyComponent::new_static());
+//! world.core.set_collider(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
@@ -399,7 +399,7 @@
 //! register_entity_for_lattice_deformation(world, mesh_entity, lattice);
 //!
 //! // Deform by moving control points
-//! if let Some(lat) = world.get_lattice_mut(lattice) {
+//! if let Some(lat) = world.core.get_lattice_mut(lattice) {
 //!     lat.set_displacement(1, 3, 1, Vec3::new(0.5, 0.0, 0.0));
 //! }
 //!
@@ -597,7 +597,7 @@
 //! let debug = world.spawn_entities(LINES, 1)[0];
 //!
 //! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(lines) = world.get_lines_mut(self.debug) {
+//!     if let Some(lines) = world.core.get_lines_mut(self.debug) {
 //!         lines.clear();
 //!
 //!         // Draw a line
@@ -623,7 +623,7 @@
 //!     1
 //! )[0];
 //!
-//! world.set_particle_emitter(emitter, ParticleEmitter {
+//! world.core.set_particle_emitter(emitter, ParticleEmitter {
 //!     max_particles: 1000,
 //!     emission_rate: 100.0,
 //!     lifetime: 2.0,
@@ -638,7 +638,7 @@
 //!     ..Default::default()
 //! });
 //!
-//! world.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
+//! world.core.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
 //!
 //! // Update each frame
 //! update_particle_emitters(world, world.resources.window.timing.delta_time);
@@ -648,7 +648,7 @@
 //!
 //! ```ignore
 //! let sprite_entity = world.spawn_entities(SPRITE, 1)[0];
-//! world.set_sprite(sprite_entity, Sprite::new(
+//! world.core.set_sprite(sprite_entity, Sprite::new(
 //!     Vec2::new(100.0, 100.0),  // Screen position
 //!     Vec2::new(64.0, 64.0),    // Size
 //! )
@@ -666,7 +666,7 @@
 //!
 //! // Or with full control
 //! let water = world.spawn_entities(WATER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.set_water(water, Water {
+//! world.core.set_water(water, Water {
 //!     color: Vec3::new(0.0, 0.3, 0.5),
 //!     opacity: 0.8,
 //!     wave_speed: 1.0,
@@ -683,7 +683,7 @@
 //!     1
 //! )[0];
 //!
-//! world.set_decal(decal, Decal {
+//! world.core.set_decal(decal, Decal {
 //!     texture_index: world.texture_cache_lookup("decal_texture"),
 //!     size: Vec2::new(2.0, 2.0),
 //!     depth: 1.0,  // Projection depth
@@ -691,7 +691,7 @@
 //! });
 //!
 //! // Position and orient decal (projects along -Y)
-//! world.set_local_transform(decal, LocalTransform {
+//! world.core.set_local_transform(decal, LocalTransform {
 //!     translation: hit_position + hit_normal * 0.01,
 //!     rotation: UnitQuaternion::face_towards(&(-hit_normal), &Vec3::x()),
 //!     ..Default::default()

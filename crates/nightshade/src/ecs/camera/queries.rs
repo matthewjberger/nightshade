@@ -17,8 +17,8 @@ pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
 }
 
 pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatrices> {
-    let camera = world.get_camera(entity)?;
-    let global_transform = world.get_global_transform(entity)?;
+    let camera = world.core.get_camera(entity)?;
+    let global_transform = world.core.get_global_transform(entity)?;
 
     let camera_position = global_transform.translation();
     let forward = global_transform.forward_vector();

@@ -7,13 +7,13 @@ use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
 
 pub fn update_animation_players(world: &mut World) {
-    let entities_with_animations: Vec<_> = world.query_entities(ANIMATION_PLAYER).collect();
+    let entities_with_animations: Vec<_> = world.core.query_entities(ANIMATION_PLAYER).collect();
     let _span =
         tracing::info_span!("animation", players = entities_with_animations.len()).entered();
 
     let delta_time = world.resources.window.timing.delta_time;
     for entity in entities_with_animations {
-        if let Some(animation_player) = world.get_animation_player_mut(entity) {
+        if let Some(animation_player) = world.core.get_animation_player_mut(entity) {
             animation_player.update(delta_time);
         }
     }
@@ -30,10 +30,10 @@ struct AnimationSampleDataMulti {
 }
 
 pub fn apply_animations(world: &mut World) {
-    let entities_with_animations: Vec<_> = world.query_entities(ANIMATION_PLAYER).collect();
+    let entities_with_animations: Vec<_> = world.core.query_entities(ANIMATION_PLAYER).collect();
 
     for entity in entities_with_animations {
-        let animation_data = if let Some(player) = world.get_animation_player(entity) {
+        let animation_data = if let Some(player) = world.core.get_animation_player(entity) {
             if !player.playing {
                 continue;
             }
@@ -241,8 +241,8 @@ struct AnimationAccumulator {
 }
 
 fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity, weights: &[f32]) {
-    if world.entity_has_components(entity, MORPH_WEIGHTS)
-        && let Some(morph_weights) = world.get_morph_weights_mut(entity)
+    if world.core.entity_has_components(entity, MORPH_WEIGHTS)
+        && let Some(morph_weights) = world.core.get_morph_weights_mut(entity)
     {
         morph_weights.weights = weights.to_vec();
     }

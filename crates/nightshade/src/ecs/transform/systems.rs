@@ -24,7 +24,7 @@ impl World {
         entity: freecs::Entity,
         local_transform: crate::ecs::transform::components::LocalTransform,
     ) {
-        self.set_local_transform(entity, local_transform);
+        self.core.set_local_transform(entity, local_transform);
         mark_local_transform_dirty(self, entity);
     }
 
@@ -37,11 +37,11 @@ impl World {
         entity: freecs::Entity,
     ) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
         mark_local_transform_dirty(self, entity);
-        self.get_local_transform_mut(entity)
+        self.core.get_local_transform_mut(entity)
     }
 
     pub fn update_parent(&mut self, child: freecs::Entity, new_parent: Option<Parent>) {
-        let old_parent_entity = self.get_parent(child).and_then(|p| p.0);
+        let old_parent_entity = self.core.get_parent(child).and_then(|p| p.0);
 
         if let Some(old_parent_entity) = old_parent_entity
             && let Some(children) = self.resources.children_cache.get_mut(&old_parent_entity)
@@ -50,7 +50,7 @@ impl World {
         }
 
         if let Some(new_parent) = new_parent {
-            self.set_parent(child, new_parent);
+            self.core.set_parent(child, new_parent);
             if let Some(parent_entity) = new_parent.0 {
                 self.resources
                     .children_cache
@@ -59,7 +59,7 @@ impl World {
                     .push(child);
             }
         } else {
-            self.remove_parent(child);
+            self.core.remove_parent(child);
         }
 
         self.resources.children_cache_valid = false;
@@ -69,9 +69,9 @@ impl World {
     pub fn validate_and_rebuild_children_cache(&mut self) {
         self.resources.children_cache.clear();
 
-        let all_entities_with_parent: Vec<freecs::Entity> = self.query_entities(PARENT).collect();
+        let all_entities_with_parent: Vec<freecs::Entity> = self.core.query_entities(PARENT).collect();
         for child in all_entities_with_parent {
-            if let Some(parent) = self.get_parent(child)
+            if let Some(parent) = self.core.get_parent(child)
                 && let Some(parent_entity) = parent.0
             {
                 self.resources
@@ -94,11 +94,11 @@ pub fn update_global_transforms_system(world: &mut World) {
     let mut dirty_entities = std::mem::take(&mut world.resources.transform_dirty_entities);
 
     let spawned_dirty: Vec<freecs::Entity> = world
-        .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
+        .core.query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
         .collect();
     for entity in &spawned_dirty {
         dirty_entities.push(*entity);
-        world.remove_local_transform_dirty(*entity);
+        world.core.remove_local_transform_dirty(*entity);
     }
 
     dirty_entities.sort_unstable_by_key(|entity| (entity.id, entity.generation));
@@ -110,23 +110,23 @@ pub fn update_global_transforms_system(world: &mut World) {
     let mut render_dirty_entities = Vec::with_capacity(dirty_entities.len());
 
     for entity in dirty_entities.iter().copied() {
-        let new_global_transform = if world.entity_has_components(entity, PARENT) {
+        let new_global_transform = if world.core.entity_has_components(entity, PARENT) {
             visited.clear();
             global_transform_of_with_cycle_detection(entity, world, &mut visited)
         } else {
-            match world.get_local_transform(entity) {
+            match world.core.get_local_transform(entity) {
                 Some(local_transform) => local_transform.as_matrix(),
                 None => nalgebra_glm::Mat4::identity(),
             }
         };
 
-        if let Some(global_transform) = world.get_global_transform_mut(entity) {
+        if let Some(global_transform) = world.core.get_global_transform_mut(entity) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if (world.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
-            || world.entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
-            && !world.entity_has_components(entity, crate::ecs::world::SPRITE)
+        if (world.core.entity_has_components(entity, crate::ecs::world::RENDER_MESH)
+            || world.core.entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
+            && !world.core.entity_has_components(entity, crate::ecs::world::SPRITE)
         {
             render_dirty_entities.push(entity);
         }
@@ -166,17 +166,17 @@ fn global_transform_of_with_cycle_detection(
         );
     }
 
-    let Some(local_transform) = world.get_local_transform(entity) else {
+    let Some(local_transform) = world.core.get_local_transform(entity) else {
         return nalgebra_glm::Mat4::identity();
     };
 
-    if let Some(parent) = world.get_parent(entity)
+    if let Some(parent) = world.core.get_parent(entity)
         && let Some(parent_entity) = parent.0
     {
         let mut parent_transform =
             global_transform_of_with_cycle_detection(parent_entity, world, visited);
 
-        if world.entity_has_ignore_parent_scale(entity) {
+        if world.core.entity_has_ignore_parent_scale(entity) {
             parent_transform = remove_scale_from_matrix(parent_transform);
         }
 

@@ -27,7 +27,7 @@
 //! world.material_add_reference("red_metal");
 //!
 //! // Apply to an entity
-//! world.set_material_ref(entity, MaterialRef::new("red_metal"));
+//! world.core.set_material_ref(entity, MaterialRef::new("red_metal"));
 //! ```
 //!
 //! # Material Registration Pattern

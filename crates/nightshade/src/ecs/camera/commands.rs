@@ -13,15 +13,15 @@ pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
 
     let camera = cameras[0];
 
-    if let Some(camera_name) = world.get_name_mut(camera) {
+    if let Some(camera_name) = world.core.get_name_mut(camera) {
         *camera_name = Name(name);
     }
 
-    if let Some(local_transform) = world.get_local_transform_mut(camera) {
+    if let Some(local_transform) = world.core.get_local_transform_mut(camera) {
         local_transform.translation = position;
     }
 
-    if let Some(camera_component) = world.get_camera_mut(camera) {
+    if let Some(camera_component) = world.core.get_camera_mut(camera) {
         *camera_component = Camera {
             projection: Projection::Perspective(PerspectiveCamera {
                 aspect_ratio: None,
@@ -56,19 +56,19 @@ pub fn spawn_pan_orbit_camera(
 
     let camera = cameras[0];
 
-    if let Some(camera_name) = world.get_name_mut(camera) {
+    if let Some(camera_name) = world.core.get_name_mut(camera) {
         *camera_name = Name(name);
     }
 
     let pan_orbit = PanOrbitCamera::new(focus, radius).with_yaw_pitch(yaw, pitch);
     let (position, rotation) = compute_pan_orbit_transform(focus, yaw, pitch, radius);
 
-    if let Some(local_transform) = world.get_local_transform_mut(camera) {
+    if let Some(local_transform) = world.core.get_local_transform_mut(camera) {
         local_transform.translation = position;
         local_transform.rotation = rotation;
     }
 
-    if let Some(camera_component) = world.get_camera_mut(camera) {
+    if let Some(camera_component) = world.core.get_camera_mut(camera) {
         *camera_component = Camera {
             projection: Projection::Perspective(PerspectiveCamera {
                 aspect_ratio: None,
@@ -80,7 +80,7 @@ pub fn spawn_pan_orbit_camera(
         };
     }
 
-    if let Some(pan_orbit_component) = world.get_pan_orbit_camera_mut(camera) {
+    if let Some(pan_orbit_component) = world.core.get_pan_orbit_camera_mut(camera) {
         *pan_orbit_component = pan_orbit;
     }
 
@@ -98,7 +98,7 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
     );
     let camera = cameras[0];
 
-    if let Some(camera_name) = world.get_name_mut(camera) {
+    if let Some(camera_name) = world.core.get_name_mut(camera) {
         *camera_name = Name("Ortho Camera".to_string());
     }
 
@@ -109,11 +109,11 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
         z_near: 0.01,
     };
 
-    if let Some(local_transform) = world.get_local_transform_mut(camera) {
+    if let Some(local_transform) = world.core.get_local_transform_mut(camera) {
         local_transform.translation = Vec3::new(position.x, position.y, ortho.z_far);
     }
 
-    if let Some(camera_component) = world.get_camera_mut(camera) {
+    if let Some(camera_component) = world.core.get_camera_mut(camera) {
         *camera_component = Camera {
             projection: Projection::Orthographic(ortho),
             smoothing: None,

@@ -1,7 +1,7 @@
 use crate::ecs::world::{INSTANCED_MESH, World};
 
 pub fn update_instanced_mesh_caches_system(world: &mut World) {
-    let entities: Vec<_> = world.query_entities(INSTANCED_MESH).collect();
+    let entities: Vec<_> = world.core.query_entities(INSTANCED_MESH).collect();
     let _span = tracing::info_span!("instanced_meshes", count = entities.len()).entered();
 
     let mut transform_dirty_entities = Vec::new();
@@ -9,11 +9,11 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
     let mut needs_compute_dispatch = false;
     for entity in entities {
         let parent_transform = world
-            .get_global_transform(entity)
+            .core.get_global_transform(entity)
             .map(|t| t.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
 
-        if let Some(instanced_mesh) = world.get_instanced_mesh_mut(entity) {
+        if let Some(instanced_mesh) = world.core.get_instanced_mesh_mut(entity) {
             let was_dirty = instanced_mesh.dirty;
             let had_gpu_dirty = instanced_mesh.local_matrices_gpu_dirty();
             let parent_only_changed = instanced_mesh.update_world_matrices(&parent_transform);

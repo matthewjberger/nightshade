@@ -34,7 +34,7 @@ chrono = "0.4"
 tracing-web = "0.1"
 tracing-tracy = "0.11"
 tracing-chrome = "0.7"
-freecs = "1.6.0"
+freecs = { path = "../freecs" }
 gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = [
     "KHR_lights_punctual",

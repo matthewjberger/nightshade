@@ -21,8 +21,8 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         1,
     )[0];
 
-    world.set_name(entity, Name(mesh_name.to_string()));
-    world.set_local_transform(
+    world.core.set_name(entity, Name(mesh_name.to_string()));
+    world.core.set_local_transform(
         entity,
         LocalTransform {
             translation: position,
@@ -30,9 +30,9 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             rotation: Quat::identity(),
         },
     );
-    world.set_global_transform(entity, GlobalTransform::default());
-    world.set_local_transform_dirty(entity, LocalTransformDirty);
-    world.set_render_mesh(entity, RenderMesh::new(mesh_name));
+    world.core.set_global_transform(entity, GlobalTransform::default());
+    world.core.set_local_transform_dirty(entity, LocalTransformDirty);
+    world.core.set_render_mesh(entity, RenderMesh::new(mesh_name));
     world.resources.mesh_render_state.mark_entity_added(entity);
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
@@ -53,9 +53,9 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             .registry
             .add_reference(index);
     }
-    world.set_material_ref(entity, MaterialRef::new(material_name));
-    world.set_bounding_volume(entity, BoundingVolume::from_mesh_type(mesh_name));
-    world.set_casts_shadow(entity, CastsShadow);
+    world.core.set_material_ref(entity, MaterialRef::new(material_name));
+    world.core.set_bounding_volume(entity, BoundingVolume::from_mesh_type(mesh_name));
+    world.core.set_casts_shadow(entity, CastsShadow);
 
     entity
 }
