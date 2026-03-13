@@ -907,16 +907,13 @@ pub mod prelude {
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
     pub use crate::ecs::sprite_particles::{ColorRange2D, EmitterShape2D, SpriteParticleEmitter};
-    pub use crate::ecs::sprite_text::commands::spawn_sprite_text;
-    pub use crate::ecs::sprite_text::{SpriteText, SpriteTextAlignment};
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
         NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,
         sample_terrain_height, spawn_terrain, spawn_terrain_with_material,
     };
     pub use crate::ecs::text::commands::{
-        load_font_from_bytes, spawn_hud_text, spawn_hud_text_with_properties, spawn_ui_text,
-        spawn_ui_text_with_properties,
+        load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
     pub use crate::ecs::text::components::{TextAlignment, VerticalAlignment};
     pub use crate::ecs::text::systems::sync_text_meshes_system;

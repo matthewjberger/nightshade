@@ -62,7 +62,6 @@ pub mod skin;
 pub mod sprite;
 pub mod sprite_animator;
 pub mod sprite_particles;
-pub mod sprite_text;
 #[cfg(feature = "terrain")]
 pub mod terrain;
 pub mod text;

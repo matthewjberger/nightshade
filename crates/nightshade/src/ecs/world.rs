@@ -58,10 +58,9 @@ pub mod components {
     pub use crate::ecs::sprite_particles::components::{
         ColorRange2D, EmitterShape2D, SpriteParticleEmitter,
     };
-    pub use crate::ecs::sprite_text::components::{SpriteText, SpriteTextAlignment};
     pub use crate::ecs::text::components::{
-        HudAnchor, HudText, Text, TextAlignment, TextCharacterBackgroundColors,
-        TextCharacterColors, TextProperties, VerticalAlignment,
+        Text, TextAlignment, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
+        VerticalAlignment,
     };
     pub use crate::ecs::tilemap::components::{TileData, Tilemap};
     pub use crate::ecs::transform::components::{
@@ -155,7 +154,6 @@ freecs::ecs! {
             material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
             render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
             text: crate::ecs::text::components::Text => TEXT,
-            hud_text: crate::ecs::text::components::HudText => HUD_TEXT,
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
             text_character_background_colors: crate::ecs::text::components::TextCharacterBackgroundColors => TEXT_CHARACTER_BACKGROUND_COLORS,
             bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
@@ -200,7 +198,6 @@ freecs::ecs! {
             sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
             tilemap: crate::ecs::tilemap::components::Tilemap => TILEMAP,
             sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
-            sprite_text: crate::ecs::sprite_text::components::SpriteText => SPRITE_TEXT,
         }
     }
     Resources {
