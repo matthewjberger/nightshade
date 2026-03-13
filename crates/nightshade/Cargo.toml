@@ -243,7 +243,7 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-web = { workspace = true, optional = true }
 egui-winit = { workspace = true, default-features = false, optional = true }
-futures = { version = "0.3.31", optional = true }
+futures = { version = "0.3.32", optional = true }
 image = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
