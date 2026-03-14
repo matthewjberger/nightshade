@@ -273,11 +273,6 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
     let is_runtime = world.resources.is_runtime;
 
     for &entity in entities {
-        if let Some(name) = world.core.get_name(entity) {
-            let name_string = name.0.clone();
-            world.resources.entity_names.remove(&name_string);
-        }
-
         world.resources.children_cache.remove(&entity);
 
         if let Some(parent_component) = world.core.get_parent(entity)
@@ -780,19 +775,15 @@ fn spawn_3d_text_impl(
 
 const CLEANUP_INTERVAL_FRAMES: u64 = 300;
 
-pub fn force_resource_cleanup(world: &mut World) {
-    world.resources.cleanup_frame_counter = 0;
-    world.resources.mesh_cache.registry.remove_unused();
-    material_registry_remove_unused(&mut world.resources.material_registry);
-    texture_cache_remove_unused(&mut world.resources.texture_cache);
-}
-
 pub fn cleanup_unused_resources_system(world: &mut World) {
     let _span = tracing::info_span!("cleanup").entered();
     world.resources.cleanup_frame_counter += 1;
 
     if world.resources.cleanup_frame_counter >= CLEANUP_INTERVAL_FRAMES {
-        force_resource_cleanup(world);
+        world.resources.cleanup_frame_counter = 0;
+        world.resources.mesh_cache.registry.remove_unused();
+        material_registry_remove_unused(&mut world.resources.material_registry);
+        texture_cache_remove_unused(&mut world.resources.texture_cache);
     }
 }
 

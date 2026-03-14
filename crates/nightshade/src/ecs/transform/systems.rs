@@ -133,7 +133,7 @@ pub fn update_global_transforms_system(world: &mut World) {
                 .core
                 .entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
             && !world
-                .core
+                .sprite2d
                 .entity_has_components(entity, crate::ecs::world::SPRITE)
         {
             render_dirty_entities.push(entity);
