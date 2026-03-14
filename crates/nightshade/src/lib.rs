@@ -791,12 +791,6 @@ pub mod xr;
 #[cfg(feature = "shell")]
 pub mod shell;
 
-#[cfg(feature = "mosaic")]
-pub mod mosaic;
-
-#[cfg(feature = "editor")]
-pub mod editor;
-
 #[cfg(all(feature = "claude", not(target_arch = "wasm32")))]
 pub mod claude;
 
@@ -973,8 +967,6 @@ pub mod prelude {
     pub use bincode;
     #[cfg(feature = "egui")]
     pub use egui;
-    #[cfg(feature = "egui")]
-    pub use egui_tiles;
     pub use freecs;
     #[cfg(feature = "assets")]
     pub use image;
