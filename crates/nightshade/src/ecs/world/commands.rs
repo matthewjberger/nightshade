@@ -349,6 +349,8 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 
     for &entity in entities {
         world.resources.children_cache.remove(&entity);
+        world.resources.entity_tags.remove(&entity);
+        world.resources.entity_metadata.remove(&entity);
 
         if let Some(parent_component) = world.core.get_parent(entity)
             && let Some(parent_entity) = parent_component.0

@@ -250,6 +250,8 @@ freecs::ecs! {
         #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
         mcp_command_queue: crate::mcp::CommandQueue,
         entity_names: std::collections::HashMap<String, freecs::Entity>,
+        entity_tags: std::collections::HashMap<freecs::Entity, Vec<String>>,
+        entity_metadata: std::collections::HashMap<freecs::Entity, std::collections::HashMap<String, crate::ecs::scene::MetadataValue>>,
         pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
         ibl_views: crate::ecs::graphics::resources::IblViews,
         retained_ui: crate::ecs::ui::resources::RetainedUiState,

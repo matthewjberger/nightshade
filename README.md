@@ -166,7 +166,7 @@ claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
 
 | Category | Tools |
 |----------|-------|
-| Entities | `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `clear_scene` |
+| Entities | `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `rename_entity`, `clear_scene` |
 | Transforms | `set_position`, `set_rotation`, `set_scale`, `set_parent`, `set_visibility` |
 | Materials | `set_material_color`, `set_emissive`, `set_material`, `set_casts_shadow` |
 | Lighting | `spawn_light`, `set_light` |
@@ -179,6 +179,7 @@ claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
 | Animation | `play_animation`, `stop_animation`, `list_animations` |
 | Scripting | `set_script`, `remove_script`, `set_game_state`, `get_game_state` |
 | Debug | `add_line`, `add_lines`, `clear_lines`, `get_input`, `get_time` |
+| Metadata | `set_entity_tags`, `set_entity_metadata` |
 | Batch | `batch` (atomic multi-operation), `run` (concise text commands) |
 
 **Batch operations:** Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency.
