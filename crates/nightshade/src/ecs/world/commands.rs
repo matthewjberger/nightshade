@@ -188,6 +188,7 @@ impl World {
                 .add_reference(index);
         }
         self.core.set_material_ref(entity, MaterialRef::new(name));
+        self.resources.mesh_render_state.mark_entity_added(entity);
     }
 
     #[cfg(feature = "physics")]
