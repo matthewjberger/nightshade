@@ -142,6 +142,80 @@ impl World {
     pub fn queue_command(&mut self, command: WorldCommand) {
         self.resources.command_queue.push(command);
     }
+
+    pub fn set_cursor_locked(&mut self, locked: bool) {
+        if let Some(window_handle) = &self.resources.window.handle {
+            if locked {
+                if window_handle
+                    .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                    .is_err()
+                {
+                    let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::Confined);
+                }
+            } else {
+                let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::None);
+            }
+        }
+    }
+
+    pub fn set_cursor_visible(&mut self, visible: bool) {
+        if let Some(window_handle) = &self.resources.window.handle {
+            window_handle.set_cursor_visible(visible);
+        }
+    }
+
+    pub fn register_material(
+        &mut self,
+        entity: Entity,
+        name: String,
+        material: crate::ecs::material::components::Material,
+    ) {
+        material_registry_insert(
+            &mut self.resources.material_registry,
+            name.clone(),
+            material,
+        );
+        if let Some(&index) = self
+            .resources
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&name)
+        {
+            self.resources
+                .material_registry
+                .registry
+                .add_reference(index);
+        }
+        self.core.set_material_ref(entity, MaterialRef::new(name));
+    }
+
+    #[cfg(feature = "physics")]
+    pub fn spawn_physics_body(&mut self, entity: Entity) {
+        let rigid_body_comp = self.core.get_rigid_body(entity).cloned();
+        let collider_comp = self.core.get_collider(entity).cloned();
+
+        if let Some(rigid_body_comp) = rigid_body_comp {
+            let rapier_body = rigid_body_comp.to_rapier_rigid_body();
+            let rapier_handle = self.resources.physics.add_rigid_body(rapier_body);
+
+            if let Some(collider_comp) = collider_comp {
+                let rapier_collider = collider_comp.to_rapier_collider();
+                self.resources
+                    .physics
+                    .add_collider(rapier_collider, rapier_handle);
+            }
+
+            if let Some(rigid_body_mut) = self.core.get_rigid_body_mut(entity) {
+                rigid_body_mut.handle = Some(rapier_handle.into());
+            }
+
+            self.resources
+                .physics
+                .handle_to_entity
+                .insert(rapier_handle, entity);
+        }
+    }
 }
 
 pub fn process_commands_system(world: &mut World) {
