@@ -9,10 +9,12 @@ logs/
 /Cargo.lock
 !apps/editor/Cargo.lock
 *.md
+!CLAUDE.md
 !apps/editor/*.md
 !crates/nightshade/*.md
 !template/*.md
 !docs/*.md
+!site/content/*.md
 apps/maps/maps/
 apps/shadows/*.json
 apps/psx/assets/*.json
