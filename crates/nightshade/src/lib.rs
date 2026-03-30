@@ -830,7 +830,9 @@ pub mod prelude {
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::systems::load_sound_from_bytes;
     pub use crate::ecs::camera::commands::{spawn_ortho_camera, spawn_pan_orbit_camera};
-    pub use crate::ecs::camera::systems::{fly_camera_system, ortho_camera_system, pan_orbit_camera_system};
+    pub use crate::ecs::camera::systems::{
+        fly_camera_system, ortho_camera_system, pan_orbit_camera_system,
+    };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     #[cfg(feature = "gamepad")]
@@ -860,8 +862,6 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
-    #[cfg(feature = "physics")]
     pub use crate::ecs::physics::commands::{
         create_textured_material, spawn_dynamic_physics_cube_with_material,
         spawn_dynamic_physics_cylinder_with_material, spawn_dynamic_physics_sphere_with_material,
@@ -869,6 +869,8 @@ pub mod prelude {
     };
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::debug::physics_debug_draw_system;
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
@@ -884,9 +886,9 @@ pub mod prelude {
         register_entity_for_trimesh_picking, register_entity_hierarchy_for_trimesh_picking,
         unregister_entity_from_picking, update_picking_transform,
     };
-    pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::commands::import_gltf_from_bytes;
+    pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::{
@@ -977,10 +979,9 @@ pub mod prelude {
         despawn_recursive_immediate, load_hdr_skybox, load_hdr_skybox_from_path,
         load_procedural_textures, set_material_with_textures,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
-        spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh,
-        spawn_instanced_mesh_with_material, spawn_material, spawn_mesh_at, spawn_plane_at,
-        spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
-        spawn_water_plane_at,
+        spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
+        spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
+        spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
     };
     pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
