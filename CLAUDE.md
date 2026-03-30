@@ -6,8 +6,8 @@ Read `docs/USAGE.md` before writing or modifying engine code.
 
 - ECS via `freecs::ecs!` macro. Components use bitflag constants: `CAMERA | LOCAL_TRANSFORM | GLOBAL_TRANSFORM`.
 - `world.core` for ECS access (get/set components, queries). `world.resources` for singletons (physics, input, audio, window, etc.).
-- Most systems run automatically via the frame schedule (`world.resources.frame_schedule`): physics, animation, camera controllers, navmesh, text sync, lattice, UI, transforms. Don't call these manually.
-- Camera controllers are component-driven: `fly_camera_system` runs unless the active camera has `PAN_ORBIT_CAMERA`, in which case `pan_orbit_camera_system` runs instead.
+- Most systems run automatically via the frame schedule (`world.resources.frame_schedule`): physics, animation, navmesh, text sync, lattice, UI, transforms. Don't call these manually.
+- Camera controllers are opt-in: call `fly_camera_system(world)` or `pan_orbit_camera_system(world)` in `run_systems`. `fly_camera_system` skips if the active camera has `PAN_ORBIT_CAMERA`.
 - Scenes load from glTF. Find entities by name after spawning (`world.core.find_entity_by_name`).
 
 ## Dual-World Pattern
