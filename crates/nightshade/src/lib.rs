@@ -827,9 +827,15 @@ pub mod prelude {
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
-    pub use crate::ecs::camera::commands::spawn_ortho_camera;
-    pub use crate::ecs::camera::systems::ortho_camera_system;
+    #[cfg(feature = "audio")]
+    pub use crate::ecs::audio::systems::load_sound_from_bytes;
+    pub use crate::ecs::camera::commands::{spawn_ortho_camera, spawn_pan_orbit_camera};
+    pub use crate::ecs::camera::systems::{fly_camera_system, ortho_camera_system, pan_orbit_camera_system};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
+    pub use crate::ecs::event_bus::resources::Message;
+    #[cfg(feature = "gamepad")]
+    pub use crate::ecs::input::queries::query_active_gamepad;
+    pub use crate::ecs::input::resources::mouse::MouseState;
     #[cfg(feature = "lattice")]
     pub use crate::ecs::lattice::{
         debug::{LatticeDebugState, get_lattice_point_at_screen_position, lattice_debug_draw},
@@ -838,6 +844,7 @@ pub mod prelude {
             register_entity_for_lattice_deformation,
         },
     };
+    pub use crate::ecs::material::resources::material_registry_insert;
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::navmesh::{
@@ -854,6 +861,14 @@ pub mod prelude {
     pub use crate::ecs::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::commands::{
+        create_textured_material, spawn_dynamic_physics_cube_with_material,
+        spawn_dynamic_physics_cylinder_with_material, spawn_dynamic_physics_sphere_with_material,
+        spawn_static_physics_cube_with_material,
+    };
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::debug::physics_debug_draw_system;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
@@ -870,6 +885,9 @@ pub mod prelude {
         unregister_entity_from_picking, update_picking_transform,
     };
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::prefab::commands::import_gltf_from_bytes;
+    pub use crate::ecs::prefab::resources::mesh_cache_insert;
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::{
         AssetMode, AssetUuid, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType, SceneCamera,
@@ -909,7 +927,7 @@ pub mod prelude {
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
-    pub use crate::ecs::text::components::{TextAlignment, VerticalAlignment};
+    pub use crate::ecs::text::components::{TextAlignment, TextProperties, VerticalAlignment};
     pub use crate::ecs::text::systems::sync_text_meshes_system;
     #[cfg(feature = "assets")]
     pub use crate::ecs::texture_loader::{
@@ -918,6 +936,7 @@ pub mod prelude {
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
     pub use crate::ecs::tilemap::commands::spawn_tilemap;
+    pub use crate::ecs::transform::commands::mark_local_transform_dirty;
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
@@ -954,15 +973,17 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{
-        capture_ibl_snapshots, capture_procedural_atmosphere_ibl, despawn_recursive_immediate,
-        load_hdr_skybox, load_hdr_skybox_from_path, load_procedural_textures,
-        set_material_with_textures, spawn_3d_billboard_text_with_properties,
-        spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
-        spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_material, spawn_mesh_at,
-        spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
+        WorldCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
+        despawn_recursive_immediate, load_hdr_skybox, load_hdr_skybox_from_path,
+        load_procedural_textures, set_material_with_textures,
+        spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
+        spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh,
+        spawn_instanced_mesh_with_material, spawn_material, spawn_mesh_at, spawn_plane_at,
+        spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
         spawn_water_plane_at,
     };
     pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
+    pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]
