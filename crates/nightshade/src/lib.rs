@@ -640,8 +640,7 @@
 //!
 //! world.core.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
 //!
-//! // Update each frame
-//! update_particle_emitters(world, world.resources.window.timing.delta_time);
+//! // Runs automatically via frame schedule
 //! ```
 //!
 //! ### Sprites
