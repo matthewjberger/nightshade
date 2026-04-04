@@ -849,6 +849,17 @@ fn forward_window_events(
         return;
     }
 
+    #[cfg(all(target_arch = "wasm32", feature = "audio"))]
+    {
+        let is_user_gesture = matches!(
+            event,
+            WindowEvent::KeyboardInput { .. } | WindowEvent::MouseInput { .. }
+        );
+        if is_user_gesture && !world.resources.audio.is_initialized() {
+            crate::ecs::audio::systems::lazy_initialize_audio_system(world);
+        }
+    }
+
     if let WindowEvent::KeyboardInput {
         event:
             winit::event::KeyEvent {
