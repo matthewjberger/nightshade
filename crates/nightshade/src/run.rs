@@ -610,11 +610,18 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             }
         }
         winit::event::WindowEvent::CursorMoved { position, .. } => {
-            let last_position = mouse.position;
             let current_position = Vec2::new(position.x as _, position.y as _);
+            if mouse.position_initialized {
+                mouse.position_delta = current_position - mouse.position;
+            } else {
+                mouse.position_delta = Vec2::new(0.0, 0.0);
+                mouse.position_initialized = true;
+            }
             mouse.position = current_position;
-            mouse.position_delta = current_position - last_position;
             mouse.state.set(MouseState::MOVED, true);
+        }
+        winit::event::WindowEvent::CursorLeft { .. } => {
+            mouse.position_initialized = false;
         }
         winit::event::WindowEvent::MouseWheel { delta, .. } => {
             let (h_delta, v_delta) = match delta {
@@ -1330,6 +1337,9 @@ impl winit::application::ApplicationHandler for WindowContext {
         match event {
             winit::event::WindowEvent::Focused(focused) => {
                 self.world.resources.window.is_focused = focused;
+                if !focused {
+                    self.world.resources.input.mouse.position_initialized = false;
+                }
             }
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
