@@ -828,15 +828,23 @@ pub mod prelude {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::systems::load_sound_from_bytes;
-    pub use crate::ecs::camera::commands::{spawn_ortho_camera, spawn_pan_orbit_camera};
+    pub use crate::ecs::bounding_volume::components::BoundingVolume;
+    pub use crate::ecs::camera::commands::{
+        spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
+    };
+    pub use crate::ecs::camera::components::ThirdPersonCamera;
     pub use crate::ecs::camera::systems::{
-        fly_camera_system, ortho_camera_system, pan_orbit_camera_system,
+        first_person_camera_look_system, fly_camera_system, ortho_camera_system,
+        pan_orbit_camera_system, third_person_camera_system,
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::queries::query_active_gamepad;
+    pub use crate::ecs::input::resources::input_mode::InputMode;
     pub use crate::ecs::input::resources::mouse::MouseState;
+    #[cfg(feature = "gamepad")]
+    pub use crate::ecs::input::systems::detect_input_mode_system;
     #[cfg(feature = "lattice")]
     pub use crate::ecs::lattice::{
         debug::{LatticeDebugState, get_lattice_point_at_screen_position, lattice_debug_draw},
@@ -870,6 +878,10 @@ pub mod prelude {
     pub use crate::ecs::physics::debug::physics_debug_draw_system;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::grab::{
+        GrabConfig, GrabState, release_grab_physics, throw_grab_physics,
+    };
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
@@ -975,8 +987,8 @@ pub mod prelude {
     pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{
         WorldCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
-        despawn_recursive_immediate, load_hdr_skybox, load_hdr_skybox_from_path,
-        load_procedural_textures, set_material_with_textures,
+        despawn_entities_with_cache_cleanup, despawn_recursive_immediate, load_hdr_skybox,
+        load_hdr_skybox_from_path, load_procedural_textures, set_material_with_textures,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,

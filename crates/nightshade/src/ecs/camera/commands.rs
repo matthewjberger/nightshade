@@ -1,5 +1,9 @@
-use crate::ecs::camera::components::compute_pan_orbit_transform;
-use crate::ecs::world::{Entity, PAN_ORBIT_CAMERA, Vec2, Vec3, World, components::*};
+use crate::ecs::camera::components::{
+    ThirdPersonCamera, compute_pan_orbit_transform, compute_third_person_transform,
+};
+use crate::ecs::world::{
+    Entity, PAN_ORBIT_CAMERA, THIRD_PERSON_CAMERA, Vec2, Vec3, World, components::*,
+};
 
 pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
     let cameras = world.spawn_entities(
@@ -121,5 +125,65 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
     }
 
     world.resources.active_camera = Some(camera);
+    camera
+}
+
+pub fn spawn_third_person_camera(
+    world: &mut World,
+    follow_target: Entity,
+    distance: f32,
+    yaw: f32,
+    pitch: f32,
+    name: String,
+) -> Entity {
+    let cameras = world.spawn_entities(
+        crate::ecs::world::NAME
+            | crate::ecs::world::LOCAL_TRANSFORM
+            | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
+            | crate::ecs::world::GLOBAL_TRANSFORM
+            | crate::ecs::world::CAMERA
+            | THIRD_PERSON_CAMERA,
+        1,
+    );
+
+    let camera = cameras[0];
+
+    if let Some(camera_name) = world.core.get_name_mut(camera) {
+        *camera_name = Name(name);
+    }
+
+    let tpc = ThirdPersonCamera::new(distance)
+        .with_target(follow_target)
+        .with_yaw_pitch(yaw, pitch);
+
+    let focus = world
+        .core
+        .get_local_transform(follow_target)
+        .map(|t| t.translation + Vec3::new(0.0, tpc.height_offset, 0.0))
+        .unwrap_or_default();
+
+    let (position, rotation) = compute_third_person_transform(focus, yaw, pitch, distance);
+
+    if let Some(local_transform) = world.core.get_local_transform_mut(camera) {
+        local_transform.translation = position;
+        local_transform.rotation = rotation;
+    }
+
+    if let Some(camera_component) = world.core.get_camera_mut(camera) {
+        *camera_component = Camera {
+            projection: Projection::Perspective(PerspectiveCamera {
+                aspect_ratio: None,
+                y_fov_rad: 60.0_f32.to_radians(),
+                z_far: Some(500.0),
+                z_near: 0.1,
+            }),
+            smoothing: None,
+        };
+    }
+
+    if let Some(tpc_component) = world.core.get_third_person_camera_mut(camera) {
+        *tpc_component = tpc;
+    }
+
     camera
 }

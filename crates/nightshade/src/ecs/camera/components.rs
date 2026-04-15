@@ -4,11 +4,13 @@ mod orthographic;
 mod pan_orbit;
 mod perspective;
 mod smoothing;
+mod third_person;
 
 pub use orthographic::*;
 pub use pan_orbit::*;
 pub use perspective::*;
 pub use smoothing::*;
+pub use third_person::*;
 
 use nalgebra_glm::Mat4;
 

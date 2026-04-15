@@ -93,4 +93,9 @@ impl LocalTransform {
     pub fn forward_vector(&self) -> Vec3 {
         super::extract_forward_vector(&self.as_matrix())
     }
+
+    /// Rotates the transform by the given angle (radians) around the given axis.
+    pub fn rotate(&mut self, angle: f32, axis: &Vec3) {
+        self.rotation = nalgebra_glm::quat_angle_axis(angle, axis) * self.rotation;
+    }
 }

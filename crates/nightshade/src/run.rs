@@ -418,6 +418,7 @@ pub(crate) fn step(
                 }
             }
 
+            crate::ecs::graphics::systems::day_night_cycle_system(world);
             state.run_systems(world);
 
             crate::ecs::event_bus::systems::process_events_system(world, |world, message| {

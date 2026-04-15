@@ -146,6 +146,7 @@ freecs::ecs! {
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             camera: crate::ecs::camera::components::Camera => CAMERA,
             pan_orbit_camera: crate::ecs::camera::components::PanOrbitCamera => PAN_ORBIT_CAMERA,
+            third_person_camera: crate::ecs::camera::components::ThirdPersonCamera => THIRD_PERSON_CAMERA,
             light: crate::ecs::light::components::Light => LIGHT,
             lines: crate::ecs::lines::components::Lines => LINES,
             visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
