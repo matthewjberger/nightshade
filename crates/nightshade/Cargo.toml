@@ -105,6 +105,8 @@ engine = [
 tui = ["runtime", "text", "dep:rand"]
 terminal = ["dep:crossterm", "dep:rand", "dep:freecs"]
 
+interactive_fiction = ["dep:strum"]
+
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "dep:egui-wgpu"]
 shell = ["egui"]
 audio = ["dep:kira"]

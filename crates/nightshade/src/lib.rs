@@ -805,6 +805,9 @@ pub mod plugin_runtime;
 #[cfg(all(windows, feature = "windows-app-icon"))]
 pub mod build;
 
+#[cfg(feature = "interactive_fiction")]
+pub mod interactive_fiction;
+
 #[cfg(feature = "runtime")]
 pub use systems::*;
 
