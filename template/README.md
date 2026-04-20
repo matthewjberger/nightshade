@@ -56,7 +56,7 @@ The `mcp` feature exposes an MCP (Model Context Protocol) server that allows AI 
 Add the feature to your dependencies:
 
 ```toml
-nightshade = { version = "0.8", features = ["egui", "mcp"] }
+nightshade = { version = "0.13", features = ["egui", "mcp"] }
 ```
 
 Or run with the feature flag:
