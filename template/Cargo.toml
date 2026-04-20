@@ -9,7 +9,7 @@ name = "template_lib"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nightshade = { version = "0.13.2", features = ["egui"] }
+nightshade = { version = "0.13.3", features = ["egui"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
