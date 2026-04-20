@@ -8,7 +8,7 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nightshade = { version = "0.12.0", features = ["egui"] }
+nightshade = { version = "0.13.0", features = ["egui"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
