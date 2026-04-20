@@ -5,6 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [lib]
+name = "template_lib"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
