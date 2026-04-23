@@ -43,6 +43,6 @@ impl State for Template {
 
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
-fn android_main(app: nightshade::AndroidApp) {
-    nightshade::launch_android(app, Template).unwrap();
+fn android_main(app: AndroidApp) {
+    launch_android(app, Template).unwrap();
 }
