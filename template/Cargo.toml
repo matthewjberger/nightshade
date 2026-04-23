@@ -1,11 +1,16 @@
 [package]
-name = "template"
+name = "template_core"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "template"
+path = "src/main.rs"
 
 [dependencies]
 nightshade = { version = "0.13.3", features = ["egui"] }

@@ -13,6 +13,7 @@ just run-wasm
 
 # openxr (vr headset)
 just run-openxr
+just build-openxr
 
 # android
 just init-android   # one-time setup
