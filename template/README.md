@@ -19,6 +19,9 @@ just build-openxr
 just init-android   # one-time setup
 just build-android
 
+# android (meta quest vr — requires libs/arm64-v8a/libopenxr_loader.so)
+just build-android-openxr
+
 # steam deck
 just build-steamdeck
 just deploy-steamdeck        # copies binary to ~/Downloads on deck

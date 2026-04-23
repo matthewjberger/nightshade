@@ -107,6 +107,10 @@ init-android:
 build-android:
     x build --release --platform android --arch arm64 -p template_core --features android
 
+# Build the app for Android with OpenXR (Meta Quest)
+build-android-openxr:
+    x build --release --platform android --arch arm64 -p template_core --features android-openxr
+
 # Install the app on a connected Android device
 install-android device:
     x build --release --arch arm64 -p template_core --features android --device adb:{{device}}

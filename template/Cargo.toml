@@ -27,6 +27,7 @@ steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]
 mcp = ["nightshade/mcp"]
 android = ["nightshade/android"]
+android-openxr = ["nightshade/android-openxr"]
 
 # For very small final binary size,
 # uncomment the following release profile and build with it
