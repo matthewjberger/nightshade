@@ -16,12 +16,12 @@ just run-openxr
 
 # android
 just init-android   # one-time setup
-just build-android project=template
+just build-android
 
 # steam deck
-just build-steamdeck project=template
-just deploy-steamdeck project=template        # copies binary to ~/Downloads on deck
-just deploy-steamdeck-quick project=template  # copies as 'game' for quick launching
+just build-steamdeck
+just deploy-steamdeck        # copies binary to ~/Downloads on deck
+just deploy-steamdeck-quick  # copies as 'game' for quick launching
 ```
 
 > All chromium-based browsers like Brave, Vivaldi, Chrome, etc support WebGPU.
