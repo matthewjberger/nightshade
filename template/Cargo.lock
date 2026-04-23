@@ -2113,7 +2113,9 @@ dependencies = [
 
 [[package]]
 name = "nightshade"
-version = "0.13.0"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739d8c4ddf84b5886fca03869cb2d4f67e495ee426b766593b438b813ec9d387"
 dependencies = [
  "android-activity",
  "ash",

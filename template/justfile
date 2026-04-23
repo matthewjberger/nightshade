@@ -102,15 +102,8 @@ init-android:
     cargo install xbuild
 
 # Build the app for Android
-[unix]
 build-android:
     x build --release --platform android --arch arm64 -p {{project}} --features android
-    cp -f target/x/release/android/arm64/cargo/aarch64-linux-android/release/lib{{project}}_lib.so target/x/release/android/arm64/cargo/aarch64-linux-android/release/lib{{project}}.so
-
-[windows]
-build-android:
-    x build --release --platform android --arch arm64 -p {{project}} --features android
-    Copy-Item -Force target/x/release/android/arm64/cargo/aarch64-linux-android/release/lib{{project}}_lib.so target/x/release/android/arm64/cargo/aarch64-linux-android/release/lib{{project}}.so
 
 # Install the app on a connected Android device
 install-android device:

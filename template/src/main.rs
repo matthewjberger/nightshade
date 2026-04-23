@@ -1,5 +1,5 @@
 use nightshade::prelude::*;
-use template_lib::Template;
+use template::Template;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     launch(Template)?;
