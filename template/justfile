@@ -2,6 +2,8 @@ set windows-shell := ["powershell.exe"]
 export RUST_LOG := "info,wgpu_core=off"
 export RUST_BACKTRACE := "1"
 
+project := "template"
+
 # Displays the list of available commands
 @just:
     just --list
@@ -97,20 +99,20 @@ watch:
 init-android:
     rustup target add aarch64-linux-android
     rustup target add x86_64-linux-android
-    cargo install --locked xbuild
+    cargo install xbuild
 
 # Build the app for Android
 build-android:
-    x build --release --platform android --arch arm64 -p template --features android
+    x build --release --platform android --arch arm64 -p {{project}} --features android
 
 # Install the app on a connected Android device
 install-android device:
-    x build --release --arch arm64 -p template --features android --device adb:{{device}}
+    x build --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
     adb -s {{device}} install -r target/x/release/android/app.apk
 
 # Run the app on a connected Android device
 run-android device:
-    x run --release --arch arm64 -p template --features android --device adb:{{device}}
+    x run --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
 
 # List connected Android devices
 list-android:
@@ -123,10 +125,10 @@ build-steamdeck:
 # Builds and deploys the project to Steam Deck
 deploy-steamdeck:
     just build-steamdeck
-    scp ./target/x86_64-unknown-linux-gnu/release/template deck@steamdeck.local:~/Downloads
+    scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
 
 # Quick deploy to Steam Deck (renames to 'game' for easy launching)
 deploy-steamdeck-quick:
     just build-steamdeck
-    scp ./target/x86_64-unknown-linux-gnu/release/template deck@steamdeck.local:~/Downloads/game
+    scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads/game
     ssh deck@steamdeck.local "chmod +x ~/Downloads/game"
