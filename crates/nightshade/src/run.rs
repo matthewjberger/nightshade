@@ -970,49 +970,26 @@ pub trait State {
     fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
         None
     }
-    /// Configure custom render passes. Called once during initialization.
+    /// Add custom render passes. Called once during initialization.
     ///
-    /// The engine pre-wires scene rendering and the final blit to swapchain.
-    /// User chains should write their final post-processed result to
-    /// `resources.compute_output` — the engine blits that to the swapchain.
+    /// The engine pre-wires the full standard pipeline: scene rendering,
+    /// shadows, bloom, depth-of-field, SSAO, post-processing, and the final
+    /// blit to swapchain. Built-in effects are toggled via
+    /// `world.resources.graphics.{bloom_enabled, ssao_enabled,
+    /// depth_of_field.enabled, …}`.
+    ///
+    /// Override only to inject a custom pass on top of the standard pipeline
+    /// (e.g. a custom shader effect that reads `scene_color` and writes a
+    /// custom resource). The engine's standard pipeline writes the final
+    /// post-processed result to `resources.compute_output`, which is then
+    /// blitted to the swapchain.
     fn configure_render_graph(
         &mut self,
-        graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
-        device: &wgpu::Device,
-        surface_format: wgpu::TextureFormat,
-        resources: RenderResources,
+        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        _device: &wgpu::Device,
+        _surface_format: wgpu::TextureFormat,
+        _resources: RenderResources,
     ) {
-        let bloom_width = resources.surface_width / 2;
-        let bloom_height = resources.surface_height / 2;
-
-        let bloom_texture = graph
-            .add_color_texture("bloom")
-            .format(wgpu::TextureFormat::Rgba16Float)
-            .size(bloom_width, bloom_height)
-            .clear_color(wgpu::Color::BLACK)
-            .transient();
-
-        let bloom_pass = crate::render::wgpu::passes::BloomPass::new(
-            device,
-            resources.surface_width,
-            resources.surface_height,
-        );
-        let _ = graph.add_pass(
-            Box::new(bloom_pass),
-            &[("hdr", resources.scene_color), ("bloom", bloom_texture)],
-        );
-
-        let postprocess_pass =
-            crate::render::wgpu::passes::PostProcessPass::new(device, surface_format, 1.0);
-        let _ = graph.add_pass(
-            Box::new(postprocess_pass),
-            &[
-                ("hdr", resources.scene_color),
-                ("bloom", bloom_texture),
-                ("ssao", resources.ssao),
-                ("output", resources.compute_output),
-            ],
-        );
     }
     /// Build egui UI (requires `egui` feature).
     #[cfg(feature = "egui")]
