@@ -881,6 +881,8 @@ pub mod prelude {
     pub use crate::ecs::physics::debug::physics_debug_draw_system;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
+    #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::types::RaycastHit;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
