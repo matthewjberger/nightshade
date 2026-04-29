@@ -971,6 +971,10 @@ pub trait State {
         None
     }
     /// Configure custom render passes. Called once during initialization.
+    ///
+    /// The engine pre-wires scene rendering and the final blit to swapchain.
+    /// User chains should write their final post-processed result to
+    /// `resources.compute_output` — the engine blits that to the swapchain.
     fn configure_render_graph(
         &mut self,
         graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
@@ -1008,29 +1012,6 @@ pub trait State {
                 ("ssao", resources.ssao),
                 ("output", resources.compute_output),
             ],
-        );
-
-        let fxaa_output = graph
-            .add_color_texture("fxaa_output")
-            .format(surface_format)
-            .size(
-                resources.surface_width.max(1),
-                resources.surface_height.max(1),
-            )
-            .transient();
-
-        let fxaa_pass = crate::render::wgpu::passes::FxaaPass::new(device, surface_format);
-        let _ = graph.add_pass(
-            Box::new(fxaa_pass),
-            &[("input", resources.compute_output), ("output", fxaa_output)],
-        );
-
-        let swapchain_blit_pass =
-            crate::render::wgpu::passes::BlitPass::new(device, surface_format)
-                .with_name("default_swapchain_blit");
-        let _ = graph.add_pass(
-            Box::new(swapchain_blit_pass),
-            &[("input", fxaa_output), ("output", resources.swapchain)],
         );
     }
     /// Build egui UI (requires `egui` feature).
