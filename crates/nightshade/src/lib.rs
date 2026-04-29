@@ -873,9 +873,9 @@ pub mod prelude {
     pub use crate::ecs::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::commands::{
-        create_textured_material, spawn_dynamic_physics_cube_with_material,
-        spawn_dynamic_physics_cylinder_with_material, spawn_dynamic_physics_sphere_with_material,
-        spawn_static_physics_cube_with_material,
+        create_textured_material, reset_physics_interpolation,
+        spawn_dynamic_physics_cube_with_material, spawn_dynamic_physics_cylinder_with_material,
+        spawn_dynamic_physics_sphere_with_material, spawn_static_physics_cube_with_material,
     };
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::debug::physics_debug_draw_system;
