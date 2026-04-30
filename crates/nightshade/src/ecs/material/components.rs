@@ -226,6 +226,10 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Chromatic dispersion strength (KHR_materials_dispersion).
+    /// Splits the refraction angle per wavelength using Cauchy's approximation.
+    #[serde(default)]
+    pub dispersion: f32,
     /// Anisotropy strength (KHR_materials_anisotropy). 0 = isotropic, 1 = maximum.
     #[serde(default)]
     pub anisotropy_strength: f32,
@@ -381,6 +385,7 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            dispersion: 0.0,
             anisotropy_strength: 0.0,
             anisotropy_rotation: 0.0,
             anisotropy_texture: None,
