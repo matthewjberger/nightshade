@@ -1,0 +1,12 @@
+[package]
+name = "fireworks"
+description = "GPU-driven particle fireworks with multiple explosion types and bloom effects"
+version = "0.1.0"
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+
+[features]
+openxr = ["nightshade/openxr"]
+
+[dependencies]
+nightshade = { workspace = true, features = ["egui", "tracing"] }
