@@ -92,6 +92,7 @@ pub enum WorldCommand {
         rgba_data: Vec<u8>,
         width: u32,
         height: u32,
+        usage: crate::render::wgpu::texture_cache::TextureUsage,
     },
     LoadHdrSkybox {
         hdr_data: Vec<u8>,
@@ -937,6 +938,7 @@ pub fn load_procedural_textures(world: &mut World) {
         rgba_data: checkerboard.0,
         width: checkerboard.1,
         height: checkerboard.2,
+        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
     });
 
     let gradient = generate_gradient_texture();
@@ -945,6 +947,7 @@ pub fn load_procedural_textures(world: &mut World) {
         rgba_data: gradient.0,
         width: gradient.1,
         height: gradient.2,
+        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
     });
 
     let uv_test = generate_uv_test_texture();
@@ -953,6 +956,7 @@ pub fn load_procedural_textures(world: &mut World) {
         rgba_data: uv_test.0,
         width: uv_test.1,
         height: uv_test.2,
+        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
     });
 }
 
