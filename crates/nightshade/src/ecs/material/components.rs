@@ -226,6 +226,21 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Diffuse transmission factor (KHR_materials_diffuse_transmission).
+    /// Fraction of base color light transmitted as Lambertian through the surface.
+    #[serde(default)]
+    pub diffuse_transmission_factor: f32,
+    #[serde(default)]
+    pub diffuse_transmission_texture: Option<String>,
+    #[serde(default)]
+    pub diffuse_transmission_texture_transform: TextureTransform,
+    /// Color tint applied to the diffuse-transmitted light.
+    #[serde(default = "default_diffuse_transmission_color")]
+    pub diffuse_transmission_color_factor: [f32; 3],
+    #[serde(default)]
+    pub diffuse_transmission_color_texture: Option<String>,
+    #[serde(default)]
+    pub diffuse_transmission_color_texture_transform: TextureTransform,
     /// Chromatic dispersion strength (KHR_materials_dispersion).
     /// Splits the refraction angle per wavelength using Cauchy's approximation.
     #[serde(default)]
@@ -325,6 +340,10 @@ fn default_emissive_strength() -> f32 {
     1.0
 }
 
+fn default_diffuse_transmission_color() -> [f32; 3] {
+    [1.0, 1.0, 1.0]
+}
+
 fn default_iridescence_ior() -> f32 {
     1.3
 }
@@ -385,6 +404,12 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            diffuse_transmission_factor: 0.0,
+            diffuse_transmission_texture: None,
+            diffuse_transmission_texture_transform: TextureTransform::IDENTITY,
+            diffuse_transmission_color_factor: [1.0, 1.0, 1.0],
+            diffuse_transmission_color_texture: None,
+            diffuse_transmission_color_texture_transform: TextureTransform::IDENTITY,
             dispersion: 0.0,
             anisotropy_strength: 0.0,
             anisotropy_rotation: 0.0,
