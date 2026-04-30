@@ -93,6 +93,7 @@ pub enum WorldCommand {
         width: u32,
         height: u32,
         usage: crate::render::wgpu::texture_cache::TextureUsage,
+        sampler: crate::render::wgpu::texture_cache::SamplerSettings,
     },
     LoadHdrSkybox {
         hdr_data: Vec<u8>,
@@ -932,6 +933,8 @@ pub fn set_material_with_textures(
 }
 
 pub fn load_procedural_textures(world: &mut World) {
+    let default_sampler = crate::render::wgpu::texture_cache::SamplerSettings::DEFAULT;
+
     let checkerboard = generate_checkerboard_texture();
     world.queue_command(WorldCommand::LoadTexture {
         name: "checkerboard".to_string(),
@@ -939,6 +942,7 @@ pub fn load_procedural_textures(world: &mut World) {
         width: checkerboard.1,
         height: checkerboard.2,
         usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
+        sampler: default_sampler,
     });
 
     let gradient = generate_gradient_texture();
@@ -948,6 +952,7 @@ pub fn load_procedural_textures(world: &mut World) {
         width: gradient.1,
         height: gradient.2,
         usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
+        sampler: default_sampler,
     });
 
     let uv_test = generate_uv_test_texture();
@@ -957,6 +962,7 @@ pub fn load_procedural_textures(world: &mut World) {
         width: uv_test.1,
         height: uv_test.2,
         usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
+        sampler: default_sampler,
     });
 }
 
