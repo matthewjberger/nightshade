@@ -226,6 +226,16 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Anisotropy strength (KHR_materials_anisotropy). 0 = isotropic, 1 = maximum.
+    #[serde(default)]
+    pub anisotropy_strength: f32,
+    /// Rotation of anisotropic direction in radians around the surface normal.
+    #[serde(default)]
+    pub anisotropy_rotation: f32,
+    #[serde(default)]
+    pub anisotropy_texture: Option<String>,
+    #[serde(default)]
+    pub anisotropy_texture_transform: TextureTransform,
     /// Iridescence strength (KHR_materials_iridescence). 0 = none, 1 = full thin-film effect.
     #[serde(default)]
     pub iridescence_factor: f32,
@@ -371,6 +381,10 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            anisotropy_strength: 0.0,
+            anisotropy_rotation: 0.0,
+            anisotropy_texture: None,
+            anisotropy_texture_transform: TextureTransform::IDENTITY,
             iridescence_factor: 0.0,
             iridescence_texture: None,
             iridescence_texture_transform: TextureTransform::IDENTITY,
