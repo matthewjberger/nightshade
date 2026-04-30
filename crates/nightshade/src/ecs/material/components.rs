@@ -226,6 +226,26 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Iridescence strength (KHR_materials_iridescence). 0 = none, 1 = full thin-film effect.
+    #[serde(default)]
+    pub iridescence_factor: f32,
+    #[serde(default)]
+    pub iridescence_texture: Option<String>,
+    #[serde(default)]
+    pub iridescence_texture_transform: TextureTransform,
+    /// Index of refraction for the iridescent thin-film layer.
+    #[serde(default = "default_iridescence_ior")]
+    pub iridescence_ior: f32,
+    /// Minimum film thickness in nanometers.
+    #[serde(default = "default_iridescence_thickness_min")]
+    pub iridescence_thickness_minimum: f32,
+    /// Maximum film thickness in nanometers (modulated by iridescence_thickness_texture.g).
+    #[serde(default = "default_iridescence_thickness_max")]
+    pub iridescence_thickness_maximum: f32,
+    #[serde(default)]
+    pub iridescence_thickness_texture: Option<String>,
+    #[serde(default)]
+    pub iridescence_thickness_texture_transform: TextureTransform,
     /// Sheen color (KHR_materials_sheen). Multiplied with sheen_color_texture if present.
     #[serde(default)]
     pub sheen_color_factor: [f32; 3],
@@ -291,6 +311,18 @@ fn default_emissive_strength() -> f32 {
     1.0
 }
 
+fn default_iridescence_ior() -> f32 {
+    1.3
+}
+
+fn default_iridescence_thickness_min() -> f32 {
+    100.0
+}
+
+fn default_iridescence_thickness_max() -> f32 {
+    400.0
+}
+
 impl Material {
     /// Returns `true` if this material requires transparency handling.
     pub fn is_transparent(&self) -> bool {
@@ -339,6 +371,14 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            iridescence_factor: 0.0,
+            iridescence_texture: None,
+            iridescence_texture_transform: TextureTransform::IDENTITY,
+            iridescence_ior: 1.3,
+            iridescence_thickness_minimum: 100.0,
+            iridescence_thickness_maximum: 400.0,
+            iridescence_thickness_texture: None,
+            iridescence_thickness_texture_transform: TextureTransform::IDENTITY,
             sheen_color_factor: [0.0, 0.0, 0.0],
             sheen_color_texture: None,
             sheen_color_texture_transform: TextureTransform::IDENTITY,
