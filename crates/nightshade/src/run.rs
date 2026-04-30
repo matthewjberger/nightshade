@@ -970,25 +970,12 @@ pub trait State {
     fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
         None
     }
-    /// Add custom render passes. Called once during initialization.
-    ///
-    /// The engine pre-wires the full standard pipeline: scene rendering,
-    /// shadows, bloom, depth-of-field, SSAO, post-processing, and the final
-    /// blit to swapchain. Built-in effects are toggled via
-    /// `world.resources.graphics.{bloom_enabled, ssao_enabled,
-    /// depth_of_field.enabled, …}`.
-    ///
-    /// Override only to inject a custom pass on top of the standard pipeline
-    /// (e.g. a custom shader effect that reads `scene_color` and writes a
-    /// custom resource). The engine's standard pipeline writes the final
-    /// post-processed result to `resources.compute_output`, which is then
-    /// blitted to the swapchain.
     fn configure_render_graph(
         &mut self,
-        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
-        _device: &wgpu::Device,
-        _surface_format: wgpu::TextureFormat,
-        _resources: RenderResources,
+        _: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        _: &wgpu::Device,
+        _: wgpu::TextureFormat,
+        _: RenderResources,
     ) {
     }
     /// Build egui UI (requires `egui` feature).
