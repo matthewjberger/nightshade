@@ -226,6 +226,20 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Sheen color (KHR_materials_sheen). Multiplied with sheen_color_texture if present.
+    #[serde(default)]
+    pub sheen_color_factor: [f32; 3],
+    #[serde(default)]
+    pub sheen_color_texture: Option<String>,
+    #[serde(default)]
+    pub sheen_color_texture_transform: TextureTransform,
+    /// Sheen roughness (0 = sharp, 1 = smooth velvet).
+    #[serde(default)]
+    pub sheen_roughness_factor: f32,
+    #[serde(default)]
+    pub sheen_roughness_texture: Option<String>,
+    #[serde(default)]
+    pub sheen_roughness_texture_transform: TextureTransform,
     /// Clearcoat layer strength (KHR_materials_clearcoat). 0 = none, 1 = full coat.
     #[serde(default)]
     pub clearcoat_factor: f32,
@@ -325,6 +339,12 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            sheen_color_factor: [0.0, 0.0, 0.0],
+            sheen_color_texture: None,
+            sheen_color_texture_transform: TextureTransform::IDENTITY,
+            sheen_roughness_factor: 0.0,
+            sheen_roughness_texture: None,
+            sheen_roughness_texture_transform: TextureTransform::IDENTITY,
             clearcoat_factor: 0.0,
             clearcoat_texture: None,
             clearcoat_texture_transform: TextureTransform::IDENTITY,
