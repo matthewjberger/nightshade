@@ -163,6 +163,20 @@ pub fn material_registry_iter(
         })
 }
 
+fn hash_texture_transform(
+    transform: &crate::ecs::material::components::TextureTransform,
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+) {
+    for component in &transform.offset {
+        component.to_bits().hash(hasher);
+    }
+    transform.rotation.to_bits().hash(hasher);
+    for component in &transform.scale {
+        component.to_bits().hash(hasher);
+    }
+    transform.uv_set.hash(hasher);
+}
+
 fn compute_material_content_hash(material: &Material) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     for component in &material.base_color {
@@ -174,32 +188,29 @@ fn compute_material_content_hash(material: &Material) -> u64 {
     material.alpha_mode.hash(&mut hasher);
     material.alpha_cutoff.to_bits().hash(&mut hasher);
     material.base_texture.hash(&mut hasher);
-    material.base_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.base_texture_transform, &mut hasher);
     material.emissive_texture.hash(&mut hasher);
-    material.emissive_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.emissive_texture_transform, &mut hasher);
     material.normal_texture.hash(&mut hasher);
-    material.normal_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.normal_texture_transform, &mut hasher);
     material.normal_scale.to_bits().hash(&mut hasher);
     material.normal_map_flip_y.hash(&mut hasher);
     material.normal_map_two_component.hash(&mut hasher);
     material.metallic_roughness_texture.hash(&mut hasher);
-    material.metallic_roughness_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.metallic_roughness_texture_transform, &mut hasher);
     material.occlusion_texture.hash(&mut hasher);
-    material.occlusion_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.occlusion_texture_transform, &mut hasher);
     material.occlusion_strength.to_bits().hash(&mut hasher);
     material.roughness.to_bits().hash(&mut hasher);
     material.metallic.to_bits().hash(&mut hasher);
     material.unlit.hash(&mut hasher);
     material.double_sided.hash(&mut hasher);
-    for component in &material.uv_scale {
-        component.to_bits().hash(&mut hasher);
-    }
     material.transmission_factor.to_bits().hash(&mut hasher);
     material.transmission_texture.hash(&mut hasher);
-    material.transmission_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.transmission_texture_transform, &mut hasher);
     material.thickness.to_bits().hash(&mut hasher);
     material.thickness_texture.hash(&mut hasher);
-    material.thickness_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.thickness_texture_transform, &mut hasher);
     for component in &material.attenuation_color {
         component.to_bits().hash(&mut hasher);
     }
@@ -210,9 +221,9 @@ fn compute_material_content_hash(material: &Material) -> u64 {
         component.to_bits().hash(&mut hasher);
     }
     material.specular_texture.hash(&mut hasher);
-    material.specular_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.specular_texture_transform, &mut hasher);
     material.specular_color_texture.hash(&mut hasher);
-    material.specular_color_texture_uv_set.hash(&mut hasher);
+    hash_texture_transform(&material.specular_color_texture_transform, &mut hasher);
     material.emissive_strength.to_bits().hash(&mut hasher);
     hasher.finish()
 }

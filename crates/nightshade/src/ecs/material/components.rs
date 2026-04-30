@@ -57,6 +57,67 @@ impl From<&str> for MaterialRef {
     }
 }
 
+/// Per-texture UV transform from glTF KHR_texture_transform.
+///
+/// Applied as `T(offset) * R(rotation) * S(scale)` to homogeneous UVs.
+/// When the extension is absent, the transform is identity and `uv_set`
+/// inherits from the binding's tex_coord.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct TextureTransform {
+    /// UV offset (translation).
+    pub offset: [f32; 2],
+    /// UV rotation in radians (positive = counter-clockwise about origin in glTF).
+    pub rotation: f32,
+    /// UV scale.
+    pub scale: [f32; 2],
+    /// Which TEXCOORD_n attribute to sample (0 or 1).
+    pub uv_set: u32,
+}
+
+impl Default for TextureTransform {
+    fn default() -> Self {
+        Self {
+            offset: [0.0, 0.0],
+            rotation: 0.0,
+            scale: [1.0, 1.0],
+            uv_set: 0,
+        }
+    }
+}
+
+impl TextureTransform {
+    pub const IDENTITY: Self = Self {
+        offset: [0.0, 0.0],
+        rotation: 0.0,
+        scale: [1.0, 1.0],
+        uv_set: 0,
+    };
+
+    /// Compose offset/rotation/scale as `T * R * S` and pack into the two-row
+    /// `mat3x2` form used by the shader. Returns `(row0, row1)` where
+    /// row0 = (m00, m01, m02), row1 = (m10, m11, m12).
+    ///
+    /// Per KHR_texture_transform reference renderer (matches Khronos sample
+    /// renderings of TextureTransformTest):
+    ///
+    /// | cos*sx   sin*sy  ox |
+    /// | -sin*sx  cos*sy  oy |
+    /// |       0       0   1 |
+    ///
+    /// applied as `M * (uv.x, uv.y, 1)^T`.
+    pub fn to_packed(&self) -> ([f32; 3], [f32; 3]) {
+        let cos_r = self.rotation.cos();
+        let sin_r = self.rotation.sin();
+        let m00 = cos_r * self.scale[0];
+        let m01 = sin_r * self.scale[1];
+        let m02 = self.offset[0];
+        let m10 = -sin_r * self.scale[0];
+        let m11 = cos_r * self.scale[1];
+        let m12 = self.offset[1];
+        ([m00, m01, m02], [m10, m11, m12])
+    }
+}
+
 /// How alpha values are interpreted for transparency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 pub enum AlphaMode {
@@ -87,15 +148,15 @@ pub struct Material {
     /// Path to base color texture.
     pub base_texture: Option<String>,
     #[serde(default)]
-    pub base_texture_uv_set: u32,
+    pub base_texture_transform: TextureTransform,
     /// Path to emissive texture.
     pub emissive_texture: Option<String>,
     #[serde(default)]
-    pub emissive_texture_uv_set: u32,
+    pub emissive_texture_transform: TextureTransform,
     /// Path to normal map texture.
     pub normal_texture: Option<String>,
     #[serde(default)]
-    pub normal_texture_uv_set: u32,
+    pub normal_texture_transform: TextureTransform,
     /// Normal map intensity multiplier.
     #[serde(default = "default_normal_scale")]
     pub normal_scale: f32,
@@ -108,11 +169,11 @@ pub struct Material {
     /// Path to metallic (B) / roughness (G) texture.
     pub metallic_roughness_texture: Option<String>,
     #[serde(default)]
-    pub metallic_roughness_texture_uv_set: u32,
+    pub metallic_roughness_texture_transform: TextureTransform,
     /// Path to ambient occlusion texture (R channel).
     pub occlusion_texture: Option<String>,
     #[serde(default)]
-    pub occlusion_texture_uv_set: u32,
+    pub occlusion_texture_transform: TextureTransform,
     /// Occlusion effect strength (0 = none, 1 = full).
     #[serde(default = "default_occlusion_strength")]
     pub occlusion_strength: f32,
@@ -125,23 +186,20 @@ pub struct Material {
     /// Render both sides of faces.
     #[serde(default)]
     pub double_sided: bool,
-    /// UV coordinate scale multiplier.
-    #[serde(default = "default_uv_scale")]
-    pub uv_scale: [f32; 2],
     /// Transmission factor for refractive materials (KHR_materials_transmission).
     #[serde(default)]
     pub transmission_factor: f32,
     #[serde(default)]
     pub transmission_texture: Option<String>,
     #[serde(default)]
-    pub transmission_texture_uv_set: u32,
+    pub transmission_texture_transform: TextureTransform,
     /// Volume thickness for transmission (KHR_materials_volume).
     #[serde(default)]
     pub thickness: f32,
     #[serde(default)]
     pub thickness_texture: Option<String>,
     #[serde(default)]
-    pub thickness_texture_uv_set: u32,
+    pub thickness_texture_transform: TextureTransform,
     /// Light absorption color inside the volume.
     #[serde(default = "default_attenuation_color")]
     pub attenuation_color: [f32; 3],
@@ -160,18 +218,14 @@ pub struct Material {
     #[serde(default)]
     pub specular_texture: Option<String>,
     #[serde(default)]
-    pub specular_texture_uv_set: u32,
+    pub specular_texture_transform: TextureTransform,
     #[serde(default)]
     pub specular_color_texture: Option<String>,
     #[serde(default)]
-    pub specular_color_texture_uv_set: u32,
+    pub specular_color_texture_transform: TextureTransform,
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
-}
-
-fn default_uv_scale() -> [f32; 2] {
-    [1.0, 1.0]
 }
 
 fn default_normal_scale() -> f32 {
@@ -217,39 +271,38 @@ impl Default for Material {
             alpha_mode: AlphaMode::Opaque,
             alpha_cutoff: 0.5,
             base_texture: None,
-            base_texture_uv_set: 0,
+            base_texture_transform: TextureTransform::IDENTITY,
             emissive_texture: None,
-            emissive_texture_uv_set: 0,
+            emissive_texture_transform: TextureTransform::IDENTITY,
             normal_texture: None,
-            normal_texture_uv_set: 0,
+            normal_texture_transform: TextureTransform::IDENTITY,
             normal_scale: 1.0,
             normal_map_flip_y: false,
             normal_map_two_component: false,
             metallic_roughness_texture: None,
-            metallic_roughness_texture_uv_set: 0,
+            metallic_roughness_texture_transform: TextureTransform::IDENTITY,
             occlusion_texture: None,
-            occlusion_texture_uv_set: 0,
+            occlusion_texture_transform: TextureTransform::IDENTITY,
             occlusion_strength: 1.0,
             roughness: 0.5,
             metallic: 0.0,
             unlit: false,
             double_sided: false,
-            uv_scale: [1.0, 1.0],
             transmission_factor: 0.0,
             transmission_texture: None,
-            transmission_texture_uv_set: 0,
+            transmission_texture_transform: TextureTransform::IDENTITY,
             thickness: 0.0,
             thickness_texture: None,
-            thickness_texture_uv_set: 0,
+            thickness_texture_transform: TextureTransform::IDENTITY,
             attenuation_color: [1.0, 1.0, 1.0],
             attenuation_distance: 0.0,
             ior: 1.5,
             specular_factor: 1.0,
             specular_color_factor: [1.0, 1.0, 1.0],
             specular_texture: None,
-            specular_texture_uv_set: 0,
+            specular_texture_transform: TextureTransform::IDENTITY,
             specular_color_texture: None,
-            specular_color_texture_uv_set: 0,
+            specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
         }
     }

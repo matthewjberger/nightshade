@@ -39,6 +39,7 @@ gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = [
     "KHR_lights_punctual",
     "KHR_materials_unlit",
+    "KHR_texture_transform",
     "names",
     "KHR_materials_pbrSpecularGlossiness",
     "KHR_materials_transmission",
