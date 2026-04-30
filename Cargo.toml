@@ -47,6 +47,7 @@ gltf = { version = "1.4.1", features = [
     "KHR_materials_ior",
     "KHR_materials_specular",
     "KHR_materials_emissive_strength",
+    "extensions",
     "import",
 ] }
 half = "2.7.1"

@@ -226,6 +226,27 @@ pub struct Material {
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
     #[serde(default = "default_emissive_strength")]
     pub emissive_strength: f32,
+    /// Clearcoat layer strength (KHR_materials_clearcoat). 0 = none, 1 = full coat.
+    #[serde(default)]
+    pub clearcoat_factor: f32,
+    #[serde(default)]
+    pub clearcoat_texture: Option<String>,
+    #[serde(default)]
+    pub clearcoat_texture_transform: TextureTransform,
+    /// Clearcoat layer roughness.
+    #[serde(default)]
+    pub clearcoat_roughness_factor: f32,
+    #[serde(default)]
+    pub clearcoat_roughness_texture: Option<String>,
+    #[serde(default)]
+    pub clearcoat_roughness_texture_transform: TextureTransform,
+    /// Optional separate normal map for the clearcoat layer.
+    #[serde(default)]
+    pub clearcoat_normal_texture: Option<String>,
+    #[serde(default)]
+    pub clearcoat_normal_texture_transform: TextureTransform,
+    #[serde(default = "default_normal_scale")]
+    pub clearcoat_normal_scale: f32,
 }
 
 fn default_normal_scale() -> f32 {
@@ -304,6 +325,15 @@ impl Default for Material {
             specular_color_texture: None,
             specular_color_texture_transform: TextureTransform::IDENTITY,
             emissive_strength: 1.0,
+            clearcoat_factor: 0.0,
+            clearcoat_texture: None,
+            clearcoat_texture_transform: TextureTransform::IDENTITY,
+            clearcoat_roughness_factor: 0.0,
+            clearcoat_roughness_texture: None,
+            clearcoat_roughness_texture_transform: TextureTransform::IDENTITY,
+            clearcoat_normal_texture: None,
+            clearcoat_normal_texture_transform: TextureTransform::IDENTITY,
+            clearcoat_normal_scale: 1.0,
         }
     }
 }
