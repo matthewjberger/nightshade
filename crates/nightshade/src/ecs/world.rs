@@ -230,6 +230,7 @@ freecs::ecs! {
         children_cache_valid: bool,
         cleanup_frame_counter: u64,
         dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
+        loading_pipeline: crate::ecs::loading::LoadingPipeline,
         skinning_offsets: std::collections::HashMap<freecs::Entity, usize>,
         total_skinning_joints: u32,
         #[cfg(feature = "scripting")]
