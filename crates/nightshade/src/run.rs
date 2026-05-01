@@ -733,6 +733,40 @@ fn timing_system(world: &mut World, event: &WindowEvent) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn collect_directory_files(
+    root: &std::path::Path,
+    current: &std::path::Path,
+    files: &mut Vec<crate::ecs::input::resources::DroppedFile>,
+) {
+    let entries = match std::fs::read_dir(current) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_directory_files(root, &path, files);
+        } else if path.is_file() {
+            let Ok(data) = std::fs::read(&path) else {
+                continue;
+            };
+            let relative = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            let prefix = root
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| format!("{}/", name))
+                .unwrap_or_default();
+            let name = format!("{}{}", prefix, relative);
+            files.push(crate::ecs::input::resources::DroppedFile { name, data });
+        }
+    }
+}
+
 fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -745,8 +779,8 @@ fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>
     }
 
     let dropped_files: Vec<_> = world.resources.dropped_files.drain(..).collect();
-    for file in dropped_files {
-        state.on_dropped_file_data(world, &file.name, &file.data);
+    if !dropped_files.is_empty() {
+        state.on_dropped_files(world, &dropped_files);
     }
 }
 
@@ -778,47 +812,36 @@ fn setup_wasm_file_drop() {
         let Some(data_transfer) = event.data_transfer() else {
             return;
         };
-        let Some(files) = data_transfer.files() else {
-            return;
-        };
 
-        for index in 0..files.length() {
-            let Some(file) = files.get(index) else {
+        let mut directory_entries: Vec<web_sys::FileSystemDirectoryEntry> = Vec::new();
+        let items = data_transfer.items();
+        for index in 0..items.length() {
+            let Some(item) = items.get(index) else {
                 continue;
             };
+            if let Ok(Some(entry)) = item.webkit_get_as_entry()
+                && entry.is_directory()
+                && let Ok(directory) = entry.dyn_into::<web_sys::FileSystemDirectoryEntry>()
+            {
+                directory_entries.push(directory);
+            }
+        }
 
-            let file_name = file.name();
-            let file_reader = web_sys::FileReader::new().expect("failed to create FileReader");
+        if directory_entries.is_empty()
+            && let Some(files) = data_transfer.files()
+        {
+            for index in 0..files.length() {
+                let Some(file) = files.get(index) else {
+                    continue;
+                };
+                read_file_into_queue(file.clone(), file.name());
+            }
+        }
 
-            let onload_closure = {
-                let file_name = file_name.clone();
-                let file_reader = file_reader.clone();
-
-                Closure::once(Box::new(move |_event: web_sys::ProgressEvent| {
-                    let result = file_reader.result().expect("failed to get result");
-                    let array_buffer = result
-                        .dyn_into::<js_sys::ArrayBuffer>()
-                        .expect("result is not ArrayBuffer");
-                    let uint8_array = js_sys::Uint8Array::new(&array_buffer);
-                    let data = uint8_array.to_vec();
-
-                    WASM_DROPPED_FILES.with(|files| {
-                        files
-                            .borrow_mut()
-                            .push(crate::ecs::input::resources::DroppedFile {
-                                name: file_name,
-                                data,
-                            });
-                    });
-                }) as Box<dyn FnOnce(_)>)
-            };
-
-            file_reader.set_onload(Some(onload_closure.as_ref().unchecked_ref()));
-            onload_closure.forget();
-
-            file_reader
-                .read_as_array_buffer(&file)
-                .expect("failed to read file");
+        for directory in directory_entries {
+            let prefix = directory.name();
+            let reader = directory.create_reader();
+            read_directory_callback(reader, prefix);
         }
     }) as Box<dyn FnMut(_)>);
 
@@ -828,6 +851,102 @@ fn setup_wasm_file_drop() {
     drop_closure.forget();
 }
 
+#[cfg(target_arch = "wasm32")]
+fn read_file_into_queue(file: web_sys::File, name: String) {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::prelude::*;
+
+    let file_reader = web_sys::FileReader::new().expect("failed to create FileReader");
+    let onload_closure = {
+        let file_reader = file_reader.clone();
+        Closure::once(Box::new(move |_event: web_sys::ProgressEvent| {
+            let result = file_reader.result().expect("failed to get result");
+            let array_buffer = match result.dyn_into::<js_sys::ArrayBuffer>() {
+                Ok(value) => value,
+                Err(_) => return,
+            };
+            let bytes = js_sys::Uint8Array::new(&array_buffer).to_vec();
+            WASM_DROPPED_FILES.with(|files| {
+                files
+                    .borrow_mut()
+                    .push(crate::ecs::input::resources::DroppedFile { name, data: bytes });
+            });
+        }) as Box<dyn FnOnce(_)>)
+    };
+    file_reader.set_onload(Some(onload_closure.as_ref().unchecked_ref()));
+    onload_closure.forget();
+    file_reader
+        .read_as_array_buffer(&file)
+        .expect("failed to read file");
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_directory_callback(reader: web_sys::FileSystemDirectoryReader, prefix: String) {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::prelude::*;
+
+    let reader_clone = reader.clone();
+    let success = Closure::once(Box::new(move |entries: JsValue| {
+        let array: js_sys::Array = match entries.dyn_into() {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        if array.length() == 0 {
+            return;
+        }
+        for index in 0..array.length() {
+            let raw = array.get(index);
+            let entry: web_sys::FileSystemEntry = match raw.dyn_into() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            walk_entry_callback(entry, prefix.clone());
+        }
+        read_directory_callback(reader_clone, prefix);
+    }) as Box<dyn FnOnce(_)>);
+    let _ = reader.read_entries_with_callback(success.as_ref().unchecked_ref());
+    success.forget();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn walk_entry_callback(entry: web_sys::FileSystemEntry, prefix: String) {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::prelude::*;
+
+    if entry.is_file() {
+        let file_entry: web_sys::FileSystemFileEntry = match entry.dyn_into() {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        let path = if prefix.is_empty() {
+            file_entry.name()
+        } else {
+            format!("{}/{}", prefix, file_entry.name())
+        };
+        let success = Closure::once(Box::new(move |file: JsValue| {
+            let file: web_sys::File = match file.dyn_into() {
+                Ok(value) => value,
+                Err(_) => return,
+            };
+            read_file_into_queue(file, path);
+        }) as Box<dyn FnOnce(_)>);
+        file_entry.file_with_callback(success.as_ref().unchecked_ref());
+        success.forget();
+    } else if entry.is_directory() {
+        let directory_entry: web_sys::FileSystemDirectoryEntry = match entry.dyn_into() {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        let next_prefix = if prefix.is_empty() {
+            directory_entry.name()
+        } else {
+            format!("{}/{}", prefix, directory_entry.name())
+        };
+        let reader = directory_entry.create_reader();
+        read_directory_callback(reader, next_prefix);
+    }
+}
+
 fn forward_window_events(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -835,7 +954,24 @@ fn forward_window_events(
 ) {
     match event {
         WindowEvent::DroppedFile(path) => {
-            state.on_dropped_file(world, path);
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if path.is_dir() {
+                    let mut files = Vec::new();
+                    collect_directory_files(path, path, &mut files);
+                    if files.is_empty() {
+                        state.on_dropped_file(world, path);
+                    } else {
+                        state.on_dropped_files(world, &files);
+                    }
+                } else {
+                    state.on_dropped_file(world, path);
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                state.on_dropped_file(world, path);
+            }
         }
         WindowEvent::HoveredFile(path) => {
             state.on_hovered_file(world, path);
@@ -1015,6 +1151,18 @@ pub trait State {
     fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     /// Handle file dropped onto window (web-compatible, provides data).
     fn on_dropped_file_data(&mut self, _world: &mut World, _name: &str, _data: &[u8]) {}
+    /// Handle a batch of files dropped together. Default delegates to
+    /// `on_dropped_file_data` per file. Override to handle multi-file formats
+    /// like `.gltf` plus external `.bin` and texture files.
+    fn on_dropped_files(
+        &mut self,
+        world: &mut World,
+        files: &[crate::ecs::input::resources::DroppedFile],
+    ) {
+        for file in files {
+            self.on_dropped_file_data(world, &file.name, &file.data);
+        }
+    }
     /// Handle file hover over window.
     fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
     /// Handle file hover cancelled.

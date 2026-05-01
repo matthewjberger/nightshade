@@ -900,6 +900,8 @@ pub mod prelude {
     };
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::commands::import_gltf_from_bytes;
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
     #[cfg(feature = "scene_graph")]
