@@ -212,7 +212,7 @@ tracing-appender = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
-egui-winit = { workspace = true, optional = true }
+egui-winit = { workspace = true, optional = true, features = ["clipboard"] }
 image = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true, features = ["signal", "sync", "time"] }
