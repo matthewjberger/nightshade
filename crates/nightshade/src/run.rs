@@ -908,7 +908,7 @@ async fn read_file_entry(
     use wasm_bindgen::JsCast;
 
     let file_promise = js_sys::Promise::new(&mut |resolve, reject| {
-        let _ = file_entry.file_with_callback_and_callback(&resolve, &reject);
+        file_entry.file_with_callback_and_callback(&resolve, &reject);
     });
     let file_value = wasm_bindgen_futures::JsFuture::from(file_promise)
         .await
