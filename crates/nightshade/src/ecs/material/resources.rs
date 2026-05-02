@@ -16,6 +16,10 @@ pub struct MaterialRegistry {
     pub registry: GenerationalRegistry<Material>,
     /// Resolved per-role [`TextureId`]s parallel to `registry.entries`.
     pub texture_ids: Vec<MaterialTextureIds>,
+    /// Reverse index: for each texture name referenced by any material, the
+    /// material indices that reference it. Used to re-resolve only the
+    /// materials affected by a newly-uploaded texture.
+    pub texture_name_to_materials: HashMap<String, Vec<u32>>,
     /// Indices of built-in materials that should not be garbage collected.
     pub protected_indices: Vec<u32>,
     /// Maps content hash to material name for deduplication.
@@ -27,6 +31,7 @@ impl Default for MaterialRegistry {
         let mut instance = Self {
             registry: GenerationalRegistry::new(),
             texture_ids: Vec::new(),
+            texture_name_to_materials: HashMap::new(),
             protected_indices: Vec::new(),
             content_hash_to_name: HashMap::new(),
         };
@@ -108,14 +113,15 @@ impl Default for MaterialRegistry {
 
 /// Inserts a material into the registry, returning its ID.
 ///
-/// The parallel `texture_ids` slot is grown to match and reset to defaults;
-/// call [`material_registry_resolve_textures`] after texture uploads land to
-/// populate it.
+/// The parallel `texture_ids` slot is grown to match and reset to defaults.
+/// Texture name references are added to `texture_name_to_materials` so the
+/// drain can resolve only the materials affected by a newly-uploaded texture.
 pub fn material_registry_insert(
     registry: &mut MaterialRegistry,
     name: String,
     material: Material,
 ) -> MaterialId {
+    let referenced_textures = collect_material_texture_names(&material);
     let (index, generation) = registry.registry.insert(name, material);
     let slot = index as usize;
     if slot >= registry.texture_ids.len() {
@@ -125,7 +131,112 @@ pub fn material_registry_insert(
     } else {
         registry.texture_ids[slot] = MaterialTextureIds::default();
     }
+    for texture_name in referenced_textures {
+        registry
+            .texture_name_to_materials
+            .entry(texture_name)
+            .or_default()
+            .push(index);
+    }
     MaterialId::new(index, generation)
+}
+
+fn collect_material_texture_names(material: &Material) -> Vec<String> {
+    [
+        &material.base_texture,
+        &material.emissive_texture,
+        &material.normal_texture,
+        &material.metallic_roughness_texture,
+        &material.occlusion_texture,
+        &material.transmission_texture,
+        &material.thickness_texture,
+        &material.specular_texture,
+        &material.specular_color_texture,
+        &material.diffuse_transmission_texture,
+        &material.diffuse_transmission_color_texture,
+        &material.anisotropy_texture,
+        &material.iridescence_texture,
+        &material.iridescence_thickness_texture,
+        &material.sheen_color_texture,
+        &material.sheen_roughness_texture,
+        &material.clearcoat_texture,
+        &material.clearcoat_roughness_texture,
+        &material.clearcoat_normal_texture,
+    ]
+    .into_iter()
+    .filter_map(|opt| opt.clone())
+    .collect()
+}
+
+fn resolve_one_material(
+    registry: &mut MaterialRegistry,
+    slot: usize,
+    texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
+) {
+    let lookup = |opt: &Option<String>| -> Option<TextureId> {
+        opt.as_deref()
+            .and_then(|name| texture_cache.registry.lookup_index(name))
+            .map(|(index, generation)| TextureId::new(index, generation))
+    };
+    let Some(material) = registry
+        .registry
+        .entries
+        .get(slot)
+        .and_then(|entry| entry.as_ref())
+    else {
+        if let Some(stale) = registry.texture_ids.get_mut(slot) {
+            *stale = MaterialTextureIds::default();
+        }
+        return;
+    };
+    let resolved = MaterialTextureIds {
+        base: lookup(&material.base_texture),
+        emissive: lookup(&material.emissive_texture),
+        normal: lookup(&material.normal_texture),
+        metallic_roughness: lookup(&material.metallic_roughness_texture),
+        occlusion: lookup(&material.occlusion_texture),
+        transmission: lookup(&material.transmission_texture),
+        thickness: lookup(&material.thickness_texture),
+        specular: lookup(&material.specular_texture),
+        specular_color: lookup(&material.specular_color_texture),
+        diffuse_transmission: lookup(&material.diffuse_transmission_texture),
+        diffuse_transmission_color: lookup(&material.diffuse_transmission_color_texture),
+        anisotropy: lookup(&material.anisotropy_texture),
+        iridescence: lookup(&material.iridescence_texture),
+        iridescence_thickness: lookup(&material.iridescence_thickness_texture),
+        sheen_color: lookup(&material.sheen_color_texture),
+        sheen_roughness: lookup(&material.sheen_roughness_texture),
+        clearcoat: lookup(&material.clearcoat_texture),
+        clearcoat_roughness: lookup(&material.clearcoat_roughness_texture),
+        clearcoat_normal: lookup(&material.clearcoat_normal_texture),
+    };
+    if slot >= registry.texture_ids.len() {
+        registry
+            .texture_ids
+            .resize_with(slot + 1, MaterialTextureIds::default);
+    }
+    registry.texture_ids[slot] = resolved;
+}
+
+/// Resolves only the materials that reference any of the supplied texture ids,
+/// using the reverse index built at insert time.
+pub fn material_registry_resolve_uploaded_textures(
+    registry: &mut MaterialRegistry,
+    texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
+    uploaded: &[TextureId],
+) {
+    let mut dirty: std::collections::HashSet<u32> = std::collections::HashSet::new();
+    for id in uploaded {
+        let Some(name) = texture_cache.registry.name_for(id.index) else {
+            continue;
+        };
+        if let Some(materials) = registry.texture_name_to_materials.get(name) {
+            dirty.extend(materials.iter().copied());
+        }
+    }
+    for index in dirty {
+        resolve_one_material(registry, index as usize, texture_cache);
+    }
 }
 
 /// Resolves [`TextureId`]s for every material in the registry by looking up
