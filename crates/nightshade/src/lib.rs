@@ -1003,6 +1003,8 @@ pub mod prelude {
     pub use bincode;
     #[cfg(feature = "egui")]
     pub use egui;
+    #[cfg(feature = "engine")]
+    pub use ehttp;
     pub use freecs;
     #[cfg(feature = "assets")]
     pub use image;
