@@ -1,6 +1,6 @@
 [workspace]
 members = ["apps/*", "crates/*"]
-exclude = ["site", "template"]
+exclude = ["site", "template", "docs"]
 resolver = "2"
 
 [workspace.package]
