@@ -115,8 +115,10 @@
 //! [`MaterialRegistry`]: resources::MaterialRegistry
 //! [`AlphaMode`]: components::AlphaMode
 
+pub mod commands;
 pub mod components;
 pub mod resources;
 
+pub use commands::*;
 pub use components::*;
 pub use resources::*;

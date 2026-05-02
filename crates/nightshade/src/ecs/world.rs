@@ -35,7 +35,9 @@ pub mod components {
     pub use crate::ecs::lattice::components::{Lattice, LatticeInfluenced};
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
-    pub use crate::ecs::material::components::{AlphaMode, Material, MaterialRef};
+    pub use crate::ecs::material::components::{
+        AlphaMode, Material, MaterialRef, MaterialVariantMapping, MaterialVariants,
+    };
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::morph::components::MorphWeights;
     pub use crate::ecs::name::components::Name;
@@ -153,6 +155,7 @@ freecs::ecs! {
             decal: crate::ecs::decal::components::Decal => DECAL,
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
             material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
+            material_variants: crate::ecs::material::components::MaterialVariants => MATERIAL_VARIANTS,
             render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
             text: crate::ecs::text::components::Text => TEXT,
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,

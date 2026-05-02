@@ -48,6 +48,38 @@ impl From<String> for MaterialRef {
     }
 }
 
+/// Per-primitive material variant table from the
+/// [`KHR_materials_variants`] glTF extension. Each mapping says: when
+/// any listed variant name is active, swap the entity's material to
+/// the named one. Outside an active variant the entity uses
+/// `default_material_name`. Variant names rather than document-scoped
+/// indices are stored so multiple assets with different variant
+/// orderings can coexist.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct MaterialVariants {
+    pub default_material_name: String,
+    pub mappings: Vec<MaterialVariantMapping>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MaterialVariantMapping {
+    pub variant_names: Vec<String>,
+    pub material_name: String,
+}
+
+impl MaterialVariants {
+    /// Returns the material name to use for the supplied variant name,
+    /// or `default_material_name` if no mapping covers it.
+    pub fn material_for_variant(&self, variant_name: &str) -> &str {
+        for mapping in &self.mappings {
+            if mapping.variant_names.iter().any(|n| n == variant_name) {
+                return &mapping.material_name;
+            }
+        }
+        &self.default_material_name
+    }
+}
+
 impl From<&str> for MaterialRef {
     fn from(name: &str) -> Self {
         Self {
