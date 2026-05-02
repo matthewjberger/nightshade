@@ -624,9 +624,8 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
         winit::event::WindowEvent::CursorMoved { position, .. } => {
             let current_position = Vec2::new(position.x as _, position.y as _);
             if mouse.position_initialized {
-                mouse.position_delta = (current_position - mouse.position) * cursor_scale;
+                mouse.position_delta += (current_position - mouse.position) * cursor_scale;
             } else {
-                mouse.position_delta = Vec2::new(0.0, 0.0);
                 mouse.position_initialized = true;
             }
             mouse.position = current_position;
