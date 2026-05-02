@@ -230,6 +230,7 @@ fn resolve_one_material(
         clearcoat: lookup(&material.clearcoat_texture),
         clearcoat_roughness: lookup(&material.clearcoat_roughness_texture),
         clearcoat_normal: lookup(&material.clearcoat_normal_texture),
+        scatter_color: lookup(&material.scatter_color_texture),
     };
     if slot >= registry.texture_ids.len() {
         registry

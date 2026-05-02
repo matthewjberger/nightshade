@@ -287,6 +287,19 @@ pub struct Material {
     /// Splits the refraction angle per wavelength using Cauchy's approximation.
     #[serde(default)]
     pub dispersion: f32,
+    /// Volume scatter color tint (KHR_materials_volume_scatter).
+    /// Wavelength-dependent scattering inside a transmissive volume; combined
+    /// with attenuation_color/attenuation_distance gives milky/wax/skin look.
+    #[serde(default = "default_scatter_color")]
+    pub scatter_color_factor: [f32; 3],
+    #[serde(default)]
+    pub scatter_color_texture: Option<String>,
+    #[serde(default)]
+    pub scatter_color_texture_transform: TextureTransform,
+    /// Henyey-Greenstein phase asymmetry [-1, 1]. 0 = isotropic, positive =
+    /// forward scattering (still translucent), negative = back scattering.
+    #[serde(default)]
+    pub scatter_anisotropy: f32,
     /// Anisotropy strength (KHR_materials_anisotropy). 0 = isotropic, 1 = maximum.
     #[serde(default)]
     pub anisotropy_strength: f32,
@@ -382,6 +395,7 @@ pub struct MaterialTextureIds {
     pub clearcoat: Option<TextureId>,
     pub clearcoat_roughness: Option<TextureId>,
     pub clearcoat_normal: Option<TextureId>,
+    pub scatter_color: Option<TextureId>,
 }
 
 fn default_blend_opaque_alpha_threshold() -> f32 {
@@ -417,6 +431,10 @@ fn default_emissive_strength() -> f32 {
 }
 
 fn default_diffuse_transmission_color() -> [f32; 3] {
+    [1.0, 1.0, 1.0]
+}
+
+fn default_scatter_color() -> [f32; 3] {
     [1.0, 1.0, 1.0]
 }
 
@@ -488,6 +506,10 @@ impl Default for Material {
             diffuse_transmission_color_texture: None,
             diffuse_transmission_color_texture_transform: TextureTransform::IDENTITY,
             dispersion: 0.0,
+            scatter_color_factor: [1.0, 1.0, 1.0],
+            scatter_color_texture: None,
+            scatter_color_texture_transform: TextureTransform::IDENTITY,
+            scatter_anisotropy: 0.0,
             anisotropy_strength: 0.0,
             anisotropy_rotation: 0.0,
             anisotropy_texture: None,
