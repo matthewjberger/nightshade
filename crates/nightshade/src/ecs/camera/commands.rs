@@ -48,6 +48,15 @@ pub fn spawn_pan_orbit_camera(
     pitch: f32,
     name: String,
 ) -> Entity {
+    let config = PanOrbitCamera::new(focus, radius).with_yaw_pitch(yaw, pitch);
+    spawn_pan_orbit_camera_with_config(world, name, config)
+}
+
+pub fn spawn_pan_orbit_camera_with_config(
+    world: &mut World,
+    name: String,
+    config: PanOrbitCamera,
+) -> Entity {
     let cameras = world.spawn_entities(
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
@@ -64,8 +73,8 @@ pub fn spawn_pan_orbit_camera(
         *camera_name = Name(name);
     }
 
-    let pan_orbit = PanOrbitCamera::new(focus, radius).with_yaw_pitch(yaw, pitch);
-    let (position, rotation) = compute_pan_orbit_transform(focus, yaw, pitch, radius);
+    let (position, rotation) =
+        compute_pan_orbit_transform(config.focus, config.yaw, config.pitch, config.radius);
 
     if let Some(local_transform) = world.core.get_local_transform_mut(camera) {
         local_transform.translation = position;
@@ -85,7 +94,7 @@ pub fn spawn_pan_orbit_camera(
     }
 
     if let Some(pan_orbit_component) = world.core.get_pan_orbit_camera_mut(camera) {
-        *pan_orbit_component = pan_orbit;
+        *pan_orbit_component = config;
     }
 
     camera
