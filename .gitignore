@@ -15,9 +15,7 @@ logs/
 !template/*.md
 !docs/*.md
 !site/content/*.md
-apps/maps/maps/
-apps/shadows/*.json
-apps/psx/assets/*.json
+apps/game/game.json
 *.tmp
 screenshots/
 .claude/
