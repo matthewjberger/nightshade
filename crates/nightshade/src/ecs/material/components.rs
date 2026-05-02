@@ -318,7 +318,7 @@ pub struct Material {
 /// hot-path code (per-frame material rebuild) can index a layer map by
 /// [`TextureId`] without re-hashing texture names. Lives in a parallel `Vec`
 /// alongside the [`crate::ecs::material::MaterialRegistry`] entries; populated
-/// by `material_registry_resolve_textures` after texture uploads land.
+/// by `material_registry_resolve_uploaded_textures` from the renderer drain.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MaterialTextureIds {
     pub base: Option<TextureId>,

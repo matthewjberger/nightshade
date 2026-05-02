@@ -3,7 +3,7 @@
 use crate::ecs::asset_id::{MaterialId, TextureId};
 use crate::ecs::generational_registry::GenerationalRegistry;
 use crate::ecs::material::components::{Material, MaterialTextureIds};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 /// Global registry of named materials.
@@ -20,6 +20,12 @@ pub struct MaterialRegistry {
     /// material indices that reference it. Used to re-resolve only the
     /// materials affected by a newly-uploaded texture.
     pub texture_name_to_materials: HashMap<String, Vec<u32>>,
+    /// Material indices whose `texture_ids` slot has not yet been resolved
+    /// against the texture cache. The drain resolves these on the next tick
+    /// regardless of whether any texture finished uploading, so materials
+    /// inserted while their referenced textures are already cached still
+    /// get their layer indices populated.
+    pub pending_resolve: Vec<u32>,
     /// Indices of built-in materials that should not be garbage collected.
     pub protected_indices: Vec<u32>,
     /// Maps content hash to material name for deduplication.
@@ -32,6 +38,7 @@ impl Default for MaterialRegistry {
             registry: GenerationalRegistry::new(),
             texture_ids: Vec::new(),
             texture_name_to_materials: HashMap::new(),
+            pending_resolve: Vec::new(),
             protected_indices: Vec::new(),
             content_hash_to_name: HashMap::new(),
         };
@@ -114,8 +121,9 @@ impl Default for MaterialRegistry {
 /// Inserts a material into the registry, returning its ID.
 ///
 /// The parallel `texture_ids` slot is grown to match and reset to defaults.
-/// Texture name references are added to `texture_name_to_materials` so the
-/// drain can resolve only the materials affected by a newly-uploaded texture.
+/// Texture name references are added to `texture_name_to_materials` and the
+/// new index is queued in `pending_resolve` so the next drain populates
+/// `texture_ids` even if no texture upload happens this tick.
 pub fn material_registry_insert(
     registry: &mut MaterialRegistry,
     name: String,
@@ -132,12 +140,13 @@ pub fn material_registry_insert(
         registry.texture_ids[slot] = MaterialTextureIds::default();
     }
     for texture_name in referenced_textures {
-        registry
-            .texture_name_to_materials
-            .entry(texture_name)
-            .or_default()
-            .push(index);
+        let entry = registry.texture_name_to_materials.entry(texture_name);
+        let materials = entry.or_default();
+        if !materials.contains(&index) {
+            materials.push(index);
+        }
     }
+    registry.pending_resolve.push(index);
     MaterialId::new(index, generation)
 }
 
@@ -218,14 +227,15 @@ fn resolve_one_material(
     registry.texture_ids[slot] = resolved;
 }
 
-/// Resolves only the materials that reference any of the supplied texture ids,
-/// using the reverse index built at insert time.
+/// Resolves the materials that reference any of the supplied texture ids
+/// (via the reverse index built at insert time) plus any indices queued in
+/// `pending_resolve` since the last drain.
 pub fn material_registry_resolve_uploaded_textures(
     registry: &mut MaterialRegistry,
     texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
     uploaded: &[TextureId],
 ) {
-    let mut dirty: std::collections::HashSet<u32> = std::collections::HashSet::new();
+    let mut dirty: HashSet<u32> = HashSet::new();
     for id in uploaded {
         let Some(name) = texture_cache.registry.name_for(id.index) else {
             continue;
@@ -234,57 +244,9 @@ pub fn material_registry_resolve_uploaded_textures(
             dirty.extend(materials.iter().copied());
         }
     }
+    dirty.extend(registry.pending_resolve.drain(..));
     for index in dirty {
         resolve_one_material(registry, index as usize, texture_cache);
-    }
-}
-
-/// Resolves [`TextureId`]s for every material in the registry by looking up
-/// the [`Material`]'s texture name strings against the supplied texture cache.
-///
-/// Idempotent and cheap when no texture names are present. Run after a
-/// streaming batch lands so the hot-path material rebuild can index by id.
-pub fn material_registry_resolve_textures(
-    registry: &mut MaterialRegistry,
-    texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
-) {
-    let lookup = |opt: &Option<String>| -> Option<TextureId> {
-        opt.as_deref()
-            .and_then(|name| texture_cache.registry.lookup_index(name))
-            .map(|(index, generation)| TextureId::new(index, generation))
-    };
-    if registry.texture_ids.len() < registry.registry.entries.len() {
-        registry
-            .texture_ids
-            .resize_with(registry.registry.entries.len(), MaterialTextureIds::default);
-    }
-    for (slot, entry) in registry.registry.entries.iter().enumerate() {
-        let Some(material) = entry else {
-            registry.texture_ids[slot] = MaterialTextureIds::default();
-            continue;
-        };
-        let resolved = MaterialTextureIds {
-            base: lookup(&material.base_texture),
-            emissive: lookup(&material.emissive_texture),
-            normal: lookup(&material.normal_texture),
-            metallic_roughness: lookup(&material.metallic_roughness_texture),
-            occlusion: lookup(&material.occlusion_texture),
-            transmission: lookup(&material.transmission_texture),
-            thickness: lookup(&material.thickness_texture),
-            specular: lookup(&material.specular_texture),
-            specular_color: lookup(&material.specular_color_texture),
-            diffuse_transmission: lookup(&material.diffuse_transmission_texture),
-            diffuse_transmission_color: lookup(&material.diffuse_transmission_color_texture),
-            anisotropy: lookup(&material.anisotropy_texture),
-            iridescence: lookup(&material.iridescence_texture),
-            iridescence_thickness: lookup(&material.iridescence_thickness_texture),
-            sheen_color: lookup(&material.sheen_color_texture),
-            sheen_roughness: lookup(&material.sheen_roughness_texture),
-            clearcoat: lookup(&material.clearcoat_texture),
-            clearcoat_roughness: lookup(&material.clearcoat_roughness_texture),
-            clearcoat_normal: lookup(&material.clearcoat_normal_texture),
-        };
-        registry.texture_ids[slot] = resolved;
     }
 }
 
@@ -308,6 +270,21 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
         if registry.registry.reference_counts[index] == 0
             && registry.registry.entries[index].is_some()
         {
+            let texture_names = registry.registry.entries[index]
+                .as_ref()
+                .map(collect_material_texture_names)
+                .unwrap_or_default();
+            for texture_name in texture_names {
+                if let Some(materials) = registry.texture_name_to_materials.get_mut(&texture_name) {
+                    materials.retain(|&material_index| material_index != index as u32);
+                    if materials.is_empty() {
+                        registry.texture_name_to_materials.remove(&texture_name);
+                    }
+                }
+            }
+            registry
+                .pending_resolve
+                .retain(|&pending_index| pending_index != index as u32);
             if let Some(name) = registry.registry.index_to_name[index].take() {
                 registry.registry.name_to_index.remove(&name);
                 removed.push(name);
