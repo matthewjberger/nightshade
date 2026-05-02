@@ -44,23 +44,23 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
     count
 }
 
-/// Returns the deduplicated variant names exposed by any currently-loaded
-/// prefab in [`crate::ecs::prefab::resources::PrefabCache`]. Order is the
-/// first observation across cached prefabs.
-#[cfg(feature = "assets")]
+/// Returns the deduplicated variant names referenced by any currently-spawned
+/// entity carrying a [`super::components::MaterialVariants`] component. Order
+/// follows first observation while iterating entities and their mappings.
 pub fn material_variant_names(world: &World) -> Vec<String> {
+    let entities: Vec<_> = world.core.query_entities(MATERIAL_VARIANTS).collect();
     let mut seen: Vec<String> = Vec::new();
-    for cached in world.resources.prefab_cache.prefabs.values() {
-        for name in &cached.prefab.material_variants {
-            if !seen.iter().any(|existing| existing == name) {
-                seen.push(name.clone());
+    for entity in entities {
+        let Some(variants) = world.core.get_material_variants(entity) else {
+            continue;
+        };
+        for mapping in &variants.mappings {
+            for name in &mapping.variant_names {
+                if !seen.iter().any(|existing| existing == name) {
+                    seen.push(name.clone());
+                }
             }
         }
     }
     seen
-}
-
-#[cfg(not(feature = "assets"))]
-pub fn material_variant_names(_world: &World) -> Vec<String> {
-    Vec::new()
 }
