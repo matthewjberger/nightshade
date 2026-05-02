@@ -154,34 +154,6 @@ build-wasm $project="editor":
 run-wasm $project="editor":
     trunk serve --release --open --config apps/{{project}}/Trunk.toml
 
-# Syncs site/index.html copy-dir lines with ../nightshade-examples/ (Windows)
-[windows]
-sync-site-examples:
-    $examples = @("../nightshade-examples/examples-2d", "../nightshade-examples/examples-3d", "../nightshade-examples/examples-terminal") | ForEach-Object { Get-ChildItem -Directory $_ -ErrorAction SilentlyContinue } | Sort-Object Name | ForEach-Object { $_.Name } | Select-Object -Unique; $html = Get-Content site/index.html -Raw; $begin = '  <!-- BEGIN EXAMPLE COPY-DIRS -->'; $end = '  <!-- END EXAMPLE COPY-DIRS -->'; $lines = $examples | ForEach-Object { "  <link data-trunk rel=`"copy-dir`" href=`"public/$_`" />" }; $block = @($begin) + $lines + @($end); $pattern = '(?s)  <!-- BEGIN EXAMPLE COPY-DIRS -->.*?  <!-- END EXAMPLE COPY-DIRS -->'; $html = $html -replace $pattern, ($block -join "`n"); Set-Content site/index.html $html -NoNewline; Write-Host "Synced $($examples.Count) examples to site/index.html"
-
-# Syncs site/index.html copy-dir lines with ../nightshade-examples/ (Unix)
-[unix]
-sync-site-examples:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    examples=$(ls -d ../nightshade-examples/examples-2d/*/ ../nightshade-examples/examples-3d/*/ ../nightshade-examples/examples-terminal/*/ 2>/dev/null | xargs -I{} basename {} | sort -u)
-    begin='  <!-- BEGIN EXAMPLE COPY-DIRS -->'
-    end='  <!-- END EXAMPLE COPY-DIRS -->'
-    block="$begin"
-    for name in $examples; do
-        block="$block"$'\n'"  <link data-trunk rel=\"copy-dir\" href=\"public/$name\" />"
-    done
-    block="$block"$'\n'"$end"
-    tmpfile=$(mktemp)
-    awk -v block="$block" '
-        /<!-- BEGIN EXAMPLE COPY-DIRS -->/{print block; skip=1; next}
-        /<!-- END EXAMPLE COPY-DIRS -->/{skip=0; next}
-        !skip{print}
-    ' site/index.html > "$tmpfile"
-    mv "$tmpfile" site/index.html
-    count=$(echo "$examples" | wc -l | tr -d ' ')
-    echo "Synced $count examples to site/index.html"
-
 # Runs all tests
 test:
     cargo test --all -- --nocapture

@@ -30,10 +30,6 @@ The fastest way to get started is with the [nightshade-template](https://github.
 
 It is also possible to host a webview with bidirectional IPC, demonstrated in [nightshade-webview](https://github.com/matthewjberger/nightshade-webview).
 
-## Examples
-
-For a collection of example projects showcasing Nightshade's features, see the [nightshade-examples](https://github.com/matthewjberger/nightshade-examples) repository.
-
 ## Features
 
 Nightshade uses a modular feature system for fine-grained dependency control.
