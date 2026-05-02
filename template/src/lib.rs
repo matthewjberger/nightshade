@@ -31,7 +31,7 @@ impl State for Template {
     }
 
     fn run_systems(&mut self, world: &mut World) {
-        pan_orbit_camera_system(world);
+        camera_controllers_system(world);
     }
 
     fn on_keyboard_input(&mut self, world: &mut World, key_code: KeyCode, key_state: KeyState) {

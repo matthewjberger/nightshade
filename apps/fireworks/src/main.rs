@@ -225,7 +225,7 @@ impl State for FireworksDemo {
         self.xr_input_system(world);
 
         #[cfg(not(feature = "openxr"))]
-        pan_orbit_camera_system(world);
+        camera_controllers_system(world);
 
         let delta_time = world.resources.window.timing.delta_time;
         let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;

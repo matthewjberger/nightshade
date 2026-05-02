@@ -837,8 +837,8 @@ pub mod prelude {
     };
     pub use crate::ecs::camera::components::ThirdPersonCamera;
     pub use crate::ecs::camera::systems::{
-        first_person_camera_look_system, fly_camera_system, ortho_camera_system,
-        pan_orbit_camera_system, third_person_camera_system,
+        camera_controllers_system, first_person_camera_look_system, fly_camera_system,
+        ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
