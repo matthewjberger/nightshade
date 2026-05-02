@@ -1,8 +1,8 @@
 //! Material registry resource.
 
-use crate::ecs::asset_id::MaterialId;
+use crate::ecs::asset_id::{MaterialId, TextureId};
 use crate::ecs::generational_registry::GenerationalRegistry;
-use crate::ecs::material::components::Material;
+use crate::ecs::material::components::{Material, MaterialTextureIds};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -14,6 +14,8 @@ use std::hash::{Hash, Hasher};
 pub struct MaterialRegistry {
     /// The underlying generational storage.
     pub registry: GenerationalRegistry<Material>,
+    /// Resolved per-role [`TextureId`]s parallel to `registry.entries`.
+    pub texture_ids: Vec<MaterialTextureIds>,
     /// Indices of built-in materials that should not be garbage collected.
     pub protected_indices: Vec<u32>,
     /// Maps content hash to material name for deduplication.
@@ -24,6 +26,7 @@ impl Default for MaterialRegistry {
     fn default() -> Self {
         let mut instance = Self {
             registry: GenerationalRegistry::new(),
+            texture_ids: Vec::new(),
             protected_indices: Vec::new(),
             content_hash_to_name: HashMap::new(),
         };
@@ -104,13 +107,74 @@ impl Default for MaterialRegistry {
 }
 
 /// Inserts a material into the registry, returning its ID.
+///
+/// The parallel `texture_ids` slot is grown to match and reset to defaults;
+/// call [`material_registry_resolve_textures`] after texture uploads land to
+/// populate it.
 pub fn material_registry_insert(
     registry: &mut MaterialRegistry,
     name: String,
     material: Material,
 ) -> MaterialId {
     let (index, generation) = registry.registry.insert(name, material);
+    let slot = index as usize;
+    if slot >= registry.texture_ids.len() {
+        registry
+            .texture_ids
+            .resize_with(slot + 1, MaterialTextureIds::default);
+    } else {
+        registry.texture_ids[slot] = MaterialTextureIds::default();
+    }
     MaterialId::new(index, generation)
+}
+
+/// Resolves [`TextureId`]s for every material in the registry by looking up
+/// the [`Material`]'s texture name strings against the supplied texture cache.
+///
+/// Idempotent and cheap when no texture names are present. Run after a
+/// streaming batch lands so the hot-path material rebuild can index by id.
+pub fn material_registry_resolve_textures(
+    registry: &mut MaterialRegistry,
+    texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
+) {
+    let lookup = |opt: &Option<String>| -> Option<TextureId> {
+        opt.as_deref()
+            .and_then(|name| texture_cache.registry.lookup_index(name))
+            .map(|(index, generation)| TextureId::new(index, generation))
+    };
+    if registry.texture_ids.len() < registry.registry.entries.len() {
+        registry
+            .texture_ids
+            .resize_with(registry.registry.entries.len(), MaterialTextureIds::default);
+    }
+    for (slot, entry) in registry.registry.entries.iter().enumerate() {
+        let Some(material) = entry else {
+            registry.texture_ids[slot] = MaterialTextureIds::default();
+            continue;
+        };
+        let resolved = MaterialTextureIds {
+            base: lookup(&material.base_texture),
+            emissive: lookup(&material.emissive_texture),
+            normal: lookup(&material.normal_texture),
+            metallic_roughness: lookup(&material.metallic_roughness_texture),
+            occlusion: lookup(&material.occlusion_texture),
+            transmission: lookup(&material.transmission_texture),
+            thickness: lookup(&material.thickness_texture),
+            specular: lookup(&material.specular_texture),
+            specular_color: lookup(&material.specular_color_texture),
+            diffuse_transmission: lookup(&material.diffuse_transmission_texture),
+            diffuse_transmission_color: lookup(&material.diffuse_transmission_color_texture),
+            anisotropy: lookup(&material.anisotropy_texture),
+            iridescence: lookup(&material.iridescence_texture),
+            iridescence_thickness: lookup(&material.iridescence_thickness_texture),
+            sheen_color: lookup(&material.sheen_color_texture),
+            sheen_roughness: lookup(&material.sheen_roughness_texture),
+            clearcoat: lookup(&material.clearcoat_texture),
+            clearcoat_roughness: lookup(&material.clearcoat_roughness_texture),
+            clearcoat_normal: lookup(&material.clearcoat_normal_texture),
+        };
+        registry.texture_ids[slot] = resolved;
+    }
 }
 
 /// Looks up a material ID by name.
@@ -139,6 +203,9 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
             }
             registry.registry.entries[index] = None;
             registry.registry.free_indices.push(index as u32);
+            if let Some(slot) = registry.texture_ids.get_mut(index) {
+                *slot = MaterialTextureIds::default();
+            }
         }
     }
 

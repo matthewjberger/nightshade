@@ -1,6 +1,6 @@
 //! Material component definitions.
 
-use crate::ecs::asset_id::MaterialId;
+use crate::ecs::asset_id::{MaterialId, TextureId};
 use serde::{Deserialize, Serialize};
 
 /// Component referencing a material by name in the [`super::MaterialRegistry`].
@@ -310,6 +310,36 @@ pub struct Material {
     pub clearcoat_normal_texture_transform: TextureTransform,
     #[serde(default = "default_normal_scale")]
     pub clearcoat_normal_scale: f32,
+}
+
+/// Resolved [`TextureId`]s for every texture role on a [`Material`].
+///
+/// Mirrors the `Option<String>` fields on [`Material`] one-for-one so that
+/// hot-path code (per-frame material rebuild) can index a layer map by
+/// [`TextureId`] without re-hashing texture names. Lives in a parallel `Vec`
+/// alongside the [`crate::ecs::material::MaterialRegistry`] entries; populated
+/// by `material_registry_resolve_textures` after texture uploads land.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MaterialTextureIds {
+    pub base: Option<TextureId>,
+    pub emissive: Option<TextureId>,
+    pub normal: Option<TextureId>,
+    pub metallic_roughness: Option<TextureId>,
+    pub occlusion: Option<TextureId>,
+    pub transmission: Option<TextureId>,
+    pub thickness: Option<TextureId>,
+    pub specular: Option<TextureId>,
+    pub specular_color: Option<TextureId>,
+    pub diffuse_transmission: Option<TextureId>,
+    pub diffuse_transmission_color: Option<TextureId>,
+    pub anisotropy: Option<TextureId>,
+    pub iridescence: Option<TextureId>,
+    pub iridescence_thickness: Option<TextureId>,
+    pub sheen_color: Option<TextureId>,
+    pub sheen_roughness: Option<TextureId>,
+    pub clearcoat: Option<TextureId>,
+    pub clearcoat_roughness: Option<TextureId>,
+    pub clearcoat_normal: Option<TextureId>,
 }
 
 fn default_normal_scale() -> f32 {
