@@ -145,6 +145,16 @@ pub struct Material {
     pub alpha_mode: AlphaMode,
     /// Alpha threshold for [`AlphaMode::Mask`].
     pub alpha_cutoff: f32,
+    /// Alpha threshold above which a fragment of an [`AlphaMode::Blend`]
+    /// material is treated as effectively opaque by the depth prepass:
+    /// fragments at or above this value write depth so transparent
+    /// fragments behind them are correctly occluded; fragments below
+    /// the threshold skip the prepass and accumulate through OIT.
+    /// Defaults to 0.99; lower it for materials with soft alpha edges
+    /// like anti-aliased text or decals where a tighter threshold
+    /// produces visible halos in OIT.
+    #[serde(default = "default_blend_opaque_alpha_threshold")]
+    pub blend_opaque_alpha_threshold: f32,
     /// Path to base color texture.
     pub base_texture: Option<String>,
     #[serde(default)]
@@ -342,6 +352,10 @@ pub struct MaterialTextureIds {
     pub clearcoat_normal: Option<TextureId>,
 }
 
+fn default_blend_opaque_alpha_threshold() -> f32 {
+    0.99
+}
+
 fn default_normal_scale() -> f32 {
     1.0
 }
@@ -400,6 +414,7 @@ impl Default for Material {
             emissive_factor: [0.0, 0.0, 0.0],
             alpha_mode: AlphaMode::Opaque,
             alpha_cutoff: 0.5,
+            blend_opaque_alpha_threshold: 0.99,
             base_texture: None,
             base_texture_transform: TextureTransform::IDENTITY,
             emissive_texture: None,
