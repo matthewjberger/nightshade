@@ -20,3 +20,4 @@ apps/shadows/*.json
 apps/psx/assets/*.json
 *.tmp
 screenshots/
+.claude/
