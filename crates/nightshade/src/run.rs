@@ -369,14 +369,15 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
 
     #[cfg(target_arch = "wasm32")]
     {
-        let mut context = WindowContext {
+        use winit::platform::web::EventLoopExtWebSys;
+        let context = WindowContext {
             state,
             world,
             renderer: None,
             renderer_receiver: None,
             initialized: false,
         };
-        event_loop.run_app(&mut context)?;
+        event_loop.spawn_app(context);
     }
 
     Ok(())
