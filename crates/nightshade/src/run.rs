@@ -571,6 +571,17 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
         publish_event(world, Message::Input { event: event_state });
     }
 
+    #[cfg(target_arch = "wasm32")]
+    let cursor_scale = world
+        .resources
+        .window
+        .handle
+        .as_ref()
+        .map(|w| w.scale_factor() as f32)
+        .unwrap_or(1.0);
+    #[cfg(not(target_arch = "wasm32"))]
+    let cursor_scale = 1.0_f32;
+
     let mouse = &mut world.resources.input.mouse;
     match window_event {
         winit::event::WindowEvent::MouseInput { button, state, .. } => {
@@ -613,7 +624,7 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
         winit::event::WindowEvent::CursorMoved { position, .. } => {
             let current_position = Vec2::new(position.x as _, position.y as _);
             if mouse.position_initialized {
-                mouse.position_delta = current_position - mouse.position;
+                mouse.position_delta = (current_position - mouse.position) * cursor_scale;
             } else {
                 mouse.position_delta = Vec2::new(0.0, 0.0);
                 mouse.position_initialized = true;
