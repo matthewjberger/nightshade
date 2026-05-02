@@ -19,7 +19,7 @@ pub struct MaterialRegistry {
     /// Reverse index: for each texture name referenced by any material, the
     /// material indices that reference it. Used to re-resolve only the
     /// materials affected by a newly-uploaded texture.
-    pub texture_name_to_materials: HashMap<String, Vec<u32>>,
+    pub texture_name_to_materials: HashMap<String, HashSet<u32>>,
     /// Material indices whose `texture_ids` slot has not yet been resolved
     /// against the texture cache. The drain resolves these on the next tick
     /// regardless of whether any texture finished uploading, so materials
@@ -120,31 +120,43 @@ impl Default for MaterialRegistry {
 
 /// Inserts a material into the registry, returning its ID.
 ///
-/// The parallel `texture_ids` slot is grown to match and reset to defaults.
-/// Texture name references are added to `texture_name_to_materials` and the
-/// new index is queued in `pending_resolve` so the next drain populates
-/// `texture_ids` even if no texture upload happens this tick.
+/// `texture_name_to_materials` is updated for the material's referenced
+/// textures (replacing the previous slot's entries when the name already
+/// existed) and the new index is queued in `pending_resolve` so the next
+/// drain populates `texture_ids` even if no texture upload happens this
+/// tick.
 pub fn material_registry_insert(
     registry: &mut MaterialRegistry,
     name: String,
     material: Material,
 ) -> MaterialId {
-    let referenced_textures = collect_material_texture_names(&material);
+    let new_texture_names = collect_material_texture_names(&material);
+    if let Some(&existing_index) = registry.registry.name_to_index.get(&name)
+        && let Some(existing_material) = registry.registry.entries[existing_index as usize].as_ref()
+    {
+        let previous_texture_names = collect_material_texture_names(existing_material);
+        for previous_name in previous_texture_names {
+            if let Some(materials) = registry.texture_name_to_materials.get_mut(&previous_name) {
+                materials.remove(&existing_index);
+                if materials.is_empty() {
+                    registry.texture_name_to_materials.remove(&previous_name);
+                }
+            }
+        }
+    }
     let (index, generation) = registry.registry.insert(name, material);
     let slot = index as usize;
     if slot >= registry.texture_ids.len() {
         registry
             .texture_ids
             .resize_with(slot + 1, MaterialTextureIds::default);
-    } else {
-        registry.texture_ids[slot] = MaterialTextureIds::default();
     }
-    for texture_name in referenced_textures {
-        let entry = registry.texture_name_to_materials.entry(texture_name);
-        let materials = entry.or_default();
-        if !materials.contains(&index) {
-            materials.push(index);
-        }
+    for texture_name in new_texture_names {
+        registry
+            .texture_name_to_materials
+            .entry(texture_name)
+            .or_default()
+            .insert(index);
     }
     registry.pending_resolve.push(index);
     MaterialId::new(index, generation)
@@ -276,7 +288,7 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
                 .unwrap_or_default();
             for texture_name in texture_names {
                 if let Some(materials) = registry.texture_name_to_materials.get_mut(&texture_name) {
-                    materials.retain(|&material_index| material_index != index as u32);
+                    materials.remove(&(index as u32));
                     if materials.is_empty() {
                         registry.texture_name_to_materials.remove(&texture_name);
                     }
