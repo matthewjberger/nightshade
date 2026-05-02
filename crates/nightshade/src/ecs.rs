@@ -21,8 +21,6 @@ pub mod asset_id;
     not(target_arch = "wasm32")
 ))]
 pub mod asset_watcher;
-#[cfg(feature = "engine")]
-pub mod async_loader;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;

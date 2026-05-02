@@ -4,48 +4,20 @@
 //! and cannot execute immediately. Queue them with [`WorldCommand`] for processing
 //! during the render phase.
 //!
-//! # Queuing Commands
-//!
-//! ```ignore
-//! // Queue a command for deferred execution
-//! world.queue_command(WorldCommand::LoadTexture {
-//!     name: "my_texture".to_string(),
-//!     rgba_data: image_bytes,
-//!     width: 512,
-//!     height: 512,
-//! });
-//! ```
-//!
 //! # Available Commands
 //!
 //! | Command | Description |
 //! |---------|-------------|
 //! | `DespawnRecursive` | Delete entity and all children |
 //! | `UploadSpriteTexture` | Upload texture to sprite atlas slot |
-//! | `LoadTexture` | Load texture into cache by name |
 //! | `LoadHdrSkybox` | Load HDR skybox from bytes |
 //! | `LoadHdrSkyboxFromPath` | Load HDR skybox from file path |
 //! | `CaptureProceduralAtmosphereIBL` | Generate IBL from procedural sky |
 //! | `CaptureScreenshot` | Save screenshot to file |
 //!
-//! # Example: Dynamic Texture Loading
-//!
-//! ```ignore
-//! fn load_custom_texture(&mut self, world: &mut World, image_data: &[u8]) {
-//!     // Decode image (using image crate)
-//!     let img = image::load_from_memory(image_data).unwrap().to_rgba8();
-//!     let (width, height) = img.dimensions();
-//!
-//!     world.queue_command(WorldCommand::LoadTexture {
-//!         name: "custom_texture".to_string(),
-//!         rgba_data: img.into_raw(),
-//!         width,
-//!         height,
-//!     });
-//!
-//!     // Texture will be available in texture cache next frame
-//! }
-//! ```
+//! Texture loading goes through [`crate::ecs::loading`] (queue_decoded_texture,
+//! queue_encoded_texture, queue_gltf_load) so the work streams across frames
+//! instead of stalling the renderer.
 //!
 //! # Example: Screenshot
 //!
@@ -86,14 +58,6 @@ pub enum WorldCommand {
         rgba_data: Vec<u8>,
         width: u32,
         height: u32,
-    },
-    LoadTexture {
-        name: String,
-        rgba_data: Vec<u8>,
-        width: u32,
-        height: u32,
-        usage: crate::render::wgpu::texture_cache::TextureUsage,
-        sampler: crate::render::wgpu::texture_cache::SamplerSettings,
     },
     LoadHdrSkybox {
         hdr_data: Vec<u8>,
@@ -229,7 +193,6 @@ pub fn process_commands_system(world: &mut World) {
     for command in commands {
         match &command {
             WorldCommand::UploadSpriteTexture { .. }
-            | WorldCommand::LoadTexture { .. }
             | WorldCommand::LoadHdrSkybox { .. }
             | WorldCommand::LoadHdrSkyboxFromPath { .. }
             | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
@@ -260,7 +223,6 @@ fn process_command(world: &mut World, command: WorldCommand) {
             despawn_entities_with_cache_cleanup(world, &descendents);
         }
         WorldCommand::UploadSpriteTexture { .. } => {}
-        WorldCommand::LoadTexture { .. } => {}
         WorldCommand::LoadHdrSkybox { .. } => {}
         WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
         WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
@@ -934,36 +896,40 @@ pub fn set_material_with_textures(
 
 pub fn load_procedural_textures(world: &mut World) {
     let default_sampler = crate::render::wgpu::texture_cache::SamplerSettings::DEFAULT;
+    let color = crate::render::wgpu::texture_cache::TextureUsage::Color;
 
     let checkerboard = generate_checkerboard_texture();
-    world.queue_command(WorldCommand::LoadTexture {
-        name: "checkerboard".to_string(),
-        rgba_data: checkerboard.0,
-        width: checkerboard.1,
-        height: checkerboard.2,
-        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
-        sampler: default_sampler,
-    });
+    crate::ecs::loading::queue_decoded_texture(
+        world,
+        "checkerboard".to_string(),
+        checkerboard.0,
+        checkerboard.1,
+        checkerboard.2,
+        color,
+        default_sampler,
+    );
 
     let gradient = generate_gradient_texture();
-    world.queue_command(WorldCommand::LoadTexture {
-        name: "gradient".to_string(),
-        rgba_data: gradient.0,
-        width: gradient.1,
-        height: gradient.2,
-        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
-        sampler: default_sampler,
-    });
+    crate::ecs::loading::queue_decoded_texture(
+        world,
+        "gradient".to_string(),
+        gradient.0,
+        gradient.1,
+        gradient.2,
+        color,
+        default_sampler,
+    );
 
     let uv_test = generate_uv_test_texture();
-    world.queue_command(WorldCommand::LoadTexture {
-        name: "uv_test".to_string(),
-        rgba_data: uv_test.0,
-        width: uv_test.1,
-        height: uv_test.2,
-        usage: crate::render::wgpu::texture_cache::TextureUsage::Color,
-        sampler: default_sampler,
-    });
+    crate::ecs::loading::queue_decoded_texture(
+        world,
+        "uv_test".to_string(),
+        uv_test.0,
+        uv_test.1,
+        uv_test.2,
+        color,
+        default_sampler,
+    );
 }
 
 fn generate_checkerboard_texture() -> (Vec<u8>, u32, u32) {
