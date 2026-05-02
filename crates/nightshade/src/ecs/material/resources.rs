@@ -110,7 +110,7 @@ pub fn material_registry_insert(
     material: Material,
 ) -> MaterialId {
     let (index, generation) = registry.registry.insert(name, material);
-    MaterialId { index, generation }
+    MaterialId::new(index, generation)
 }
 
 /// Looks up a material ID by name.
@@ -118,7 +118,7 @@ pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> O
     registry
         .registry
         .lookup_index(name)
-        .map(|(index, generation)| MaterialId { index, generation })
+        .map(|(index, generation)| MaterialId::new(index, generation))
 }
 
 /// Removes materials with zero references (except protected materials).
