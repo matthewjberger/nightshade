@@ -931,7 +931,9 @@ pub mod prelude {
         spawn_triangle, spawn_variable_width_path, tessellate_cubic_bezier,
         tessellate_quadratic_bezier,
     };
-    pub use crate::ecs::sprite::slot_allocator::{allocate_sprite_slot, sized_slot_uv};
+    pub use crate::ecs::sprite::slot_allocator::{
+        allocate_sprite_slot, sized_slot_uv, try_allocate_sprite_slot,
+    };
     pub use crate::ecs::sprite_animator::{
         LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
     };
@@ -957,36 +959,38 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
-    pub use crate::ecs::ui::composite::{CompositeWidget, UiInteractionContext};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
         SolidLayout, WindowLayout,
     };
     pub use crate::ecs::ui::resources::{
-        BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastSeverity, UiEvent,
-        blend_color,
+        BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastCorner, ToastSeverity,
+        UiEvent, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
     };
     pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::ui::widgets::world_layout::UiImageUpload;
+    pub use crate::ecs::ui::widgets::world_layout::open_url_in_browser;
     pub use crate::ecs::ui::{
         Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
-        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, FromPropertyValue, FromWidgetState,
-        InputMask, IntoPropertyValue, ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig,
-        SplitDirection, StateTransition, TextSpan, ThemeColor, TileBuilder, TileId, TileLayout,
-        TileLayoutNode, TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData,
-        UiButtonData, UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
-        UiCommandPaletteData, UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode,
-        UiDisabled, UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode,
-        UiLayoutRoot, UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData,
-        UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind,
-        UiPressed, UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData,
-        UiRichTextData, UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected,
-        UiSliderData, UiSplitterData, UiStateWeights, UiTabBarData, UiTextAreaData,
+        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, ResizeEdge, Rh, Rl, Rw,
+        ScalingMode, SliderConfig, SplitDirection, StateTransition, TextOverflow, TextSpan,
+        ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode, TileNode, Ui,
+        UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData, UiButtonData, UiCanvasData,
+        UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiCommandPaletteData,
+        UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode, UiDisabled,
+        UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot,
+        UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData, UiNodeAnimation,
+        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
+        UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData, UiRichTextData,
+        UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected, UiSliderData,
+        UiSplitterData, UiStateTrait, UiStateWeights, UiTabBarData, UiTextAreaData,
         UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
-        UiTreeViewData, UiValue, UiVirtualListData, UiWidgetState, ValidationRule, Vh, Vp, Vw,
+        UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
     };
     pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{

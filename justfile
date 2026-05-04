@@ -146,6 +146,16 @@ publish-crate-dry:
 run $project="nightshade-editor":
     cargo run -r -p {{project}}
 
+# Opens the UI test harness in preview mode (no automated tests, just the UI)
+[windows]
+preview-ui-test-harness:
+    $env:UI_HARNESS_PREVIEW = "1"; cargo run -r -p ui_test_harness
+
+# Opens the UI test harness in preview mode (no automated tests, just the UI)
+[unix]
+preview-ui-test-harness:
+    UI_HARNESS_PREVIEW=1 cargo run -r -p ui_test_harness
+
 # Build the app for WASM
 build-wasm $project="editor":
     trunk build --config apps/{{project}}/Trunk.toml

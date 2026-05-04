@@ -438,12 +438,21 @@ pub(crate) fn step(
             let window_handle = world.resources.window.handle.as_ref()?;
 
             if world.resources.retained_ui.enabled {
-                let cursor = world
-                    .resources
-                    .retained_ui
-                    .requested_cursor
-                    .unwrap_or(winit::window::CursorIcon::Default);
-                window_handle.set_cursor(cursor);
+                let requested = world.resources.retained_ui.interaction.requested_cursor;
+                let applied = world.resources.retained_ui.interaction.applied_cursor;
+                if requested.is_some() && requested != applied {
+                    if let Some(cursor) = requested {
+                        window_handle.set_cursor(cursor);
+                    }
+                    world.resources.retained_ui.interaction.applied_cursor = requested;
+                } else if requested.is_none()
+                    && applied.is_some()
+                    && applied != Some(winit::window::CursorIcon::Default)
+                {
+                    window_handle.set_cursor(winit::window::CursorIcon::Default);
+                    world.resources.retained_ui.interaction.applied_cursor =
+                        Some(winit::window::CursorIcon::Default);
+                }
             }
 
             let renderer = renderer.as_mut()?;
@@ -1229,7 +1238,11 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            attributes = attributes.with_title(self.state.title());
+            attributes = attributes
+                .with_title(self.state.title())
+                .with_resizable(true)
+                .with_decorations(true)
+                .with_min_inner_size(winit::dpi::LogicalSize::new(400.0, 300.0));
 
             #[cfg(feature = "assets")]
             if let Some(icon_bytes) = self.state.icon_bytes()

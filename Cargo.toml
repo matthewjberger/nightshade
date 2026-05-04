@@ -34,7 +34,9 @@ chrono = "0.4"
 tracing-web = "0.1"
 tracing-tracy = "0.11"
 tracing-chrome = "0.7"
+arboard = "3"
 freecs = "2.0.0"
+webbrowser = "1"
 gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = [
     "KHR_lights_punctual",
@@ -55,6 +57,8 @@ image = { version = "0.25", default-features = false, features = [
     "png",
     "jpeg",
     "hdr",
+    "gif",
+    "webp",
 ] }
 kira = "0.11.0"
 mint = "0.5"
@@ -85,6 +89,7 @@ noise = "0.9"
 notify = "7"
 ehttp = "0.6"
 rustfft = "6.2"
+taffy = "0.7"
 wasm-bindgen = "0.2.114"
 wasm-bindgen-futures = "0.4.64"
 js-sys = "0.3"

@@ -1,0 +1,10 @@
+[package]
+name = "gallery"
+description = "Live gallery showcasing every retained UI widget and feature"
+version = "0.1.0"
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+
+[dependencies]
+nightshade = { workspace = true, features = ["egui", "tracing"] }
+nalgebra-glm = { workspace = true }

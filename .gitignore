@@ -18,5 +18,6 @@ logs/
 !site/content/*.md
 apps/game/game.json
 *.tmp
+*.report.json
 screenshots/
 .claude/

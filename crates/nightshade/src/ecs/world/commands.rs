@@ -10,6 +10,7 @@
 //! |---------|-------------|
 //! | `DespawnRecursive` | Delete entity and all children |
 //! | `UploadSpriteTexture` | Upload texture to sprite atlas slot |
+//! | `UploadSpriteTextureRegion` | Upload texture to sub-region of sprite atlas slot |
 //! | `LoadHdrSkybox` | Load HDR skybox from bytes |
 //! | `LoadHdrSkyboxFromPath` | Load HDR skybox from file path |
 //! | `CaptureProceduralAtmosphereIBL` | Generate IBL from procedural sky |
@@ -55,6 +56,20 @@ pub enum WorldCommand {
     },
     UploadSpriteTexture {
         slot: u32,
+        rgba_data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
+    UploadSpriteTextureRegion {
+        slot: u32,
+        offset_x: u32,
+        offset_y: u32,
+        rgba_data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
+    UploadUiImageLayer {
+        layer: u32,
         rgba_data: Vec<u8>,
         width: u32,
         height: u32,
@@ -193,6 +208,8 @@ pub fn process_commands_system(world: &mut World) {
     for command in commands {
         match &command {
             WorldCommand::UploadSpriteTexture { .. }
+            | WorldCommand::UploadSpriteTextureRegion { .. }
+            | WorldCommand::UploadUiImageLayer { .. }
             | WorldCommand::LoadHdrSkybox { .. }
             | WorldCommand::LoadHdrSkyboxFromPath { .. }
             | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
@@ -223,6 +240,8 @@ fn process_command(world: &mut World, command: WorldCommand) {
             despawn_entities_with_cache_cleanup(world, &descendents);
         }
         WorldCommand::UploadSpriteTexture { .. } => {}
+        WorldCommand::UploadSpriteTextureRegion { .. } => {}
+        WorldCommand::UploadUiImageLayer { .. } => {}
         WorldCommand::LoadHdrSkybox { .. } => {}
         WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
         WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
@@ -801,7 +820,6 @@ fn spawn_3d_text_impl(
         components::Text {
             text_index,
             properties,
-            font_index: 0,
             dirty: true,
             cached_mesh: None,
             billboard,

@@ -55,8 +55,8 @@ file_watcher = [
 
 text = [
     "core",
+    "dep:cosmic-text",
     "dep:swash",
-    "dep:ttf-parser",
 ]
 
 scene_graph = ["assets"]
@@ -169,7 +169,7 @@ bytemuck = { workspace = true, optional = true }
 egui = { workspace = true, optional = true }
 egui_extras = { workspace = true, optional = true }
 swash = { version = "0.2", optional = true }
-ttf-parser = { version = "0.25", optional = true }
+cosmic-text = { version = "0.16", optional = true }
 freecs = { workspace = true, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }
@@ -199,6 +199,7 @@ uuid = { version = "1.0", features = ["v4", "serde"], optional = true }
 web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
 ehttp = { workspace = true, optional = true }
+taffy = { workspace = true }
 
 egui-wgpu = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
@@ -277,6 +278,8 @@ ico = { version = "0.5", optional = true }
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
 rfd = { version = "0.17", optional = true }
 openxr = { workspace = true, optional = true }
+arboard = { workspace = true }
+webbrowser = { workspace = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android-activity = { workspace = true, optional = true }
