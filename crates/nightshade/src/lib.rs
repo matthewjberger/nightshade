@@ -845,6 +845,9 @@ pub mod prelude {
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
+    pub use crate::ecs::gpu_picking::{
+        GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
+    };
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::queries::query_active_gamepad;
     pub use crate::ecs::input::resources::input_mode::InputMode;

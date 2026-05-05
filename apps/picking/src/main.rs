@@ -1,0 +1,567 @@
+use nightshade::ecs::camera::commands::spawn_pan_orbit_camera;
+use nightshade::ecs::camera::systems::pan_orbit_camera_system;
+use nightshade::ecs::gpu_picking::GpuPickResult;
+use nightshade::ecs::input::resources::MouseState;
+use nightshade::ecs::lines::components::{Line, Lines};
+use nightshade::ecs::material::material_registry_insert;
+use nightshade::prelude::*;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    launch(PickingDemo::default())
+}
+
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+enum PickingMode {
+    #[default]
+    GpuHover,
+    CpuHover,
+}
+
+struct DemoMesh {
+    entity: Entity,
+    label: &'static str,
+}
+
+#[derive(Default, Clone, Copy)]
+struct UiHandles {
+    mode_button: Entity,
+    debug_volumes_toggle: Entity,
+    spin_slider: Entity,
+    status_label: Entity,
+    detail_label: Entity,
+}
+
+#[derive(Default)]
+struct PickingDemo {
+    meshes: Vec<DemoMesh>,
+    debug_volumes: Vec<(Entity, Entity)>,
+    highlighted_entity: Option<Entity>,
+    selected_entity: Option<Entity>,
+    last_pick_result: Option<GpuPickResult>,
+    last_mouse_pos: (u32, u32),
+    preview_lines_entity: Option<Entity>,
+    mode: PickingMode,
+    show_debug_volumes: bool,
+    spin_speed: f32,
+    handles: UiHandles,
+}
+
+const MESH_LAYOUT: [(&str, Vec3, Vec4); 5] = [
+    (
+        "Cube",
+        Vec3::new(-8.0, 0.0, 0.0),
+        Vec4::new(0.8, 0.2, 0.2, 1.0),
+    ),
+    (
+        "Sphere",
+        Vec3::new(-4.0, 0.0, 0.0),
+        Vec4::new(0.2, 0.8, 0.2, 1.0),
+    ),
+    (
+        "Cylinder",
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec4::new(0.2, 0.2, 0.8, 1.0),
+    ),
+    (
+        "Torus",
+        Vec3::new(4.0, 0.0, 0.0),
+        Vec4::new(0.2, 0.8, 0.8, 1.0),
+    ),
+    (
+        "Cone",
+        Vec3::new(8.0, 0.0, 0.0),
+        Vec4::new(0.8, 0.2, 0.8, 1.0),
+    ),
+];
+
+const PANEL_RECT: Rect = Rect {
+    min: Vec2::new(16.0, 16.0),
+    max: Vec2::new(360.0, 320.0),
+};
+
+impl State for PickingDemo {
+    fn title(&self) -> &str {
+        "Picking Demo"
+    }
+
+    fn initialize(&mut self, world: &mut World) {
+        world.resources.user_interface.enabled = true;
+        world.resources.retained_ui.enabled = true;
+        world.resources.graphics.show_grid = true;
+        world.resources.graphics.atmosphere = Atmosphere::Sky;
+        self.show_debug_volumes = true;
+        self.spin_speed = 1.0;
+
+        spawn_sun(world);
+
+        for (mesh_type, position, color) in MESH_LAYOUT {
+            let entity = spawn_mesh(world, mesh_type, position, Vec3::new(1.0, 1.0, 1.0));
+            let material_name = format!("{}_{}", mesh_type, entity.id);
+            material_registry_insert(
+                &mut world.resources.material_registry,
+                material_name.clone(),
+                Material {
+                    base_color: color.into(),
+                    ..Default::default()
+                },
+            );
+            if let Some(&index) = world
+                .resources
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                world
+                    .resources
+                    .material_registry
+                    .registry
+                    .add_reference(index);
+            }
+            world
+                .core
+                .set_material_ref(entity, MaterialRef::new(material_name));
+
+            let bounding_radius = world
+                .core
+                .get_bounding_volume(entity)
+                .map(|bv| bv.sphere_radius)
+                .unwrap_or(1.0);
+            let sphere_entity = spawn_debug_sphere(world, mesh_type, position, bounding_radius);
+            self.debug_volumes.push((entity, sphere_entity));
+
+            self.meshes.push(DemoMesh {
+                entity,
+                label: mesh_type,
+            });
+        }
+
+        let camera = spawn_pan_orbit_camera(
+            world,
+            Vec3::new(0.0, 0.0, 0.0),
+            12.0,
+            0.0,
+            0.4,
+            "Picking Demo Camera".to_string(),
+        );
+        world.resources.active_camera = Some(camera);
+
+        let preview_entity = world.spawn_entities(LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
+        world.core.set_lines(preview_entity, Lines::default());
+        world
+            .core
+            .set_visibility(preview_entity, Visibility { visible: true });
+        world
+            .core
+            .set_global_transform(preview_entity, GlobalTransform::default());
+        self.preview_lines_entity = Some(preview_entity);
+
+        self.handles = build_panel(world, self.mode, self.show_debug_volumes, self.spin_speed);
+    }
+
+    fn run_systems(&mut self, world: &mut World) {
+        pan_orbit_camera_system(world);
+
+        self.poll_panel(world);
+        self.tick_rotation(world);
+        self.sync_debug_volume_visibility(world);
+
+        match self.mode {
+            PickingMode::GpuHover => self.update_gpu_hover(world),
+            PickingMode::CpuHover => self.update_cpu_hover(world),
+        }
+
+        self.handle_click(world);
+        self.sync_outline(world);
+        self.sync_panel(world);
+    }
+
+    fn on_keyboard_input(&mut self, world: &mut World, key_code: KeyCode, key_state: KeyState) {
+        if matches!((key_code, key_state), (KeyCode::Escape, KeyState::Pressed)) {
+            world.resources.window.should_exit = true;
+        }
+    }
+}
+
+impl PickingDemo {
+    fn poll_panel(&mut self, world: &mut World) {
+        if let Some(slider) = world.widget::<UiSliderData>(self.handles.spin_slider) {
+            self.spin_speed = slider.value;
+        }
+        if let Some(toggle) = world.widget::<UiCheckboxData>(self.handles.debug_volumes_toggle) {
+            self.show_debug_volumes = toggle.value;
+        }
+
+        let mut mode_clicked = false;
+        for event in world.ui_events() {
+            if let UiEvent::ButtonClicked(entity) = event
+                && *entity == self.handles.mode_button
+            {
+                mode_clicked = true;
+            }
+        }
+        if mode_clicked {
+            self.highlighted_entity = None;
+            self.mode = match self.mode {
+                PickingMode::GpuHover => PickingMode::CpuHover,
+                PickingMode::CpuHover => PickingMode::GpuHover,
+            };
+        }
+    }
+
+    fn tick_rotation(&mut self, world: &mut World) {
+        let delta = world.resources.window.timing.delta_time.max(0.0);
+        if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {
+            return;
+        }
+        let rotation =
+            nalgebra_glm::quat_angle_axis(self.spin_speed * delta, &Vec3::new(0.0, 1.0, 0.0));
+        for mesh in &self.meshes {
+            if let Some(transform) = world.core.get_local_transform_mut(mesh.entity) {
+                transform.rotation = rotation * transform.rotation;
+                world
+                    .core
+                    .set_local_transform_dirty(mesh.entity, LocalTransformDirty);
+            }
+        }
+        for (mesh_entity, sphere_entity) in &self.debug_volumes {
+            if let Some(global) = world.core.get_global_transform(*mesh_entity) {
+                let translation = Vec3::new(global.0[(0, 3)], global.0[(1, 3)], global.0[(2, 3)]);
+                if let Some(transform) = world.core.get_local_transform_mut(*sphere_entity) {
+                    transform.translation = translation;
+                    world
+                        .core
+                        .set_local_transform_dirty(*sphere_entity, LocalTransformDirty);
+                }
+            }
+        }
+    }
+
+    fn sync_debug_volume_visibility(&self, world: &mut World) {
+        for (_, sphere_entity) in &self.debug_volumes {
+            if let Some(visibility) = world.core.get_visibility_mut(*sphere_entity) {
+                visibility.visible = self.show_debug_volumes;
+            }
+        }
+    }
+
+    fn update_gpu_hover(&mut self, world: &mut World) {
+        if let Some(result) = world.resources.gpu_picking.take_result() {
+            self.last_pick_result = Some(result);
+        }
+
+        let mouse = world.resources.input.mouse;
+        let mouse_pos = mouse.position;
+        let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
+        let ui_capturing = world.resources.user_interface.hud_wants_pointer
+            || world
+                .resources
+                .retained_ui
+                .interaction
+                .hovered_entity
+                .is_some()
+            || world
+                .resources
+                .retained_ui
+                .interaction
+                .active_entity
+                .is_some();
+        let mouse_held = mouse.state.contains(MouseState::LEFT_CLICKED);
+        if mouse_held {
+            self.highlighted_entity = None;
+        } else if !ui_capturing && current_mouse_pos != self.last_mouse_pos {
+            world
+                .resources
+                .gpu_picking
+                .request_pick(current_mouse_pos.0, current_mouse_pos.1);
+            self.last_mouse_pos = current_mouse_pos;
+        }
+
+        if let Some(preview_entity) = self.preview_lines_entity {
+            let lines = match &self.last_pick_result {
+                Some(result) if result.depth > 0.0 && !mouse_held => {
+                    preview_marker(result.world_position, result.world_normal, 0.6)
+                }
+                _ => Lines::new(vec![]),
+            };
+            world.core.set_lines(preview_entity, lines);
+        }
+
+        if mouse_held {
+            return;
+        }
+
+        self.highlighted_entity = self.last_pick_result.as_ref().and_then(|result| {
+            if result.depth <= 0.0 {
+                return None;
+            }
+            self.meshes
+                .iter()
+                .map(|mesh| {
+                    let mesh_position = world
+                        .core
+                        .get_global_transform(mesh.entity)
+                        .map(|t| Vec3::new(t.0[(0, 3)], t.0[(1, 3)], t.0[(2, 3)]))
+                        .unwrap_or_else(Vec3::zeros);
+                    let distance = nalgebra_glm::distance(&result.world_position, &mesh_position);
+                    (mesh.entity, distance)
+                })
+                .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                .filter(|(_, distance)| *distance < 1.5)
+                .map(|(entity, _)| entity)
+        });
+    }
+
+    fn update_cpu_hover(&mut self, world: &mut World) {
+        if let Some(preview_entity) = self.preview_lines_entity {
+            world.core.set_lines(preview_entity, Lines::new(vec![]));
+        }
+
+        let mouse = world.resources.input.mouse;
+        if mouse.state.contains(MouseState::LEFT_CLICKED) {
+            self.highlighted_entity = None;
+            return;
+        }
+        let hits = pick_entities(world, mouse.position, PickingOptions::default());
+        let valid: std::collections::HashSet<Entity> =
+            self.meshes.iter().map(|m| m.entity).collect();
+        self.highlighted_entity = hits
+            .into_iter()
+            .find(|hit| valid.contains(&hit.entity))
+            .map(|hit| hit.entity);
+    }
+
+    fn handle_click(&mut self, world: &mut World) {
+        let mouse = world.resources.input.mouse;
+        if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
+            return;
+        }
+        let ui_capturing = world.resources.user_interface.hud_wants_pointer
+            || world
+                .resources
+                .retained_ui
+                .interaction
+                .hovered_entity
+                .is_some()
+            || world
+                .resources
+                .retained_ui
+                .interaction
+                .active_entity
+                .is_some();
+        if ui_capturing {
+            return;
+        }
+        let target = self.highlighted_entity;
+        self.selected_entity = match (self.selected_entity, target) {
+            (Some(prev), Some(now)) if prev == now => None,
+            (_, Some(now)) => Some(now),
+            (_, None) => None,
+        };
+    }
+
+    fn sync_outline(&self, world: &mut World) {
+        world.resources.graphics.bounding_volume_selected_entity =
+            self.highlighted_entity.or(self.selected_entity);
+    }
+
+    fn sync_panel(&self, world: &mut World) {
+        world.ui_button_set_text(self.handles.mode_button, mode_label(self.mode));
+        let label_for = |entity: Entity| -> String {
+            self.meshes
+                .iter()
+                .find(|m| m.entity == entity)
+                .map(|m| m.label.to_string())
+                .unwrap_or_else(|| "?".to_string())
+        };
+        let status = match (self.selected_entity, self.highlighted_entity) {
+            (Some(selected), Some(hovered)) if selected == hovered => {
+                format!("Selected: {} (hover)", label_for(selected))
+            }
+            (Some(selected), Some(hovered)) => format!(
+                "Selected: {}    Hover: {}",
+                label_for(selected),
+                label_for(hovered)
+            ),
+            (Some(selected), None) => format!("Selected: {}", label_for(selected)),
+            (None, Some(hovered)) => format!("Hover: {}", label_for(hovered)),
+            (None, None) => "Selected: none".to_string(),
+        };
+        world.ui_set_text(self.handles.status_label, &status);
+
+        let mouse = world.resources.input.mouse.position;
+        let detail = match &self.last_pick_result {
+            Some(result) if result.depth > 0.0 => format!(
+                "Mouse {:.0}, {:.0}    Hit ({:.2}, {:.2}, {:.2})",
+                mouse.x,
+                mouse.y,
+                result.world_position.x,
+                result.world_position.y,
+                result.world_position.z
+            ),
+            _ => format!("Mouse {:.0}, {:.0}    no gpu hit", mouse.x, mouse.y),
+        };
+        world.ui_set_text(self.handles.detail_label, &detail);
+    }
+}
+
+fn mode_label(mode: PickingMode) -> &'static str {
+    match mode {
+        PickingMode::GpuHover => "Mode: GPU hover",
+        PickingMode::CpuHover => "Mode: CPU hover",
+    }
+}
+
+fn build_panel(
+    world: &mut World,
+    initial_mode: PickingMode,
+    initial_show_volumes: bool,
+    initial_spin: f32,
+) -> UiHandles {
+    let mut tree = UiTreeBuilder::new(world);
+    let panel = tree.add_floating_panel("Picking Demo", PANEL_RECT);
+    let content = tree
+        .world_mut()
+        .widget::<UiPanelData>(panel)
+        .map(|d| d.content_entity)
+        .expect("panel content");
+    tree.push_parent(content);
+
+    tree.add_label("Hover for outline, click to lock.");
+    tree.add_label("Drag to orbit, scroll to zoom.");
+    let mode_button = tree.add_button(mode_label(initial_mode));
+    let status_label = tree.add_label("Selected: none");
+    let detail_label = tree.add_label("");
+    tree.add_label("Spin speed");
+    let spin_slider = tree.add_slider(initial_spin, 0.0, 5.0);
+    let debug_volumes_toggle = tree.add_checkbox("Show debug volumes", initial_show_volumes);
+
+    tree.pop_parent();
+    tree.finish();
+
+    UiHandles {
+        mode_button,
+        debug_volumes_toggle,
+        spin_slider,
+        status_label,
+        detail_label,
+    }
+}
+
+fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32) -> Entity {
+    let lines = sphere_wireframe(radius, Vec4::new(0.0, 1.0, 1.0, 1.0), 16);
+    let entity = world.spawn_entities(
+        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
+        1,
+    )[0];
+    world
+        .core
+        .set_name(entity, Name(format!("{name} Debug Volume")));
+    world.core.set_local_transform(
+        entity,
+        LocalTransform {
+            translation: position,
+            scale: Vec3::new(1.0, 1.0, 1.0),
+            ..Default::default()
+        },
+    );
+    world
+        .core
+        .set_global_transform(entity, GlobalTransform::default());
+    world
+        .core
+        .set_local_transform_dirty(entity, LocalTransformDirty);
+    world.core.set_lines(entity, Lines::new(lines));
+    world
+        .core
+        .set_visibility(entity, Visibility { visible: true });
+    entity
+}
+
+fn sphere_wireframe(radius: f32, color: Vec4, segments: u32) -> Vec<Line> {
+    let mut lines = Vec::new();
+    for i in 0..segments {
+        let phi = std::f32::consts::PI * (i as f32 / segments as f32);
+        let y = radius * phi.cos();
+        let circle_radius = radius * phi.sin();
+        for j in 0..segments {
+            let theta1 = 2.0 * std::f32::consts::PI * (j as f32 / segments as f32);
+            let theta2 = 2.0 * std::f32::consts::PI * ((j + 1) as f32 / segments as f32);
+            lines.push(Line {
+                start: Vec3::new(
+                    circle_radius * theta1.cos(),
+                    y,
+                    circle_radius * theta1.sin(),
+                ),
+                end: Vec3::new(
+                    circle_radius * theta2.cos(),
+                    y,
+                    circle_radius * theta2.sin(),
+                ),
+                color,
+            });
+        }
+    }
+    for i in 0..segments {
+        let theta = 2.0 * std::f32::consts::PI * (i as f32 / segments as f32);
+        let cos_theta = theta.cos();
+        let sin_theta = theta.sin();
+        for j in 0..segments {
+            let phi1 = std::f32::consts::PI * (j as f32 / segments as f32);
+            let phi2 = std::f32::consts::PI * ((j + 1) as f32 / segments as f32);
+            lines.push(Line {
+                start: Vec3::new(
+                    radius * phi1.sin() * cos_theta,
+                    radius * phi1.cos(),
+                    radius * phi1.sin() * sin_theta,
+                ),
+                end: Vec3::new(
+                    radius * phi2.sin() * cos_theta,
+                    radius * phi2.cos(),
+                    radius * phi2.sin() * sin_theta,
+                ),
+                color,
+            });
+        }
+    }
+    lines
+}
+
+fn preview_marker(position: Vec3, normal: Vec3, size: f32) -> Lines {
+    let normal = if normal.norm() > 1e-4 {
+        nalgebra_glm::normalize(&normal)
+    } else {
+        Vec3::new(0.0, 1.0, 0.0)
+    };
+    let helper = if normal.x.abs() < 0.9 {
+        Vec3::new(1.0, 0.0, 0.0)
+    } else {
+        Vec3::new(0.0, 1.0, 0.0)
+    };
+    let tangent = nalgebra_glm::normalize(&nalgebra_glm::cross(&normal, &helper));
+    let bitangent = nalgebra_glm::cross(&normal, &tangent);
+    let half = size * 0.5;
+    let color = Vec4::new(0.0, 1.0, 0.0, 1.0);
+    let normal_color = Vec4::new(1.0, 1.0, 0.0, 1.0);
+
+    let corners = [
+        position + tangent * half + bitangent * half,
+        position - tangent * half + bitangent * half,
+        position - tangent * half - bitangent * half,
+        position + tangent * half - bitangent * half,
+    ];
+    let mut lines_vec = Vec::with_capacity(5);
+    for i in 0..4 {
+        lines_vec.push(Line {
+            start: corners[i],
+            end: corners[(i + 1) % 4],
+            color,
+        });
+    }
+    lines_vec.push(Line {
+        start: position,
+        end: position + normal * size,
+        color: normal_color,
+    });
+    Lines::new(lines_vec)
+}

@@ -5,81 +5,10 @@
 //!
 //! - [`GpuPicking`]: Resource managing pick requests and results
 //! - [`GpuPickRequest`]: Screen coordinates to sample
-//! - [`GpuPickResult`]: World position, normal, depth, and entity ID
-//!
-//! Unlike ray-based picking, GPU picking reads the actual rendered depth buffer,
-//! giving pixel-perfect results that match what's visible on screen.
-//!
-//! # Basic Usage
-//!
-//! ```ignore
-//! fn on_mouse_input(&mut self, world: &mut World, button: MouseButton, state: KeyState) {
-//!     if button == MouseButton::Left && state == KeyState::Pressed {
-//!         let mouse = world.resources.input.mouse.position;
-//!         world.resources.gpu_picking.request_pick(mouse.x as u32, mouse.y as u32);
-//!     }
-//! }
-//!
-//! fn run_systems(&mut self, world: &mut World) {
-//!     // Check for pick result (available next frame after request)
-//!     if let Some(result) = world.resources.gpu_picking.take_result() {
-//!         let hit_position = result.world_position;
-//!         let surface_normal = result.world_normal;
-//!         let depth = result.depth;
-//!
-//!         // Place a decal at the hit position
-//!         spawn_decal_at(world, hit_position, surface_normal);
-//!
-//!         // Or check which entity was clicked
-//!         if let Some(entity_id) = result.entity_id {
-//!             println!("Clicked entity ID: {}", entity_id);
-//!         }
-//!     }
-//! }
-//! ```
-//!
-//! # Continuous Picking (Hover/Drag)
-//!
-//! For real-time cursor tracking:
-//!
-//! ```ignore
-//! fn run_systems(&mut self, world: &mut World) {
-//!     let mouse = world.resources.input.mouse.position;
-//!
-//!     // Request pick every frame for continuous tracking
-//!     world.resources.gpu_picking.request_pick(mouse.x as u32, mouse.y as u32);
-//!
-//!     // Results are smoothed automatically to reduce jitter
-//!     if let Some(result) = world.resources.gpu_picking.take_result() {
-//!         // Update preview decal position
-//!         self.preview_position = result.world_position;
-//!         self.preview_normal = result.world_normal;
-//!     }
-//! }
-//! ```
-//!
-//! # GpuPickResult Fields
-//!
-//! | Field | Type | Description |
-//! |-------|------|-------------|
-//! | `world_position` | Vec3 | 3D world coordinates at cursor |
-//! | `world_normal` | Vec3 | Surface normal (computed from depth gradients) |
-//! | `depth` | f32 | Raw depth buffer value (0-1, reverse-Z) |
-//! | `entity_id` | `Option<u32>` | Entity ID if entity ID buffer is enabled |
-//!
-//! # How It Works
-//!
-//! 1. Call `request_pick(x, y)` with screen coordinates
-//! 2. Renderer samples a small region of the depth buffer around that point
-//! 3. `compute_result()` reconstructs world position from depth + inverse view-projection
-//! 4. Normal is computed from neighboring depth samples
-//! 5. Results are smoothed across frames to reduce jitter
-//!
-//! # Performance Notes
-//!
-//! - Only one pick request is processed per frame
-//! - Depth buffer readback has ~1 frame latency
-//! - Position/normal smoothing reduces noise from depth precision limits
+//! - [`GpuPickResult`]: World position, normal, depth, and entity id
+
+use crate::ecs::window::resources::ViewportRect;
+use crate::ecs::world::Vec2;
 
 #[derive(Debug, Clone, Copy)]
 pub struct GpuPickRequest {
@@ -163,6 +92,14 @@ impl GpuPicking {
 
         let center_depth = self.depth_sample_buffer[center_index];
         if center_depth <= 0.0 {
+            self.result = Some(GpuPickResult {
+                world_position: nalgebra_glm::Vec3::zeros(),
+                world_normal: nalgebra_glm::Vec3::new(0.0, 1.0, 0.0),
+                depth: 0.0,
+                entity_id: None,
+            });
+            self.previous_position = None;
+            self.previous_normal = None;
             return;
         }
 
@@ -255,4 +192,53 @@ impl GpuPicking {
             entity_id,
         });
     }
+}
+
+/// Map a tile-local cursor position to surface (input texture) pixel coordinates,
+/// honoring the same center-crop UV transform that `viewport_compose` applies when
+/// the tile aspect differs from the surface aspect.
+///
+/// Returns `None` if the cursor is outside `viewport_rect`.
+pub fn surface_pick_coords(
+    mouse_pos: Vec2,
+    viewport_rect: Option<ViewportRect>,
+    surface_size: (u32, u32),
+) -> Option<(u32, u32)> {
+    let Some(rect) = viewport_rect else {
+        return Some((mouse_pos.x.max(0.0) as u32, mouse_pos.y.max(0.0) as u32));
+    };
+
+    let local = rect.to_local(mouse_pos);
+    if local.x < 0.0 || local.y < 0.0 || local.x >= rect.width || local.y >= rect.height {
+        return None;
+    }
+
+    let surface_width = surface_size.0 as f32;
+    let surface_height = surface_size.1 as f32;
+    if surface_width <= 0.0 || surface_height <= 0.0 || rect.width <= 0.0 || rect.height <= 0.0 {
+        return None;
+    }
+
+    let texture_aspect = surface_width / surface_height;
+    let rect_aspect = rect.width / rect.height;
+    let (uv_scale_x, uv_scale_y) = if texture_aspect > rect_aspect {
+        (rect_aspect / texture_aspect, 1.0)
+    } else if texture_aspect < rect_aspect {
+        (1.0, texture_aspect / rect_aspect)
+    } else {
+        (1.0, 1.0)
+    };
+
+    let tile_uv_x = local.x / rect.width;
+    let tile_uv_y = local.y / rect.height;
+    let input_uv_x = (tile_uv_x - 0.5) * uv_scale_x + 0.5;
+    let input_uv_y = (tile_uv_y - 0.5) * uv_scale_y + 0.5;
+
+    let pick_x = (input_uv_x * surface_width)
+        .clamp(0.0, surface_width - 1.0)
+        .round() as u32;
+    let pick_y = (input_uv_y * surface_height)
+        .clamp(0.0, surface_height - 1.0)
+        .round() as u32;
+    Some((pick_x, pick_y))
 }

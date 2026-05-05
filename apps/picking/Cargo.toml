@@ -1,0 +1,9 @@
+[package]
+name = "picking"
+description = "Hover-to-select picking demo with debug volume visualization"
+version = "0.1.0"
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+
+[dependencies]
+nightshade = { workspace = true, features = ["tracing"] }
