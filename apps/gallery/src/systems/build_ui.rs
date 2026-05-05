@@ -75,7 +75,8 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let (containers_screen, modal_trigger, modal_dialog, confirm_trigger, confirm_dialog) =
         build_containers_screen(&mut tree);
     screen_roots.push(containers_screen);
-    screen_roots.push(build_data_screen(&mut tree));
+    let (data_screen, virtual_list, virtual_list_text_nodes) = build_data_screen(&mut tree);
+    screen_roots.push(data_screen);
     let (effects_screen, effects_pulse, effects_blend, effects_progress, effects_spinner) =
         build_effects_screen(&mut tree);
     screen_roots.push(effects_screen);
@@ -130,6 +131,8 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     gallery.resources.handles.palette_entity = Some(palette_entity);
     gallery.resources.handles.disable_toggle = Some(disable_toggle);
     gallery.resources.handles.disabled_slider = Some(disabled_slider);
+    gallery.resources.handles.virtual_list = Some(virtual_list);
+    gallery.resources.handles.virtual_list_text_nodes = virtual_list_text_nodes;
 }
 
 pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
@@ -305,6 +308,25 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     }
     if let Some((message, severity)) = button_toast {
         world.ui_show_toast(&message, severity, 2.0);
+    }
+
+    if let Some(virtual_list) = gallery.resources.handles.virtual_list {
+        let visible_start = world
+            .ui
+            .get_ui_virtual_list(virtual_list)
+            .map(|data| data.visible_start)
+            .unwrap_or(0);
+        for (pool_index, text_entity) in gallery
+            .resources
+            .handles
+            .virtual_list_text_nodes
+            .clone()
+            .into_iter()
+            .enumerate()
+        {
+            let item_index = visible_start + pool_index;
+            world.ui_set_text(text_entity, &format!("Item {item_index}"));
+        }
     }
 }
 
@@ -1062,9 +1084,11 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
     )
 }
 
-fn build_data_screen(tree: &mut UiTreeBuilder) -> Entity {
+fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let virtual_list_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let text_nodes_cell = std::rc::Rc::new(std::cell::RefCell::new(Vec::<Entity>::new()));
 
     build_two_column_card(
         tree,
@@ -1143,13 +1167,12 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> Entity {
                         + Ab(nalgebra_glm::Vec2::new(0.0, 220.0)),
                 )
                 .entity();
-            let vl_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-            let vlc = vl_cell.clone();
+            let vl_cell = virtual_list_cell.clone();
             ui.within(virtual_list_box, |inner| {
                 let vl = inner.tree().add_virtual_list(28.0, 8);
-                vlc.set(vl);
+                vl_cell.set(vl);
             });
-            let vl = vl_cell.get();
+            let vl = virtual_list_cell.get();
             ui.world_mut().ui_virtual_list_set_count(vl, 64);
             let pool_containers: Vec<Entity> = ui
                 .world_mut()
@@ -1157,16 +1180,20 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> Entity {
                 .get_ui_virtual_list(vl)
                 .map(|d| d.pool_items.iter().map(|p| p.container_entity).collect())
                 .unwrap_or_default();
+            let mut text_nodes = text_nodes_cell.borrow_mut();
+            text_nodes.clear();
             for (pool_index, container) in pool_containers.iter().enumerate() {
                 ui.tree().push_parent(*container);
-                ui.tree()
+                let text_entity = ui
+                    .tree()
                     .add_node()
                     .flow_child(Rl(nalgebra_glm::Vec2::new(100.0, 100.0)))
                     .with_text(&format!("Item {pool_index}"), 14.0)
                     .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
                     .with_theme_color::<UiBase>(ThemeColor::Text)
                     .without_pointer_events()
-                    .done();
+                    .entity();
+                text_nodes.push(text_entity);
                 ui.tree().pop_parent();
             }
         },
@@ -1235,7 +1262,9 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> Entity {
     );
 
     tree.pop_parent();
-    screen
+    let virtual_list = virtual_list_cell.get();
+    let text_nodes = text_nodes_cell.borrow().clone();
+    (screen, virtual_list, text_nodes)
 }
 
 fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity, Entity) {

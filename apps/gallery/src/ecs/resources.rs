@@ -33,4 +33,6 @@ pub struct GalleryHandles {
     pub disable_toggle: Option<Entity>,
     pub disabled_slider: Option<Entity>,
     pub submit_count: u32,
+    pub virtual_list: Option<Entity>,
+    pub virtual_list_text_nodes: Vec<Entity>,
 }
