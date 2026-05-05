@@ -15,8 +15,8 @@ const CARD_BORDER: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.1, 0.1, 0.18, 
 const ACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 0.8);
 const INACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 0.0);
 
-const SIDEBAR_PERCENT: f32 = 16.0;
-const CONTENT_OFFSET_PERCENT: f32 = 16.5;
+const SIDEBAR_PERCENT: f32 = 22.0;
+const CONTENT_OFFSET_PERCENT: f32 = 22.5;
 
 const NAV_LABELS: [&str; 6] = [
     "BUTTONS",
@@ -518,10 +518,10 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
             .add_node()
             .window(
                 Ab(nalgebra_glm::Vec2::new(46.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
-                Ab(nalgebra_glm::Vec2::new(160.0, 30.0)),
+                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-58.0, 30.0)),
                 Anchor::CenterLeft,
             )
-            .with_text(label, 14.0)
+            .with_text(label, 12.0)
             .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
             .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
             .without_pointer_events()
