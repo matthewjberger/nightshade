@@ -20,7 +20,7 @@ pub mod components {
         AnimationChannel, AnimationClip, AnimationInterpolation, AnimationPlayer,
         AnimationProperty, AnimationSampler, AnimationSamplerOutput, AnimationValue,
     };
-    pub use crate::ecs::audio::components::{AudioListener, AudioSource};
+    pub use crate::ecs::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
         Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, Smoothing,

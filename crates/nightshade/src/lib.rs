@@ -830,7 +830,9 @@ pub mod prelude {
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     #[cfg(feature = "audio")]
-    pub use crate::ecs::audio::systems::load_sound_from_bytes;
+    pub use crate::ecs::audio::systems::{
+        load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
+    };
     pub use crate::ecs::bounding_volume::components::BoundingVolume;
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{
