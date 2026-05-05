@@ -960,7 +960,7 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
-    pub use crate::ecs::ui::icons::{self, IconGlyph};
+    pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
