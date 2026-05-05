@@ -947,6 +947,7 @@ pub mod prelude {
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
     pub use crate::ecs::text::components::{TextAlignment, TextProperties, VerticalAlignment};
+    pub use crate::ecs::text::resources::font_engine::FontKind;
     pub use crate::ecs::text::systems::sync_text_meshes_system;
     #[cfg(feature = "assets")]
     pub use crate::ecs::texture_loader::{
@@ -959,6 +960,7 @@ pub mod prelude {
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
     };
+    pub use crate::ecs::ui::icons::{self, IconGlyph};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,

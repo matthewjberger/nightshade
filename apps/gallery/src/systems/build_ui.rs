@@ -27,6 +27,15 @@ const NAV_LABELS: [&str; 6] = [
     "EFFECTS",
 ];
 
+const NAV_ICONS: [IconGlyph; 6] = [
+    icons::material::TOGGLE_ON,
+    icons::material::KEYBOARD,
+    icons::material::PALETTE,
+    icons::material::VIEW_QUILT,
+    icons::material::TABLE_CHART,
+    icons::material::AUTO_AWESOME,
+];
+
 pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let mut tree = UiTreeBuilder::new(world);
 
@@ -495,14 +504,25 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
             .entity();
 
         tree.push_parent(button);
+        tree.add_node()
+            .window(
+                Ab(nalgebra_glm::Vec2::new(16.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+                Ab(nalgebra_glm::Vec2::new(20.0, 20.0)),
+                Anchor::CenterLeft,
+            )
+            .with_icon(NAV_ICONS[index], 18.0)
+            .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
+            .without_pointer_events()
+            .done();
         let label_entity = tree
             .add_node()
             .window(
-                Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                Ab(nalgebra_glm::Vec2::new(180.0, 30.0)),
-                Anchor::Center,
+                Ab(nalgebra_glm::Vec2::new(46.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+                Ab(nalgebra_glm::Vec2::new(160.0, 30.0)),
+                Anchor::CenterLeft,
             )
             .with_text(label, 14.0)
+            .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
             .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
             .without_pointer_events()
             .done();
