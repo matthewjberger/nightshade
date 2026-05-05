@@ -967,8 +967,8 @@ pub mod prelude {
         SolidLayout, WindowLayout,
     };
     pub use crate::ecs::ui::resources::{
-        BubbledUiEvent, DrawRectParams, OverlayText, ReservedAreas, ToastCorner, ToastSeverity,
-        UiEvent, blend_color,
+        BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
+        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiEvent, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
