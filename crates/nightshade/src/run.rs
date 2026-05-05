@@ -383,6 +383,42 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn sync_min_window_size(world: &mut World) {
+    let desired = world.resources.graphics.min_window_size;
+    if world.resources.window.applied_min_window_size == desired {
+        return;
+    }
+    let Some(handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    match desired {
+        Some((min_width, min_height)) => {
+            handle.set_min_inner_size(Some(winit::dpi::LogicalSize::new(
+                min_width as f64,
+                min_height as f64,
+            )));
+            let scale = handle.scale_factor();
+            let physical_min_width = (min_width as f64 * scale).round() as u32;
+            let physical_min_height = (min_height as f64 * scale).round() as u32;
+            let current = handle.inner_size();
+            if current.width < physical_min_width || current.height < physical_min_height {
+                let _ = handle.request_inner_size(winit::dpi::PhysicalSize::new(
+                    current.width.max(physical_min_width),
+                    current.height.max(physical_min_height),
+                ));
+            }
+        }
+        None => {
+            handle.set_min_inner_size(None::<winit::dpi::LogicalSize<f64>>);
+        }
+    }
+    world.resources.window.applied_min_window_size = desired;
+}
+
+#[cfg(target_arch = "wasm32")]
+fn sync_min_window_size(_world: &mut World) {}
+
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -392,6 +428,7 @@ pub(crate) fn step(
     let delta_ms = (world.resources.window.timing.delta_time * 1000.0) as u32;
     let _span = tracing::info_span!("frame", delta_ms).entered();
 
+    sync_min_window_size(world);
     handle_event_systems(world, event);
 
     match event {
@@ -1376,6 +1413,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.world.resources.frame_schedule =
                     crate::schedule::build_default_frame_schedule();
                 self.state.initialize(&mut self.world);
+                sync_min_window_size(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
                 self.initialized = true;
             }
@@ -1415,6 +1453,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.world.resources.frame_schedule =
                     crate::schedule::build_default_frame_schedule();
                 self.state.initialize(&mut self.world);
+                sync_min_window_size(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
 
                 if self.world.resources.graphics.use_fullscreen
@@ -1472,33 +1511,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
-
-                #[cfg(not(target_arch = "wasm32"))]
-                let (width, height) = if let Some((min_logical_width, min_logical_height)) =
-                    self.world.resources.graphics.min_window_size
-                    && let Some(handle) = self.world.resources.window.handle.as_ref()
-                {
-                    handle.set_min_inner_size(Some(winit::dpi::LogicalSize::new(
-                        min_logical_width as f64,
-                        min_logical_height as f64,
-                    )));
-                    let scale = self.world.resources.window.cached_scale_factor.max(0.0001) as f64;
-                    let min_physical_width = (min_logical_width as f64 * scale).round() as u32;
-                    let min_physical_height = (min_logical_height as f64 * scale).round() as u32;
-                    if width < min_physical_width || height < min_physical_height {
-                        let target_width = width.max(min_physical_width);
-                        let target_height = height.max(min_physical_height);
-                        let _ = handle.request_inner_size(winit::dpi::PhysicalSize::new(
-                            target_width,
-                            target_height,
-                        ));
-                        (target_width, target_height)
-                    } else {
-                        (width, height)
-                    }
-                } else {
-                    (width, height)
-                };
 
                 self.world.resources.window.cached_viewport_size = Some((width, height));
 
