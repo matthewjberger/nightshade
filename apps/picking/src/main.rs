@@ -24,6 +24,7 @@ struct DemoMesh {
 
 #[derive(Default, Clone, Copy)]
 struct UiHandles {
+    panel: Entity,
     mode_button: Entity,
     debug_volumes_toggle: Entity,
     spin_slider: Entity,
@@ -89,6 +90,7 @@ impl State for PickingDemo {
         world.resources.retained_ui.enabled = true;
         world.resources.graphics.show_grid = true;
         world.resources.graphics.atmosphere = Atmosphere::Sky;
+        world.resources.graphics.selection_outline_enabled = true;
         self.show_debug_volumes = true;
         self.spin_speed = 1.0;
 
@@ -179,6 +181,10 @@ impl State for PickingDemo {
     fn on_keyboard_input(&mut self, world: &mut World, key_code: KeyCode, key_state: KeyState) {
         if matches!((key_code, key_state), (KeyCode::Escape, KeyState::Pressed)) {
             world.resources.window.should_exit = true;
+        }
+        if matches!((key_code, key_state), (KeyCode::F1, KeyState::Pressed)) {
+            let panel = self.handles.panel;
+            world.ui_set_visible(panel, !world.ui_node_visible(panel));
         }
     }
 }
@@ -429,6 +435,7 @@ fn build_panel(
 
     tree.add_label("Hover for outline, click to lock.");
     tree.add_label("Drag to orbit, scroll to zoom.");
+    tree.add_label("F1 toggles this panel.");
     let mode_button = tree.add_button(mode_label(initial_mode));
     let status_label = tree.add_label("Selected: none");
     let detail_label = tree.add_label("");
@@ -440,6 +447,7 @@ fn build_panel(
     tree.finish();
 
     UiHandles {
+        panel,
         mode_button,
         debug_volumes_toggle,
         spin_slider,
