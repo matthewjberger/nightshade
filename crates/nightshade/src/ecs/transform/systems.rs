@@ -69,19 +69,12 @@ impl World {
     pub fn validate_and_rebuild_children_cache(&mut self) {
         self.resources.children_cache.clear();
 
-        let all_entities_with_parent: Vec<freecs::Entity> =
-            self.core.query_entities(PARENT).collect();
-        for child in all_entities_with_parent {
-            if let Some(parent) = self.core.get_parent(child)
-                && let Some(parent_entity) = parent.0
-            {
-                self.resources
-                    .children_cache
-                    .entry(parent_entity)
-                    .or_default()
-                    .push(child);
+        let children_cache = &mut self.resources.children_cache;
+        self.core.query().with(PARENT).iter(|child, table, idx| {
+            if let Some(parent_entity) = table.parent[idx].0 {
+                children_cache.entry(parent_entity).or_default().push(child);
             }
-        }
+        });
 
         for children in self.resources.children_cache.values_mut() {
             children.sort_by_key(|entity| entity.id);
@@ -94,12 +87,17 @@ impl World {
 pub fn update_global_transforms_system(world: &mut World) {
     let mut dirty_entities = std::mem::take(&mut world.resources.transform_dirty_entities);
 
-    let spawned_dirty: Vec<freecs::Entity> = world
-        .core
-        .query_entities(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
-        .collect();
-    for entity in &spawned_dirty {
-        dirty_entities.push(*entity);
+    {
+        let dirty_ref = &mut dirty_entities;
+        world
+            .core
+            .query()
+            .with(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
+            .iter(|entity, _, _| {
+                dirty_ref.push(entity);
+            });
+    }
+    for entity in &dirty_entities {
         world.core.remove_local_transform_dirty(*entity);
     }
 

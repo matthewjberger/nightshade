@@ -10,6 +10,14 @@ Read `docs/USAGE.md` before writing or modifying engine code.
 - Camera controllers are opt-in: call `fly_camera_system(world)` or `pan_orbit_camera_system(world)` in `run_systems`. `fly_camera_system` skips if the active camera has `PAN_ORBIT_CAMERA`.
 - Scenes load from glTF. Find entities by name after spawning (`world.core.find_entity_by_name`).
 
+## Querying
+
+- Default: `world.core.query().with(MASK).iter(|entity, table, idx| { ... })` for reads, `query_mut()` for writes. Direct table access, no allocation, no per-entity getter cost.
+- Use `.without(MASK)` for negative filters at table level instead of `.filter(|e| !world.core.entity_has_components(*e, MASK))`.
+- For structural mutations during iteration (add/remove components, despawn, set component triggering archetype migration), use the two-pass pattern: closure-form gather into a small `Vec` of `(entity, payload)` tuples, then a second loop that applies the mutations.
+- `WorldCommand` is GPU-deferred (texture uploads, screenshots, IBL) and flushes once per frame in `process_commands_system`. Don't use it for general structural mutation.
+- Escape hatches: `query_entities(MASK).collect::<Vec<_>>()` allocates per call; `for entity in query_entities(...)` doesn't allocate but pays per-entity getter overhead. Only use when the closure form can't return component references or when a helper requires `&World`.
+
 ## Dual-World Pattern
 
 Games use two ECS worlds: the engine `World` (rendering, physics, transforms) and a user-defined `GameWorld` via a second `freecs::ecs!` (game logic, AI, state). An `EngineEntity(Entity)` component links game entities to their engine-side render entities. Sync positions from game world to engine world in a render_sync pass.

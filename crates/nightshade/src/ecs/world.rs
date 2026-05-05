@@ -113,6 +113,7 @@ pub mod events {
 }
 
 pub mod commands;
+pub mod scratch;
 pub use commands::{
     CommandQueue, WorldCommand, capture_procedural_atmosphere_ibl, cleanup_unused_resources_system,
     despawn_entities_with_cache_cleanup, load_hdr_skybox, load_procedural_textures,
@@ -123,6 +124,7 @@ pub use commands::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use commands::{capture_screenshot, capture_screenshot_to_path};
+pub use scratch::Scratch;
 
 pub mod animation_systems {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
@@ -267,6 +269,7 @@ freecs::ecs! {
 
         event_bus: crate::ecs::event_bus::resources::EventBus,
         command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
+        scratch: crate::ecs::world::scratch::Scratch,
         transform_dirty_entities: Vec<freecs::Entity>,
         children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
         children_cache_valid: bool,

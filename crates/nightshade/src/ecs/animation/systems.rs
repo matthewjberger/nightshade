@@ -7,16 +7,15 @@ use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
 
 pub fn update_animation_players(world: &mut World) {
-    let entities_with_animations: Vec<_> = world.core.query_entities(ANIMATION_PLAYER).collect();
-    let _span =
-        tracing::info_span!("animation", players = entities_with_animations.len()).entered();
-
+    let _span = tracing::info_span!("animation").entered();
     let delta_time = world.resources.window.timing.delta_time;
-    for entity in entities_with_animations {
-        if let Some(animation_player) = world.core.get_animation_player_mut(entity) {
-            animation_player.update(delta_time);
-        }
-    }
+    world
+        .core
+        .query_mut()
+        .with(ANIMATION_PLAYER)
+        .iter(|_, table, idx| {
+            table.animation_player[idx].update(delta_time);
+        });
 }
 
 struct AnimationSampleDataMulti {
@@ -30,14 +29,16 @@ struct AnimationSampleDataMulti {
 }
 
 pub fn apply_animations(world: &mut World) {
-    let entities_with_animations: Vec<_> = world.core.query_entities(ANIMATION_PLAYER).collect();
-
-    for entity in entities_with_animations {
-        let animation_data = if let Some(player) = world.core.get_animation_player(entity) {
+    let mut sample_data: Vec<(Entity, AnimationSampleDataMulti)> = Vec::new();
+    world
+        .core
+        .query()
+        .with(ANIMATION_PLAYER)
+        .iter(|entity, table, idx| {
+            let player = &table.animation_player[idx];
             if !player.playing {
-                continue;
+                return;
             }
-
             let clips_to_sample: Vec<AnimationClip> = if player.play_all {
                 player.clips.clone()
             } else if let Some(to_clip) = player.get_current_clip() {
@@ -45,75 +46,72 @@ pub fn apply_animations(world: &mut World) {
             } else {
                 vec![]
             };
-
             let from_clip = player
                 .blend_from_clip
                 .and_then(|index| player.clips.get(index))
                 .cloned();
-
-            Some(AnimationSampleDataMulti {
-                clips: clips_to_sample,
-                time: player.time,
-                from_clip,
-                from_time: player.blend_from_time,
-                blend_factor: player.blend_factor,
-                node_mapping: player.node_index_to_entity.clone(),
-                bone_name_mapping: player.bone_name_to_entity.clone(),
-            })
-        } else {
-            None
-        };
-
-        if let Some(data) = animation_data {
-            let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
-
-            for clip in &data.clips {
-                let clip_values =
-                    sample_clip(clip, data.time, &data.node_mapping, &data.bone_name_mapping);
-
-                for (target_entity, values) in clip_values {
-                    let entry = final_values.entry(target_entity).or_default();
-                    if values.translation.is_some() {
-                        entry.translation = values.translation;
-                    }
-                    if values.rotation.is_some() {
-                        entry.rotation = values.rotation;
-                    }
-                    if values.scale.is_some() {
-                        entry.scale = values.scale;
-                    }
-                    if values.morph_weights.is_some() {
-                        entry.morph_weights = values.morph_weights;
-                    }
-                }
-            }
-
-            if let Some(from_clip) = &data.from_clip {
-                let from_values = sample_clip(
+            sample_data.push((
+                entity,
+                AnimationSampleDataMulti {
+                    clips: clips_to_sample,
+                    time: player.time,
                     from_clip,
-                    data.from_time,
-                    &data.node_mapping,
-                    &data.bone_name_mapping,
-                );
-                final_values =
-                    blend_animation_values(&from_values, &final_values, data.blend_factor);
-            }
+                    from_time: player.blend_from_time,
+                    blend_factor: player.blend_factor,
+                    node_mapping: player.node_index_to_entity.clone(),
+                    bone_name_mapping: player.bone_name_to_entity.clone(),
+                },
+            ));
+        });
 
-            for (target_entity, values) in final_values {
-                if let Some(transform) = world.mutate_local_transform(target_entity) {
-                    if let Some(translation) = values.translation {
-                        transform.translation = translation;
-                    }
-                    if let Some(rotation) = values.rotation {
-                        transform.rotation = rotation.normalize();
-                    }
-                    if let Some(scale) = values.scale {
-                        transform.scale = scale;
-                    }
+    for (_entity, data) in sample_data {
+        let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
+
+        for clip in &data.clips {
+            let clip_values =
+                sample_clip(clip, data.time, &data.node_mapping, &data.bone_name_mapping);
+
+            for (target_entity, values) in clip_values {
+                let entry = final_values.entry(target_entity).or_default();
+                if values.translation.is_some() {
+                    entry.translation = values.translation;
                 }
-                if let Some(weights) = values.morph_weights {
-                    apply_morph_weights_to_entity_and_children(world, target_entity, &weights);
+                if values.rotation.is_some() {
+                    entry.rotation = values.rotation;
                 }
+                if values.scale.is_some() {
+                    entry.scale = values.scale;
+                }
+                if values.morph_weights.is_some() {
+                    entry.morph_weights = values.morph_weights;
+                }
+            }
+        }
+
+        if let Some(from_clip) = &data.from_clip {
+            let from_values = sample_clip(
+                from_clip,
+                data.from_time,
+                &data.node_mapping,
+                &data.bone_name_mapping,
+            );
+            final_values = blend_animation_values(&from_values, &final_values, data.blend_factor);
+        }
+
+        for (target_entity, values) in final_values {
+            if let Some(transform) = world.mutate_local_transform(target_entity) {
+                if let Some(translation) = values.translation {
+                    transform.translation = translation;
+                }
+                if let Some(rotation) = values.rotation {
+                    transform.rotation = rotation.normalize();
+                }
+                if let Some(scale) = values.scale {
+                    transform.scale = scale;
+                }
+            }
+            if let Some(weights) = values.morph_weights {
+                apply_morph_weights_to_entity_and_children(world, target_entity, &weights);
             }
         }
     }

@@ -1,5 +1,6 @@
 use crate::ecs::world::components::MaterialRef;
 use crate::ecs::world::{MATERIAL_REF, MATERIAL_VARIANTS, World};
+use std::collections::HashSet;
 
 /// Switches every entity with [`MaterialVariants`] to the material that
 /// covers the supplied variant name, or back to its default if
@@ -10,29 +11,22 @@ use crate::ecs::world::{MATERIAL_REF, MATERIAL_VARIANTS, World};
 ///
 /// [`MaterialVariants`]: super::components::MaterialVariants
 pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> usize {
-    let entities: Vec<_> = world
+    let mut updates: Vec<(freecs::Entity, String)> = Vec::new();
+    world
         .core
-        .query_entities(MATERIAL_VARIANTS | MATERIAL_REF)
-        .collect();
-
-    let mut updates: Vec<(freecs::Entity, String)> = Vec::with_capacity(entities.len());
-    for entity in entities {
-        let Some(variants) = world.core.get_material_variants(entity) else {
-            continue;
-        };
-        let target_name = match variant_name {
-            None => variants.default_material_name.clone(),
-            Some(name) => variants.material_for_variant(name).to_string(),
-        };
-        let current_name = world
-            .core
-            .get_material_ref(entity)
-            .map(|r| r.name.clone())
-            .unwrap_or_default();
-        if current_name != target_name {
-            updates.push((entity, target_name));
-        }
-    }
+        .query()
+        .with(MATERIAL_VARIANTS | MATERIAL_REF)
+        .iter(|entity, table, idx| {
+            let variants = &table.material_variants[idx];
+            let target_name = match variant_name {
+                None => variants.default_material_name.clone(),
+                Some(name) => variants.material_for_variant(name).to_string(),
+            };
+            let current_name = &table.material_ref[idx].name;
+            if current_name != &target_name {
+                updates.push((entity, target_name));
+            }
+        });
 
     let count = updates.len();
     for (entity, name) in updates {
@@ -48,19 +42,21 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
 /// entity carrying a [`super::components::MaterialVariants`] component. Order
 /// follows first observation while iterating entities and their mappings.
 pub fn material_variant_names(world: &World) -> Vec<String> {
-    let entities: Vec<_> = world.core.query_entities(MATERIAL_VARIANTS).collect();
+    let mut seen_set: HashSet<String> = HashSet::new();
     let mut seen: Vec<String> = Vec::new();
-    for entity in entities {
-        let Some(variants) = world.core.get_material_variants(entity) else {
-            continue;
-        };
-        for mapping in &variants.mappings {
-            for name in &mapping.variant_names {
-                if !seen.iter().any(|existing| existing == name) {
-                    seen.push(name.clone());
+    world
+        .core
+        .query()
+        .with(MATERIAL_VARIANTS)
+        .iter(|_, table, idx| {
+            let variants = &table.material_variants[idx];
+            for mapping in &variants.mappings {
+                for name in &mapping.variant_names {
+                    if seen_set.insert(name.clone()) {
+                        seen.push(name.clone());
+                    }
                 }
             }
-        }
-    }
+        });
     seen
 }

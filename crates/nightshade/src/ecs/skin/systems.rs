@@ -47,60 +47,78 @@ impl SkinningCache {
             return true;
         }
 
-        let current_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
-
-        if current_entities.len() != self.skinned_entity_ids.len() {
+        let mut mismatch = false;
+        let mut count = 0usize;
+        let expected = &self.skinned_entity_ids;
+        world
+            .core
+            .query()
+            .with(SKIN | RENDER_MESH)
+            .iter(|entity, _, _| {
+                let index = count;
+                count += 1;
+                if mismatch {
+                    return;
+                }
+                if index >= expected.len() || entity.id != expected[index] {
+                    mismatch = true;
+                }
+            });
+        if mismatch {
             return true;
         }
-
-        for (index, entity) in current_entities.iter().enumerate() {
-            if index >= self.skinned_entity_ids.len() || entity.id != self.skinned_entity_ids[index]
-            {
-                return true;
-            }
-        }
-
-        false
+        count != expected.len()
     }
 
     pub fn rebuild_static_data(&mut self, world: &World) {
-        let skinned_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
-
-        self.skinned_entity_ids = skinned_entities.iter().map(|e| e.id).collect();
+        self.skinned_entity_ids.clear();
         self.inverse_bind_matrices.clear();
         self.skin_data.clear();
         self.entity_skin_indices.clear();
         self.joint_entities.clear();
         self.total_joints = 0;
 
-        if skinned_entities.is_empty() {
-            self.static_data_uploaded = true;
-            return;
-        }
-
+        let mut any = false;
         let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
         let mut bone_index = 0u32;
-
-        for &entity in &skinned_entities {
-            if let Some(skin) = world.core.get_skin(entity) {
+        let joint_entities = &mut self.joint_entities;
+        let skinned_entity_ids = &mut self.skinned_entity_ids;
+        world
+            .core
+            .query()
+            .with(SKIN | RENDER_MESH)
+            .iter(|entity, table, idx| {
+                any = true;
+                skinned_entity_ids.push(entity.id);
+                let skin = &table.skin[idx];
                 for &joint_entity in &skin.joints {
                     bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                         let index = bone_index;
-                        self.joint_entities.push(joint_entity);
+                        joint_entities.push(joint_entity);
                         bone_index += 1;
                         index
                     });
                 }
-            }
+            });
+
+        if !any {
+            self.static_data_uploaded = true;
+            return;
         }
 
         let mut skin_configs: HashMap<u64, u32> = HashMap::new();
         let mut unique_skin_index = 0u32;
         let mut current_ibm_offset = 0u32;
         let mut current_output_offset = 0u32;
-
-        for &entity in &skinned_entities {
-            if let Some(skin) = world.core.get_skin(entity) {
+        let skin_data = &mut self.skin_data;
+        let inverse_bind_matrices = &mut self.inverse_bind_matrices;
+        let entity_skin_indices = &mut self.entity_skin_indices;
+        world
+            .core
+            .query()
+            .with(SKIN | RENDER_MESH)
+            .iter(|entity, table, idx| {
+                let skin = &table.skin[idx];
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 for joint in skin.joints.iter() {
                     use std::hash::Hash;
@@ -137,13 +155,13 @@ impl SkinningCache {
                         base_ibm_index: current_ibm_offset,
                         base_output_index: current_output_offset,
                     };
-                    self.skin_data.push(gpu_skin_data);
+                    skin_data.push(gpu_skin_data);
 
                     for (joint_index, &inverse_bind) in
                         skin.inverse_bind_matrices.iter().enumerate()
                     {
                         if joint_index < 256 {
-                            self.inverse_bind_matrices.push(inverse_bind);
+                            inverse_bind_matrices.push(inverse_bind);
                         }
                     }
 
@@ -154,9 +172,8 @@ impl SkinningCache {
                     index
                 };
 
-                self.entity_skin_indices.insert(entity, skin_index);
-            }
-        }
+                entity_skin_indices.insert(entity, skin_index);
+            });
 
         self.total_joints = current_output_offset;
         self.static_data_uploaded = true;
@@ -186,9 +203,37 @@ impl SkinningCache {
 }
 
 pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
-    let skinned_entities: Vec<Entity> = world.core.query_entities(SKIN | RENDER_MESH).collect();
+    let mut bone_transforms = Vec::new();
+    let mut inverse_bind_matrices = Vec::new();
+    let mut skin_data_vec = Vec::new();
+    let mut entity_skin_indices = HashMap::new();
 
-    if skinned_entities.is_empty() {
+    let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
+    let mut bone_index = 0u32;
+
+    world
+        .core
+        .query()
+        .with(SKIN | RENDER_MESH)
+        .iter(|_, table, idx| {
+            let skin = &table.skin[idx];
+            for &joint_entity in &skin.joints {
+                bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
+                    let index = bone_index;
+                    if let Some(joint_global_transform) =
+                        world.core.get_global_transform(joint_entity)
+                    {
+                        bone_transforms.push(joint_global_transform.0);
+                    } else {
+                        bone_transforms.push(Mat4::identity());
+                    }
+                    bone_index += 1;
+                    index
+                });
+            }
+        });
+
+    if bone_transforms.is_empty() && entity_skin_indices.is_empty() {
         return SkinningUploadData {
             bone_transforms: Vec::new(),
             inverse_bind_matrices: Vec::new(),
@@ -198,42 +243,17 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
         };
     }
 
-    let mut bone_transforms = Vec::new();
-    let mut inverse_bind_matrices = Vec::new();
-    let mut skin_data_vec = Vec::new();
-    let mut entity_skin_indices = HashMap::new();
-
-    let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
-    let mut bone_index = 0u32;
-
-    for &entity in &skinned_entities {
-        if let Some(skin) = world.core.get_skin(entity) {
-            for &joint_entity in &skin.joints {
-                bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
-                    let index = bone_index;
-
-                    if let Some(joint_global_transform) =
-                        world.core.get_global_transform(joint_entity)
-                    {
-                        bone_transforms.push(joint_global_transform.0);
-                    } else {
-                        bone_transforms.push(Mat4::identity());
-                    }
-
-                    bone_index += 1;
-                    index
-                });
-            }
-        }
-    }
-
     let mut skin_configs: HashMap<u64, u32> = HashMap::new();
     let mut unique_skin_index = 0u32;
     let mut current_ibm_offset = 0u32;
     let mut current_output_offset = 0u32;
 
-    for &entity in &skinned_entities {
-        if let Some(skin) = world.core.get_skin(entity) {
+    world
+        .core
+        .query()
+        .with(SKIN | RENDER_MESH)
+        .iter(|entity, table, idx| {
+            let skin = &table.skin[idx];
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             for joint in skin.joints.iter() {
                 use std::hash::Hash;
@@ -286,8 +306,7 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
             };
 
             entity_skin_indices.insert(entity, skin_index);
-        }
-    }
+        });
 
     SkinningUploadData {
         bone_transforms,
