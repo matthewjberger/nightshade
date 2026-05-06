@@ -48,4 +48,7 @@ ignore = [
     "RUSTSEC-2024-0370",
     # paste is unmaintained but widely used; no drop-in replacement.
     "RUSTSEC-2024-0436",
+    # instant is unmaintained; transitive via notify -> notify-types. The
+    # author recommends web-time, but notify hasn't migrated yet.
+    "RUSTSEC-2024-0384",
 ]
