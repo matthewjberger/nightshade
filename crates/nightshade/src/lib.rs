@@ -745,10 +745,12 @@
 //!    - Process deferred commands, cleanup
 //! 9. Execute render graph passes
 //!
-//! The frame schedule is a resource at `world.resources.frame_schedule`. Modify it
-//! in [`State::initialize()`](run::State::initialize) to insert, remove, or reorder
-//! engine systems. See [`system_names`](schedule::system_names) for the available
-//! system name constants.
+//! The frame schedule is a resource at `world.resources.schedules.frame`, with
+//! the retained UI sub-schedule at `world.resources.schedules.retained_ui`. Modify
+//! either in [`State::initialize()`](run::State::initialize) to insert, remove, or
+//! reorder engine systems. See [`system_names`](schedule::system_names) and
+//! [`retained_ui_system_names`](schedule::retained_ui_system_names) for the
+//! available system name constants.
 //!
 //! ## Threading Model
 //!
