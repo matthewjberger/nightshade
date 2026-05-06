@@ -51,7 +51,9 @@ pub mod components {
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
     };
-    pub use crate::ecs::render_layer::components::RenderLayer;
+    pub use crate::ecs::render_layer::components::{
+        CameraCullingMask, CullingMask, RenderLayer,
+    };
     pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
@@ -171,6 +173,8 @@ freecs::ecs! {
             material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
             material_variants: crate::ecs::material::components::MaterialVariants => MATERIAL_VARIANTS,
             render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
+            culling_mask: crate::ecs::render_layer::components::CullingMask => CULLING_MASK,
+            camera_culling_mask: crate::ecs::render_layer::components::CameraCullingMask => CAMERA_CULLING_MASK,
             text: crate::ecs::text::components::Text => TEXT,
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
             text_character_background_colors: crate::ecs::text::components::TextCharacterBackgroundColors => TEXT_CHARACTER_BACKGROUND_COLORS,

@@ -26,6 +26,7 @@
 //! a separate global toggle.
 
 use crate::ecs::graphics::resources::{ColorGrading, DepthOfField, Graphics};
+use crate::ecs::render_layer::components::CameraCullingMask;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
@@ -91,6 +92,13 @@ pub struct EffectiveShading {
     pub ssr_fade_end: f32,
     pub ssr_intensity: f32,
     pub ambient_light: [f32; 4],
+    /// Bitmask of "culling layers" this view will render. Compared
+    /// against each entity's [`CullingMask`](crate::ecs::render_layer::components::CullingMask)
+    /// at render-collection time; an entity is skipped when
+    /// `(entity_layers & culling_mask) == 0`. Defaults to `!0` (all
+    /// layers) so cameras without a `CameraCullingMask` component
+    /// continue to render every entity.
+    pub culling_mask: u32,
 }
 
 impl EffectiveShading {
@@ -131,6 +139,7 @@ impl EffectiveShading {
             ssr_fade_end: graphics.ssr_fade_end,
             ssr_intensity: graphics.ssr_intensity,
             ambient_light: graphics.ambient_light,
+            culling_mask: !0,
         }
     }
 
@@ -138,8 +147,12 @@ impl EffectiveShading {
         graphics: &Graphics,
         shading: &ViewportShading,
         post_process: Option<&CameraPostProcess>,
+        culling_mask: Option<&CameraCullingMask>,
     ) -> Self {
         let mut effective = Self::from_graphics(graphics);
+        if let Some(mask) = culling_mask {
+            effective.culling_mask = mask.0;
+        }
         if let Some(overrides) = post_process {
             if let Some(cg) = overrides.color_grading {
                 effective.color_grading = cg;
@@ -254,6 +267,7 @@ impl Default for EffectiveShading {
             ssr_fade_end: 1.0,
             ssr_intensity: 1.0,
             ambient_light: [0.1, 0.1, 0.1, 1.0],
+            culling_mask: !0,
         }
     }
 }
