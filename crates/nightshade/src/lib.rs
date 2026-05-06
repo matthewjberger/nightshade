@@ -1122,7 +1122,19 @@ pub mod prelude {
     pub use crate::render::wgpu::passes;
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::rendergraph::{
-        PassExecutionContext, PassNode, RenderGraph, ResourceId,
+        PassExecutionContext, PassNode, RenderGraph, ResourceId, render_graph_add_buffer,
+        render_graph_add_color_texture, render_graph_add_depth_texture, render_graph_add_pass,
+        render_graph_add_pass_with_slots, render_graph_add_sub_graph, render_graph_compile,
+        render_graph_execute, render_graph_external_color, render_graph_get_pass_mut,
+        render_graph_get_sub_graph, render_graph_get_sub_graph_mut, render_graph_get_texture,
+        render_graph_get_texture_view, render_graph_new, render_graph_pass,
+        render_graph_resize_all_transient_proportional, render_graph_resize_all_transient_textures,
+        render_graph_resize_transient_resource, render_graph_resource_pool,
+        render_graph_resources_mut, render_graph_restore_pass_enabled_states,
+        render_graph_save_pass_enabled_states, render_graph_set_external_buffer,
+        render_graph_set_external_texture, render_graph_set_pass_enabled,
+        render_graph_transient_color_from_template,
+        render_graph_transient_color_from_template_with_clear,
     };
     #[cfg(feature = "gamepad")]
     pub use gilrs;
