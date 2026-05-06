@@ -121,12 +121,13 @@ pub mod cleanup;
 pub mod commands;
 pub mod scratch;
 pub use commands::{
-    CommandQueue, WorldCommand, capture_procedural_atmosphere_ibl, cleanup_unused_resources_system,
-    despawn_entities_with_cache_cleanup, load_hdr_skybox, load_procedural_textures,
-    process_commands_system, set_material_with_textures, spawn_3d_billboard_text_with_properties,
-    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
-    spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_mesh_at, spawn_plane_at,
-    spawn_sphere_at, spawn_sun, spawn_torus_at, spawn_water_plane_at,
+    CommandQueues, EcsCommand, RenderCommand, capture_procedural_atmosphere_ibl,
+    cleanup_unused_resources_system, despawn_entities_with_cache_cleanup, load_hdr_skybox,
+    load_procedural_textures, process_commands_system, set_material_with_textures,
+    spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
+    spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
+    spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
+    spawn_water_plane_at,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use commands::{capture_screenshot, capture_screenshot_to_path};
@@ -285,7 +286,7 @@ freecs::ecs! {
         entities: crate::ecs::entity_registry::EntityRegistry,
         event_bus: crate::ecs::event_bus::resources::EventBus,
         scratch: crate::ecs::world::scratch::Scratch,
-        command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
+        commands: crate::ecs::world::commands::CommandQueues,
         mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
         active_camera: Option<freecs::Entity>,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,

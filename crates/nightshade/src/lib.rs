@@ -1001,7 +1001,7 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::world::commands::{
-        WorldCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
+        EcsCommand, RenderCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
         despawn_entities_with_cache_cleanup, despawn_recursive_immediate, load_hdr_skybox,
         load_hdr_skybox_from_path, load_procedural_textures, set_material_with_textures,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,

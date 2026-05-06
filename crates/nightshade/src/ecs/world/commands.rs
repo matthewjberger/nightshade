@@ -1,35 +1,3 @@
-//! Deferred command system for GPU-dependent operations.
-//!
-//! Some operations (texture uploads, skybox loading, screenshots) require GPU access
-//! and cannot execute immediately. Queue them with [`WorldCommand`] for processing
-//! during the render phase.
-//!
-//! # Available Commands
-//!
-//! | Command | Description |
-//! |---------|-------------|
-//! | `DespawnRecursive` | Delete entity and all children |
-//! | `UploadSpriteTexture` | Upload texture to sprite atlas slot |
-//! | `UploadSpriteTextureRegion` | Upload texture to sub-region of sprite atlas slot |
-//! | `LoadHdrSkybox` | Load HDR skybox from bytes |
-//! | `LoadHdrSkyboxFromPath` | Load HDR skybox from file path |
-//! | `CaptureProceduralAtmosphereIBL` | Generate IBL from procedural sky |
-//! | `CaptureScreenshot` | Save screenshot to file |
-//!
-//! Texture loading goes through [`crate::ecs::loading`] (queue_decoded_texture,
-//! queue_encoded_texture, queue_gltf_load) so the work streams across frames
-//! instead of stalling the renderer.
-//!
-//! # Example: Screenshot
-//!
-//! ```ignore
-//! fn capture_screenshot(&mut self, world: &mut World) {
-//!     world.queue_command(WorldCommand::CaptureScreenshot {
-//!         path: Some("screenshot.png".into()),
-//!     });
-//! }
-//! ```
-
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
 use crate::ecs::graphics::Atmosphere;
 use crate::ecs::material::components::MaterialRef;
@@ -44,16 +12,19 @@ use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
 };
 
-pub type CommandQueue = Vec<WorldCommand>;
-
-/// Deferred commands for operations requiring GPU access.
-///
-/// Queue commands via `world.queue_command(cmd)`. They execute during the render phase.
 #[derive(Debug, Clone)]
-pub enum WorldCommand {
+pub enum EcsCommand {
     DespawnRecursive {
         entity: Entity,
     },
+    ReloadMaterial {
+        name: String,
+        material: Box<crate::ecs::material::components::Material>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum RenderCommand {
     UploadSpriteTexture {
         slot: u32,
         rgba_data: Vec<u8>,
@@ -97,10 +68,12 @@ pub enum WorldCommand {
         width: u32,
         height: u32,
     },
-    ReloadMaterial {
-        name: String,
-        material: Box<crate::ecs::material::components::Material>,
-    },
+}
+
+#[derive(Default)]
+pub struct CommandQueues {
+    pub ecs: Vec<EcsCommand>,
+    pub render: Vec<RenderCommand>,
 }
 
 impl World {
@@ -120,8 +93,12 @@ impl World {
         entities
     }
 
-    pub fn queue_command(&mut self, command: WorldCommand) {
-        self.resources.command_queue.push(command);
+    pub fn queue_ecs_command(&mut self, command: EcsCommand) {
+        self.resources.commands.ecs.push(command);
+    }
+
+    pub fn queue_render_command(&mut self, command: RenderCommand) {
+        self.resources.commands.render.push(command);
     }
 
     pub fn set_cursor_locked(&mut self, locked: bool) {
@@ -203,55 +180,20 @@ impl World {
 }
 
 pub fn process_commands_system(world: &mut World) {
-    let commands = world.resources.command_queue.drain(..).collect::<Vec<_>>();
-    let _span = tracing::info_span!("commands", count = commands.len()).entered();
-    let mut sprite_texture_commands = Vec::new();
-
+    let commands = std::mem::take(&mut world.resources.commands.ecs);
+    let _span = tracing::info_span!("ecs_commands", count = commands.len()).entered();
     for command in commands {
-        match &command {
-            WorldCommand::UploadSpriteTexture { .. }
-            | WorldCommand::UploadSpriteTextureRegion { .. }
-            | WorldCommand::UploadUiImageLayer { .. }
-            | WorldCommand::LoadHdrSkybox { .. }
-            | WorldCommand::LoadHdrSkyboxFromPath { .. }
-            | WorldCommand::CaptureProceduralAtmosphereIBL { .. }
-            | WorldCommand::CaptureIblSnapshots { .. }
-            | WorldCommand::CaptureScreenshot { .. }
-            | WorldCommand::ReloadTexture { .. } => {
-                sprite_texture_commands.push(command);
+        match command {
+            EcsCommand::DespawnRecursive { entity } => {
+                if !world.resources.transform_state.children_cache_valid {
+                    world.validate_and_rebuild_children_cache();
+                }
+                let descendents = query_descendents(world, entity);
+                despawn_entities_with_cache_cleanup(world, &descendents);
             }
-            _ => {
-                process_command(world, command);
+            EcsCommand::ReloadMaterial { name, material } => {
+                reload_material_command(world, name, *material);
             }
-        }
-    }
-
-    world
-        .resources
-        .command_queue
-        .extend(sprite_texture_commands);
-}
-
-fn process_command(world: &mut World, command: WorldCommand) {
-    match command {
-        WorldCommand::DespawnRecursive { entity } => {
-            if !world.resources.transform_state.children_cache_valid {
-                world.validate_and_rebuild_children_cache();
-            }
-            let descendents = query_descendents(world, entity);
-            despawn_entities_with_cache_cleanup(world, &descendents);
-        }
-        WorldCommand::UploadSpriteTexture { .. } => {}
-        WorldCommand::UploadSpriteTextureRegion { .. } => {}
-        WorldCommand::UploadUiImageLayer { .. } => {}
-        WorldCommand::LoadHdrSkybox { .. } => {}
-        WorldCommand::LoadHdrSkyboxFromPath { .. } => {}
-        WorldCommand::CaptureProceduralAtmosphereIBL { .. } => {}
-        WorldCommand::CaptureIblSnapshots { .. } => {}
-        WorldCommand::CaptureScreenshot { .. } => {}
-        WorldCommand::ReloadTexture { .. } => {}
-        WorldCommand::ReloadMaterial { name, material } => {
-            reload_material_command(world, name, *material);
         }
     }
 }
@@ -1067,29 +1009,29 @@ fn generate_uv_test_texture() -> (Vec<u8>, u32, u32) {
 }
 
 pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
-    world.queue_command(WorldCommand::LoadHdrSkybox { hdr_data });
+    world.queue_render_command(RenderCommand::LoadHdrSkybox { hdr_data });
 }
 
 pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
-    world.queue_command(WorldCommand::LoadHdrSkyboxFromPath { path });
+    world.queue_render_command(RenderCommand::LoadHdrSkyboxFromPath { path });
 }
 
 pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
-    world.queue_command(WorldCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
+    world.queue_render_command(RenderCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
 }
 
 pub fn capture_ibl_snapshots(world: &mut World, atmosphere: Atmosphere, hours: Vec<f32>) {
-    world.queue_command(WorldCommand::CaptureIblSnapshots { atmosphere, hours });
+    world.queue_render_command(RenderCommand::CaptureIblSnapshots { atmosphere, hours });
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn capture_screenshot(world: &mut World) {
-    world.queue_command(WorldCommand::CaptureScreenshot { path: None });
+    world.queue_render_command(RenderCommand::CaptureScreenshot { path: None });
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn capture_screenshot_to_path(world: &mut World, path: impl Into<std::path::PathBuf>) {
-    world.queue_command(WorldCommand::CaptureScreenshot {
+    world.queue_render_command(RenderCommand::CaptureScreenshot {
         path: Some(path.into()),
     });
 }
@@ -1286,4 +1228,36 @@ pub fn spawn_material(
             .add_reference(index);
     }
     world.core.set_material_ref(entity, MaterialRef::new(name));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn process_commands_system_drains_ecs_and_leaves_render() {
+        let mut world = World::default();
+        let entity = world.spawn_count(1)[0];
+
+        world.queue_ecs_command(EcsCommand::DespawnRecursive { entity });
+        world.queue_render_command(RenderCommand::LoadHdrSkybox {
+            hdr_data: vec![0u8; 4],
+        });
+
+        process_commands_system(&mut world);
+
+        assert!(
+            world.resources.commands.ecs.is_empty(),
+            "process_commands_system should drain the ecs queue"
+        );
+        assert_eq!(
+            world.resources.commands.render.len(),
+            1,
+            "process_commands_system must not touch the render queue"
+        );
+        assert!(matches!(
+            world.resources.commands.render[0],
+            RenderCommand::LoadHdrSkybox { .. }
+        ));
+    }
 }
