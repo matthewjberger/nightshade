@@ -11,4 +11,4 @@ publish = false
 openxr = ["nightshade/openxr"]
 
 [dependencies]
-nightshade = { workspace = true, features = ["egui", "tracing"] }
+nightshade = { workspace = true, features = ["tracing"] }

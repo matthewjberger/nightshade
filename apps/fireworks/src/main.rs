@@ -1,4 +1,6 @@
+use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::prelude::*;
+use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     launch(FireworksDemo::default())
@@ -101,6 +103,11 @@ struct FireworksDemo {
     show_start_time: f32,
     show_events: Vec<ShowEvent>,
     show_event_index: usize,
+    ui: UiHandles,
+    type_buttons: HashMap<Entity, ExplosionType>,
+    last_show_active: bool,
+    last_salvo_mode: bool,
+    last_stats: Option<Stats>,
     #[cfg(feature = "openxr")]
     xr_a_button_was_pressed: bool,
     #[cfg(feature = "openxr")]
@@ -111,6 +118,38 @@ struct FireworksDemo {
     xr_right_grip_was_pressed: bool,
     #[cfg(feature = "openxr")]
     xr_next_trigger_launch_time: f32,
+}
+
+#[derive(Default, Clone, Copy)]
+struct UiHandles {
+    auto_launch: Entity,
+    launch_interval: Entity,
+    salvo_mode: Entity,
+    salvo_count_label: Entity,
+    salvo_count: Entity,
+    bloom_intensity: Entity,
+    launch_single: Entity,
+    launch_salvo: Entity,
+    finale: Entity,
+    show_play: Entity,
+    show_status_label: Entity,
+    shells_label: Entity,
+    sub_shells_label: Entity,
+    fire_label: Entity,
+    sprite_label: Entity,
+    smoke_label: Entity,
+    emitters_label: Entity,
+}
+
+#[derive(Default, Clone, Copy, PartialEq)]
+struct Stats {
+    shells: usize,
+    sub_shells: usize,
+    fire: usize,
+    sprite_total: usize,
+    sprite_active: usize,
+    smoke: usize,
+    emitters: usize,
 }
 
 impl State for FireworksDemo {
@@ -217,10 +256,15 @@ impl State for FireworksDemo {
                 ..Default::default()
             },
         );
+
+        world.resources.retained_ui.enabled = true;
+        self.build_ui(world);
     }
 
     fn run_systems(&mut self, world: &mut World) {
         escape_key_exit_system(world);
+        self.poll_ui_events(world);
+        self.update_ui_state(world);
 
         #[cfg(feature = "openxr")]
         self.xr_input_system(world);
@@ -297,205 +341,272 @@ impl State for FireworksDemo {
             _ => {}
         }
     }
-
-    fn ui(&mut self, world: &mut World, ui_context: &egui::Context) {
-        egui::Window::new("Fireworks Controls")
-            .default_pos([10.0, 60.0])
-            .show(ui_context, |ui| {
-                ui.checkbox(&mut self.auto_launch, "Auto-launch");
-                ui.add(
-                    egui::Slider::new(&mut self.launch_interval, 0.1..=2.0)
-                        .text("Launch interval (s)"),
-                );
-
-                ui.checkbox(&mut self.salvo_mode, "Salvo mode");
-                if self.salvo_mode {
-                    ui.add(egui::Slider::new(&mut self.salvo_count, 3..=15).text("Salvo count"));
-                }
-
-                ui.add(
-                    egui::Slider::new(&mut world.resources.graphics.bloom_intensity, 0.0..=2.0)
-                        .text("Bloom intensity"),
-                );
-
-                ui.separator();
-
-                if ui.button("Launch Single").clicked() {
-                    self.launch_firework(world);
-                }
-                if ui.button("Launch Salvo (5)").clicked() {
-                    self.launch_salvo(world);
-                }
-                if ui.button("FINALE!").clicked() {
-                    self.launch_finale(world);
-                }
-
-                ui.separator();
-
-                ui.collapsing("Launch by Type", |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        if ui.button("Peony").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Peony, None, None);
-                        }
-                        if ui.button("Chrysanthemum").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::Chrysanthemum,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Willow").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Willow, None, None);
-                        }
-                        if ui.button("Ring").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Ring, None, None);
-                        }
-                        if ui.button("MultiBreak").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::MultiBreak,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Glitter").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::Glitter,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Crackle").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::Crackle,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Palm").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Palm, None, None);
-                        }
-                        if ui.button("Crossette").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::Crossette,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Strobe").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Strobe, None, None);
-                        }
-                        if ui.button("Kamuro").clicked() {
-                            self.launch_specific_firework(world, ExplosionType::Kamuro, None, None);
-                        }
-                    });
-
-                    ui.label("Shapes:");
-                    ui.horizontal_wrapped(|ui| {
-                        if ui.button("Smiley").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeSmiley,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Heart").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeHeart,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Star").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeStar,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Circle").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeCircle,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Cross").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeCross,
-                                None,
-                                None,
-                            );
-                        }
-                        if ui.button("Diamond").clicked() {
-                            self.launch_specific_firework(
-                                world,
-                                ExplosionType::ShapeDiamond,
-                                None,
-                                None,
-                            );
-                        }
-                    });
-
-                    ui.label("Special:");
-                    if ui.button("Splitting Shell").clicked() {
-                        self.launch_specific_firework(
-                            world,
-                            ExplosionType::SplittingShell,
-                            None,
-                            None,
-                        );
-                    }
-                });
-
-                ui.separator();
-
-                if self.show_active {
-                    ui.label("Show in progress...");
-                    if ui.button("Stop Show").clicked() {
-                        self.show_active = false;
-                    }
-                } else if ui.button("Play Fireworks Show").clicked() {
-                    let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
-                    self.start_fireworks_show(uptime);
-                }
-
-                ui.separator();
-
-                ui.label(format!("Active shells: {}", self.shells.len()));
-                ui.label(format!("Sub-shells: {}", self.sub_shells.len()));
-                ui.label(format!("Fire effects: {}", self.fire_effects.len()));
-                ui.label(format!(
-                    "Sprite effects: {} ({} entities)",
-                    self.sprite_effects.len(),
-                    self.sprite_effects
-                        .iter()
-                        .filter(|effect| {
-                            world
-                                .core
-                                .get_particle_emitter(effect.entity)
-                                .is_some_and(|emitter| emitter.enabled)
-                        })
-                        .count()
-                ));
-                ui.label(format!("Smoke effects: {}", self.smoke_effects.len()));
-
-                let emitter_count = world.core.query_entities(PARTICLE_EMITTER).count();
-                ui.label(format!("Active emitters: {}", emitter_count));
-            });
-    }
 }
 
 impl FireworksDemo {
+    fn build_ui(&mut self, world: &mut World) {
+        let auto_launch_initial = self.auto_launch;
+        let launch_interval_initial = self.launch_interval;
+        let salvo_mode_initial = self.salvo_mode;
+        let salvo_count_initial = self.salvo_count as f32;
+        let bloom_intensity_initial = world.resources.graphics.bloom_intensity;
+
+        let mut tree = UiTreeBuilder::new(world);
+        let panel = tree.add_docked_panel_left("Fireworks", 260.0);
+        let content = panel_content(tree.world_mut(), panel);
+        if let Some(node) = tree.world_mut().ui.get_ui_layout_node_mut(content) {
+            node.flow_layout = Some(FlowLayout {
+                direction: FlowDirection::Vertical,
+                padding: 0.0,
+                spacing: 0.0,
+                alignment: FlowAlignment::Start,
+                cross_alignment: FlowAlignment::Start,
+                wrap: false,
+            });
+        }
+        tree.push_parent(content);
+
+        let scroll = tree.add_scroll_area_fill(8.0, 6.0);
+        let scroll_body = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
+            .map(|data| data.content_entity)
+            .expect("scroll body");
+        tree.push_parent(scroll_body);
+
+        let auto_launch = tree.add_checkbox("Auto-launch", auto_launch_initial);
+        tree.add_label("Launch interval (s)");
+        let launch_interval = tree.add_slider(0.1, 2.0, launch_interval_initial);
+
+        let salvo_mode = tree.add_checkbox("Salvo mode", salvo_mode_initial);
+        let salvo_count_label = tree.add_label("Salvo count");
+        let salvo_count = tree.add_slider(3.0, 15.0, salvo_count_initial);
+
+        tree.add_label("Bloom intensity");
+        let bloom_intensity = tree.add_slider(0.0, 2.0, bloom_intensity_initial);
+
+        let launch_single = tree.add_button("Launch Single");
+        let launch_salvo = tree.add_button("Launch Salvo (5)");
+        let finale = tree.add_button("FINALE!");
+
+        let mut type_buttons: HashMap<Entity, ExplosionType> = HashMap::new();
+        collapsing(&mut tree, "Launch by Type", false, |tree| {
+            tree.add_label("Standard");
+            for (label, explosion_type) in [
+                ("Peony", ExplosionType::Peony),
+                ("Chrysanthemum", ExplosionType::Chrysanthemum),
+                ("Willow", ExplosionType::Willow),
+                ("Ring", ExplosionType::Ring),
+                ("MultiBreak", ExplosionType::MultiBreak),
+                ("Glitter", ExplosionType::Glitter),
+                ("Crackle", ExplosionType::Crackle),
+                ("Palm", ExplosionType::Palm),
+                ("Crossette", ExplosionType::Crossette),
+                ("Strobe", ExplosionType::Strobe),
+                ("Kamuro", ExplosionType::Kamuro),
+            ] {
+                type_buttons.insert(tree.add_button(label), explosion_type);
+            }
+
+            tree.add_label("Shapes");
+            for (label, explosion_type) in [
+                ("Smiley", ExplosionType::ShapeSmiley),
+                ("Heart", ExplosionType::ShapeHeart),
+                ("Star", ExplosionType::ShapeStar),
+                ("Circle", ExplosionType::ShapeCircle),
+                ("Cross", ExplosionType::ShapeCross),
+                ("Diamond", ExplosionType::ShapeDiamond),
+            ] {
+                type_buttons.insert(tree.add_button(label), explosion_type);
+            }
+
+            tree.add_label("Special");
+            type_buttons.insert(
+                tree.add_button("Splitting Shell"),
+                ExplosionType::SplittingShell,
+            );
+        });
+
+        let show_status_label = tree.add_label("");
+        let show_play = tree.add_button("Play Fireworks Show");
+
+        tree.add_label("");
+        tree.add_label("Stats");
+        let shells_label = tree.add_label("Active shells: 0");
+        let sub_shells_label = tree.add_label("Sub-shells: 0");
+        let fire_label = tree.add_label("Fire effects: 0");
+        let sprite_label = tree.add_label("Sprite effects: 0 (0 entities)");
+        let smoke_label = tree.add_label("Smoke effects: 0");
+        let emitters_label = tree.add_label("Active emitters: 0");
+
+        tree.pop_parent();
+        tree.pop_parent();
+        tree.finish();
+
+        ui_set_visible(world, salvo_count_label, salvo_mode_initial);
+        ui_set_visible(world, salvo_count, salvo_mode_initial);
+
+        let _ = panel;
+        self.ui = UiHandles {
+            auto_launch,
+            launch_interval,
+            salvo_mode,
+            salvo_count_label,
+            salvo_count,
+            bloom_intensity,
+            launch_single,
+            launch_salvo,
+            finale,
+            show_play,
+            show_status_label,
+            shells_label,
+            sub_shells_label,
+            fire_label,
+            sprite_label,
+            smoke_label,
+            emitters_label,
+        };
+        self.type_buttons = type_buttons;
+        self.last_show_active = !self.show_active;
+        self.last_salvo_mode = !salvo_mode_initial;
+        self.last_stats = None;
+    }
+
+    fn poll_ui_events(&mut self, world: &mut World) {
+        let mut launch_single = false;
+        let mut launch_salvo = false;
+        let mut launch_finale = false;
+        let mut show_clicked = false;
+        let mut explosion_request: Option<ExplosionType> = None;
+
+        for event in ui_events(world) {
+            if let UiEvent::ButtonClicked(entity) = event {
+                if *entity == self.ui.launch_single {
+                    launch_single = true;
+                } else if *entity == self.ui.launch_salvo {
+                    launch_salvo = true;
+                } else if *entity == self.ui.finale {
+                    launch_finale = true;
+                } else if *entity == self.ui.show_play {
+                    show_clicked = true;
+                } else if let Some(explosion_type) = self.type_buttons.get(entity).copied() {
+                    explosion_request = Some(explosion_type);
+                }
+            }
+        }
+
+        if let Some(value) = ui_checkbox_value(world, self.ui.auto_launch) {
+            self.auto_launch = value;
+        }
+        if let Some(value) = ui_slider_value(world, self.ui.launch_interval) {
+            self.launch_interval = value;
+        }
+        if let Some(value) = ui_checkbox_value(world, self.ui.salvo_mode) {
+            self.salvo_mode = value;
+        }
+        if let Some(value) = ui_slider_value(world, self.ui.salvo_count) {
+            self.salvo_count = value.round().clamp(3.0, 15.0) as u32;
+        }
+        if let Some(value) = ui_slider_value(world, self.ui.bloom_intensity) {
+            world.resources.graphics.bloom_intensity = value;
+        }
+
+        if launch_single {
+            self.launch_firework(world);
+        }
+        if launch_salvo {
+            self.launch_salvo(world);
+        }
+        if launch_finale {
+            self.launch_finale(world);
+        }
+        if let Some(explosion_type) = explosion_request {
+            self.launch_specific_firework(world, explosion_type, None, None);
+        }
+        if show_clicked {
+            if self.show_active {
+                self.show_active = false;
+            } else {
+                let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+                self.start_fireworks_show(uptime);
+            }
+        }
+    }
+
+    fn update_ui_state(&mut self, world: &mut World) {
+        if self.last_salvo_mode != self.salvo_mode {
+            ui_set_visible(world, self.ui.salvo_count_label, self.salvo_mode);
+            ui_set_visible(world, self.ui.salvo_count, self.salvo_mode);
+            self.last_salvo_mode = self.salvo_mode;
+        }
+
+        if self.last_show_active != self.show_active {
+            if self.show_active {
+                ui_set_text(world, self.ui.show_status_label, "Show in progress...");
+                ui_set_text(world, self.ui.show_play, "Stop Show");
+            } else {
+                ui_set_text(world, self.ui.show_status_label, "");
+                ui_set_text(world, self.ui.show_play, "Play Fireworks Show");
+            }
+            self.last_show_active = self.show_active;
+        }
+
+        let sprite_active = self
+            .sprite_effects
+            .iter()
+            .filter(|effect| {
+                world
+                    .core
+                    .get_particle_emitter(effect.entity)
+                    .is_some_and(|emitter| emitter.enabled)
+            })
+            .count();
+        let emitters = world.core.query_entities(PARTICLE_EMITTER).count();
+        let stats = Stats {
+            shells: self.shells.len(),
+            sub_shells: self.sub_shells.len(),
+            fire: self.fire_effects.len(),
+            sprite_total: self.sprite_effects.len(),
+            sprite_active,
+            smoke: self.smoke_effects.len(),
+            emitters,
+        };
+        if self.last_stats != Some(stats) {
+            ui_set_text(
+                world,
+                self.ui.shells_label,
+                &format!("Active shells: {}", stats.shells),
+            );
+            ui_set_text(
+                world,
+                self.ui.sub_shells_label,
+                &format!("Sub-shells: {}", stats.sub_shells),
+            );
+            ui_set_text(
+                world,
+                self.ui.fire_label,
+                &format!("Fire effects: {}", stats.fire),
+            );
+            ui_set_text(
+                world,
+                self.ui.sprite_label,
+                &format!(
+                    "Sprite effects: {} ({} entities)",
+                    stats.sprite_total, stats.sprite_active
+                ),
+            );
+            ui_set_text(
+                world,
+                self.ui.smoke_label,
+                &format!("Smoke effects: {}", stats.smoke),
+            );
+            ui_set_text(
+                world,
+                self.ui.emitters_label,
+                &format!("Active emitters: {}", stats.emitters),
+            );
+            self.last_stats = Some(stats);
+        }
+    }
+
     #[cfg(feature = "openxr")]
     fn xr_input_system(&mut self, world: &mut World) {
         let Some(xr_input) = world.resources.xr.input.clone() else {
@@ -2133,4 +2244,25 @@ impl FireworksDemo {
             true
         });
     }
+}
+
+fn panel_content(world: &mut World, panel: Entity) -> Entity {
+    widget::<UiPanelData>(world, panel)
+        .map(|data| data.content_entity)
+        .expect("panel content missing")
+}
+
+fn collapsing<F>(tree: &mut UiTreeBuilder, label: &str, default_open: bool, f: F)
+where
+    F: FnOnce(&mut UiTreeBuilder),
+{
+    let header = tree.add_collapsing_header(label, default_open);
+    let Some(content) =
+        widget::<UiCollapsingHeaderData>(tree.world_mut(), header).map(|data| data.content_entity)
+    else {
+        return;
+    };
+    tree.push_parent(content);
+    f(tree);
+    tree.pop_parent();
 }
