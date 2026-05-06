@@ -21,3 +21,4 @@ apps/game/game.json
 *.report.json
 screenshots/
 .claude/
+THIRD_PARTY_LICENSES.html
