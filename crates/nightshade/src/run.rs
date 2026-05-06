@@ -1301,18 +1301,31 @@ impl winit::application::ApplicationHandler for WindowContext {
         let (canvas_width, canvas_height) = {
             use wasm_bindgen::JsCast;
             use winit::platform::web::WindowAttributesExtWebSys;
-            let canvas = wgpu::web_sys::window()
-                .unwrap()
+            let web_window = wgpu::web_sys::window().unwrap();
+            let canvas = web_window
                 .document()
                 .unwrap()
                 .get_element_by_id("canvas")
                 .unwrap()
                 .dyn_into::<wgpu::web_sys::HtmlCanvasElement>()
                 .unwrap();
-            let canvas_width = canvas.width();
-            let canvas_height = canvas.height();
+            let dpr = web_window.device_pixel_ratio().max(1.0);
+            let css_width = web_window
+                .inner_width()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(800.0);
+            let css_height = web_window
+                .inner_height()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(600.0);
+            let physical_width = (css_width * dpr).round() as u32;
+            let physical_height = (css_height * dpr).round() as u32;
+            canvas.set_width(physical_width);
+            canvas.set_height(physical_height);
             attributes = attributes.with_canvas(Some(canvas));
-            (canvas_width, canvas_height)
+            (physical_width, physical_height)
         };
 
         #[cfg(target_arch = "wasm32")]
@@ -1330,10 +1343,8 @@ impl winit::application::ApplicationHandler for WindowContext {
         {
             use winit::platform::web::WindowExtWebSys;
             if let Some(canvas) = window_handle.canvas() {
-                let client_width = canvas.client_width() as u32;
-                let client_height = canvas.client_height() as u32;
                 self.world.resources.window.cached_viewport_size =
-                    Some((client_width, client_height));
+                    Some((canvas.width(), canvas.height()));
             }
         }
 
@@ -1503,25 +1514,43 @@ impl winit::application::ApplicationHandler for WindowContext {
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
                 if width > 0 && height > 0 =>
             {
-                #[cfg(target_arch = "wasm32")]
-                {
-                    use winit::platform::web::WindowExtWebSys;
-                    if let Some(window) = self.world.resources.window.handle.as_ref()
-                        && let Some(canvas) = window.canvas()
-                    {
-                        canvas.set_width(width);
-                        canvas.set_height(height);
-                    }
-                }
-
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
 
-                self.world.resources.window.cached_viewport_size = Some((width, height));
+                #[cfg(target_arch = "wasm32")]
+                let (surface_width, surface_height) = {
+                    let web_window = wgpu::web_sys::window().unwrap();
+                    let dpr = web_window.device_pixel_ratio().max(1.0);
+                    let css_width = web_window
+                        .inner_width()
+                        .ok()
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(width as f64);
+                    let css_height = web_window
+                        .inner_height()
+                        .ok()
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(height as f64);
+                    let physical_width = (css_width * dpr).round() as u32;
+                    let physical_height = (css_height * dpr).round() as u32;
+                    use winit::platform::web::WindowExtWebSys;
+                    if let Some(window) = self.world.resources.window.handle.as_ref()
+                        && let Some(canvas) = window.canvas()
+                    {
+                        canvas.set_width(physical_width);
+                        canvas.set_height(physical_height);
+                    }
+                    (physical_width, physical_height)
+                };
+                #[cfg(not(target_arch = "wasm32"))]
+                let (surface_width, surface_height) = (width, height);
+
+                self.world.resources.window.cached_viewport_size =
+                    Some((surface_width, surface_height));
 
                 if let Some(renderer) = &mut self.renderer
-                    && let Err(error) = renderer.resize_surface(width, height)
+                    && let Err(error) = renderer.resize_surface(surface_width, surface_height)
                 {
                     tracing::error!("Failed to resize surface: {error}");
                 }
