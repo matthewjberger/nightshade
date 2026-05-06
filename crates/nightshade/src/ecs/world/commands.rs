@@ -141,12 +141,10 @@ pub fn register_material(
         .name_to_index
         .get(&name)
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world.core.set_material_ref(entity, MaterialRef::new(name));
     world.resources.mesh_render_state.mark_entity_added(entity);
@@ -311,12 +309,10 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                     .name_to_index
                     .get(&mesh_name)
                 {
-                    world
-                        .resources
-                        .assets
-                        .mesh_cache
-                        .registry
-                        .remove_reference(index);
+                    registry_remove_reference(
+                        &mut world.resources.assets.mesh_cache.registry,
+                        index,
+                    );
                 }
             }
             world
@@ -336,12 +332,10 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                     .name_to_index
                     .get(&mesh_name)
                 {
-                    world
-                        .resources
-                        .assets
-                        .mesh_cache
-                        .registry
-                        .remove_reference(index);
+                    registry_remove_reference(
+                        &mut world.resources.assets.mesh_cache.registry,
+                        index,
+                    );
                 }
             }
 
@@ -372,12 +366,10 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                     .name_to_index
                     .get(&material_name)
                 {
-                    world
-                        .resources
-                        .assets
-                        .material_registry
-                        .registry
-                        .remove_reference(index);
+                    registry_remove_reference(
+                        &mut world.resources.assets.material_registry.registry,
+                        index,
+                    );
                 }
             }
         }
@@ -578,12 +570,7 @@ pub fn spawn_mesh_at(
         .name_to_index
         .get(&render_mesh.name)
     {
-        world
-            .resources
-            .assets
-            .mesh_cache
-            .registry
-            .add_reference(index);
+        registry_add_reference(&mut world.resources.assets.mesh_cache.registry, index);
     }
 
     world.core.set_render_mesh(entity, render_mesh);
@@ -597,12 +584,10 @@ pub fn spawn_mesh_at(
         .name_to_index
         .get("Default")
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -738,12 +723,7 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
         .name_to_index
         .get(mesh_name)
     {
-        world
-            .resources
-            .assets
-            .mesh_cache
-            .registry
-            .add_reference(index);
+        registry_add_reference(&mut world.resources.assets.mesh_cache.registry, index);
     }
 
     world
@@ -840,7 +820,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
     if world.resources.cleanup.frame_counter >= CLEANUP_INTERVAL_FRAMES {
         world.resources.cleanup.frame_counter = 0;
-        world.resources.assets.mesh_cache.registry.remove_unused();
+        registry_remove_unused(&mut world.resources.assets.mesh_cache.registry);
         material_registry_remove_unused(&mut world.resources.assets.material_registry);
         texture_cache_remove_unused(&mut world.resources.texture_cache);
     }
@@ -902,12 +882,10 @@ pub fn set_material_with_textures(
             .name_to_index
             .get(&material_name)
         {
-            world
-                .resources
-                .assets
-                .material_registry
-                .registry
-                .add_reference(index);
+            registry_add_reference(
+                &mut world.resources.assets.material_registry.registry,
+                index,
+            );
         }
         world.core.set_material_ref(
             entity,
@@ -1106,12 +1084,10 @@ pub fn spawn_instanced_mesh(
         .name_to_index
         .get("Default")
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -1180,12 +1156,10 @@ pub fn spawn_instanced_mesh_with_material(
         .name_to_index
         .get(material_name)
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
 
     if let Some(mat) = registry_entry_by_name(
@@ -1238,12 +1212,10 @@ pub fn spawn_material(
         .name_to_index
         .get(&name)
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world.core.set_material_ref(entity, MaterialRef::new(name));
 }

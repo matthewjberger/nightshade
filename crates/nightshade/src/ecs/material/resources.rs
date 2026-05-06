@@ -1,7 +1,7 @@
 //! Material registry resource.
 
 use crate::ecs::asset_id::{MaterialId, TextureId};
-use crate::ecs::generational_registry::GenerationalRegistry;
+use crate::ecs::generational_registry::*;
 use crate::ecs::material::components::{Material, MaterialTextureIds};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -35,7 +35,7 @@ pub struct MaterialRegistry {
 impl Default for MaterialRegistry {
     fn default() -> Self {
         let mut instance = Self {
-            registry: GenerationalRegistry::new(),
+            registry: GenerationalRegistry::default(),
             texture_ids: Vec::new(),
             texture_name_to_materials: HashMap::new(),
             pending_resolve: Vec::new(),
@@ -110,7 +110,8 @@ impl Default for MaterialRegistry {
         ];
 
         for (name, material) in default_materials {
-            let (index, _generation) = instance.registry.insert(name.to_string(), material);
+            let (index, _generation) =
+                registry_insert(&mut instance.registry, name.to_string(), material);
             instance.protected_indices.push(index);
         }
 
@@ -144,7 +145,7 @@ pub fn material_registry_insert(
             }
         }
     }
-    let (index, generation) = registry.registry.insert(name, material);
+    let (index, generation) = registry_insert(&mut registry.registry, name, material);
     let slot = index as usize;
     if slot >= registry.texture_ids.len() {
         registry
@@ -196,7 +197,7 @@ fn resolve_one_material(
 ) {
     let lookup = |opt: &Option<String>| -> Option<TextureId> {
         opt.as_deref()
-            .and_then(|name| texture_cache.registry.lookup_index(name))
+            .and_then(|name| registry_lookup_index(&texture_cache.registry, name))
             .map(|(index, generation)| TextureId::new(index, generation))
     };
     let Some(material) = registry
@@ -250,7 +251,7 @@ pub fn material_registry_resolve_uploaded_textures(
 ) {
     let mut dirty: HashSet<u32> = HashSet::new();
     for id in uploaded {
-        let Some(name) = texture_cache.registry.name_for(id.index) else {
+        let Some(name) = registry_name_for(&texture_cache.registry, id.index) else {
             continue;
         };
         if let Some(materials) = registry.texture_name_to_materials.get(name) {
@@ -265,9 +266,7 @@ pub fn material_registry_resolve_uploaded_textures(
 
 /// Looks up a material ID by name.
 pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> Option<MaterialId> {
-    registry
-        .registry
-        .lookup_index(name)
+    registry_lookup_index(&registry.registry, name)
         .map(|(index, generation)| MaterialId::new(index, generation))
 }
 

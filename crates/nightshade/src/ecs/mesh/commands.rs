@@ -56,12 +56,10 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         .name_to_index
         .get(&material_name)
     {
-        world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .add_reference(index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core

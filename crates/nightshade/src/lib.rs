@@ -851,6 +851,13 @@ pub mod prelude {
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
+    pub use crate::ecs::generational_registry::{
+        GenerationalRegistry, registry_add_reference, registry_clear, registry_entry,
+        registry_entry_by_name, registry_entry_by_name_mut, registry_insert, registry_is_empty,
+        registry_is_filled, registry_is_valid, registry_len, registry_lookup_index,
+        registry_name_for, registry_reference_count, registry_remove, registry_remove_reference,
+        registry_remove_unused, registry_reserve_name,
+    };
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
