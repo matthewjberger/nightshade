@@ -821,7 +821,8 @@ pub mod prelude {
     pub use crate::ecs::world::*;
     pub use crate::run::*;
     pub use crate::schedule::{
-        FrameSchedule, FrameScheduleEntry, SystemFn, run_retained_ui_systems, system_names,
+        FrameSchedule, FrameScheduleEntry, Schedules, SystemFn, build_default_retained_ui_schedule,
+        retained_ui_system_names, run_retained_ui_schedule, system_names,
     };
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};

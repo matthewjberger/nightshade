@@ -536,9 +536,9 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 pub(crate) fn run_frame_systems(world: &mut World) {
-    let schedule = std::mem::take(&mut world.resources.frame_schedule);
+    let schedule = std::mem::take(&mut world.resources.schedules.frame);
     schedule.run(world);
-    world.resources.frame_schedule = schedule;
+    world.resources.schedules.frame = schedule;
 }
 
 fn input_event_system(world: &mut World, window_event: &WindowEvent) {
@@ -1411,8 +1411,10 @@ impl winit::application::ApplicationHandler for WindowContext {
             egui_support::initialize_user_interface(&mut self.world);
 
             if !self.initialized {
-                self.world.resources.frame_schedule =
+                self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
+                self.world.resources.schedules.retained_ui =
+                    crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
@@ -1451,8 +1453,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 #[cfg(feature = "egui")]
                 egui_support::initialize_user_interface(&mut self.world);
-                self.world.resources.frame_schedule =
+                self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
+                self.world.resources.schedules.retained_ui =
+                    crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);

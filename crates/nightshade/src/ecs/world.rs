@@ -293,7 +293,7 @@ freecs::ecs! {
         ibl_views: crate::ecs::graphics::resources::IblViews,
         sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
-        frame_schedule: crate::schedule::FrameSchedule,
+        schedules: crate::schedule::Schedules,
         #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
         mcp_command_queue: crate::mcp::CommandQueue,
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
