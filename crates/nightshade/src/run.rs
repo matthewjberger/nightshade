@@ -447,7 +447,7 @@ pub(crate) fn step(
             #[cfg(feature = "egui")]
             egui_support::create_ui_system(world, state);
             #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-            world.resources.steam.run_callbacks();
+            crate::steam::steam_run_callbacks(&world.resources.steam);
 
             #[cfg(feature = "gamepad")]
             {
@@ -538,7 +538,7 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 
 pub(crate) fn run_frame_systems(world: &mut World) {
     let schedule = std::mem::take(&mut world.resources.schedules.frame);
-    schedule.run(world);
+    crate::schedule::schedule_run(&schedule, world);
     world.resources.schedules.frame = schedule;
 }
 
@@ -1029,7 +1029,7 @@ fn forward_window_events(
             event,
             WindowEvent::KeyboardInput { .. } | WindowEvent::MouseInput { .. }
         );
-        if is_user_gesture && !world.resources.audio.is_initialized() {
+        if is_user_gesture && !audio_engine_is_initialized(&world.resources.audio) {
             crate::ecs::audio::systems::lazy_initialize_audio_system(world);
         }
     }

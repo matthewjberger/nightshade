@@ -259,7 +259,7 @@
 //!
 //! ```ignore
 //! // Load and play a sound
-//! let sound = world.resources.audio.load_sound(include_bytes!("sound.ogg"));
+//! let sound = audio_engine_load_sound(&mut world.resources.audio, include_bytes!("sound.ogg"));
 //! world.resources.audio.play(sound);
 //!
 //! // 3D spatial audio
@@ -287,7 +287,7 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     world.resources.physics.step(world.resources.window.timing.delta_time);
+//!     physics_world_step(&mut world.resources.physics, world.resources.window.timing.delta_time);
 //!     sync_physics_transforms(world);
 //! }
 //! ```
@@ -827,7 +827,9 @@ pub mod prelude {
     pub use crate::run::*;
     pub use crate::schedule::{
         FrameSchedule, FrameScheduleEntry, Schedules, SystemFn, build_default_retained_ui_schedule,
-        retained_ui_system_names, run_retained_ui_schedule, system_names,
+        retained_ui_system_names, run_retained_ui_schedule, schedule_contains,
+        schedule_insert_after, schedule_insert_before, schedule_push, schedule_remove,
+        schedule_run, system_names,
     };
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -835,6 +837,12 @@ pub mod prelude {
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
+    #[cfg(feature = "audio")]
+    pub use crate::ecs::audio::resources::{
+        audio_engine_cleanup_entity, audio_engine_get_sound, audio_engine_has_handle,
+        audio_engine_initialize, audio_engine_is_initialized, audio_engine_load_sound,
+        audio_engine_stop_sound,
+    };
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::systems::{
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
@@ -875,6 +883,16 @@ pub mod prelude {
             register_entity_for_lattice_deformation,
         },
     };
+    pub use crate::ecs::loading::{
+        LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
+        loading_pipeline_allocate_source_image, loading_pipeline_completed,
+        loading_pipeline_decoded, loading_pipeline_fraction, loading_pipeline_is_active,
+        loading_pipeline_last_category, loading_pipeline_last_label,
+        loading_pipeline_mark_completed, loading_pipeline_pending_len, loading_pipeline_pop,
+        loading_pipeline_push, loading_pipeline_release_recipe_sources,
+        loading_pipeline_release_source, loading_pipeline_reset_source_arena,
+        loading_pipeline_store_decoded, loading_pipeline_total,
+    };
     pub use crate::ecs::material::resources::material_registry_insert;
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
@@ -901,6 +919,19 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
     #[cfg(feature = "physics")]
+    pub use crate::ecs::physics::resources::{
+        physics_world_add_collider, physics_world_add_joint, physics_world_add_rigid_body,
+        physics_world_angular_velocity, physics_world_apply_force, physics_world_apply_impulse,
+        physics_world_apply_impulse_at_point, physics_world_apply_torque,
+        physics_world_body_rotation, physics_world_body_translation, physics_world_cast_ray,
+        physics_world_collision_events, physics_world_contact_force_events,
+        physics_world_get_interpolation_alpha, physics_world_get_rigid_body,
+        physics_world_get_rigid_body_mut, physics_world_linear_velocity,
+        physics_world_overlap_sphere, physics_world_query_pipeline,
+        physics_world_remove_rigid_body, physics_world_set_angular_velocity,
+        physics_world_set_linear_velocity, physics_world_step,
+    };
+    #[cfg(feature = "physics")]
     pub use crate::ecs::physics::types::RaycastHit;
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
@@ -923,6 +954,19 @@ pub mod prelude {
     pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::scene::registry::{
+        AssetRegistry, RuntimeAssetEntry, RuntimeAssetRegistry, asset_registry_add_manifest,
+        asset_registry_all_assets, asset_registry_asset_count, asset_registry_assets_of_type,
+        asset_registry_clear, asset_registry_get_base_path, asset_registry_get_entry,
+        asset_registry_manifest_count, asset_registry_name_exists, asset_registry_path_exists,
+        asset_registry_resolve_name, asset_registry_resolve_path, asset_registry_resolve_uuid,
+        asset_registry_uuid_exists, runtime_asset_registry_clear, runtime_asset_registry_get,
+        runtime_asset_registry_get_by_name, runtime_asset_registry_is_loaded,
+        runtime_asset_registry_mark_loaded, runtime_asset_registry_mark_unloaded,
+        runtime_asset_registry_register, runtime_asset_registry_resolve_name,
+        runtime_asset_registry_unregister,
+    };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::{
         AssetMode, AssetUuid, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType, SceneCamera,
