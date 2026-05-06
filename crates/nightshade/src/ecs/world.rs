@@ -23,9 +23,9 @@ pub mod components {
     pub use crate::ecs::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
-        Camera, CameraPostProcess, ConstrainedAspect, OrthographicCamera, PanOrbitCamera,
-        PerspectiveCamera, Projection, ShadingMode, Smoothing, ViewportShading,
-        ViewportUpdateMode,
+        Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
+        OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode,
+        Smoothing, ViewportShading, ViewportUpdateMode,
     };
 
     pub use crate::ecs::decal::components::Decal;
@@ -167,6 +167,7 @@ freecs::ecs! {
             viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
             camera_post_process: crate::ecs::camera::components::CameraPostProcess => CAMERA_POST_PROCESS,
             constrained_aspect: crate::ecs::camera::components::ConstrainedAspect => CONSTRAINED_ASPECT,
+            camera_environment: crate::ecs::camera::components::CameraEnvironment => CAMERA_ENVIRONMENT,
             light: crate::ecs::light::components::Light => LIGHT,
             lines: crate::ecs::lines::components::Lines => LINES,
             visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,

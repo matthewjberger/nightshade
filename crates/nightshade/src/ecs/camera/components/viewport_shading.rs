@@ -25,7 +25,7 @@
 //! the selection outline) for that camera only. The world ground grid is
 //! a separate global toggle.
 
-use crate::ecs::graphics::resources::{ColorGrading, DepthOfField, Graphics};
+use crate::ecs::graphics::resources::{Atmosphere, ColorGrading, DepthOfField, Fog, Graphics};
 use crate::ecs::render_layer::components::CameraCullingMask;
 
 
@@ -99,6 +99,15 @@ pub struct EffectiveShading {
     /// layers) so cameras without a `CameraCullingMask` component
     /// continue to render every entity.
     pub culling_mask: u32,
+    /// Resolved fog state for this view. `None` disables fog; `Some`
+    /// uses the contained Fog parameters. Inherits from `Graphics::fog`
+    /// unless the camera carries a `CameraEnvironment` override.
+    pub fog: Option<Fog>,
+    /// Resolved atmosphere selection for this view, used by the sky
+    /// pass and the IBL bracket selection. Defaults to
+    /// `Graphics::atmosphere` and can be overridden per camera via
+    /// `CameraEnvironment`.
+    pub atmosphere: Atmosphere,
 }
 
 impl EffectiveShading {
@@ -140,6 +149,8 @@ impl EffectiveShading {
             ssr_intensity: graphics.ssr_intensity,
             ambient_light: graphics.ambient_light,
             culling_mask: !0,
+            fog: graphics.fog,
+            atmosphere: graphics.atmosphere,
         }
     }
 
@@ -148,10 +159,21 @@ impl EffectiveShading {
         shading: &ViewportShading,
         post_process: Option<&CameraPostProcess>,
         culling_mask: Option<&CameraCullingMask>,
+        environment: Option<&CameraEnvironment>,
     ) -> Self {
         let mut effective = Self::from_graphics(graphics);
         if let Some(mask) = culling_mask {
             effective.culling_mask = mask.0;
+        }
+        if let Some(env) = environment {
+            if let Some(atmosphere) = env.atmosphere {
+                effective.atmosphere = atmosphere;
+            }
+            effective.fog = match env.fog {
+                FogOverride::Inherit => effective.fog,
+                FogOverride::Disabled => None,
+                FogOverride::Override(fog) => Some(fog),
+            };
         }
         if let Some(overrides) = post_process {
             if let Some(cg) = overrides.color_grading {
@@ -268,6 +290,8 @@ impl Default for EffectiveShading {
             ssr_intensity: 1.0,
             ambient_light: [0.1, 0.1, 0.1, 1.0],
             culling_mask: !0,
+            fog: None,
+            atmosphere: Atmosphere::None,
         }
     }
 }
@@ -286,6 +310,24 @@ impl Default for ConstrainedAspect {
     fn default() -> Self {
         Self(16.0 / 9.0)
     }
+}
+
+/// Per-camera environment overrides for atmosphere and fog. Each
+/// field opts into changing the resolved view state. `Inherit`
+/// for fog or `None` for atmosphere keeps the corresponding
+/// global `Graphics` value.
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CameraEnvironment {
+    pub atmosphere: Option<Atmosphere>,
+    pub fog: FogOverride,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum FogOverride {
+    #[default]
+    Inherit,
+    Disabled,
+    Override(Fog),
 }
 
 /// Per-camera post-process parameter overrides. Anything left as
