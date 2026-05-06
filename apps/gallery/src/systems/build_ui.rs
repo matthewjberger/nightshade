@@ -207,7 +207,8 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                     let text_slot = data.text_slot;
                     let label = world
                         .resources
-                        .text_cache
+                        .text
+                        .cache
                         .get_text(text_slot)
                         .map(|s| s.to_string())
                         .unwrap_or_else(|| "Clicked".to_string());
@@ -302,7 +303,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                 world.ui.get_ui_node_content(log_entity)
             {
                 let slot = *text_slot;
-                world.resources.text_cache.set_text(slot, &message);
+                world.resources.text.cache.set_text(slot, &message);
             }
         }
     }

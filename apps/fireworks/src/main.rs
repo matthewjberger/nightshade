@@ -1664,6 +1664,7 @@ impl FireworksDemo {
         let (width, height) = img.dimensions();
         world
             .resources
+            .loading
             .pending_particle_textures
             .push(ParticleTextureUpload {
                 slot,

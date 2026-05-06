@@ -100,7 +100,7 @@ impl State for PickingDemo {
             let entity = spawn_mesh(world, mesh_type, position, Vec3::new(1.0, 1.0, 1.0));
             let material_name = format!("{}_{}", mesh_type, entity.id);
             material_registry_insert(
-                &mut world.resources.material_registry,
+                &mut world.resources.assets.material_registry,
                 material_name.clone(),
                 Material {
                     base_color: color.into(),
@@ -109,6 +109,7 @@ impl State for PickingDemo {
             );
             if let Some(&index) = world
                 .resources
+                .assets
                 .material_registry
                 .registry
                 .name_to_index
@@ -116,6 +117,7 @@ impl State for PickingDemo {
             {
                 world
                     .resources
+                    .assets
                     .material_registry
                     .registry
                     .add_reference(index);

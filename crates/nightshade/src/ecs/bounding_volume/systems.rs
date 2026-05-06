@@ -19,7 +19,7 @@ fn resolve_bounding_volume(mesh_cache: &MeshCache, mesh_name: &str) -> BoundingV
 pub fn ensure_bounding_volumes(world: &mut World) {
     let mut pending: Vec<(Entity, BoundingVolume)> = Vec::new();
 
-    let mesh_cache = &world.resources.mesh_cache;
+    let mesh_cache = &world.resources.assets.mesh_cache;
     world
         .core
         .query()

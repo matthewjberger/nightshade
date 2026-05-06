@@ -42,12 +42,13 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     world.resources.mesh_render_state.mark_entity_added(entity);
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
-        &mut world.resources.material_registry,
+        &mut world.resources.assets.material_registry,
         material_name.clone(),
         Material::default(),
     );
     if let Some(&index) = world
         .resources
+        .assets
         .material_registry
         .registry
         .name_to_index
@@ -55,6 +56,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     {
         world
             .resources
+            .assets
             .material_registry
             .registry
             .add_reference(index);

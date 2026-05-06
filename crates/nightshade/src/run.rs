@@ -830,12 +830,13 @@ fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>
         WASM_DROPPED_FILES.with(|files| {
             world
                 .resources
+                .loading
                 .dropped_files
                 .append(&mut files.borrow_mut());
         });
     }
 
-    let dropped_files: Vec<_> = world.resources.dropped_files.drain(..).collect();
+    let dropped_files: Vec<_> = world.resources.loading.dropped_files.drain(..).collect();
     if !dropped_files.is_empty() {
         state.on_dropped_files(world, &dropped_files);
     }

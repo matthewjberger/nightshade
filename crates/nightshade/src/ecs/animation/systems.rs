@@ -247,6 +247,7 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
 
     let child_entities: Vec<Entity> = world
         .resources
+        .transform_state
         .children_cache
         .get(&entity)
         .cloned()

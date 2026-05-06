@@ -9,11 +9,11 @@
 //!
 //! Key resource paths:
 //!
-//! - `world.resources.window.timing` — frame timing ([`WindowTiming`](resources::WindowTiming))
-//! - `world.resources.input` — keyboard/mouse/touch state ([`Input`](resources::Input))
-//! - `world.resources.graphics` — rendering settings ([`Graphics`](resources::Graphics))
-//! - `world.resources.active_camera` — current camera entity
-//! - `world.resources.entity_names` — name-to-entity mapping
+//! - `world.resources.window.timing` â€” frame timing ([`WindowTiming`](resources::WindowTiming))
+//! - `world.resources.input` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
+//! - `world.resources.graphics` â€” rendering settings ([`Graphics`](resources::Graphics))
+//! - `world.resources.active_camera` â€” current camera entity
+//! - `world.resources.entities.names` â€” name-to-entity mapping
 
 pub mod components {
     pub use crate::ecs::animation::components::{
@@ -81,14 +81,17 @@ pub mod components {
 }
 
 pub mod resources {
+    pub use crate::ecs::asset_state::AssetState;
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::AudioEngine;
+    pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
         Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, IblViews, MeshLodChain,
         MeshLodLevel, TonemapAlgorithm, VertexSnap,
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::resources::PhysicsWorld;
@@ -99,12 +102,14 @@ pub mod resources {
     pub use crate::ecs::script::resources::ScriptRuntime;
     #[cfg(feature = "sdf_sculpt")]
     pub use crate::ecs::sdf::resources::{SdfMaterial, SdfMaterialRegistry, SdfWorld};
-    pub use crate::ecs::text::resources::TextCache;
+    pub use crate::ecs::text::resources::{TextCache, TextState};
+    pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::window::resources::{
         SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, ViewportRect, Window,
         WindowSpawnRequest, WindowTiming,
     };
+    pub use crate::ecs::world::cleanup::CleanupState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
 }
 
@@ -112,6 +117,7 @@ pub mod events {
     pub use crate::ecs::event_bus::resources::{InputEvent, KeyState, Message};
 }
 
+pub mod cleanup;
 pub mod commands;
 pub mod scratch;
 pub use commands::{
@@ -250,61 +256,45 @@ freecs::ecs! {
         window: crate::ecs::window::resources::Window,
         secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         user_interface: crate::ecs::ui::UserInterface,
+        retained_ui: crate::ecs::ui::resources::RetainedUiState,
         graphics: crate::ecs::graphics::resources::Graphics,
         input: crate::ecs::input::resources::Input,
         #[cfg(feature = "audio")]
         audio: crate::ecs::audio::resources::AudioEngine,
         #[cfg(feature = "physics")]
         physics: crate::ecs::physics::resources::PhysicsWorld,
+        #[cfg(feature = "physics")]
+        picking_world: crate::ecs::picking::resources::PickingWorld,
+        gpu_picking: crate::ecs::gpu_picking::GpuPicking,
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
-        text_cache: crate::ecs::text::resources::TextCache,
-        font_engine: crate::ecs::text::resources::FontEngine,
-        mesh_cache: crate::ecs::prefab::resources::MeshCache,
-        animation_cache: crate::ecs::prefab::resources::AnimationCache,
-        prefab_cache: crate::ecs::prefab::resources::PrefabCache,
-        material_registry: crate::ecs::material::resources::MaterialRegistry,
-        texture_cache: crate::render::wgpu::texture_cache::TextureCache,
-        pending_font_loads: Vec<crate::ecs::text::commands::PendingFontLoad>,
-        active_camera: Option<freecs::Entity>,
-
-        event_bus: crate::ecs::event_bus::resources::EventBus,
-        command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
-        scratch: crate::ecs::world::scratch::Scratch,
-        transform_dirty_entities: Vec<freecs::Entity>,
-        children_cache: std::collections::HashMap<freecs::Entity, Vec<freecs::Entity>>,
-        children_cache_valid: bool,
-        cleanup_frame_counter: u64,
-        dropped_files: Vec<crate::ecs::input::resources::DroppedFile>,
-        loading_pipeline: crate::ecs::loading::LoadingPipeline,
-        skinning_offsets: std::collections::HashMap<freecs::Entity, usize>,
-        total_skinning_joints: u32,
         #[cfg(feature = "scripting")]
         script_runtime: crate::ecs::script::resources::ScriptRuntime,
         #[cfg(feature = "openxr")]
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
-        #[cfg(feature = "physics")]
-        picking_world: crate::ecs::picking::resources::PickingWorld,
-        gpu_picking: crate::ecs::gpu_picking::GpuPicking,
         #[cfg(feature = "sdf_sculpt")]
         sdf_world: crate::ecs::sdf::resources::SdfWorld,
         #[cfg(feature = "sdf_sculpt")]
         sdf_materials: crate::ecs::sdf::resources::SdfMaterialRegistry,
+        text: crate::ecs::text::resources::TextState,
+        assets: crate::ecs::asset_state::AssetState,
+        transform_state: crate::ecs::transform::resources::TransformState,
+        cleanup: crate::ecs::world::cleanup::CleanupState,
+        loading: crate::ecs::loading::LoadingState,
+        entities: crate::ecs::entity_registry::EntityRegistry,
+        event_bus: crate::ecs::event_bus::resources::EventBus,
+        scratch: crate::ecs::world::scratch::Scratch,
+        command_queue: Vec<crate::ecs::world::commands::WorldCommand>,
         mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
-        #[cfg(feature = "scene_graph")]
-        asset_registry: crate::ecs::scene::registry::AssetRegistry,
-        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-        mcp_command_queue: crate::mcp::CommandQueue,
-        entity_names: std::collections::HashMap<String, freecs::Entity>,
-        entity_tags: std::collections::HashMap<freecs::Entity, Vec<String>>,
-        entity_metadata: std::collections::HashMap<freecs::Entity, std::collections::HashMap<String, crate::ecs::scene::MetadataValue>>,
-        pending_particle_textures: Vec<crate::ecs::particles::components::ParticleTextureUpload>,
+        active_camera: Option<freecs::Entity>,
+        texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         ibl_views: crate::ecs::graphics::resources::IblViews,
-        retained_ui: crate::ecs::ui::resources::RetainedUiState,
-        frame_schedule: crate::schedule::FrameSchedule,
         sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
+        frame_schedule: crate::schedule::FrameSchedule,
+        #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
+        mcp_command_queue: crate::mcp::CommandQueue,
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         #[cfg(all(feature = "assets", feature = "file_watcher", not(target_arch = "wasm32")))]

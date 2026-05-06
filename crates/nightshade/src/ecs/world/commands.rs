@@ -152,18 +152,20 @@ impl World {
         material: crate::ecs::material::components::Material,
     ) {
         material_registry_insert(
-            &mut self.resources.material_registry,
+            &mut self.resources.assets.material_registry,
             name.clone(),
             material,
         );
         if let Some(&index) = self
             .resources
+            .assets
             .material_registry
             .registry
             .name_to_index
             .get(&name)
         {
             self.resources
+                .assets
                 .material_registry
                 .registry
                 .add_reference(index);
@@ -233,7 +235,7 @@ pub fn process_commands_system(world: &mut World) {
 fn process_command(world: &mut World, command: WorldCommand) {
     match command {
         WorldCommand::DespawnRecursive { entity } => {
-            if !world.resources.children_cache_valid {
+            if !world.resources.transform_state.children_cache_valid {
                 world.validate_and_rebuild_children_cache();
             }
             let descendents = query_descendents(world, entity);
@@ -261,8 +263,9 @@ fn reload_material_command(
 ) {
     use crate::ecs::world::MATERIAL_REF;
 
-    let old_textures = registry_entry_by_name(&world.resources.material_registry.registry, &name)
-        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+    let old_textures =
+        registry_entry_by_name(&world.resources.assets.material_registry.registry, &name)
+            .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
 
     if let Some((old_base, old_emissive)) = &old_textures {
         if let Some(base_texture) = old_base {
@@ -280,9 +283,10 @@ fn reload_material_command(
         texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
     }
 
-    if let Some(existing) =
-        registry_entry_by_name_mut(&mut world.resources.material_registry.registry, &name)
-    {
+    if let Some(existing) = registry_entry_by_name_mut(
+        &mut world.resources.assets.material_registry.registry,
+        &name,
+    ) {
         *existing = new_material;
     }
 
@@ -308,6 +312,7 @@ fn reload_material_command(
 fn query_children(world: &World, entity: Entity) -> Vec<Entity> {
     world
         .resources
+        .transform_state
         .children_cache
         .get(&entity)
         .cloned()
@@ -331,13 +336,21 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
     let is_runtime = world.resources.is_runtime;
 
     for &entity in entities {
-        world.resources.children_cache.remove(&entity);
-        world.resources.entity_tags.remove(&entity);
-        world.resources.entity_metadata.remove(&entity);
+        world
+            .resources
+            .transform_state
+            .children_cache
+            .remove(&entity);
+        world.resources.entities.tags.remove(&entity);
+        world.resources.entities.metadata.remove(&entity);
 
         if let Some(parent_component) = world.core.get_parent(entity)
             && let Some(parent_entity) = parent_component.0
-            && let Some(children) = world.resources.children_cache.get_mut(&parent_entity)
+            && let Some(children) = world
+                .resources
+                .transform_state
+                .children_cache
+                .get_mut(&parent_entity)
         {
             children.retain(|&e| e != entity);
             has_parent_entities = true;
@@ -348,12 +361,18 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 let mesh_name = render_mesh.name.clone();
                 if let Some(&index) = world
                     .resources
+                    .assets
                     .mesh_cache
                     .registry
                     .name_to_index
                     .get(&mesh_name)
                 {
-                    world.resources.mesh_cache.registry.remove_reference(index);
+                    world
+                        .resources
+                        .assets
+                        .mesh_cache
+                        .registry
+                        .remove_reference(index);
                 }
             }
             world
@@ -367,19 +386,25 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 let mesh_name = instanced_mesh.mesh_name.clone();
                 if let Some(&index) = world
                     .resources
+                    .assets
                     .mesh_cache
                     .registry
                     .name_to_index
                     .get(&mesh_name)
                 {
-                    world.resources.mesh_cache.registry.remove_reference(index);
+                    world
+                        .resources
+                        .assets
+                        .mesh_cache
+                        .registry
+                        .remove_reference(index);
                 }
             }
 
             if let Some(material_ref) = world.core.get_material_ref(entity) {
                 let material_name = material_ref.name.clone();
                 if let Some(material) = registry_entry_by_name(
-                    &world.resources.material_registry.registry,
+                    &world.resources.assets.material_registry.registry,
                     &material_name,
                 ) {
                     if let Some(base_texture) = &material.base_texture {
@@ -397,6 +422,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 }
                 if let Some(&index) = world
                     .resources
+                    .assets
                     .material_registry
                     .registry
                     .name_to_index
@@ -404,6 +430,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 {
                     world
                         .resources
+                        .assets
                         .material_registry
                         .registry
                         .remove_reference(index);
@@ -413,14 +440,14 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
     }
 
     if has_parent_entities {
-        world.resources.children_cache_valid = false;
+        world.resources.transform_state.children_cache_valid = false;
     }
 
     world.despawn_entities(entities);
 }
 
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
-    if !world.resources.children_cache_valid {
+    if !world.resources.transform_state.children_cache_valid {
         world.validate_and_rebuild_children_cache();
     }
     let descendents = query_descendents(world, entity);
@@ -571,6 +598,7 @@ pub fn spawn_mesh_at(
 
     if !world
         .resources
+        .assets
         .mesh_cache
         .registry
         .name_to_index
@@ -587,18 +615,28 @@ pub fn spawn_mesh_at(
             _ => None,
         };
         if let Some(mesh) = mesh {
-            mesh_cache_insert(&mut world.resources.mesh_cache, mesh_name.to_string(), mesh);
+            mesh_cache_insert(
+                &mut world.resources.assets.mesh_cache,
+                mesh_name.to_string(),
+                mesh,
+            );
         }
     }
 
     if let Some(&index) = world
         .resources
+        .assets
         .mesh_cache
         .registry
         .name_to_index
         .get(&render_mesh.name)
     {
-        world.resources.mesh_cache.registry.add_reference(index);
+        world
+            .resources
+            .assets
+            .mesh_cache
+            .registry
+            .add_reference(index);
     }
 
     world.core.set_render_mesh(entity, render_mesh);
@@ -606,6 +644,7 @@ pub fn spawn_mesh_at(
 
     if let Some(&index) = world
         .resources
+        .assets
         .material_registry
         .registry
         .name_to_index
@@ -613,6 +652,7 @@ pub fn spawn_mesh_at(
     {
         world
             .resources
+            .assets
             .material_registry
             .registry
             .add_reference(index);
@@ -728,23 +768,34 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
     let mesh_name = "WaterPlane";
     if !world
         .resources
+        .assets
         .mesh_cache
         .registry
         .name_to_index
         .contains_key(mesh_name)
     {
         let mesh = create_subdivided_plane_mesh(20.0, 1);
-        mesh_cache_insert(&mut world.resources.mesh_cache, mesh_name.to_string(), mesh);
+        mesh_cache_insert(
+            &mut world.resources.assets.mesh_cache,
+            mesh_name.to_string(),
+            mesh,
+        );
     }
 
     if let Some(&index) = world
         .resources
+        .assets
         .mesh_cache
         .registry
         .name_to_index
         .get(mesh_name)
     {
-        world.resources.mesh_cache.registry.add_reference(index);
+        world
+            .resources
+            .assets
+            .mesh_cache
+            .registry
+            .add_reference(index);
     }
 
     world
@@ -791,7 +842,7 @@ fn spawn_3d_text_impl(
         GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME, TEXT, VISIBILITY,
     };
 
-    let text_index = world.resources.text_cache.add_text(text);
+    let text_index = world.resources.text.cache.add_text(text);
 
     let entity = world.spawn_entities(
         NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
@@ -836,12 +887,12 @@ const CLEANUP_INTERVAL_FRAMES: u64 = 300;
 
 pub fn cleanup_unused_resources_system(world: &mut World) {
     let _span = tracing::info_span!("cleanup").entered();
-    world.resources.cleanup_frame_counter += 1;
+    world.resources.cleanup.frame_counter += 1;
 
-    if world.resources.cleanup_frame_counter >= CLEANUP_INTERVAL_FRAMES {
-        world.resources.cleanup_frame_counter = 0;
-        world.resources.mesh_cache.registry.remove_unused();
-        material_registry_remove_unused(&mut world.resources.material_registry);
+    if world.resources.cleanup.frame_counter >= CLEANUP_INTERVAL_FRAMES {
+        world.resources.cleanup.frame_counter = 0;
+        world.resources.assets.mesh_cache.registry.remove_unused();
+        material_registry_remove_unused(&mut world.resources.assets.material_registry);
         texture_cache_remove_unused(&mut world.resources.texture_cache);
     }
 }
@@ -854,9 +905,11 @@ pub fn set_material_with_textures(
     let material_ref = world.core.get_material_ref(entity).cloned();
 
     if let Some(ref mat_ref) = material_ref {
-        let old_textures =
-            registry_entry_by_name(&world.resources.material_registry.registry, &mat_ref.name)
-                .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
+        let old_textures = registry_entry_by_name(
+            &world.resources.assets.material_registry.registry,
+            &mat_ref.name,
+        )
+        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
 
         if let Some((old_base, old_emissive)) = old_textures {
             if let Some(base_texture) = old_base {
@@ -880,7 +933,7 @@ pub fn set_material_with_textures(
 
     if let Some(ref mat_ref) = material_ref {
         if let Some(existing_mat) = registry_entry_by_name_mut(
-            &mut world.resources.material_registry.registry,
+            &mut world.resources.assets.material_registry.registry,
             &mat_ref.name,
         ) {
             *existing_mat = material;
@@ -888,12 +941,13 @@ pub fn set_material_with_textures(
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(
-            &mut world.resources.material_registry,
+            &mut world.resources.assets.material_registry,
             material_name.clone(),
             material,
         );
         if let Some(&index) = world
             .resources
+            .assets
             .material_registry
             .registry
             .name_to_index
@@ -901,6 +955,7 @@ pub fn set_material_with_textures(
         {
             world
                 .resources
+                .assets
                 .material_registry
                 .registry
                 .add_reference(index);
@@ -1086,6 +1141,7 @@ pub fn spawn_instanced_mesh(
 
     if let Some(&index) = world
         .resources
+        .assets
         .material_registry
         .registry
         .name_to_index
@@ -1093,6 +1149,7 @@ pub fn spawn_instanced_mesh(
     {
         world
             .resources
+            .assets
             .material_registry
             .registry
             .add_reference(index);
@@ -1157,6 +1214,7 @@ pub fn spawn_instanced_mesh_with_material(
 
     if let Some(&index) = world
         .resources
+        .assets
         .material_registry
         .registry
         .name_to_index
@@ -1164,14 +1222,16 @@ pub fn spawn_instanced_mesh_with_material(
     {
         world
             .resources
+            .assets
             .material_registry
             .registry
             .add_reference(index);
     }
 
-    if let Some(mat) =
-        registry_entry_by_name(&world.resources.material_registry.registry, material_name)
-    {
+    if let Some(mat) = registry_entry_by_name(
+        &world.resources.assets.material_registry.registry,
+        material_name,
+    ) {
         if let Some(base_texture) = &mat.base_texture {
             texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
         }
@@ -1206,12 +1266,13 @@ pub fn spawn_material(
     material: crate::ecs::material::components::Material,
 ) {
     material_registry_insert(
-        &mut world.resources.material_registry,
+        &mut world.resources.assets.material_registry,
         name.clone(),
         material,
     );
     if let Some(&index) = world
         .resources
+        .assets
         .material_registry
         .registry
         .name_to_index
@@ -1219,6 +1280,7 @@ pub fn spawn_material(
     {
         world
             .resources
+            .assets
             .material_registry
             .registry
             .add_reference(index);

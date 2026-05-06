@@ -15,6 +15,7 @@
 
 pub mod animation;
 pub mod asset_id;
+pub mod asset_state;
 #[cfg(all(
     feature = "assets",
     feature = "file_watcher",
@@ -24,6 +25,7 @@ pub mod asset_watcher;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
+pub mod entity_registry;
 #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
 pub mod file_watcher;
 

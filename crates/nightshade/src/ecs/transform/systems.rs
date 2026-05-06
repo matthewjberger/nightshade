@@ -13,7 +13,7 @@ pub fn run_systems(world: &mut World) {
 }
 
 fn rebuild_children_cache_if_needed(world: &mut World) {
-    if !world.resources.children_cache_valid {
+    if !world.resources.transform_state.children_cache_valid {
         world.validate_and_rebuild_children_cache();
     }
 }
@@ -44,7 +44,11 @@ impl World {
         let old_parent_entity = self.core.get_parent(child).and_then(|p| p.0);
 
         if let Some(old_parent_entity) = old_parent_entity
-            && let Some(children) = self.resources.children_cache.get_mut(&old_parent_entity)
+            && let Some(children) = self
+                .resources
+                .transform_state
+                .children_cache
+                .get_mut(&old_parent_entity)
         {
             children.retain(|&e| e != child);
         }
@@ -53,6 +57,7 @@ impl World {
             self.core.set_parent(child, new_parent);
             if let Some(parent_entity) = new_parent.0 {
                 self.resources
+                    .transform_state
                     .children_cache
                     .entry(parent_entity)
                     .or_default()
@@ -62,30 +67,30 @@ impl World {
             self.core.remove_parent(child);
         }
 
-        self.resources.children_cache_valid = false;
+        self.resources.transform_state.children_cache_valid = false;
         self.mark_local_transform_dirty(child);
     }
 
     pub fn validate_and_rebuild_children_cache(&mut self) {
-        self.resources.children_cache.clear();
+        self.resources.transform_state.children_cache.clear();
 
-        let children_cache = &mut self.resources.children_cache;
+        let children_cache = &mut self.resources.transform_state.children_cache;
         self.core.query().with(PARENT).iter(|child, table, idx| {
             if let Some(parent_entity) = table.parent[idx].0 {
                 children_cache.entry(parent_entity).or_default().push(child);
             }
         });
 
-        for children in self.resources.children_cache.values_mut() {
+        for children in self.resources.transform_state.children_cache.values_mut() {
             children.sort_by_key(|entity| entity.id);
         }
 
-        self.resources.children_cache_valid = true;
+        self.resources.transform_state.children_cache_valid = true;
     }
 }
 
 pub fn update_global_transforms_system(world: &mut World) {
-    let mut dirty_entities = std::mem::take(&mut world.resources.transform_dirty_entities);
+    let mut dirty_entities = std::mem::take(&mut world.resources.transform_state.dirty_entities);
 
     {
         let dirty_ref = &mut dirty_entities;
@@ -146,7 +151,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     }
 
     dirty_entities.clear();
-    world.resources.transform_dirty_entities = dirty_entities;
+    world.resources.transform_state.dirty_entities = dirty_entities;
 }
 
 const MAX_HIERARCHY_DEPTH: usize = 256;
