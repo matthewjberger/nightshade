@@ -13,18 +13,23 @@
 //!
 //! - `Rendered`: full pipeline (bloom, SSAO, SSGI, SSR, lit shading).
 //! - `Solid`: unlit base color with all post-processing disabled.
+//! - `Flat`: lit shading with every material's surface color replaced by
+//!   a uniform CAD-style gray. Lighting still runs so the form of each
+//!   model reads, but textures and per-material colors are suppressed.
 //! - `Wireframe`: solid base + GPU-driven edge overlay rendered through
 //!   the existing lines pass (silhouette + crease edges derived from the
 //!   depth/normal buffer; no per-mesh edge index buffer needed, so it
 //!   works on every backend including WebGPU).
 //!
-//! `show_overlays` gates editor-visible decorations (grid, gizmos, the
-//! navigation gizmo, debug lines) for the camera's tile only.
+//! `show_overlays` gates editor-visible decorations (gizmos, the
+//! navigation gizmo, debug lines) for the camera's tile only. The world
+//! grid is a separate global toggle and is not affected.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ShadingMode {
     Wireframe,
     Solid,
+    Flat,
     #[default]
     Rendered,
 }
