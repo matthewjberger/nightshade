@@ -165,7 +165,7 @@
 //! - **`engine`** (default) - Full engine functionality including asset loading, scene graphs,
 //!   terrain, file dialogs, and more. This is the standard feature for building games.
 //!
-//! - **`runtime`** - Minimal rendering without asset loading. Use with `wgpu` and `egui` for
+//! - **`runtime`** - Minimal rendering without asset loading. Use with `wgpu` for
 //!   lightweight apps that don't need gltf/image loading.
 //!
 //! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `scripting`, `fbx`, etc.
@@ -194,9 +194,7 @@
 //!
 //! ### Optional Features
 //!
-//! - **`egui`** - Immediate mode GUI. Enables `fn ui()` on State trait.
-//!
-//! - **`shell`** - Developer console with command registration. Renders via the retained UI; enable `egui` to also expose the legacy `shell_ui` overlay.
+//! - **`shell`** - Developer console with command registration, rendered via the retained UI.
 //!
 //! - **`audio`** - Audio playback using Kira.
 //!
@@ -223,7 +221,7 @@
 //! - **`steam`** - Steamworks integration.
 //!
 //! - **`webview`** - Bidirectional IPC for hosting web frontends (Leptos, Yew, etc.).
-//!   On native (with `runtime` + `egui`), provides `WebviewContext` and `serve_embedded_dir`.
+//!   On native (with `runtime`), provides `WebviewContext` and `serve_embedded_dir`.
 //!   On WASM, provides `connect` and `send` for the frontend bridge.
 //!
 //! ### Profiling Features
@@ -239,12 +237,6 @@
 //! - **`plugins`** - Guest-side WASM plugin API.
 //!
 //! - **`plugin_runtime`** - WASM plugin hosting via Wasmtime. Requires `assets`.
-//!
-//! - **`mosaic`** - Multi-pane desktop application framework with tile-based layouts,
-//!   themes, modals, notifications, and built-in viewport widgets. Requires `egui`.
-//!
-//! - **`editor`** - Scene editor infrastructure with gizmos, undo/redo, component inspectors,
-//!   entity picking, selection management, and scene tree UI. Requires `mosaic` and `picking`.
 //!
 //! - **`mcp`** - HTTP-based Model Context Protocol server on `http://127.0.0.1:3333/mcp`.
 //!   Exposes 50+ tools for AI clients to manipulate the running scene. Native only.
@@ -328,22 +320,6 @@
 //! if let Some(result) = world.resources.gpu_picking.take_result() {
 //!     let world_pos = result.world_position;
 //!     let normal = result.world_normal;
-//! }
-//! ```
-//!
-//! ### Immediate Mode GUI (`egui` feature)
-//!
-//! ```ignore
-//! impl State for Game {
-//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
-//!         egui::Window::new("Debug").show(ctx, |ui| {
-//!             ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
-//!             if ui.button("Spawn Cube").clicked() {
-//!                 spawn_cube_at(world, Vec3::zeros());
-//!             }
-//!             ui.add(egui::Slider::new(&mut self.speed, 0.0..=10.0).text("Speed"));
-//!         });
-//!     }
 //! }
 //! ```
 //!
@@ -480,49 +456,7 @@
 //! ### Webview (`webview` feature)
 //!
 //! Host a web frontend (Leptos, Yew, etc.) inside a nightshade window with bidirectional IPC.
-//!
-//! **Native side** (use `webview` with `runtime` and `egui`):
-//!
-//! ```ignore
-//! use include_dir::{Dir, include_dir};
-//! use nightshade::prelude::*;
-//! use nightshade::webview::{WebviewContext, serve_embedded_dir};
-//!
-//! static DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/site/dist");
-//!
-//! struct App {
-//!     port: u16,
-//!     ctx: WebviewContext<FrontendCommand, BackendEvent>,
-//! }
-//!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     launch(App {
-//!         port: serve_embedded_dir(&DIST),
-//!         ctx: WebviewContext::default(),
-//!     })
-//! }
-//!
-//! impl State for App {
-//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
-//!         // Handle messages from frontend
-//!         for cmd in self.ctx.drain_messages() {
-//!             match cmd {
-//!                 FrontendCommand::Ready => self.ctx.send(BackendEvent::Connected),
-//!                 // ...
-//!             }
-//!         }
-//!
-//!         // Render webview in a panel
-//!         egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx, |ui| {
-//!             if let Some(handle) = &world.resources.window.handle {
-//!                 self.ctx.ensure_webview(handle.clone(), self.port, ui.available_rect_before_wrap());
-//!             }
-//!         });
-//!     }
-//! }
-//! ```
-//!
-//! **WASM frontend** (use `webview` with `default-features = false`):
+//! On WASM, the frontend uses `connect` and `send`:
 //!
 //! ```ignore
 //! use nightshade::webview::{connect, send};
@@ -534,59 +468,6 @@
 //!
 //!     // Send commands to native app
 //!     send(&FrontendCommand::DoSomething);
-//! }
-//! ```
-//!
-//! ### Mosaic Framework (`mosaic` feature)
-//!
-//! Build multi-pane desktop applications with dockable, serializable widgets:
-//!
-//! ```ignore
-//! use nightshade::prelude::*;
-//! use nightshade::mosaic::{Mosaic, ViewportWidget, Widget, WidgetContext, WidgetEntry, Pane};
-//!
-//! #[derive(Clone, serde::Serialize, serde::Deserialize)]
-//! enum AppWidget {
-//!     Viewport(ViewportWidget),
-//! }
-//!
-//! impl Widget for AppWidget {
-//!     fn title(&self) -> String {
-//!         match self {
-//!             AppWidget::Viewport(v) => v.title(),
-//!         }
-//!     }
-//!
-//!     fn ui(&mut self, ui: &mut egui::Ui, context: &mut WidgetContext) {
-//!         match self {
-//!             AppWidget::Viewport(v) => v.ui(ui, context),
-//!         }
-//!     }
-//!
-//!     fn catalog() -> Vec<WidgetEntry<Self>> {
-//!         vec![WidgetEntry {
-//!             name: "Viewport".to_string(),
-//!             create: || AppWidget::Viewport(ViewportWidget::default()),
-//!         }]
-//!     }
-//! }
-//!
-//! struct MyApp {
-//!     mosaic: Mosaic<AppWidget>,
-//! }
-//!
-//! impl State for MyApp {
-//!     fn title(&self) -> &str { "My App" }
-//!
-//!     fn initialize(&mut self, world: &mut World) {
-//!         self.mosaic = Mosaic::with_panes(vec![
-//!             AppWidget::Viewport(ViewportWidget::default()),
-//!         ]);
-//!     }
-//!
-//!     fn ui(&mut self, world: &mut World, ctx: &egui::Context) {
-//!         self.mosaic.show(world, ctx, &mut ());
-//!     }
 //! }
 //! ```
 //!
@@ -700,10 +581,10 @@
 //!
 //! ## Minimal Example
 //!
-//! For a lightweight egui app without asset loading:
+//! For a lightweight app without asset loading:
 //!
 //! ```toml
-//! nightshade = { default-features = false, features = ["runtime", "wgpu", "egui"] }
+//! nightshade = { default-features = false, features = ["runtime", "wgpu"] }
 //! ```
 //!
 //! ## Example
@@ -729,11 +610,10 @@
 //! 1. Process window/input events
 //! 2. Update keyboard/mouse/gamepad state
 //! 3. Calculate delta time
-//! 4. Run egui frame (if enabled)
-//! 5. Call [`State::run_systems()`](run::State::run_systems)
-//! 6. Dispatch event bus messages
-//! 7. Process MCP commands (if `mcp` feature enabled)
-//! 8. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
+//! 4. Call [`State::run_systems()`](run::State::run_systems)
+//! 5. Dispatch event bus messages
+//! 6. Process MCP commands (if `mcp` feature enabled)
+//! 7. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
 //!    - Initialize and update audio (if `audio` enabled)
 //!    - Update camera aspect ratios
 //!    - Step physics simulation (if `physics` enabled)
@@ -1070,8 +950,6 @@ pub mod prelude {
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
     #[cfg(feature = "assets")]
     pub use bincode;
-    #[cfg(feature = "egui")]
-    pub use egui;
     #[cfg(feature = "engine")]
     pub use ehttp;
     pub use freecs;
@@ -1154,8 +1032,6 @@ pub mod prelude {
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use steamworks::SteamId;
 
-    #[cfg(all(feature = "shell", feature = "egui"))]
-    pub use crate::shell::shell_ui;
     #[cfg(feature = "shell")]
     pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_retained_ui};
 

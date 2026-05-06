@@ -40,12 +40,6 @@ impl State for MyGame {
         world.resources.active_camera = Some(main_camera);
     }
 
-    fn ui(&mut self, _world: &mut World, ui_context: &egui::Context) {
-        egui::Window::new("My Game").show(ui_context, |ui| {
-            ui.heading("Hello, world!");
-        });
-    }
-
     fn run_systems(&mut self, world: &mut World) {
         fly_camera_system(world);
     }

@@ -8,5 +8,5 @@ license.workspace = true
 publish = false
 
 [dependencies]
-nightshade = { workspace = true, features = ["egui", "tracing"] }
+nightshade = { workspace = true, features = ["tracing"] }
 nalgebra-glm = { workspace = true }

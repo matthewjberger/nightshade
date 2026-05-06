@@ -32,7 +32,6 @@
 //! | `icon_bytes()` | Window creation | Window icon PNG (desktop) |
 //! | `initialize()` | After renderer ready | Scene setup, spawn entities |
 //! | `run_systems()` | Every frame | Game logic, entity updates |
-//! | `ui()` | Every frame | egui panels and windows |
 //! | `configure_render_graph()` | Once at startup | Custom post-processing |
 //! | `update_render_graph()` | Every frame | Dynamic render graph changes |
 //! | `handle_event()` | On event bus message | Cross-system communication |
@@ -81,12 +80,6 @@
 //! ```
 
 use crate::prelude::*;
-#[cfg(feature = "egui")]
-mod egui_support;
-#[cfg(all(feature = "egui", not(target_arch = "wasm32")))]
-pub(crate) use egui_support::initialize_user_interface;
-#[cfg(feature = "egui")]
-pub(crate) use egui_support::update_egui_scale_factor;
 #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
 mod mcp_commands;
 
@@ -444,8 +437,6 @@ pub(crate) fn step(
                 renderer.initialize_fonts(world);
             }
 
-            #[cfg(feature = "egui")]
-            egui_support::create_ui_system(world, state);
             #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
             crate::steam::steam_run_callbacks(&world.resources.steam);
 
@@ -495,9 +486,6 @@ pub(crate) fn step(
 
             let renderer = renderer.as_mut()?;
 
-            #[cfg(feature = "egui")]
-            let ui_frame_output = world.resources.user_interface.frame_output.take();
-
             let should_render =
                 window_handle.inner_size().width > 0 && window_handle.inner_size().height > 0;
             if should_render {
@@ -507,14 +495,7 @@ pub(crate) fn step(
 
                 state.pre_render(&mut **renderer, world);
 
-                #[cfg(feature = "egui")]
-                let (ui_output, ui_primitives) = match ui_frame_output {
-                    Some((output, primitives)) => (Some(output), Some(primitives)),
-                    None => (None, None),
-                };
-                #[cfg(not(feature = "egui"))]
-                let (ui_output, ui_primitives) = (None, None);
-                if let Err(error) = renderer.render_frame(world, ui_output, ui_primitives) {
+                if let Err(error) = renderer.render_frame(world) {
                     tracing::error!("Failed to draw frame: {error}");
                 }
             }
@@ -530,8 +511,6 @@ pub(crate) fn step(
 
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("event_handling").entered();
-    #[cfg(feature = "egui")]
-    egui_support::ui_event_system(world, event);
     input_event_system(world, event);
     timing_system(world, event);
 }
@@ -1190,18 +1169,6 @@ pub trait State {
         _: RenderResources,
     ) {
     }
-    /// Build egui UI (requires `egui` feature).
-    #[cfg(feature = "egui")]
-    fn ui(&mut self, _world: &mut World, _ui_context: &egui::Context) {}
-    /// Build egui UI for a secondary application window.
-    #[cfg(feature = "egui")]
-    fn secondary_ui(
-        &mut self,
-        _world: &mut World,
-        _window_index: usize,
-        _ui_context: &egui::Context,
-    ) {
-    }
     /// Called every frame to run game logic.
     fn run_systems(&mut self, _world: &mut World) {}
     /// Called before main rendering to allow custom world rendering.
@@ -1458,9 +1425,6 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            #[cfg(feature = "egui")]
-            egui_support::initialize_user_interface(&mut self.world);
-
             if !self.initialized {
                 self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
@@ -1502,8 +1466,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
-                #[cfg(feature = "egui")]
-                egui_support::initialize_user_interface(&mut self.world);
                 self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
                 self.world.resources.schedules.retained_ui =
@@ -1547,8 +1509,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
-                #[cfg(feature = "egui")]
-                egui_support::update_egui_scale_factor(&mut self.world);
             }
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
                 if width > 0 && height > 0 =>
@@ -1593,9 +1553,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                 {
                     tracing::error!("Failed to resize surface: {error}");
                 }
-
-                #[cfg(feature = "egui")]
-                egui_support::update_egui_scale_factor(&mut self.world);
             }
             _ => {}
         }
