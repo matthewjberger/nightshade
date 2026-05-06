@@ -8,5 +8,5 @@ license.workspace = true
 publish = false
 
 [dependencies]
-nightshade = { workspace = true, features = ["tracing", "navmesh", "physics"] }
+nightshade = { workspace = true, features = ["tracing", "navmesh", "physics", "grass"] }
 rand = "0.9"
