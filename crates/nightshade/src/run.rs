@@ -707,6 +707,8 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
         let id = touch.id;
         let position = Vec2::new(touch.location.x as f32, touch.location.y as f32);
 
+        let was_primary = touch_input.primary_touch_id == Some(id);
+
         match touch.phase {
             winit::event::TouchPhase::Started => {
                 let touch_point = TouchPoint {
@@ -746,6 +748,43 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
         }
 
         touch_input.update_gesture();
+
+        let is_primary = touch_input.primary_touch_id == Some(id);
+        let mouse = &mut world.resources.input.mouse;
+        match touch.phase {
+            winit::event::TouchPhase::Started if is_primary => {
+                if mouse.position_initialized {
+                    mouse.position_delta += position - mouse.position;
+                } else {
+                    mouse.position_initialized = true;
+                }
+                mouse.position = position;
+                mouse.state.set(MouseState::MOVED, true);
+                let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
+                mouse.state.set(MouseState::LEFT_CLICKED, true);
+                if !was_clicked {
+                    mouse.state.set(MouseState::LEFT_JUST_PRESSED, true);
+                }
+            }
+            winit::event::TouchPhase::Moved if is_primary => {
+                if mouse.position_initialized {
+                    mouse.position_delta += position - mouse.position;
+                }
+                mouse.position = position;
+                mouse.state.set(MouseState::MOVED, true);
+            }
+            winit::event::TouchPhase::Ended | winit::event::TouchPhase::Cancelled
+                if was_primary =>
+            {
+                mouse.position = position;
+                let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
+                mouse.state.set(MouseState::LEFT_CLICKED, false);
+                if was_clicked {
+                    mouse.state.set(MouseState::LEFT_JUST_RELEASED, true);
+                }
+            }
+            _ => {}
+        }
     }
 }
 
