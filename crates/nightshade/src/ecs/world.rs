@@ -27,6 +27,7 @@ pub mod components {
     };
 
     pub use crate::ecs::decal::components::Decal;
+    #[cfg(feature = "grass")]
     pub use crate::ecs::grass::components::{
         GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
     };
