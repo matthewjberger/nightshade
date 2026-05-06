@@ -184,6 +184,14 @@ licenses-check:
 licenses-html:
     cargo about generate about.hbs -o THIRD_PARTY_LICENSES.html
 
+# Checks dependencies for known security advisories (RustSec)
+audit:
+    cargo deny check advisories
+
+# Runs all cargo-deny checks (licenses, advisories, bans, sources)
+deny-check:
+    cargo deny check all
+
 # Vendors all dependencies into the vendor directory
 vendor:
     cargo vendor
