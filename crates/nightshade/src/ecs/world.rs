@@ -24,8 +24,8 @@ pub mod components {
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
         Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
-        OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode,
-        Smoothing, ViewportShading, ViewportUpdateMode,
+        OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode, Smoothing,
+        ViewportShading, ViewportUpdateMode,
     };
 
     pub use crate::ecs::decal::components::Decal;
@@ -52,9 +52,7 @@ pub mod components {
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
     };
-    pub use crate::ecs::render_layer::components::{
-        CameraCullingMask, CullingMask, RenderLayer,
-    };
+    pub use crate::ecs::render_layer::components::{CameraCullingMask, CullingMask, RenderLayer};
     pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};

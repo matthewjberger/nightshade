@@ -28,7 +28,6 @@
 use crate::ecs::graphics::resources::{Atmosphere, ColorGrading, DepthOfField, Fog, Graphics};
 use crate::ecs::render_layer::components::CameraCullingMask;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ShadingMode {
     Wireframe,
@@ -374,4 +373,3 @@ pub enum ViewportUpdateMode {
     Once,
     Disabled,
 }
-

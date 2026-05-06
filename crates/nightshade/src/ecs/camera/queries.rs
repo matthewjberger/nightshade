@@ -27,10 +27,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 
     let projection = match &camera.projection {
         crate::ecs::world::components::Projection::Perspective(persp) => {
-            let constrained = world
-                .core
-                .get_constrained_aspect(entity)
-                .map(|c| c.0);
+            let constrained = world.core.get_constrained_aspect(entity).map(|c| c.0);
             let aspect_ratio = constrained
                 .or(persp.aspect_ratio)
                 .or_else(|| query_camera_tile_aspect_ratio(world, entity))
