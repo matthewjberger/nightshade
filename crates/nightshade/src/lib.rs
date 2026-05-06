@@ -813,6 +813,9 @@ pub use systems::*;
 
 #[cfg(feature = "runtime")]
 pub mod prelude {
+    pub use crate::ecs::sync::{
+        EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
+    };
     pub use crate::ecs::window::resources::{
         SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, WindowSpawnRequest,
     };
