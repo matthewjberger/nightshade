@@ -55,7 +55,7 @@ impl Default for ViewportShading {
 
 pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72, 0.72, 0.72, 1.0);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EffectiveShading {
     pub unlit_mode: bool,
     pub bloom_enabled: bool,
