@@ -25,7 +25,7 @@
 //! the selection outline) for that camera only. The world ground grid is
 //! a separate global toggle.
 
-use crate::ecs::graphics::resources::Graphics;
+use crate::ecs::graphics::resources::{ColorGrading, DepthOfField, Graphics};
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
@@ -67,6 +67,30 @@ pub struct EffectiveShading {
     pub flat_shading_color: Option<nalgebra_glm::Vec4>,
     pub shadow_depth_enabled: bool,
     pub lines_enabled: bool,
+    pub color_grading: ColorGrading,
+    pub depth_of_field: DepthOfField,
+    pub bloom_intensity: f32,
+    pub bloom_threshold: f32,
+    pub bloom_knee: f32,
+    pub bloom_filter_radius: f32,
+    pub ssao_radius: f32,
+    pub ssao_bias: f32,
+    pub ssao_intensity: f32,
+    pub ssao_sample_count: u32,
+    pub ssao_visualization: bool,
+    pub ssao_blur_depth_threshold: f32,
+    pub ssao_blur_normal_power: f32,
+    pub ssgi_radius: f32,
+    pub ssgi_intensity: f32,
+    pub ssgi_max_steps: u32,
+    pub ssr_max_steps: u32,
+    pub ssr_thickness: f32,
+    pub ssr_max_distance: f32,
+    pub ssr_stride: f32,
+    pub ssr_fade_start: f32,
+    pub ssr_fade_end: f32,
+    pub ssr_intensity: f32,
+    pub ambient_light: [f32; 4],
 }
 
 impl EffectiveShading {
@@ -83,11 +107,74 @@ impl EffectiveShading {
             flat_shading_color: None,
             shadow_depth_enabled: true,
             lines_enabled: graphics.show_normals || graphics.show_bounding_volumes,
+            color_grading: graphics.color_grading,
+            depth_of_field: graphics.depth_of_field,
+            bloom_intensity: graphics.bloom_intensity,
+            bloom_threshold: graphics.bloom_threshold,
+            bloom_knee: graphics.bloom_knee,
+            bloom_filter_radius: graphics.bloom_filter_radius,
+            ssao_radius: graphics.ssao_radius,
+            ssao_bias: graphics.ssao_bias,
+            ssao_intensity: graphics.ssao_intensity,
+            ssao_sample_count: graphics.ssao_sample_count,
+            ssao_visualization: graphics.ssao_visualization,
+            ssao_blur_depth_threshold: graphics.ssao_blur_depth_threshold,
+            ssao_blur_normal_power: graphics.ssao_blur_normal_power,
+            ssgi_radius: graphics.ssgi_radius,
+            ssgi_intensity: graphics.ssgi_intensity,
+            ssgi_max_steps: graphics.ssgi_max_steps,
+            ssr_max_steps: graphics.ssr_max_steps,
+            ssr_thickness: graphics.ssr_thickness,
+            ssr_max_distance: graphics.ssr_max_distance,
+            ssr_stride: graphics.ssr_stride,
+            ssr_fade_start: graphics.ssr_fade_start,
+            ssr_fade_end: graphics.ssr_fade_end,
+            ssr_intensity: graphics.ssr_intensity,
+            ambient_light: graphics.ambient_light,
         }
     }
 
-    pub fn for_camera(graphics: &Graphics, shading: &ViewportShading) -> Self {
+    pub fn for_camera(
+        graphics: &Graphics,
+        shading: &ViewportShading,
+        post_process: Option<&CameraPostProcess>,
+    ) -> Self {
         let mut effective = Self::from_graphics(graphics);
+        if let Some(overrides) = post_process {
+            if let Some(cg) = overrides.color_grading {
+                effective.color_grading = cg;
+            }
+            if let Some(dof) = overrides.depth_of_field {
+                effective.depth_of_field = dof;
+            }
+            if let Some(value) = overrides.bloom_intensity {
+                effective.bloom_intensity = value;
+            }
+            if let Some(value) = overrides.bloom_threshold {
+                effective.bloom_threshold = value;
+            }
+            if let Some(value) = overrides.bloom_knee {
+                effective.bloom_knee = value;
+            }
+            if let Some(value) = overrides.bloom_filter_radius {
+                effective.bloom_filter_radius = value;
+            }
+            if let Some(value) = overrides.ssao_intensity {
+                effective.ssao_intensity = value;
+            }
+            if let Some(value) = overrides.ssao_radius {
+                effective.ssao_radius = value;
+            }
+            if let Some(value) = overrides.ssgi_intensity {
+                effective.ssgi_intensity = value;
+            }
+            if let Some(value) = overrides.ssr_intensity {
+                effective.ssr_intensity = value;
+            }
+            if let Some(value) = overrides.ambient_light {
+                effective.ambient_light = value;
+            }
+        }
         match shading.mode {
             ShadingMode::Rendered => {}
             ShadingMode::Solid => {
@@ -143,8 +230,52 @@ impl Default for EffectiveShading {
             flat_shading_color: None,
             shadow_depth_enabled: true,
             lines_enabled: false,
+            color_grading: ColorGrading::default(),
+            depth_of_field: DepthOfField::default(),
+            bloom_intensity: 0.08,
+            bloom_threshold: 1.0,
+            bloom_knee: 0.5,
+            bloom_filter_radius: 0.005,
+            ssao_radius: 0.5,
+            ssao_bias: 0.025,
+            ssao_intensity: 1.0,
+            ssao_sample_count: 64,
+            ssao_visualization: false,
+            ssao_blur_depth_threshold: 0.005,
+            ssao_blur_normal_power: 8.0,
+            ssgi_radius: 2.0,
+            ssgi_intensity: 1.0,
+            ssgi_max_steps: 16,
+            ssr_max_steps: 64,
+            ssr_thickness: 0.3,
+            ssr_max_distance: 50.0,
+            ssr_stride: 1.0,
+            ssr_fade_start: 0.8,
+            ssr_fade_end: 1.0,
+            ssr_intensity: 1.0,
+            ambient_light: [0.1, 0.1, 0.1, 1.0],
         }
     }
+}
+
+/// Per-camera post-process parameter overrides. Anything left as
+/// `None` (or `Default`) inherits the corresponding global value
+/// from `Graphics`. The renderer resolves overrides into
+/// `graphics.active_view` per camera each frame so passes read a
+/// single set of resolved values.
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CameraPostProcess {
+    pub color_grading: Option<ColorGrading>,
+    pub depth_of_field: Option<DepthOfField>,
+    pub bloom_intensity: Option<f32>,
+    pub bloom_threshold: Option<f32>,
+    pub bloom_knee: Option<f32>,
+    pub bloom_filter_radius: Option<f32>,
+    pub ssao_intensity: Option<f32>,
+    pub ssao_radius: Option<f32>,
+    pub ssgi_intensity: Option<f32>,
+    pub ssr_intensity: Option<f32>,
+    pub ambient_light: Option<[f32; 4]>,
 }
 
 /// Update mode for a camera's viewport tile, mirroring Godot's

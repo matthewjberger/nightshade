@@ -23,8 +23,8 @@ pub mod components {
     pub use crate::ecs::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
-        Camera, OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode,
-        Smoothing, ViewportShading, ViewportUpdateMode,
+        Camera, CameraPostProcess, OrthographicCamera, PanOrbitCamera, PerspectiveCamera,
+        Projection, ShadingMode, Smoothing, ViewportShading, ViewportUpdateMode,
     };
 
     pub use crate::ecs::decal::components::Decal;
@@ -162,6 +162,7 @@ freecs::ecs! {
             third_person_camera: crate::ecs::camera::components::ThirdPersonCamera => THIRD_PERSON_CAMERA,
             viewport_shading: crate::ecs::camera::components::ViewportShading => VIEWPORT_SHADING,
             viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
+            camera_post_process: crate::ecs::camera::components::CameraPostProcess => CAMERA_POST_PROCESS,
             light: crate::ecs::light::components::Light => LIGHT,
             lines: crate::ecs::lines::components::Lines => LINES,
             visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
