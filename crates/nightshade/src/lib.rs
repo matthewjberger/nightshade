@@ -196,7 +196,7 @@
 //!
 //! - **`egui`** - Immediate mode GUI. Enables `fn ui()` on State trait.
 //!
-//! - **`shell`** - Developer console with command registration. Requires `egui`.
+//! - **`shell`** - Developer console with command registration. Renders via the retained UI; enable `egui` to also expose the legacy `shell_ui` overlay.
 //!
 //! - **`audio`** - Audio playback using Kira.
 //!
@@ -1154,10 +1154,10 @@ pub mod prelude {
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use steamworks::SteamId;
 
+    #[cfg(all(feature = "shell", feature = "egui"))]
+    pub use crate::shell::shell_ui;
     #[cfg(feature = "shell")]
-    pub use crate::shell::{
-        Command, CommandRegistry, OutputLine, ShellState, shell_retained_ui, shell_ui,
-    };
+    pub use crate::shell::{Command, CommandRegistry, OutputLine, ShellState, shell_retained_ui};
 
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::ecs::file_watcher::FileWatcher;
