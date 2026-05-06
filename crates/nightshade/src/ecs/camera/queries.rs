@@ -27,8 +27,13 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 
     let projection = match &camera.projection {
         crate::ecs::world::components::Projection::Perspective(persp) => {
-            let aspect_ratio = persp
-                .aspect_ratio
+            let constrained = world
+                .core
+                .get_constrained_aspect(entity)
+                .map(|c| c.0);
+            let aspect_ratio = constrained
+                .or(persp.aspect_ratio)
+                .or_else(|| query_camera_tile_aspect_ratio(world, entity))
                 .or_else(|| query_window_aspect_ratio(world))
                 .unwrap_or(16.0 / 9.0);
             persp.matrix_with_aspect(aspect_ratio)
@@ -43,6 +48,14 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
         projection,
         view,
     })
+}
+
+pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f32> {
+    let rect = world.resources.window.camera_tile_rects.get(&entity)?;
+    if rect.height <= 0.0 {
+        return None;
+    }
+    Some(rect.width / rect.height)
 }
 
 pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {

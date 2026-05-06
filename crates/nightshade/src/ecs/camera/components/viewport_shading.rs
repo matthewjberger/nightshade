@@ -272,6 +272,22 @@ impl Default for EffectiveShading {
     }
 }
 
+/// Locks a camera's projection aspect to a fixed value regardless
+/// of the tile size it renders into. The renderer fits a
+/// constrained-aspect inner rect inside the tile and letterboxes /
+/// pillarboxes the remaining bars in the tile background. Without
+/// this component the camera's projection aspect matches the tile
+/// rect (the default behavior). With it, the aspect stays
+/// constant and the rendered region is centered inside the tile.
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ConstrainedAspect(pub f32);
+
+impl Default for ConstrainedAspect {
+    fn default() -> Self {
+        Self(16.0 / 9.0)
+    }
+}
+
 /// Per-camera post-process parameter overrides. Anything left as
 /// `None` (or `Default`) inherits the corresponding global value
 /// from `Graphics`. The renderer resolves overrides into
@@ -292,8 +308,7 @@ pub struct CameraPostProcess {
     pub ambient_light: Option<[f32; 4]>,
 }
 
-/// Update mode for a camera's viewport tile, mirroring Godot's
-/// `SubViewport.update_mode` and Unreal's per-viewport "Realtime" toggle.
+/// Update mode for a camera's viewport tile.
 ///
 /// - `Always`: re-render every frame regardless of dirty state.
 /// - `WhenVisible`: same as `Always` for now (the engine treats any camera
