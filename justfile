@@ -12,20 +12,6 @@ template_repo := "https://github.com/matthewjberger/nightshade-template.git"
 build:
     cargo build -r
 
-# Builds the example editor plugin (Windows)
-[windows]
-build-editor-plugin:
-    cargo build -p editor-plugin --target wasm32-wasip1 --release --manifest-path apps/editor/example-plugin/Cargo.toml
-    New-Item -ItemType Directory -Force -Path target/release/plugins | Out-Null
-    Copy-Item apps/editor/example-plugin/target/wasm32-wasip1/release/editor_plugin.wasm target/release/plugins/
-
-# Builds the example editor plugin (Unix)
-[unix]
-build-editor-plugin:
-    cargo build -p editor-plugin --target wasm32-wasip1 --release --manifest-path apps/editor/example-plugin/Cargo.toml
-    mkdir -p target/release/plugins
-    cp apps/editor/example-plugin/target/wasm32-wasip1/release/editor_plugin.wasm target/release/plugins/
-
 # Runs cargo check and format check
 check:
     cargo check --all --tests
