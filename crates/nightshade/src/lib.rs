@@ -82,7 +82,7 @@
 //! Entities are created with bitflags specifying their components:
 //!
 //! ```ignore
-//! let entity = world.spawn_entities(
+//! let entity = spawn_entities(world,
 //!     LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | RENDER_MESH,
 //!     1
 //! )[0];
@@ -263,7 +263,7 @@
 //! world.resources.audio.play(sound);
 //!
 //! // 3D spatial audio
-//! let source = world.spawn_entities(AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let source = spawn_entities(world, AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.core.set_audio_source(source, AudioSource::new(sound).with_spatial(true));
 //! world.core.set_local_transform(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
 //! ```
@@ -272,7 +272,7 @@
 //!
 //! ```ignore
 //! // Dynamic rigid body with collider
-//! let entity = world.spawn_entities(
+//! let entity = spawn_entities(world,
 //!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
 //!     1
 //! )[0];
@@ -281,7 +281,7 @@
 //! world.core.set_local_transform(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
 //!
 //! // Static floor
-//! let floor = world.spawn_entities(RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let floor = spawn_entities(world, RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.core.set_rigid_body(floor, RigidBodyComponent::new_static());
 //! world.core.set_collider(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
 //!
@@ -594,7 +594,7 @@
 //!
 //! ```ignore
 //! // Create debug lines entity
-//! let debug = world.spawn_entities(LINES, 1)[0];
+//! let debug = spawn_entities(world, LINES, 1)[0];
 //!
 //! fn run_systems(&mut self, world: &mut World) {
 //!     if let Some(lines) = world.core.get_lines_mut(self.debug) {
@@ -618,7 +618,7 @@
 //! ### Particles
 //!
 //! ```ignore
-//! let emitter = world.spawn_entities(
+//! let emitter = spawn_entities(world,
 //!     PARTICLE_EMITTER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
 //!     1
 //! )[0];
@@ -665,7 +665,7 @@
 //! spawn_water_plane_at(world, Vec3::new(0.0, 0.0, 0.0), 100.0);
 //!
 //! // Or with full control
-//! let water = world.spawn_entities(WATER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let water = spawn_entities(world, WATER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.core.set_water(water, Water {
 //!     color: Vec3::new(0.0, 0.3, 0.5),
 //!     opacity: 0.8,
@@ -678,7 +678,7 @@
 //! ### Decals
 //!
 //! ```ignore
-//! let decal = world.spawn_entities(
+//! let decal = spawn_entities(world,
 //!     DECAL | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
 //!     1
 //! )[0];
@@ -1108,4 +1108,75 @@ pub mod prelude {
     pub use crate::run::launch_android;
     #[cfg(all(target_os = "android", feature = "android"))]
     pub use android_activity::AndroidApp;
+    // === decap re-exports (generated) ===
+    pub use crate::ecs::transform::systems::{
+        assign_local_transform, mutate_local_transform, update_parent,
+        validate_and_rebuild_children_cache,
+    };
+    pub use crate::ecs::ui::widgets::world_canvas::{
+        ui_canvas_arc, ui_canvas_circle, ui_canvas_circle_stroke, ui_canvas_clear,
+        ui_canvas_cubic_bezier, ui_canvas_hit_test, ui_canvas_line, ui_canvas_polyline,
+        ui_canvas_quadratic_bezier, ui_canvas_rect, ui_canvas_rect_stroke, ui_canvas_text,
+    };
+    pub use crate::ecs::ui::widgets::world_data::{
+        ui_data_grid_clear_filter, ui_data_grid_populate, ui_data_grid_populate_fn,
+        ui_data_grid_selection_changed, ui_data_grid_set_cell, ui_data_grid_set_filter,
+        ui_data_grid_set_row_count, ui_data_grid_sort_changed, ui_data_grid_start_edit,
+        ui_data_grid_stop_edit, ui_rich_text_editor_set_color, ui_rich_text_editor_set_value,
+        ui_rich_text_editor_toggle_bold, ui_rich_text_editor_toggle_italic,
+        ui_rich_text_editor_toggle_style, ui_rich_text_editor_toggle_underline,
+        ui_text_area_set_syntax, ui_text_area_set_value,
+    };
+    pub use crate::ecs::ui::widgets::world_interaction::{
+        ui_add_validation_rule, ui_bubbled_events_for, ui_clear_error, ui_close_context_menus,
+        ui_command_palette_clear, ui_command_palette_rebuild_results, ui_command_palette_register,
+        ui_context_menu_get_checked, ui_context_menu_set_checked, ui_context_menu_widget_content,
+        ui_drag_value_set_value, ui_has_error, ui_is_valid, ui_mark_children_dirty,
+        ui_mark_layout_dirty, ui_mark_render_dirty, ui_rich_text_set_span_color,
+        ui_rich_text_set_span_text, ui_set_error, ui_set_selected, ui_set_toast_corner,
+        ui_set_validation_rules, ui_show_command_palette, ui_show_context_menu, ui_show_modal,
+        ui_show_toast, ui_tick_toasts, ui_tree_node_mark_loaded, ui_tree_node_set_expanded,
+        ui_tree_view_clear_filter, ui_tree_view_clear_selection, ui_tree_view_scroll_to_node,
+        ui_tree_view_select_node, ui_tree_view_set_filter, ui_validate, ui_widget_content,
+    };
+    pub use crate::ecs::ui::widgets::world_layout::{
+        ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for, ui_focus,
+        ui_is_disabled, ui_label_text, ui_node_effectively_visible, ui_node_visible,
+        ui_read_system_clipboard, ui_rebuild_children, ui_rect, ui_release_image_layer,
+        ui_set_clipboard_text, ui_set_disabled, ui_set_disabled_recursive, ui_set_icon,
+        ui_set_label_text, ui_set_test_id, ui_set_text, ui_set_tooltip_entity, ui_set_tooltip_text,
+        ui_set_visible, ui_set_visible_exclusive, ui_size, ui_text_slot_for_entity,
+        ui_upload_image,
+    };
+    pub use crate::ecs::ui::widgets::world_reactive::{
+        ui_announce, ui_announcements, ui_clicked, ui_data_grid_enable_filters,
+        ui_data_grid_set_filtered_indices, ui_date_picker_set_value, ui_multi_select_set_selected,
+        ui_set_accessible_label, ui_set_reduced_motion, ui_set_state_active,
+    };
+    pub use crate::ecs::ui::widgets::world_state::{
+        measure_ui_text_width, ui_breadcrumb_set_segments, ui_button_set_text, ui_changed,
+        ui_checkbox_changed, ui_checkbox_value, ui_collapsing_header_open, ui_color_picker_changed,
+        ui_color_picker_color, ui_color_picker_set_value, ui_drag_value, ui_drag_value_changed,
+        ui_dropdown_selected, ui_dropdown_selected_changed, ui_dropdown_set_value,
+        ui_panel_set_header_visible, ui_panel_set_pinned, ui_pointer_over_widget,
+        ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
+        ui_range_slider_set_values, ui_reserved_areas, ui_scroll_area_set_offset,
+        ui_scroll_area_set_snap, ui_slider_set_value, ui_slider_value, ui_slider_value_changed,
+        ui_tab_bar_selected, ui_tab_bar_set_value, ui_text_input_changed, ui_text_input_set_mask,
+        ui_text_input_set_password, ui_text_input_set_value, ui_text_input_submitted,
+        ui_text_input_text, ui_toggle_changed, ui_toggle_set_value, ui_toggle_value,
+        ui_tree_view_selected, ui_virtual_list_populate, ui_virtual_list_populate_fn,
+        ui_virtual_list_selection_changed, ui_virtual_list_set_count, widget,
+    };
+    pub use crate::ecs::ui::widgets::world_tiles::{
+        build_tiles, spawn_tile_pane_entity, ui_tile_active_pane, ui_tile_add_pane,
+        ui_tile_add_pane_to, ui_tile_load_layout, ui_tile_pane_content, ui_tile_pane_title,
+        ui_tile_remove, ui_tile_save_layout, ui_tile_set_active, ui_tile_split,
+        ui_tile_splitter_moved, ui_tile_tab_activated, ui_tile_tab_closed,
+    };
+    pub use crate::ecs::world::commands::{
+        queue_ecs_command, queue_render_command, register_material, set_cursor_locked,
+        set_cursor_visible, spawn_entities, spawn_entities_ui,
+    };
+    // === decap re-exports end ===
 }

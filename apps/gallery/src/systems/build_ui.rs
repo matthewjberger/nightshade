@@ -107,8 +107,7 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
         ("Toggle Fullscreen", "F11", "View"),
         ("Quit", "Ctrl+Q", "App"),
     ] {
-        tree.world_mut()
-            .ui_command_palette_register(palette_entity, label, shortcut, category);
+        ui_command_palette_register(tree.world_mut(), palette_entity, label, shortcut, category);
     }
 
     tree.pop_parent();
@@ -169,7 +168,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     let mut focus_request: Option<Entity> = None;
     let mut palette_request: Option<Entity> = None;
     let mut button_toast: Option<(String, ToastSeverity)> = None;
-    for event in world.ui_events() {
+    for event in ui_events(world) {
         match event {
             UiEvent::ButtonClicked(entity) => {
                 let mut consumed = false;
@@ -203,7 +202,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                         consumed = true;
                     }
                 }
-                if !consumed && let Some(data) = world.widget::<UiButtonData>(*entity) {
+                if !consumed && let Some(data) = widget::<UiButtonData>(world, *entity) {
                     let text_slot = data.text_slot;
                     let label = world
                         .resources
@@ -242,7 +241,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     if let Some(index) = new_active {
         let prev = gallery.resources.handles.active_screen;
         if index != prev {
-            world.ui_set_visible(screen_roots[prev], false);
+            ui_set_visible(world, screen_roots[prev], false);
             if let Some(color) = world.ui.get_ui_node_color_mut(nav_indicators[prev]) {
                 color.colors[UiBase::INDEX] = Some(INACTIVE_INDICATOR);
             }
@@ -251,7 +250,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             {
                 color.colors[UiBase::INDEX] = Some(LIGHT_GRAY);
             }
-            world.ui_set_visible(screen_roots[index], true);
+            ui_set_visible(world, screen_roots[index], true);
             if let Some(color) = world.ui.get_ui_node_color_mut(nav_indicators[index]) {
                 color.colors[UiBase::INDEX] = Some(ACTIVE_INDICATOR);
             }
@@ -264,7 +263,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
         }
     }
     if let Some(target) = focus_request {
-        world.ui_focus(target);
+        ui_focus(world, target);
     }
     let ctrl_p = world
         .resources
@@ -282,17 +281,16 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                 .keyboard
                 .is_key_pressed(winit::keyboard::KeyCode::ControlRight));
     if ctrl_p && let Some(palette) = palette_entity {
-        world.ui_show_command_palette(palette);
+        ui_show_command_palette(world, palette);
     }
     if let Some(palette) = palette_request {
-        world.ui_show_command_palette(palette);
+        ui_show_command_palette(world, palette);
     }
     if let (Some(toggle), Some(slider)) = (disable_toggle, disabled_slider) {
-        let disabled = world
-            .widget::<UiToggleData>(toggle)
+        let disabled = widget::<UiToggleData>(world, toggle)
             .map(|d| d.value)
             .unwrap_or(false);
-        world.ui_set_disabled(slider, disabled);
+        ui_set_disabled(world, slider, disabled);
     }
     if submit_count_increment > 0 {
         gallery.resources.handles.submit_count += submit_count_increment;
@@ -308,16 +306,16 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
         }
     }
     if let Some(dialog) = show_modal {
-        world.ui_show_modal(dialog);
+        ui_show_modal(world, dialog);
     }
     if let Some(dialog) = show_confirm {
-        world.ui_show_modal(dialog);
+        ui_show_modal(world, dialog);
     }
     if let Some((message, severity)) = toast {
-        world.ui_show_toast(message, severity, 2.0);
+        ui_show_toast(world, message, severity, 2.0);
     }
     if let Some((message, severity)) = button_toast {
-        world.ui_show_toast(&message, severity, 2.0);
+        ui_show_toast(world, &message, severity, 2.0);
     }
 
     if let Some(virtual_list) = gallery.resources.handles.virtual_list {
@@ -335,7 +333,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             .enumerate()
         {
             let item_index = visible_start + pool_index;
-            world.ui_set_text(text_entity, &format!("Item {item_index}"));
+            ui_set_text(world, text_entity, &format!("Item {item_index}"));
         }
     }
 }
@@ -588,9 +586,7 @@ fn build_two_column_card(
 
     tree.push_parent(left_card);
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
     tree.build_ui(content, left);
@@ -608,9 +604,7 @@ fn build_two_column_card(
 
     tree.push_parent(right_card);
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
     tree.build_ui(content, right);
@@ -724,9 +718,7 @@ fn build_buttons_screen(
     let ds = disabled_slider_cell.clone();
 
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
     tree.build_ui(content, |ui| {
@@ -806,9 +798,7 @@ fn build_inputs_screen(
     tree.push_parent(card);
 
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
 
@@ -908,9 +898,7 @@ fn build_pickers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity) {
     tree.push_parent(card);
 
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
 
@@ -984,9 +972,7 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
     tree.push_parent(card);
 
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
 
@@ -1031,7 +1017,7 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         });
         let tile_container = tile_container_cell.get();
         for title in ["Scene", "Inspector", "Console"] {
-            let _ = ui.world_mut().ui_tile_add_pane(tile_container, title);
+            let _ = ui_tile_add_pane(ui.world_mut(), tile_container, title);
         }
 
         ui.spacing(8.0);
@@ -1067,9 +1053,7 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
     tree.pop_parent();
 
     let modal_dialog = tree.add_modal_dialog("Custom Modal", 380.0, 220.0);
-    let modal_content = tree
-        .world_mut()
-        .widget::<UiModalDialogData>(modal_dialog)
+    let modal_content = widget::<UiModalDialogData>(tree.world_mut(), modal_dialog)
         .map(|data| data.content_entity)
         .unwrap_or(modal_dialog);
     tree.build_ui(modal_content, |inner| {
@@ -1169,12 +1153,11 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                 ("name", "str", "Player"),
                 ("tag", "str", "main"),
             ];
-            ui.world_mut()
-                .ui_data_grid_set_row_count(grid, sample_rows.len());
+            ui_data_grid_set_row_count(ui.world_mut(), grid, sample_rows.len());
             for (row, (name, ty, value)) in sample_rows.iter().enumerate() {
-                ui.world_mut().ui_data_grid_set_cell(grid, row, 0, name);
-                ui.world_mut().ui_data_grid_set_cell(grid, row, 1, ty);
-                ui.world_mut().ui_data_grid_set_cell(grid, row, 2, value);
+                ui_data_grid_set_cell(ui.world_mut(), grid, row, 0, name);
+                ui_data_grid_set_cell(ui.world_mut(), grid, row, 1, ty);
+                ui_data_grid_set_cell(ui.world_mut(), grid, row, 2, value);
             }
 
             ui.spacing(8.0);
@@ -1194,7 +1177,7 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                 vl_cell.set(vl);
             });
             let vl = virtual_list_cell.get();
-            ui.world_mut().ui_virtual_list_set_count(vl, 64);
+            ui_virtual_list_set_count(ui.world_mut(), vl, 64);
             let pool_containers: Vec<Entity> = ui
                 .world_mut()
                 .ui
@@ -1231,18 +1214,14 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                 .entity();
             ui.tree().push_parent(tree_view_box);
             let tree_view = ui.tree().add_tree_view(false);
-            let tv_content = ui
-                .world_mut()
-                .widget::<UiTreeViewData>(tree_view)
+            let tv_content = widget::<UiTreeViewData>(ui.world_mut(), tree_view)
                 .map(|d| d.content_entity)
                 .unwrap();
             let project = ui
                 .tree()
                 .add_tree_node(tree_view, tv_content, "Project", 0, 0);
-            ui.world_mut().ui_tree_node_set_expanded(project, true);
-            let project_children = ui
-                .world_mut()
-                .widget::<UiTreeNodeData>(project)
+            ui_tree_node_set_expanded(ui.world_mut(), project, true);
+            let project_children = widget::<UiTreeNodeData>(ui.world_mut(), project)
                 .map(|d| d.children_container)
                 .unwrap();
             ui.tree()
@@ -1252,10 +1231,8 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
             let scenes = ui
                 .tree()
                 .add_tree_node(tree_view, project_children, "Scenes", 1, 3);
-            ui.world_mut().ui_tree_node_set_expanded(scenes, true);
-            let scene_children = ui
-                .world_mut()
-                .widget::<UiTreeNodeData>(scenes)
+            ui_tree_node_set_expanded(ui.world_mut(), scenes, true);
+            let scene_children = widget::<UiTreeNodeData>(ui.world_mut(), scenes)
                 .map(|d| d.children_container)
                 .unwrap();
             ui.tree()
@@ -1296,9 +1273,7 @@ fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, En
     tree.push_parent(card);
 
     let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = tree
-        .world_mut()
-        .widget::<UiScrollAreaData>(scroll)
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
         .map(|d| d.content_entity)
         .unwrap();
 

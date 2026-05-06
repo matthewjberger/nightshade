@@ -80,6 +80,7 @@
 //! }
 //! ```
 
+use crate::prelude::*;
 #[cfg(feature = "egui")]
 mod egui_support;
 #[cfg(all(feature = "egui", not(target_arch = "wasm32")))]

@@ -6,6 +6,7 @@ use crate::ecs::world::{
     components::{GlobalTransform, Parent},
 };
 
+use crate::prelude::*;
 pub fn run_systems(world: &mut World) {
     let _span = tracing::info_span!("transform_systems").entered();
     rebuild_children_cache_if_needed(world);
@@ -14,79 +15,74 @@ pub fn run_systems(world: &mut World) {
 
 fn rebuild_children_cache_if_needed(world: &mut World) {
     if !world.resources.transform_state.children_cache_valid {
-        world.validate_and_rebuild_children_cache();
+        validate_and_rebuild_children_cache(world);
     }
 }
 
-impl World {
-    pub fn assign_local_transform(
-        &mut self,
-        entity: freecs::Entity,
-        local_transform: crate::ecs::transform::components::LocalTransform,
-    ) {
-        self.core.set_local_transform(entity, local_transform);
-        mark_local_transform_dirty(self, entity);
+pub fn assign_local_transform(
+    world: &mut World,
+    entity: freecs::Entity,
+    local_transform: crate::ecs::transform::components::LocalTransform,
+) {
+    world.core.set_local_transform(entity, local_transform);
+    mark_local_transform_dirty(world, entity);
+}
+
+pub fn mutate_local_transform(
+    world: &mut World,
+    entity: freecs::Entity,
+) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
+    mark_local_transform_dirty(world, entity);
+    world.core.get_local_transform_mut(entity)
+}
+
+pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Parent>) {
+    let old_parent_entity = world.core.get_parent(child).and_then(|p| p.0);
+
+    if let Some(old_parent_entity) = old_parent_entity
+        && let Some(children) = world
+            .resources
+            .transform_state
+            .children_cache
+            .get_mut(&old_parent_entity)
+    {
+        children.retain(|&e| e != child);
     }
 
-    pub fn mark_local_transform_dirty(&mut self, entity: freecs::Entity) {
-        mark_local_transform_dirty(self, entity);
-    }
-
-    pub fn mutate_local_transform(
-        &mut self,
-        entity: freecs::Entity,
-    ) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
-        mark_local_transform_dirty(self, entity);
-        self.core.get_local_transform_mut(entity)
-    }
-
-    pub fn update_parent(&mut self, child: freecs::Entity, new_parent: Option<Parent>) {
-        let old_parent_entity = self.core.get_parent(child).and_then(|p| p.0);
-
-        if let Some(old_parent_entity) = old_parent_entity
-            && let Some(children) = self
+    if let Some(new_parent) = new_parent {
+        world.core.set_parent(child, new_parent);
+        if let Some(parent_entity) = new_parent.0 {
+            world
                 .resources
                 .transform_state
                 .children_cache
-                .get_mut(&old_parent_entity)
-        {
-            children.retain(|&e| e != child);
+                .entry(parent_entity)
+                .or_default()
+                .push(child);
         }
-
-        if let Some(new_parent) = new_parent {
-            self.core.set_parent(child, new_parent);
-            if let Some(parent_entity) = new_parent.0 {
-                self.resources
-                    .transform_state
-                    .children_cache
-                    .entry(parent_entity)
-                    .or_default()
-                    .push(child);
-            }
-        } else {
-            self.core.remove_parent(child);
-        }
-
-        self.resources.transform_state.children_cache_valid = false;
-        self.mark_local_transform_dirty(child);
+    } else {
+        world.core.remove_parent(child);
     }
 
-    pub fn validate_and_rebuild_children_cache(&mut self) {
-        self.resources.transform_state.children_cache.clear();
+    world.resources.transform_state.children_cache_valid = false;
+    mark_local_transform_dirty(world, child);
+}
 
-        let children_cache = &mut self.resources.transform_state.children_cache;
-        self.core.query().with(PARENT).iter(|child, table, idx| {
-            if let Some(parent_entity) = table.parent[idx].0 {
-                children_cache.entry(parent_entity).or_default().push(child);
-            }
-        });
+pub fn validate_and_rebuild_children_cache(world: &mut World) {
+    world.resources.transform_state.children_cache.clear();
 
-        for children in self.resources.transform_state.children_cache.values_mut() {
-            children.sort_by_key(|entity| entity.id);
+    let children_cache = &mut world.resources.transform_state.children_cache;
+    world.core.query().with(PARENT).iter(|child, table, idx| {
+        if let Some(parent_entity) = table.parent[idx].0 {
+            children_cache.entry(parent_entity).or_default().push(child);
         }
+    });
 
-        self.resources.transform_state.children_cache_valid = true;
+    for children in world.resources.transform_state.children_cache.values_mut() {
+        children.sort_by_key(|entity| entity.id);
     }
+
+    world.resources.transform_state.children_cache_valid = true;
 }
 
 pub fn update_global_transforms_system(world: &mut World) {

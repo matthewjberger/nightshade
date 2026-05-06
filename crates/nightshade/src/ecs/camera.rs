@@ -15,7 +15,7 @@
 //! use nightshade::ecs::camera::{Camera, Projection, PerspectiveCamera};
 //! use nightshade::ecs::world::CAMERA;
 //!
-//! let entity = world.spawn_entities(CAMERA, 1)[0];
+//! let entity = spawn_entities(world, CAMERA, 1)[0];
 //! world.core.set_camera(entity, Camera {
 //!     projection: Projection::Perspective(PerspectiveCamera {
 //!         y_fov_rad: 60.0_f32.to_radians(),
@@ -41,7 +41,7 @@
 //! use nightshade::ecs::camera::{Camera, PanOrbitCamera};
 //! use nightshade::ecs::world::PAN_ORBIT_CAMERA;
 //!
-//! let entity = world.spawn_entities(PAN_ORBIT_CAMERA, 1)[0];
+//! let entity = spawn_entities(world, PAN_ORBIT_CAMERA, 1)[0];
 //! world.core.set_camera(entity, Camera::default());
 //! world.core.set_pan_orbit_camera(entity, PanOrbitCamera::new(
 //!     Vec3::zeros(),  // Focus point

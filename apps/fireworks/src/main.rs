@@ -133,7 +133,8 @@ impl State for FireworksDemo {
             world.resources.xr.initial_player_yaw = Some(std::f32::consts::PI);
         }
 
-        let camera = world.spawn_entities(
+        let camera = spawn_entities(
+            world,
             LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
             1,
         )[0];
@@ -828,7 +829,7 @@ impl FireworksDemo {
             let direction = Vec3::new(point.x, point.y, 0.0).normalize();
             let speed = scale * point_magnitude * rng.random_range(0.9..1.1);
 
-            let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+            let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
 
             let mut emitter = ParticleEmitter::firework_explosion(pos, color, particles_per_point);
             emitter.burst_count = particles_per_point;
@@ -869,19 +870,19 @@ impl FireworksDemo {
     ) {
         let mut rng = rand::rng();
 
-        let flash_entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let flash_entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         let flash_emitter = ParticleEmitter::flash_burst(pos);
         world.core.set_particle_emitter(flash_entity, flash_emitter);
 
         match explosion_type {
             ExplosionType::Peony => {
                 let particle_count: u32 = rng.random_range(500..900);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, particle_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 if let Some(secondary) = secondary_color {
-                    let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter2 =
                         ParticleEmitter::firework_explosion(pos, secondary, particle_count / 2);
                     emitter2.initial_velocity_min *= 0.7;
@@ -891,19 +892,19 @@ impl FireworksDemo {
                 }
 
                 let spark_count: u32 = rng.random_range(100..200);
-                let spark_entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let spark_entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let spark_emitter = ParticleEmitter::firework_glitter(pos, spark_count);
                 world.core.set_particle_emitter(spark_entity, spark_emitter);
             }
             ExplosionType::Chrysanthemum => {
                 let particle_count: u32 = rng.random_range(700..1200);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_chrysanthemum(pos, color, particle_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 if let Some(secondary) = secondary_color {
                     let inner_count: u32 = rng.random_range(300..500);
-                    let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter2 =
                         ParticleEmitter::firework_explosion(pos, secondary, inner_count);
                     emitter2.initial_velocity_min *= 0.5;
@@ -913,12 +914,12 @@ impl FireworksDemo {
             }
             ExplosionType::Willow => {
                 let particle_count: u32 = rng.random_range(600..1000);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_willow(pos, color, particle_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 let tip_count: u32 = rng.random_range(150..300);
-                let tip_entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let tip_entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let tip_emitter = ParticleEmitter::firework_glitter(pos, tip_count);
                 world.core.set_particle_emitter(tip_entity, tip_emitter);
             }
@@ -927,7 +928,7 @@ impl FireworksDemo {
 
                 for angle_index in 0..4 {
                     let angle = (angle_index as f32) * std::f32::consts::TAU / 4.0;
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter = ParticleEmitter::firework_ring(pos, color, particle_count);
                     emitter.direction = Vec3::new(angle.sin(), 0.0, angle.cos());
                     world.core.set_particle_emitter(entity, emitter);
@@ -935,14 +936,14 @@ impl FireworksDemo {
 
                 if let Some(secondary) = secondary_color {
                     let center_count: u32 = rng.random_range(200..400);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let emitter = ParticleEmitter::firework_explosion(pos, secondary, center_count);
                     world.core.set_particle_emitter(entity, emitter);
                 }
             }
             ExplosionType::MultiBreak => {
                 let main_count: u32 = rng.random_range(400..600);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, main_count);
                 world.core.set_particle_emitter(entity, emitter);
 
@@ -958,7 +959,7 @@ impl FireworksDemo {
                         1 => secondary_color.unwrap_or(Self::random_color()),
                         _ => Self::random_color(),
                     };
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter =
                         ParticleEmitter::firework_explosion(pos + offset, sub_color, sub_count);
                     emitter.initial_velocity_min *= 0.6;
@@ -969,18 +970,18 @@ impl FireworksDemo {
             }
             ExplosionType::Glitter => {
                 let main_count: u32 = rng.random_range(500..800);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, main_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 let glitter_count: u32 = rng.random_range(300..500);
-                let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter2 = ParticleEmitter::firework_glitter(pos, glitter_count);
                 world.core.set_particle_emitter(entity2, emitter2);
 
                 if let Some(secondary) = secondary_color {
                     let extra_glitter: u32 = rng.random_range(150..300);
-                    let entity3 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity3 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter3 = ParticleEmitter::firework_glitter(pos, extra_glitter);
                     emitter3.color_gradient = ColorGradient::firework_explosion(secondary);
                     world.core.set_particle_emitter(entity3, emitter3);
@@ -988,17 +989,17 @@ impl FireworksDemo {
             }
             ExplosionType::Crackle => {
                 let main_count: u32 = rng.random_range(400..700);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, main_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 let crackle_count: u32 = rng.random_range(200..400);
-                let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter2 = ParticleEmitter::firework_crackle(pos, crackle_count);
                 world.core.set_particle_emitter(entity2, emitter2);
 
                 let extra_crackle: u32 = rng.random_range(100..200);
-                let entity3 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity3 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let mut emitter3 = ParticleEmitter::firework_crackle(pos, extra_crackle);
                 emitter3.particle_lifetime_min *= 1.5;
                 emitter3.particle_lifetime_max *= 1.5;
@@ -1009,7 +1010,7 @@ impl FireworksDemo {
                 for frond_index in 0..rng.random_range(6..10) {
                     let angle = (frond_index as f32) * std::f32::consts::TAU / 8.0;
                     let tilt = rng.random_range(0.3..0.6);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter = ParticleEmitter::palm_explosion(pos, color, trunk_count);
                     emitter.direction =
                         Vec3::new(angle.sin() * tilt, 1.0 - tilt * 0.5, angle.cos() * tilt)
@@ -1019,7 +1020,7 @@ impl FireworksDemo {
 
                 if let Some(secondary) = secondary_color {
                     let tip_count: u32 = rng.random_range(200..400);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter = ParticleEmitter::firework_glitter(pos, tip_count);
                     emitter.color_gradient = ColorGradient::firework_explosion(secondary);
                     world.core.set_particle_emitter(entity, emitter);
@@ -1027,7 +1028,7 @@ impl FireworksDemo {
             }
             ExplosionType::Crossette => {
                 let main_count: u32 = rng.random_range(400..700);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, main_count);
                 world.core.set_particle_emitter(entity, emitter);
 
@@ -1044,7 +1045,7 @@ impl FireworksDemo {
                     } else {
                         color
                     };
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let emitter =
                         ParticleEmitter::crossette_burst(pos + offset, burst_color, burst_count);
                     world.core.set_particle_emitter(entity, emitter);
@@ -1052,18 +1053,18 @@ impl FireworksDemo {
             }
             ExplosionType::Strobe => {
                 let main_count: u32 = rng.random_range(500..800);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, main_count);
                 world.core.set_particle_emitter(entity, emitter);
 
                 let strobe_count: u32 = rng.random_range(150..300);
-                let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter2 = ParticleEmitter::strobe_effect(pos, strobe_count);
                 world.core.set_particle_emitter(entity2, emitter2);
             }
             ExplosionType::Kamuro => {
                 let particle_count: u32 = rng.random_range(1000..1500);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let mut emitter = ParticleEmitter::firework_willow(pos, color, particle_count);
                 emitter.initial_velocity_min = 20.0;
                 emitter.initial_velocity_max = 35.0;
@@ -1077,7 +1078,7 @@ impl FireworksDemo {
 
                 if let Some(secondary) = secondary_color {
                     let inner_count: u32 = rng.random_range(400..600);
-                    let entity2 = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity2 = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter2 =
                         ParticleEmitter::firework_chrysanthemum(pos, secondary, inner_count);
                     emitter2.initial_velocity_min *= 0.5;
@@ -1090,7 +1091,7 @@ impl FireworksDemo {
                 Self::spawn_shaped_explosion(world, pos, color, &pattern, 20.0, 8);
                 if let Some(secondary) = secondary_color {
                     let glitter_count: u32 = rng.random_range(100..200);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter = ParticleEmitter::firework_glitter(pos, glitter_count);
                     emitter.color_gradient = ColorGradient::firework_explosion(secondary);
                     world.core.set_particle_emitter(entity, emitter);
@@ -1108,7 +1109,7 @@ impl FireworksDemo {
                 let pattern = Self::generate_star_pattern();
                 Self::spawn_shaped_explosion(world, pos, color, &pattern, 20.0, 12);
                 let glitter_count: u32 = rng.random_range(150..250);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_glitter(pos, glitter_count);
                 world.core.set_particle_emitter(entity, emitter);
             }
@@ -1117,7 +1118,7 @@ impl FireworksDemo {
                 Self::spawn_shaped_explosion(world, pos, color, &pattern, 22.0, 10);
                 if let Some(secondary) = secondary_color {
                     let glitter_count: u32 = rng.random_range(150..250);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let mut emitter = ParticleEmitter::firework_glitter(pos, glitter_count);
                     emitter.color_gradient = ColorGradient::firework_explosion(secondary);
                     world.core.set_particle_emitter(entity, emitter);
@@ -1128,7 +1129,7 @@ impl FireworksDemo {
                 Self::spawn_shaped_explosion(world, pos, color, &pattern, 20.0, 10);
                 if let Some(secondary) = secondary_color {
                     let center_count: u32 = rng.random_range(100..200);
-                    let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                    let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                     let emitter = ParticleEmitter::firework_explosion(pos, secondary, center_count);
                     world.core.set_particle_emitter(entity, emitter);
                 }
@@ -1143,7 +1144,7 @@ impl FireworksDemo {
             }
             ExplosionType::SplittingShell => {
                 let initial_burst: u32 = rng.random_range(200..400);
-                let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+                let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
                 let emitter = ParticleEmitter::firework_explosion(pos, color, initial_burst);
                 world.core.set_particle_emitter(entity, emitter);
             }
@@ -1171,7 +1172,7 @@ impl FireworksDemo {
                 angle.sin() * (1.0 - elevation) * speed,
             );
 
-            let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+            let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
             let trail_emitter = ParticleEmitter::firework_shell(pos, velocity);
             world.core.set_particle_emitter(entity, trail_emitter);
 
@@ -1260,7 +1261,7 @@ impl FireworksDemo {
         let explosion_type = Self::random_explosion_type();
         let shell_type = Self::random_shell_type();
 
-        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         let trail_emitter = match shell_type {
             ShellType::Standard => ParticleEmitter::firework_shell(launch_pos, velocity),
             ShellType::Comet => ParticleEmitter::comet_shell(launch_pos, velocity),
@@ -1323,7 +1324,7 @@ impl FireworksDemo {
 
         let shell_type = Self::random_shell_type();
 
-        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         let trail_emitter = match shell_type {
             ShellType::Standard => ParticleEmitter::firework_shell(launch_pos, velocity),
             ShellType::Comet => ParticleEmitter::comet_shell(launch_pos, velocity),
@@ -1636,7 +1637,7 @@ impl FireworksDemo {
     }
 
     fn spawn_fire_effect(&mut self, world: &mut World, position: Vec3) {
-        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         let fire_emitter = ParticleEmitter::fire(position);
         world.core.set_particle_emitter(entity, fire_emitter);
 
@@ -1647,7 +1648,7 @@ impl FireworksDemo {
     }
 
     fn spawn_smoke_effect(&mut self, world: &mut World, position: Vec3) {
-        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         let smoke_emitter = ParticleEmitter::smoke(position);
         world.core.set_particle_emitter(entity, smoke_emitter);
 
@@ -1712,7 +1713,7 @@ impl FireworksDemo {
         emitter: ParticleEmitter,
         label: &'static str,
     ) {
-        let entity = world.spawn_entities(nightshade::ecs::PARTICLE_EMITTER, 1)[0];
+        let entity = spawn_entities(world, nightshade::ecs::PARTICLE_EMITTER, 1)[0];
         world.core.set_particle_emitter(entity, emitter);
         self.sprite_effects.push(SpriteEffect {
             entity,

@@ -150,7 +150,7 @@ impl State for PickingDemo {
         );
         world.resources.active_camera = Some(camera);
 
-        let preview_entity = world.spawn_entities(LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
+        let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
         world.core.set_lines(preview_entity, Lines::default());
         world
             .core
@@ -186,22 +186,22 @@ impl State for PickingDemo {
         }
         if matches!((key_code, key_state), (KeyCode::F1, KeyState::Pressed)) {
             let panel = self.handles.panel;
-            world.ui_set_visible(panel, !world.ui_node_visible(panel));
+            ui_set_visible(world, panel, !ui_node_visible(world, panel));
         }
     }
 }
 
 impl PickingDemo {
     fn poll_panel(&mut self, world: &mut World) {
-        if let Some(slider) = world.widget::<UiSliderData>(self.handles.spin_slider) {
+        if let Some(slider) = widget::<UiSliderData>(world, self.handles.spin_slider) {
             self.spin_speed = slider.value;
         }
-        if let Some(toggle) = world.widget::<UiCheckboxData>(self.handles.debug_volumes_toggle) {
+        if let Some(toggle) = widget::<UiCheckboxData>(world, self.handles.debug_volumes_toggle) {
             self.show_debug_volumes = toggle.value;
         }
 
         let mut mode_clicked = false;
-        for event in world.ui_events() {
+        for event in ui_events(world) {
             if let UiEvent::ButtonClicked(entity) = event
                 && *entity == self.handles.mode_button
             {
@@ -374,7 +374,7 @@ impl PickingDemo {
     }
 
     fn sync_panel(&self, world: &mut World) {
-        world.ui_button_set_text(self.handles.mode_button, mode_label(self.mode));
+        ui_button_set_text(world, self.handles.mode_button, mode_label(self.mode));
         let label_for = |entity: Entity| -> String {
             self.meshes
                 .iter()
@@ -395,7 +395,7 @@ impl PickingDemo {
             (None, Some(hovered)) => format!("Hover: {}", label_for(hovered)),
             (None, None) => "Selected: none".to_string(),
         };
-        world.ui_set_text(self.handles.status_label, &status);
+        ui_set_text(world, self.handles.status_label, &status);
 
         let mouse = world.resources.input.mouse.position;
         let detail = match &self.last_pick_result {
@@ -409,7 +409,7 @@ impl PickingDemo {
             ),
             _ => format!("Mouse {:.0}, {:.0}    no gpu hit", mouse.x, mouse.y),
         };
-        world.ui_set_text(self.handles.detail_label, &detail);
+        ui_set_text(world, self.handles.detail_label, &detail);
     }
 }
 
@@ -428,9 +428,7 @@ fn build_panel(
 ) -> UiHandles {
     let mut tree = UiTreeBuilder::new(world);
     let panel = tree.add_floating_panel("Picking Demo", PANEL_RECT);
-    let content = tree
-        .world_mut()
-        .widget::<UiPanelData>(panel)
+    let content = widget::<UiPanelData>(tree.world_mut(), panel)
         .map(|d| d.content_entity)
         .expect("panel content");
     tree.push_parent(content);
@@ -460,7 +458,8 @@ fn build_panel(
 
 fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32) -> Entity {
     let lines = sphere_wireframe(radius, Vec4::new(0.0, 1.0, 1.0, 1.0), 16);
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
         1,
     )[0];

@@ -12,6 +12,7 @@ use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
 };
 
+use crate::prelude::*;
 #[derive(Debug, Clone)]
 pub enum EcsCommand {
     DespawnRecursive {
@@ -76,106 +77,107 @@ pub struct CommandQueues {
     pub render: Vec<RenderCommand>,
 }
 
-impl World {
-    pub fn spawn_entities(&mut self, core_mask: u64, count: usize) -> Vec<Entity> {
-        let entities = self.spawn_count(count);
-        for &entity in &entities {
-            self.core.add_components(entity, core_mask);
-        }
-        entities
+pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<Entity> {
+    let entities = world.spawn_count(count);
+    for &entity in &entities {
+        world.core.add_components(entity, core_mask);
     }
+    entities
+}
 
-    pub fn spawn_entities_ui(&mut self, ui_mask: u64, count: usize) -> Vec<Entity> {
-        let entities = self.spawn_count(count);
-        for &entity in &entities {
-            self.ui.add_components(entity, ui_mask);
-        }
-        entities
+pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<Entity> {
+    let entities = world.spawn_count(count);
+    for &entity in &entities {
+        world.ui.add_components(entity, ui_mask);
     }
+    entities
+}
 
-    pub fn queue_ecs_command(&mut self, command: EcsCommand) {
-        self.resources.commands.ecs.push(command);
-    }
+pub fn queue_ecs_command(world: &mut World, command: EcsCommand) {
+    world.resources.commands.ecs.push(command);
+}
 
-    pub fn queue_render_command(&mut self, command: RenderCommand) {
-        self.resources.commands.render.push(command);
-    }
+pub fn queue_render_command(world: &mut World, command: RenderCommand) {
+    world.resources.commands.render.push(command);
+}
 
-    pub fn set_cursor_locked(&mut self, locked: bool) {
-        if let Some(window_handle) = &self.resources.window.handle {
-            if locked {
-                if window_handle
-                    .set_cursor_grab(winit::window::CursorGrabMode::Locked)
-                    .is_err()
-                {
-                    let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::Confined);
-                }
-            } else {
-                let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::None);
+pub fn set_cursor_locked(world: &mut World, locked: bool) {
+    if let Some(window_handle) = &world.resources.window.handle {
+        if locked {
+            if window_handle
+                .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                .is_err()
+            {
+                let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::Confined);
             }
+        } else {
+            let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::None);
         }
     }
+}
 
-    pub fn set_cursor_visible(&mut self, visible: bool) {
-        if let Some(window_handle) = &self.resources.window.handle {
-            window_handle.set_cursor_visible(visible);
-        }
+pub fn set_cursor_visible(world: &mut World, visible: bool) {
+    if let Some(window_handle) = &world.resources.window.handle {
+        window_handle.set_cursor_visible(visible);
     }
+}
 
-    pub fn register_material(
-        &mut self,
-        entity: Entity,
-        name: String,
-        material: crate::ecs::material::components::Material,
-    ) {
-        material_registry_insert(
-            &mut self.resources.assets.material_registry,
-            name.clone(),
-            material,
-        );
-        if let Some(&index) = self
+pub fn register_material(
+    world: &mut World,
+    entity: Entity,
+    name: String,
+    material: crate::ecs::material::components::Material,
+) {
+    material_registry_insert(
+        &mut world.resources.assets.material_registry,
+        name.clone(),
+        material,
+    );
+    if let Some(&index) = world
+        .resources
+        .assets
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&name)
+    {
+        world
             .resources
             .assets
             .material_registry
             .registry
-            .name_to_index
-            .get(&name)
-        {
-            self.resources
-                .assets
-                .material_registry
-                .registry
-                .add_reference(index);
-        }
-        self.core.set_material_ref(entity, MaterialRef::new(name));
-        self.resources.mesh_render_state.mark_entity_added(entity);
+            .add_reference(index);
     }
+    world.core.set_material_ref(entity, MaterialRef::new(name));
+    world.resources.mesh_render_state.mark_entity_added(entity);
+}
 
-    #[cfg(feature = "physics")]
-    pub fn spawn_physics_body(&mut self, entity: Entity) {
-        let rigid_body_comp = self.core.get_rigid_body(entity).cloned();
-        let collider_comp = self.core.get_collider(entity).cloned();
+#[cfg(feature = "physics")]
+pub fn spawn_physics_body(world: &mut World, entity: Entity) {
+    let rigid_body_comp = world.core.get_rigid_body(entity).cloned();
+    let collider_comp = world.core.get_collider(entity).cloned();
 
-        if let Some(rigid_body_comp) = rigid_body_comp {
-            let rapier_body = rigid_body_comp.to_rapier_rigid_body();
-            let rapier_handle = self.resources.physics.add_rigid_body(rapier_body);
+    if let Some(rigid_body_comp) = rigid_body_comp {
+        let rapier_body = rigid_body_comp.to_rapier_rigid_body();
+        let rapier_handle = world.resources.physics.add_rigid_body(rapier_body);
 
-            if let Some(collider_comp) = collider_comp {
-                let rapier_collider = collider_comp.to_rapier_collider();
-                self.resources
-                    .physics
-                    .add_collider(rapier_collider, rapier_handle);
-            }
-
-            if let Some(rigid_body_mut) = self.core.get_rigid_body_mut(entity) {
-                rigid_body_mut.handle = Some(rapier_handle.into());
-            }
-
-            self.resources
+        if let Some(collider_comp) = collider_comp {
+            let rapier_collider = collider_comp.to_rapier_collider();
+            world
+                .resources
                 .physics
-                .handle_to_entity
-                .insert(rapier_handle, entity);
+                .add_collider(rapier_collider, rapier_handle);
         }
+
+        if let Some(rigid_body_mut) = world.core.get_rigid_body_mut(entity) {
+            rigid_body_mut.handle = Some(rapier_handle.into());
+        }
+
+        world
+            .resources
+            .physics
+            .handle_to_entity
+            .insert(rapier_handle, entity);
     }
 }
 
@@ -186,7 +188,7 @@ pub fn process_commands_system(world: &mut World) {
         match command {
             EcsCommand::DespawnRecursive { entity } => {
                 if !world.resources.transform_state.children_cache_valid {
-                    world.validate_and_rebuild_children_cache();
+                    validate_and_rebuild_children_cache(world);
                 }
                 let descendents = query_descendents(world, entity);
                 despawn_entities_with_cache_cleanup(world, &descendents);
@@ -390,7 +392,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     if !world.resources.transform_state.children_cache_valid {
-        world.validate_and_rebuild_children_cache();
+        validate_and_rebuild_children_cache(world);
     }
     let descendents = query_descendents(world, entity);
     despawn_entities_with_cache_cleanup(world, &descendents);
@@ -402,7 +404,8 @@ pub fn spawn_sun(world: &mut World) -> Entity {
         GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
         1,
     )[0];
@@ -453,7 +456,8 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
         GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
         1,
     )[0];
@@ -507,7 +511,8 @@ pub fn spawn_mesh_at(
         MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -679,7 +684,8 @@ pub fn spawn_water_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> 
         WATER,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -786,7 +792,8 @@ fn spawn_3d_text_impl(
 
     let text_index = world.resources.text.cache.add_text(text);
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
         1,
     )[0];
@@ -1009,31 +1016,40 @@ fn generate_uv_test_texture() -> (Vec<u8>, u32, u32) {
 }
 
 pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
-    world.queue_render_command(RenderCommand::LoadHdrSkybox { hdr_data });
+    queue_render_command(world, RenderCommand::LoadHdrSkybox { hdr_data });
 }
 
 pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
-    world.queue_render_command(RenderCommand::LoadHdrSkyboxFromPath { path });
+    queue_render_command(world, RenderCommand::LoadHdrSkyboxFromPath { path });
 }
 
 pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
-    world.queue_render_command(RenderCommand::CaptureProceduralAtmosphereIBL { atmosphere, time });
+    queue_render_command(
+        world,
+        RenderCommand::CaptureProceduralAtmosphereIBL { atmosphere, time },
+    );
 }
 
 pub fn capture_ibl_snapshots(world: &mut World, atmosphere: Atmosphere, hours: Vec<f32>) {
-    world.queue_render_command(RenderCommand::CaptureIblSnapshots { atmosphere, hours });
+    queue_render_command(
+        world,
+        RenderCommand::CaptureIblSnapshots { atmosphere, hours },
+    );
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn capture_screenshot(world: &mut World) {
-    world.queue_render_command(RenderCommand::CaptureScreenshot { path: None });
+    queue_render_command(world, RenderCommand::CaptureScreenshot { path: None });
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn capture_screenshot_to_path(world: &mut World, path: impl Into<std::path::PathBuf>) {
-    world.queue_render_command(RenderCommand::CaptureScreenshot {
-        path: Some(path.into()),
-    });
+    queue_render_command(
+        world,
+        RenderCommand::CaptureScreenshot {
+            path: Some(path.into()),
+        },
+    );
 }
 
 pub fn spawn_instanced_mesh(
@@ -1047,7 +1063,8 @@ pub fn spawn_instanced_mesh(
         MATERIAL_REF, NAME, VISIBILITY,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -1120,7 +1137,8 @@ pub fn spawn_instanced_mesh_with_material(
         MATERIAL_REF, NAME, VISIBILITY,
     };
 
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -1239,10 +1257,13 @@ mod tests {
         let mut world = World::default();
         let entity = world.spawn_count(1)[0];
 
-        world.queue_ecs_command(EcsCommand::DespawnRecursive { entity });
-        world.queue_render_command(RenderCommand::LoadHdrSkybox {
-            hdr_data: vec![0u8; 4],
-        });
+        queue_ecs_command(&mut world, EcsCommand::DespawnRecursive { entity });
+        queue_render_command(
+            &mut world,
+            RenderCommand::LoadHdrSkybox {
+                hdr_data: vec![0u8; 4],
+            },
+        );
 
         process_commands_system(&mut world);
 

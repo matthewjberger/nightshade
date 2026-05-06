@@ -13,16 +13,16 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     let entity_count = world.core.entity_count();
 
     if let Some(text) = gallery.resources.handles.fps_text {
-        world.ui_set_text(text, &format!("{fps:.0}"));
+        ui_set_text(world, text, &format!("{fps:.0}"));
     }
     if let Some(text) = gallery.resources.handles.uptime_text {
         let seconds = uptime_ms / 1000;
         let minutes = seconds / 60;
         let remaining = seconds % 60;
-        world.ui_set_text(text, &format!("{minutes}:{remaining:02}"));
+        ui_set_text(world, text, &format!("{minutes}:{remaining:02}"));
     }
     if let Some(text) = gallery.resources.handles.entity_count_text {
-        world.ui_set_text(text, &format!("{entity_count}"));
+        ui_set_text(world, text, &format!("{entity_count}"));
     }
 
     if let Some(progress) = gallery.resources.handles.progress_entity {
@@ -30,7 +30,7 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         if gallery.resources.handles.progress_value > 1.0 {
             gallery.resources.handles.progress_value = 0.0;
         }
-        world.ui_progress_bar_set_value(progress, gallery.resources.handles.progress_value);
+        ui_progress_bar_set_value(world, progress, gallery.resources.handles.progress_value);
     }
 
     if let Some(pulse) = gallery.resources.handles.pulse_entity {
@@ -90,7 +90,11 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         if gallery.resources.handles.effects_progress_value > 1.0 {
             gallery.resources.handles.effects_progress_value = 0.0;
         }
-        world.ui_progress_bar_set_value(entity, gallery.resources.handles.effects_progress_value);
+        ui_progress_bar_set_value(
+            world,
+            entity,
+            gallery.resources.handles.effects_progress_value,
+        );
     }
 
     if let Some(entity) = gallery.resources.handles.effects_spinner {

@@ -6,6 +6,7 @@ use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
 
+use crate::prelude::*;
 pub fn update_animation_players(world: &mut World) {
     let _span = tracing::info_span!("animation").entered();
     let delta_time = world.resources.window.timing.delta_time;
@@ -99,7 +100,7 @@ pub fn apply_animations(world: &mut World) {
         }
 
         for (target_entity, values) in final_values {
-            if let Some(transform) = world.mutate_local_transform(target_entity) {
+            if let Some(transform) = mutate_local_transform(world, target_entity) {
                 if let Some(translation) = values.translation {
                     transform.translation = translation;
                 }

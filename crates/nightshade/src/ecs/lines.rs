@@ -15,7 +15,7 @@
 //! use nightshade::ecs::lines::{Lines, Line};
 //!
 //! // Create a lines entity
-//! let debug_lines = world.spawn_entities(LINES, 1)[0];
+//! let debug_lines = spawn_entities(world, LINES, 1)[0];
 //!
 //! // Get the lines component and add lines
 //! if let Some(lines) = world.core.get_lines_mut(debug_lines) {

@@ -9,8 +9,10 @@ use crate::ecs::world::{
 };
 use freecs::Entity;
 
+use crate::prelude::*;
 pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec3) -> Entity {
-    let entity = world.spawn_entities(
+    let entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY

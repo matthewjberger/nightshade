@@ -5,8 +5,10 @@ use crate::ecs::world::{
     Entity, PAN_ORBIT_CAMERA, THIRD_PERSON_CAMERA, Vec2, Vec3, World, components::*,
 };
 
+use crate::prelude::*;
 pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
-    let cameras = world.spawn_entities(
+    let cameras = spawn_entities(
+        world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
             | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
@@ -57,7 +59,8 @@ pub fn spawn_pan_orbit_camera_with_config(
     name: String,
     config: PanOrbitCamera,
 ) -> Entity {
-    let cameras = world.spawn_entities(
+    let cameras = spawn_entities(
+        world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
             | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
@@ -101,7 +104,8 @@ pub fn spawn_pan_orbit_camera_with_config(
 }
 
 pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
-    let cameras = world.spawn_entities(
+    let cameras = spawn_entities(
+        world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
             | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
@@ -145,7 +149,8 @@ pub fn spawn_third_person_camera(
     pitch: f32,
     name: String,
 ) -> Entity {
-    let cameras = world.spawn_entities(
+    let cameras = spawn_entities(
+        world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
             | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
