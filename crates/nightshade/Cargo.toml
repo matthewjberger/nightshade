@@ -116,7 +116,6 @@ picking = []
 behaviors = []
 lattice = []
 grass = []
-sdf_sculpt = []
 syntax_highlighting = ["dep:syntect"]
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
@@ -136,7 +135,6 @@ full = [
     "scripting",
     "fbx",
     "lattice",
-    "sdf_sculpt",
     "plugins",
     "claude",
     "mcp",

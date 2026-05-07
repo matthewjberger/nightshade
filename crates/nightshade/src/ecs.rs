@@ -56,8 +56,6 @@ pub mod render_layer;
 pub mod scene;
 pub mod scene_2d;
 pub mod script;
-#[cfg(feature = "sdf_sculpt")]
-pub mod sdf;
 pub mod shadow;
 pub mod skin;
 pub mod sprite;

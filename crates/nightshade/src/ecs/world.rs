@@ -103,8 +103,6 @@ pub mod resources {
     pub use crate::ecs::prefab::resources::{AnimationCache, MeshCache, PrefabCache};
     #[cfg(feature = "scripting")]
     pub use crate::ecs::script::resources::ScriptRuntime;
-    #[cfg(feature = "sdf_sculpt")]
-    pub use crate::ecs::sdf::resources::{SdfMaterial, SdfMaterialRegistry, SdfWorld};
     pub use crate::ecs::text::resources::{TextCache, TextState};
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
@@ -284,10 +282,6 @@ freecs::ecs! {
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
-        #[cfg(feature = "sdf_sculpt")]
-        sdf_world: crate::ecs::sdf::resources::SdfWorld,
-        #[cfg(feature = "sdf_sculpt")]
-        sdf_materials: crate::ecs::sdf::resources::SdfMaterialRegistry,
         text: crate::ecs::text::resources::TextState,
         assets: crate::ecs::asset_state::AssetState,
         transform_state: crate::ecs::transform::resources::TransformState,

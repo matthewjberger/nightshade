@@ -212,8 +212,6 @@
 //!
 //! - **`lattice`** - Lattice deformation system.
 //!
-//! - **`sdf_sculpt`** - SDF sculpting system.
-//!
 //! ### Platform Features
 //!
 //! - **`openxr`** - OpenXR VR support.
