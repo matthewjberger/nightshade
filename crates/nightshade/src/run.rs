@@ -124,52 +124,8 @@ thread_local! {
 }
 
 /// Launches the application with the given state.
-///
-/// Uses OpenXR if the `openxr` feature is enabled, otherwise creates a windowed application.
 pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(feature = "openxr")]
-    {
-        crate::xr::launch_xr(state)
-    }
-
-    #[cfg(not(feature = "openxr"))]
-    {
-        launch_windowed(state)
-    }
-}
-
-#[cfg(all(target_os = "android", feature = "android"))]
-pub fn launch_android(
-    app: android_activity::AndroidApp,
-    state: impl State + 'static,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use tracing_subscriber::layer::SubscriberExt;
-    use tracing_subscriber::util::SubscriberInitExt;
-    use winit::platform::android::EventLoopBuilderExtAndroid;
-
-    tracing_subscriber::registry()
-        .with(tracing_android::layer("nightshade").expect("Failed to create Android log layer"))
-        .init();
-
-    let state = Box::new(state);
-    let mut world = World::default();
-    world.resources.android_app = Some(app.clone());
-    crate::filesystem::set_android_app(app.clone());
-
-    let event_loop = EventLoop::builder().with_android_app(app).build()?;
-    event_loop.set_control_flow(ControlFlow::Poll);
-
-    let mut context = WindowContext {
-        state,
-        world,
-        renderer: None,
-        snapshot_path: None,
-        snapshot_queued: false,
-        initialized: false,
-    };
-    event_loop.run_app(&mut context)?;
-
-    Ok(())
+    launch_windowed(state)
 }
 
 /// Launches a windowed application (desktop or web).

@@ -26,29 +26,14 @@ db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "warn"
 ignore = [
-    # gtk-rs GTK3 bindings are unmaintained but pulled transitively by wry for
-    # the editor's webview on Linux. No safe upgrade path until wry migrates.
-    "RUSTSEC-2024-0412",
-    "RUSTSEC-2024-0413",
-    "RUSTSEC-2024-0414",
-    "RUSTSEC-2024-0415",
-    "RUSTSEC-2024-0416",
-    "RUSTSEC-2024-0417",
-    "RUSTSEC-2024-0418",
-    "RUSTSEC-2024-0419",
-    "RUSTSEC-2024-0420",
-    # glib VariantStrIter unsoundness, transitive via gtk-rs 0.18 / wry on Linux.
-    "RUSTSEC-2024-0429",
-    # atomic-polyfill is unmaintained; transitive via heapless. No replacement.
+    # atomic-polyfill is unmaintained, transitive via heapless. No replacement.
     "RUSTSEC-2023-0089",
-    # bincode 1.x is unmaintained; bincode 2.x is API-incompatible and the
+    # bincode 1.x is unmaintained, bincode 2.x is API-incompatible and the
     # editor / game serialization is committed to the 1.x format.
     "RUSTSEC-2025-0141",
-    # proc-macro-error is unmaintained; pulled by gtk-rs and other macro deps.
-    "RUSTSEC-2024-0370",
-    # paste is unmaintained but widely used; no drop-in replacement.
+    # paste is unmaintained but widely used, no drop-in replacement.
     "RUSTSEC-2024-0436",
-    # instant is unmaintained; transitive via notify -> notify-types. The
-    # author recommends web-time, but notify hasn't migrated yet.
+    # instant is unmaintained, transitive via notify -> notify-types. The
+    # author recommends web-time, but notify has not migrated yet.
     "RUSTSEC-2024-0384",
 ]

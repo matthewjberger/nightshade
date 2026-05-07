@@ -60,24 +60,16 @@ raw-window-handle = "0.6.2"
 thiserror = "2.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.49.0", features = ["rt-multi-thread"] }
 web-time = "1.1.0"
 wgpu = { version = "29", default-features = false }
-wgpu-hal = { version = "29", features = ["vulkan"] }
 winit = { version = "0.30.13", features = ["serde"] }
 
-android-activity = { version = "0.6", features = ["native-activity"] }
-tracing-android = "0.2"
-openxr = { version = "0.21", features = ["static", "loaded"] }
-ash = "0.38"
-gpu-allocator = "0.28"
 clap = { version = "4", features = ["derive"] }
 steamworks = "0.13"
 steamworks-sys = "0.13"
 noise = "0.9"
 notify = "7"
 ehttp = "0.6"
-rustfft = "6.2"
 taffy = "0.7"
 wasm-bindgen = "0.2.114"
 wasm-bindgen-futures = "0.4.64"

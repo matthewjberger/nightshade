@@ -20,9 +20,3 @@ mod state;
 mod systems;
 
 pub use state::Template;
-
-#[cfg(target_os = "android")]
-#[unsafe(no_mangle)]
-fn android_main(app: nightshade::prelude::AndroidApp) {
-    nightshade::prelude::launch_android(app, Template::default()).unwrap();
-}

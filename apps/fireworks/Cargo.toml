@@ -7,8 +7,5 @@ edition = "2024"
 license.workspace = true
 publish = false
 
-[features]
-openxr = ["nightshade/openxr"]
-
 [dependencies]
 nightshade = { workspace = true, features = ["tracing"] }

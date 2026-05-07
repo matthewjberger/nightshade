@@ -40,14 +40,6 @@ lint:
 run:
     cargo run -r
 
-# Runs the app with OpenXR (VR headset)
-run-openxr:
-    cargo run -r --features openxr
-
-# Builds the app with OpenXR support
-build-openxr:
-    cargo build -r --features openxr
-
 # Build the app for WASM
 build-wasm:
     trunk build --release
@@ -96,33 +88,6 @@ install-tools:
 # Watches for changes and runs the app
 watch:
     cargo watch -x 'run -r'
-
-# Install Android tooling
-init-android:
-    rustup target add aarch64-linux-android
-    rustup target add x86_64-linux-android
-    cargo install xbuild
-
-# Build the app for Android
-build-android:
-    x build --release --platform android --arch arm64 -p template_core --features android
-
-# Build the app for Android with OpenXR (Meta Quest)
-build-android-openxr:
-    x build --release --platform android --arch arm64 -p template_core --features android-openxr
-
-# Install the app on a connected Android device
-install-android device:
-    x build --release --arch arm64 -p template_core --features android --device adb:{{device}}
-    adb -s {{device}} install -r target/x/release/android/template_core.apk
-
-# Run the app on a connected Android device
-run-android device:
-    x run --release --arch arm64 -p template_core --features android --device adb:{{device}}
-
-# List connected Android devices
-list-android:
-    adb devices
 
 # Builds the project for Steam Deck using cross
 build-steamdeck:

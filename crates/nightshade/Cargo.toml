@@ -105,8 +105,6 @@ grass = []
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
-android = ["dep:android-activity", "dep:tracing-android"]
-android-openxr = ["android", "openxr"]
 
 full = [
     "engine",
@@ -119,7 +117,6 @@ full = [
 ]
 
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
-openxr = ["dep:openxr", "dep:ash", "dep:wgpu-hal", "dep:gpu-allocator", "wgpu/vulkan"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
 tracing = ["dep:tracing-appender", "dep:chrono"]
 tracy = ["tracing", "dep:tracing-tracy"]
@@ -176,9 +173,6 @@ tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
-ash = { workspace = true, optional = true }
-wgpu-hal = { workspace = true, optional = true }
-gpu-allocator = { workspace = true, optional = true }
 steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
 
@@ -224,14 +218,8 @@ ico = { version = "0.5", optional = true }
 
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
 rfd = { version = "0.17", optional = true }
-openxr = { workspace = true, optional = true }
 arboard = { workspace = true }
 webbrowser = { workspace = true }
-
-[target.'cfg(target_os = "android")'.dependencies]
-android-activity = { workspace = true, optional = true }
-tracing-android = { workspace = true, optional = true }
-openxr = { version = "0.21", default-features = false, features = ["loaded"], optional = true }
 
 [package.metadata.cargo-machete]
 ignored = ["nalgebra", "getrandom"]

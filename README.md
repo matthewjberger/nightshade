@@ -16,7 +16,7 @@
 
 ## Documentation
 
-📖 **[Read the Book](https://matthewjberger.github.io/nightshade/book/)** - Comprehensive guide covering all engine systems, from getting started to advanced features like SDF sculpting and audio-reactive effects.
+📖 **[Read the Book](https://matthewjberger.github.io/nightshade/book/)** - Comprehensive guide covering all engine systems.
 
 ## Gallery
 
@@ -37,41 +37,22 @@ Nightshade uses a modular feature system for fine-grained dependency control.
 ```
 nightshade features:
 ├── core ─────────────── Minimal: windowing, math, ECS, time
-├── text ─────────────── 3D text rendering (fontdue)
+├── text ─────────────── 3D text rendering (cosmic-text + swash)
 ├── behaviors ────────── Built-in entity behaviors (stateless, WASM-compatible)
 ├── assets ───────────── Asset loading (gltf, image, bincode, lz4)
 ├── runtime ──────────── core + text + behaviors
 ├── engine (default) ─── runtime + assets + scene_graph + terrain + picking + file_dialog + more
-├── full ─────────────── engine + egui + audio + physics + scripting + fbx + editor + more
+├── full ─────────────── engine + audio + physics + gamepad + navmesh
 │
 │ Add-on features:
 ├── wgpu ─────────────── GPU rendering (dx12, metal, vulkan, webgpu)
-├── egui ─────────────── Immediate mode UI (egui + tiles)
 ├── audio ────────────── Audio playback (kira)
-├── fft ──────────────── FFT audio analysis (rustfft)
 ├── physics ──────────── 3D physics (rapier3d)
 ├── gamepad ──────────── Controller input (gilrs)
 ├── navmesh ──────────── Navigation mesh (rerecast)
-├── scripting ────────── Rhai scripting
-├── fbx ──────────────── FBX asset format (ufbx)
-├── lattice ──────────── Lattice deformation
-├── sdf_sculpt ───────── SDF sculpting
-├── mosaic ──────────── Multi-pane desktop app framework (egui_tiles)
-├── editor ──────────── Scene editor infrastructure (gizmo, undo, inspector, picking)
-├── openxr ───────────── VR/AR support
-├── steam ────────────── Steam integration
-├── mcp ──────────────── AI scene manipulation (MCP server)
-├── claude ──────────── Claude Code CLI integration
-├── webview ──────────── Embedded webview with IPC
-└── plugins ──────────── WASI plugin system
-```
-
-### Minimal Build
-
-For a lightweight egui app without asset loading:
-
-```toml
-nightshade = { default-features = false, features = ["runtime", "wgpu", "egui"] }
+├── grass ────────────── GPU grass rendering
+├── terrain ──────────── Procedural terrain generation
+└── steam ────────────── Steam integration
 ```
 
 ## Quickstart
@@ -129,72 +110,6 @@ See [STEAM.md](docs/STEAM.md) for Steam integration (achievements, stats, friend
 ### Profiling & Logging
 
 See [PROFILING.md](docs/PROFILING.md) for detailed profiling and logging documentation.
-
-### Plugins
-
-See [PLUGINS.md](docs/PLUGINS.md) for runtime WASI plugin support.
-
-### Scripting
-
-See [SCRIPTING.md](docs/SCRIPTING.md) for Rhai scripting support.
-
-### AI Integration (Native Only)
-
-Nightshade has two features for AI integration: `mcp` for exposing the engine as an MCP server, and `claude` for spawning and communicating with Claude Code CLI as a subprocess.
-
-#### MCP Server (`mcp` feature)
-
-The `mcp` feature starts an HTTP-based [Model Context Protocol](https://modelcontextprotocol.io) server on `http://127.0.0.1:3333/mcp` when the application launches. Any MCP client (Claude Code, Claude Desktop, or custom tooling) can connect and manipulate the running scene in real time.
-
-```toml
-nightshade = { features = ["mcp"] }
-```
-
-Connect Claude Code:
-
-```bash
-claude mcp add --transport http nightshade http://127.0.0.1:3333/mcp
-```
-
-**Available tools (50+):**
-
-| Category | Tools |
-|----------|-------|
-| Entities | `list_entities`, `query_entity`, `spawn_entity`, `despawn_entity`, `rename_entity`, `clear_scene` |
-| Transforms | `set_position`, `set_rotation`, `set_scale`, `set_parent`, `set_visibility` |
-| Materials | `set_material_color`, `set_emissive`, `set_material`, `set_casts_shadow` |
-| Lighting | `spawn_light`, `set_light` |
-| Camera | `set_camera` |
-| Assets | `load_asset`, `spawn_prefab`, `list_loaded_assets` |
-| Environment | `set_atmosphere`, `load_hdr`, `set_graphics` |
-| Effects | `spawn_water`, `spawn_particles`, `set_particles`, `spawn_decal` |
-| Text | `spawn_hud_text`, `set_hud_text`, `spawn_3d_text` |
-| Physics | `add_rigid_body`, `add_collider`, `apply_impulse`, `apply_force`, `set_velocity` |
-| Animation | `play_animation`, `stop_animation`, `list_animations` |
-| Scripting | `set_script`, `remove_script`, `set_game_state`, `get_game_state` |
-| Debug | `add_line`, `add_lines`, `clear_lines`, `get_input`, `get_time` |
-| Metadata | `set_entity_tags`, `set_entity_metadata` |
-| Batch | `batch` (atomic multi-operation), `run` (concise text commands) |
-
-**Batch operations:** Use `batch` to execute multiple operations atomically in a single frame, reducing round-trip latency.
-
-**Concise commands:** Use `run` for shorthand text commands (e.g. `spawn sun Sphere 0,0,0 scale:2 emissive:5,4,0`).
-
-**State hook:** Applications can intercept MCP commands before the engine processes them by implementing `handle_mcp_command` on the `State` trait. Return `Some(response)` to handle a command yourself, or `None` to let the engine handle it with default behavior.
-
-#### Claude Code CLI (`claude` feature)
-
-The `claude` feature provides types and a worker thread for spawning Claude Code as a subprocess and streaming its output. This lets applications embed an AI assistant panel that can send queries, receive streamed responses (text, thinking, tool use events), and optionally auto-configure MCP so Claude can manipulate the scene.
-
-```toml
-nightshade = { features = ["claude"] }
-```
-
-Key types: `ClaudeConfig` (system prompt, allowed/disallowed tools, MCP config, custom CLI args), `CliCommand` (StartQuery, Cancel), `CliEvent` (SessionStarted, TextDelta, ThinkingDelta, ToolUseStarted, ToolUseFinished, TurnComplete, Complete, Error).
-
-When both `claude` and `mcp` features are enabled, `McpConfig::Auto` automatically configures Claude Code to connect to the engine's MCP server — no manual `mcp add` step needed.
-
-The editor enables both features by default for AI-assisted development workflows.
 
 ## Contributing
 

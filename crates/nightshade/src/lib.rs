@@ -168,7 +168,7 @@
 //! - **`runtime`** - Minimal rendering without asset loading. Use with `wgpu` for
 //!   lightweight apps that don't need gltf/image loading.
 //!
-//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `fbx`, etc.
+//! - **`full`** - Everything in `engine` plus `audio`, `physics`, `gamepad`, `navmesh`.
 //!
 //! - **`wgpu`** (default) - WebGPU-based rendering with DirectX 12, Metal, Vulkan, and WebGPU.
 //!
@@ -205,8 +205,6 @@
 //! - **`gamepad`** - Gamepad input using gilrs.
 //!
 //! ### Platform Features
-//!
-//! - **`openxr`** - OpenXR VR support.
 //!
 //! - **`steam`** - Steamworks integration.
 //!
@@ -352,32 +350,6 @@
 //!         if gamepad.pressed(GamepadButton::South) { /* A/Cross */ }
 //!         if gamepad.just_pressed(GamepadButton::North) { /* Y/Triangle */ }
 //!     }
-//! }
-//! ```
-//!
-//! ### OpenXR VR (`openxr` feature)
-//!
-//! ```ignore
-//! // Launch in VR mode
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     launch_xr(Game::default())
-//! }
-//!
-//! // Read VR input
-//! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(input) = &world.resources.xr.input {
-//!         let head_pos = input.head_position;
-//!         let left_hand = input.left_hand_position();
-//!         let right_trigger = input.right_trigger;
-//!
-//!         if input.a_button_pressed() {
-//!             // A button action
-//!         }
-//!     }
-//!
-//!     // Enable locomotion
-//!     world.resources.xr.locomotion_enabled = true;
-//!     world.resources.xr.locomotion_speed = 3.0;
 //! }
 //! ```
 //!
@@ -571,7 +543,6 @@
 //!
 //! - **Native** (Windows/macOS/Linux): Full feature support with DirectX 12, Metal, or Vulkan.
 //! - **WebAssembly**: WebGPU backend. Files via drag-and-drop or HTTP. No WASI plugins. Async initialization.
-//! - **XR** (with `openxr`): Vulkan backend required. Use `launch_xr()` entry point.
 
 pub mod filesystem;
 
@@ -587,9 +558,6 @@ pub mod run;
 pub mod schedule;
 #[cfg(feature = "runtime")]
 mod systems;
-
-#[cfg(feature = "openxr")]
-pub mod xr;
 
 #[cfg(feature = "shell")]
 pub mod shell;
@@ -871,17 +839,9 @@ pub mod prelude {
         window,
     };
 
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        feature = "file_dialog"
-    ))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
     pub use dirs;
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        feature = "file_dialog"
-    ))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
     pub use rfd;
 
     #[cfg(target_arch = "wasm32")]
@@ -920,9 +880,6 @@ pub mod prelude {
     pub use rapier3d;
     pub use wgpu;
 
-    #[cfg(feature = "openxr")]
-    pub use crate::xr::{XrContext, XrInput, launch_xr};
-
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use crate::steam::{
         AchievementInfo, ActiveSession, FriendInfo, NetworkMessage, PendingSessionRequest,
@@ -937,12 +894,6 @@ pub mod prelude {
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::ecs::file_watcher::FileWatcher;
 
-    #[cfg(all(target_os = "android", feature = "android"))]
-    pub use crate::filesystem::{get_android_app, read_android_asset};
-    #[cfg(all(target_os = "android", feature = "android"))]
-    pub use crate::run::launch_android;
-    #[cfg(all(target_os = "android", feature = "android"))]
-    pub use android_activity::AndroidApp;
     // === decap re-exports (generated) ===
     pub use crate::ecs::transform::systems::{
         assign_local_transform, mutate_local_transform, update_parent,

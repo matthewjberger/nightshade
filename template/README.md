@@ -11,17 +11,6 @@ just run
 # wasm (webgpu)
 just run-wasm
 
-# openxr (vr headset)
-just run-openxr
-just build-openxr
-
-# android
-just init-android   # one-time setup
-just build-android
-
-# android (meta quest vr — requires libs/arm64-v8a/libopenxr_loader.so)
-just build-android-openxr
-
 # steam deck
 just build-steamdeck
 just deploy-steamdeck        # copies binary to ~/Downloads on deck
@@ -46,13 +35,8 @@ Enable features with `cargo run --features <feature>`:
 
 | Feature | Description | Docs |
 |---------|-------------|------|
-| `plugins` | WASI plugin runtime for modding support | [Plugins](https://github.com/matthewjberger/nightshade/blob/main/docs/PLUGINS.md) |
-| `scripting` | Rhai scripting for runtime script execution | [Scripting](https://github.com/matthewjberger/nightshade/blob/main/docs/SCRIPTING.md) |
 | `tracing` | File logging to `logs/nightshade.log` | [Profiling](https://github.com/matthewjberger/nightshade/blob/main/docs/PROFILING.md) |
-| `openxr` | VR headset support | |
 | `steam` | Steamworks integration | [Steam](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM.md) |
-| `android` | Android mobile support (API 24+) | |
-| `mcp` | MCP server for AI-assisted scene manipulation (native only) | |
 
 See also: [Steam Deck Deployment](https://github.com/matthewjberger/nightshade/blob/main/docs/STEAM_DECK.md)
 

@@ -32,40 +32,12 @@ format:
 # Install Debian/Ubuntu dependencies for building
 [linux]
 install-debian-deps:
-    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
 
 # Install wasm tooling
 init-wasm:
     rustup target add wasm32-unknown-unknown
     cargo install --locked trunk
-
-# Install Android tooling
-init-android:
-    rustup target add aarch64-linux-android
-    rustup target add x86_64-linux-android
-    cargo install --locked xbuild
-
-# Build the app for Android (arm64)
-[unix]
-build-android $project="nightshade-editor":
-    x build --release --platform android --arch arm64 -p {{project}} --features android
-
-[windows]
-build-android $project="nightshade-editor":
-    x build --release --platform android --arch arm64 -p {{project}} --features android
-
-# Install the app on connected Android device
-install-android device $project="nightshade-editor":
-    x build --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
-    adb -s {{device}} install -r target/x/release/android/app.apk
-
-# Run the app on connected Android device
-run-android device $project="nightshade-editor":
-    x run --release --arch arm64 -p {{project}} --features android --device adb:{{device}}
-
-# List connected Android devices
-list-android:
-    adb devices
 
 # Install development tools
 install-tools:

@@ -268,8 +268,6 @@ freecs::ecs! {
         picking_world: crate::ecs::picking::resources::PickingWorld,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
-        #[cfg(feature = "openxr")]
-        xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
         text: crate::ecs::text::resources::TextState,
@@ -292,8 +290,6 @@ freecs::ecs! {
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         #[cfg(all(feature = "assets", feature = "file_watcher", not(target_arch = "wasm32")))]
         asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
-        #[cfg(all(target_os = "android", feature = "android"))]
-        android_app: Option<android_activity::AndroidApp>,
     }
 }
 

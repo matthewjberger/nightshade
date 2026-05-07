@@ -108,16 +108,6 @@ struct FireworksDemo {
     last_show_active: bool,
     last_salvo_mode: bool,
     last_stats: Option<Stats>,
-    #[cfg(feature = "openxr")]
-    xr_a_button_was_pressed: bool,
-    #[cfg(feature = "openxr")]
-    xr_b_button_was_pressed: bool,
-    #[cfg(feature = "openxr")]
-    xr_left_trigger_was_pressed: bool,
-    #[cfg(feature = "openxr")]
-    xr_right_grip_was_pressed: bool,
-    #[cfg(feature = "openxr")]
-    xr_next_trigger_launch_time: f32,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -164,13 +154,6 @@ impl State for FireworksDemo {
         world.resources.graphics.clear_color = [0.01, 0.01, 0.02, 1.0];
         world.resources.graphics.bloom_enabled = true;
         world.resources.graphics.bloom_intensity = 0.1;
-
-        #[cfg(feature = "openxr")]
-        {
-            world.resources.xr.locomotion_speed = 15.0;
-            world.resources.xr.initial_player_position = Some(Vec3::new(0.0, 10.0, 100.0));
-            world.resources.xr.initial_player_yaw = Some(std::f32::consts::PI);
-        }
 
         let camera = spawn_entities(
             world,
@@ -266,10 +249,6 @@ impl State for FireworksDemo {
         self.poll_ui_events(world);
         self.update_ui_state(world);
 
-        #[cfg(feature = "openxr")]
-        self.xr_input_system(world);
-
-        #[cfg(not(feature = "openxr"))]
         camera_controllers_system(world);
 
         let delta_time = world.resources.window.timing.delta_time;
@@ -605,44 +584,6 @@ impl FireworksDemo {
             );
             self.last_stats = Some(stats);
         }
-    }
-
-    #[cfg(feature = "openxr")]
-    fn xr_input_system(&mut self, world: &mut World) {
-        let Some(xr_input) = world.resources.xr.input.clone() else {
-            return;
-        };
-
-        let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
-
-        let a_pressed = xr_input.a_button_pressed();
-        if a_pressed && !self.xr_a_button_was_pressed {
-            self.launch_firework(world);
-        }
-        self.xr_a_button_was_pressed = a_pressed;
-
-        let b_pressed = xr_input.b_button_pressed();
-        if b_pressed && !self.xr_b_button_was_pressed {
-            self.launch_salvo(world);
-        }
-        self.xr_b_button_was_pressed = b_pressed;
-
-        if xr_input.right_trigger_pressed() && uptime >= self.xr_next_trigger_launch_time {
-            self.launch_firework(world);
-            self.xr_next_trigger_launch_time = uptime + 0.15;
-        }
-
-        let left_trigger_pressed = xr_input.left_trigger_pressed();
-        if left_trigger_pressed && !self.xr_left_trigger_was_pressed {
-            self.auto_launch = !self.auto_launch;
-        }
-        self.xr_left_trigger_was_pressed = left_trigger_pressed;
-
-        let right_grip_pressed = xr_input.right_grip_pressed();
-        if right_grip_pressed && !self.xr_right_grip_was_pressed {
-            self.launch_finale(world);
-        }
-        self.xr_right_grip_was_pressed = right_grip_pressed;
     }
 
     fn random_color() -> Vec3 {

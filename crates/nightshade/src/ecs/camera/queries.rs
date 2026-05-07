@@ -8,10 +8,6 @@ pub struct CameraMatrices {
 }
 
 pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
-    #[cfg(feature = "openxr")]
-    if let Some(xr_override) = &world.resources.xr.camera_override {
-        return Some(xr_override.clone());
-    }
     let active_camera = world.resources.active_camera?;
     query_camera_matrices(world, active_camera)
 }

@@ -1,19 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(all(target_os = "android", feature = "android"))]
-static ANDROID_APP: std::sync::OnceLock<android_activity::AndroidApp> = std::sync::OnceLock::new();
-
-#[cfg(all(target_os = "android", feature = "android"))]
-pub fn set_android_app(app: android_activity::AndroidApp) {
-    let _ = ANDROID_APP.set(app);
-}
-
-#[cfg(all(target_os = "android", feature = "android"))]
-pub fn get_android_app() -> Option<&'static android_activity::AndroidApp> {
-    ANDROID_APP.get()
-}
-
 pub struct FileFilter {
     pub name: String,
     pub extensions: Vec<String>,
@@ -67,11 +54,7 @@ impl PendingFileLoad {
     }
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn pick_file(filters: &[FileFilter]) -> Option<std::path::PathBuf> {
     let mut dialog = rfd::FileDialog::new();
     for filter in filters {
@@ -81,20 +64,12 @@ pub fn pick_file(filters: &[FileFilter]) -> Option<std::path::PathBuf> {
     dialog.pick_file()
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn pick_folder() -> Option<std::path::PathBuf> {
     rfd::FileDialog::new().pick_folder()
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn save_file_dialog(
     filters: &[FileFilter],
     default_filename: Option<&str>,
@@ -110,11 +85,7 @@ pub fn save_file_dialog(
     dialog.save_file()
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn read_file(path: &std::path::Path) -> Result<Vec<u8>, FileError> {
     if !path.exists() {
         return Err(FileError::NotFound(path.display().to_string()));
@@ -122,11 +93,7 @@ pub fn read_file(path: &std::path::Path) -> Result<Vec<u8>, FileError> {
     std::fs::read(path).map_err(|error| FileError::ReadError(error.to_string()))
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn write_file(path: &std::path::Path, bytes: &[u8]) -> Result<(), FileError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
@@ -135,11 +102,7 @@ pub fn write_file(path: &std::path::Path, bytes: &[u8]) -> Result<(), FileError>
     std::fs::write(path, bytes).map_err(|error| FileError::WriteError(error.to_string()))
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn save_file(filename: &str, data: &[u8], filters: &[FileFilter]) -> Result<(), FileError> {
     let mut dialog = rfd::FileDialog::new().set_file_name(filename);
     for filter in filters {
@@ -152,11 +115,7 @@ pub fn save_file(filename: &str, data: &[u8], filters: &[FileFilter]) -> Result<
     }
 }
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_os = "android"),
-    feature = "file_dialog"
-))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "file_dialog"))]
 pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     let mut dialog = rfd::FileDialog::new();
     for filter in filters {
@@ -178,7 +137,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn open_directory(path: &std::path::Path) {
     let directory = if path.is_dir() {
         path
@@ -308,15 +267,4 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     input.click();
 
     pending
-}
-
-#[cfg(all(target_os = "android", feature = "android"))]
-pub fn read_android_asset(app: &android_activity::AndroidApp, path: &str) -> Option<Vec<u8>> {
-    use std::io::Read;
-    let asset_manager = app.asset_manager();
-    let c_path = std::ffi::CString::new(path).ok()?;
-    let mut asset = asset_manager.open(&c_path)?;
-    let mut bytes = Vec::new();
-    asset.read_to_end(&mut bytes).ok()?;
-    Some(bytes)
 }

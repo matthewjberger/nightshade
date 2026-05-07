@@ -25,7 +25,6 @@ no-clearly-defined = true
 workarounds = [
     "ring",
     "unicode-ident",
-    "wasmtime",
     "chrono",
     "rustls",
     "rustix",
