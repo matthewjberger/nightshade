@@ -55,7 +55,6 @@ pub mod render_layer;
 #[cfg(feature = "scene_graph")]
 pub mod scene;
 pub mod scene_2d;
-pub mod script;
 pub mod shadow;
 pub mod skin;
 pub mod sprite;

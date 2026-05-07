@@ -168,7 +168,7 @@
 //! - **`runtime`** - Minimal rendering without asset loading. Use with `wgpu` for
 //!   lightweight apps that don't need gltf/image loading.
 //!
-//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `scripting`, `fbx`, etc.
+//! - **`full`** - Everything in `engine` plus `audio`, `navmesh`, `fbx`, etc.
 //!
 //! - **`wgpu`** (default) - WebGPU-based rendering with DirectX 12, Metal, Vulkan, and WebGPU.
 //!
@@ -202,8 +202,6 @@
 //!
 //! - **`navmesh`** - Navigation mesh generation using Recast.
 //!
-//! - **`scripting`** - Rhai scripting runtime.
-//!
 //! - **`picking`** - Ray-based entity picking. Trimesh picking requires `physics`.
 //!
 //! - **`gamepad`** - Gamepad input using gilrs.
@@ -230,11 +228,7 @@
 //!
 //! - **`chrome`** - Chrome tracing output. Implies `tracing`.
 //!
-//! ### Plugin Features
-//!
-//! - **`plugins`** - Guest-side WASM plugin API.
-//!
-//! - **`plugin_runtime`** - WASM plugin hosting via Wasmtime. Requires `assets`.
+//! ### Tooling Features
 //!
 //! - **`mcp`** - HTTP-based Model Context Protocol server on `http://127.0.0.1:3333/mcp`.
 //!   Exposes 50+ tools for AI clients to manipulate the running scene. Native only.
@@ -615,7 +609,6 @@
 //!    - Initialize and update audio (if `audio` enabled)
 //!    - Update camera aspect ratios
 //!    - Step physics simulation (if `physics` enabled)
-//!    - Run scripts (if `scripting` enabled)
 //!    - Update animation players, apply to transforms
 //!    - Propagate transform hierarchy
 //!    - Update instanced mesh caches, sync text
@@ -643,7 +636,6 @@
 //! - **XR** (with `openxr`): Vulkan backend required. Use `launch_xr()` entry point.
 
 pub mod filesystem;
-pub mod plugin;
 
 #[cfg(any(feature = "tui", feature = "terminal"))]
 pub mod tui;
@@ -678,9 +670,6 @@ pub mod mcp;
 
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
-
-#[cfg(all(feature = "plugin_runtime", not(target_arch = "wasm32")))]
-pub mod plugin_runtime;
 
 #[cfg(all(windows, feature = "windows-app-icon"))]
 pub mod build;
@@ -968,8 +957,6 @@ pub mod prelude {
         window,
     };
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "plugin_runtime"))]
-    pub use anyhow;
     #[cfg(all(
         not(target_arch = "wasm32"),
         not(target_os = "android"),
@@ -1108,8 +1095,9 @@ pub mod prelude {
     pub use crate::ecs::ui::widgets::world_tiles::{
         build_tiles, spawn_tile_pane_entity, ui_tile_active_pane, ui_tile_add_pane,
         ui_tile_add_pane_to, ui_tile_load_layout, ui_tile_pane_content, ui_tile_pane_title,
-        ui_tile_remove, ui_tile_save_layout, ui_tile_set_active, ui_tile_split,
-        ui_tile_splitter_moved, ui_tile_tab_activated, ui_tile_tab_closed,
+        ui_tile_remove, ui_tile_reset_to_panes, ui_tile_save_layout, ui_tile_set_active,
+        ui_tile_split, ui_tile_splitter_moved, ui_tile_tab_activated, ui_tile_tab_closed,
+        ui_tile_wrap_pane_in_tabs,
     };
     pub use crate::ecs::world::commands::{
         queue_ecs_command, queue_render_command, register_material, set_cursor_locked,

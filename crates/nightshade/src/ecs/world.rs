@@ -53,7 +53,6 @@ pub mod components {
         PhysicsInterpolation, RigidBodyComponent,
     };
     pub use crate::ecs::render_layer::components::{CameraCullingMask, CullingMask, RenderLayer};
-    pub use crate::ecs::script::components::{Script, ScriptSource};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::sprite::components::{
@@ -101,8 +100,6 @@ pub mod resources {
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::resources::CachedPrefab;
     pub use crate::ecs::prefab::resources::{AnimationCache, MeshCache, PrefabCache};
-    #[cfg(feature = "scripting")]
-    pub use crate::ecs::script::resources::ScriptRuntime;
     pub use crate::ecs::text::resources::{TextCache, TextState};
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
@@ -190,7 +187,6 @@ freecs::ecs! {
             particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
             prefab_instance: crate::ecs::prefab::components::PrefabInstance => PREFAB_INSTANCE,
-            script: crate::ecs::script::components::Script => SCRIPT,
             skin: crate::ecs::skin::components::Skin => SKIN,
             joint: crate::ecs::skin::components::Joint => JOINT,
             morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
@@ -276,8 +272,6 @@ freecs::ecs! {
         picking_world: crate::ecs::picking::resources::PickingWorld,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
-        #[cfg(feature = "scripting")]
-        script_runtime: crate::ecs::script::resources::ScriptRuntime,
         #[cfg(feature = "openxr")]
         xr: crate::xr::XrResources,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
