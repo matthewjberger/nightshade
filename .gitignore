@@ -22,3 +22,5 @@ apps/game/game.json
 screenshots/
 .claude/
 THIRD_PARTY_LICENSES.html
+*.tracy
+trace.csv
