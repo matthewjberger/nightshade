@@ -1379,7 +1379,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                     crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
-                crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
+                #[cfg(target_arch = "wasm32")]
+                crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
                 self.initialized = true;
             }
 
@@ -1419,7 +1420,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                     crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
-                crate::ecs::camera::systems::update_camera_aspect_ratios(&mut self.world);
+                #[cfg(target_arch = "wasm32")]
+                crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
 
                 if self.world.resources.graphics.use_fullscreen
                     && let Some(window_handle) = &self.world.resources.window.handle
