@@ -929,13 +929,13 @@ pub mod prelude {
         ui_tree_view_select_node, ui_tree_view_set_filter, ui_validate, ui_widget_content,
     };
     pub use crate::ecs::ui::widgets::world_layout::{
-        ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for, ui_focus,
-        ui_is_disabled, ui_label_text, ui_node_effectively_visible, ui_node_visible,
-        ui_read_system_clipboard, ui_rebuild_children, ui_rect, ui_release_image_layer,
-        ui_set_clipboard_text, ui_set_disabled, ui_set_disabled_recursive, ui_set_icon,
-        ui_set_label_text, ui_set_test_id, ui_set_text, ui_set_tooltip_entity, ui_set_tooltip_text,
-        ui_set_visible, ui_set_visible_exclusive, ui_size, ui_text_slot_for_entity,
-        ui_upload_image,
+        ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for,
+        ui_events_for_window, ui_focus, ui_is_disabled, ui_label_text, ui_node_effectively_visible,
+        ui_node_visible, ui_read_system_clipboard, ui_rebuild_children, ui_rect,
+        ui_release_image_layer, ui_set_clipboard_text, ui_set_disabled, ui_set_disabled_recursive,
+        ui_set_icon, ui_set_label_text, ui_set_test_id, ui_set_text, ui_set_tooltip_entity,
+        ui_set_tooltip_text, ui_set_visible, ui_set_visible_exclusive, ui_size,
+        ui_text_slot_for_entity, ui_upload_image,
     };
     pub use crate::ecs::ui::widgets::world_reactive::{
         ui_announce, ui_announcements, ui_clicked, ui_data_grid_enable_filters,

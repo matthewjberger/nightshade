@@ -139,10 +139,7 @@ pub fn reset_keyboard_system(world: &mut World) {
 }
 
 pub fn escape_key_exit_system(world: &mut World) {
-    if world
-        .resources
-        .input
-        .keyboard
+    if crate::ecs::input::access::keyboard_for_active(world)
         .is_key_pressed(winit::keyboard::KeyCode::Escape)
     {
         world.resources.window.should_exit = true;
@@ -153,8 +150,8 @@ pub fn escape_key_exit_system(world: &mut World) {
 pub fn detect_input_mode_system(world: &mut World) {
     use crate::ecs::input::resources::{InputMode, MouseState};
 
-    let keyboard = &world.resources.input.keyboard;
-    let mouse = &world.resources.input.mouse;
+    let keyboard = crate::ecs::input::access::keyboard_for_active(world);
+    let mouse = crate::ecs::input::access::mouse_for_active(world);
 
     let has_keyboard_input = keyboard
         .keystates
