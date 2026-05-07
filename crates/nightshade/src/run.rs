@@ -80,8 +80,6 @@
 //! ```
 
 use crate::prelude::*;
-#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-mod mcp_commands;
 
 use crate::ecs::world::World;
 use winit::{
@@ -343,14 +341,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     let state = Box::new(state);
 
     #[allow(unused_mut)]
-    let mut world = World::default();
-
-    #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-    let _mcp_shutdown = {
-        let command_queue = crate::mcp::create_mcp_queues();
-        world.resources.mcp_command_queue = command_queue.clone();
-        crate::mcp::start_mcp_server(command_queue)
-    };
+    let world = World::default();
 
     let event_loop = EventLoop::builder().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
@@ -454,9 +445,6 @@ pub(crate) fn step(
             crate::ecs::event_bus::systems::process_events_system(world, |world, message| {
                 state.handle_event(world, message);
             });
-
-            #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-            process_mcp_commands_with_state(world, state.as_mut());
 
             run_frame_systems(world);
 
@@ -1225,27 +1213,6 @@ pub trait State {
         _button: winit::event::MouseButton,
     ) {
     }
-    /// Intercept an MCP command before the engine processes it.
-    ///
-    /// Return `Some(response)` to handle the command yourself (engine skips it),
-    /// or `None` to let the engine handle it with the default behavior.
-    #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-    fn handle_mcp_command(
-        &mut self,
-        _world: &mut World,
-        _command: &crate::mcp::McpCommand,
-    ) -> Option<crate::mcp::McpResponse> {
-        None
-    }
-    /// Called after an MCP command has been processed (either by the engine or by `handle_mcp_command`).
-    #[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-    fn after_mcp_command(
-        &mut self,
-        _world: &mut World,
-        _command: &crate::mcp::McpCommand,
-        _response: &crate::mcp::McpResponse,
-    ) {
-    }
 }
 
 /// Application context for the winit event loop.
@@ -1357,27 +1324,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         let dimension = window_handle.inner_size();
 
-        #[cfg(all(not(target_arch = "wasm32"), feature = "async_runtime"))]
-        {
-            let runtime = tokio::runtime::Runtime::new().unwrap();
-            match runtime.block_on(crate::render::core::create_renderer(
-                window_handle.clone(),
-                dimension.width,
-                dimension.height,
-            )) {
-                Ok(mut renderer) => {
-                    if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
-                        tracing::error!("Failed to configure renderer with state: {error}");
-                    }
-                    self.renderer = Some(renderer);
-                }
-                Err(error) => {
-                    tracing::error!("Failed to create renderer: {error}");
-                }
-            }
-        }
-
-        #[cfg(all(not(target_arch = "wasm32"), not(feature = "async_runtime")))]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             match pollster::block_on(crate::render::core::create_renderer(
                 window_handle.clone(),
@@ -1609,22 +1556,4 @@ pub(crate) fn request_redraw_system(world: &mut World) {
         return;
     }
     window_handle.request_redraw();
-}
-
-#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-pub(crate) fn process_mcp_commands_with_state(world: &mut World, state: &mut dyn State) {
-    let commands: Vec<crate::mcp::PendingCommand> = {
-        let mut queue = world.resources.mcp_command_queue.lock().unwrap();
-        queue.drain(..).collect()
-    };
-
-    for (command, response_sender) in commands {
-        let response = match state.handle_mcp_command(world, &command) {
-            Some(response) => response,
-            None => mcp_commands::process_single_mcp_command(world, command.clone()),
-        };
-
-        state.after_mcp_command(world, &command, &response);
-        let _ = response_sender.send(response);
-    }
 }

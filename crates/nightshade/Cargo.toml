@@ -73,11 +73,6 @@ file_dialog = [
     "dep:dirs",
 ]
 
-async_runtime = [
-    "core",
-    "dep:tokio",
-]
-
 runtime = [
     "core",
     "text",
@@ -90,7 +85,6 @@ engine = [
     "scene_graph",
     "picking",
     "file_dialog",
-    "async_runtime",
     "terrain",
     "screenshot",
     "dep:rand",
@@ -132,8 +126,6 @@ full = [
     "gamepad",
     "navmesh",
     "lattice",
-    "claude",
-    "mcp",
 ]
 
 wgpu = ["dep:wgpu", "wgpu/wgsl", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
@@ -142,10 +134,7 @@ steam = ["dep:steamworks", "dep:steamworks-sys"]
 tracing = ["dep:tracing-appender", "dep:chrono"]
 tracy = ["tracing", "dep:tracing-tracy"]
 chrome = ["tracing", "dep:tracing-chrome"]
-claude = ["dep:serde_json"]
-mcp = ["async_runtime", "behaviors", "dep:axum", "dep:rmcp", "dep:schemars"]
 windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
-webview = ["dep:wry", "dep:tiny_http", "dep:include_dir", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
 
 [dependencies]
 serde = { workspace = true }
@@ -201,18 +190,11 @@ tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["signal", "sync", "time"] }
 ash = { workspace = true, optional = true }
 wgpu-hal = { workspace = true, optional = true }
 gpu-allocator = { workspace = true, optional = true }
 steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
-wry = { version = "0.54", optional = true }
-tiny_http = { version = "0.12", optional = true }
-include_dir = { version = "0.7", optional = true }
-axum = { version = "0.8", features = ["macros"], optional = true }
-rmcp = { version = "0.2", features = ["server", "transport-sse-server", "transport-streamable-http-server"], optional = true }
-schemars = { version = "0.8", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "1.0", features = ["v4", "js", "serde"], optional = true }

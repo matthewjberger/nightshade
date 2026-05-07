@@ -188,8 +188,6 @@
 //!
 //! - **`file_dialog`** - Native file dialogs using rfd. Requires `core`.
 //!
-//! - **`async_runtime`** - Tokio async runtime. Requires `core`. Falls back to pollster if disabled.
-//!
 //! - **`screenshot`** - PNG screenshot saving using image. Standalone feature.
 //!
 //! ### Optional Features
@@ -214,10 +212,6 @@
 //!
 //! - **`steam`** - Steamworks integration.
 //!
-//! - **`webview`** - Bidirectional IPC for hosting web frontends (Leptos, Yew, etc.).
-//!   On native (with `runtime`), provides `WebviewContext` and `serve_embedded_dir`.
-//!   On WASM, provides `connect` and `send` for the frontend bridge.
-//!
 //! ### Profiling Features
 //!
 //! - **`tracing`** - Rolling log files and `RUST_LOG` support.
@@ -225,15 +219,6 @@
 //! - **`tracy`** - Real-time profiling with Tracy. Implies `tracing`.
 //!
 //! - **`chrome`** - Chrome tracing output. Implies `tracing`.
-//!
-//! ### Tooling Features
-//!
-//! - **`mcp`** - HTTP-based Model Context Protocol server on `http://127.0.0.1:3333/mcp`.
-//!   Exposes 50+ tools for AI clients to manipulate the running scene. Native only.
-//!   Requires `async_runtime` and `behaviors`.
-//!
-//! - **`claude`** - Background worker for spawning Claude Code CLI as a subprocess and
-//!   streaming its JSON output. Lets applications embed an AI chat interface. Native only.
 //!
 //! ## Feature Quick Reference
 //!
@@ -443,24 +428,6 @@
 //! }
 //! ```
 //!
-//! ### Webview (`webview` feature)
-//!
-//! Host a web frontend (Leptos, Yew, etc.) inside a nightshade window with bidirectional IPC.
-//! On WASM, the frontend uses `connect` and `send`:
-//!
-//! ```ignore
-//! use nightshade::webview::{connect, send};
-//!
-//! fn main() {
-//!     connect(FrontendCommand::Ready, |event: BackendEvent| {
-//!         // Handle events from native app
-//!     });
-//!
-//!     // Send commands to native app
-//!     send(&FrontendCommand::DoSomething);
-//! }
-//! ```
-//!
 //! ### Debug Lines
 //!
 //! ```ignore
@@ -602,8 +569,7 @@
 //! 3. Calculate delta time
 //! 4. Call [`State::run_systems()`](run::State::run_systems)
 //! 5. Dispatch event bus messages
-//! 6. Process MCP commands (if `mcp` feature enabled)
-//! 7. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
+//! 6. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
 //!    - Initialize and update audio (if `audio` enabled)
 //!    - Update camera aspect ratios
 //!    - Step physics simulation (if `physics` enabled)
@@ -623,9 +589,8 @@
 //!
 //! ## Threading Model
 //!
-//! The engine runs on a single thread with async GPU operations via wgpu,
-//! optional async asset loading (with `async_runtime` feature), and fixed
-//! timestep physics with interpolation for smooth rendering.
+//! The engine runs on a single thread with async GPU operations via wgpu
+//! and fixed timestep physics with interpolation for smooth rendering.
 //!
 //! ## Platform Notes
 //!
@@ -637,9 +602,6 @@ pub mod filesystem;
 
 #[cfg(any(feature = "tui", feature = "terminal"))]
 pub mod tui;
-
-#[cfg(feature = "webview")]
-pub mod webview;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
@@ -659,12 +621,6 @@ pub mod xr;
 
 #[cfg(feature = "shell")]
 pub mod shell;
-
-#[cfg(all(feature = "claude", not(target_arch = "wasm32")))]
-pub mod claude;
-
-#[cfg(all(feature = "mcp", not(target_arch = "wasm32")))]
-pub mod mcp;
 
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
