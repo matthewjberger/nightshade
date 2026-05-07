@@ -120,7 +120,6 @@ syntax_highlighting = ["dep:syntect"]
 screenshot = ["dep:image"]
 navmesh = ["dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
-fbx = ["assets", "dep:ufbx"]
 android = ["dep:android-activity", "dep:tracing-android"]
 android-openxr = ["android", "openxr"]
 
@@ -132,7 +131,6 @@ full = [
     "physics",
     "gamepad",
     "navmesh",
-    "fbx",
     "lattice",
     "claude",
     "mcp",
@@ -209,7 +207,6 @@ wgpu-hal = { workspace = true, optional = true }
 gpu-allocator = { workspace = true, optional = true }
 steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
-ufbx = { version = "0.10", optional = true }
 wry = { version = "0.54", optional = true }
 tiny_http = { version = "0.12", optional = true }
 include_dir = { version = "0.7", optional = true }

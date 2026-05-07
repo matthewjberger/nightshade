@@ -206,8 +206,6 @@
 //!
 //! - **`gamepad`** - Gamepad input using gilrs.
 //!
-//! - **`fbx`** - FBX model loading using ufbx. Requires `assets`.
-//!
 //! - **`lattice`** - Lattice deformation system.
 //!
 //! ### Platform Features
