@@ -204,8 +204,6 @@
 //!
 //! - **`gamepad`** - Gamepad input using gilrs.
 //!
-//! - **`lattice`** - Lattice deformation system.
-//!
 //! ### Platform Features
 //!
 //! - **`openxr`** - OpenXR VR support.
@@ -333,29 +331,6 @@
 //!     },
 //! };
 //! let terrain = spawn_terrain_with_material(world, &config, material_id);
-//! ```
-//!
-//! ### Lattice Deformation (`lattice` feature)
-//!
-//! ```ignore
-//! // Create lattice covering a region
-//! let lattice = create_lattice_entity(
-//!     world,
-//!     Vec3::new(-2.0, 0.0, -2.0),  // Min bounds
-//!     Vec3::new(2.0, 4.0, 2.0),    // Max bounds
-//!     [3, 4, 3],                    // Grid dimensions
-//! );
-//!
-//! // Bind mesh to lattice
-//! register_entity_for_lattice_deformation(world, mesh_entity, lattice);
-//!
-//! // Deform by moving control points
-//! if let Some(lat) = world.core.get_lattice_mut(lattice) {
-//!     lat.set_displacement(1, 3, 1, Vec3::new(0.5, 0.0, 0.0));
-//! }
-//!
-//! // Apply deformations each frame
-//! lattice_deformation_system(world);
 //! ```
 //!
 //! ### Gamepad Input (`gamepad` feature)
@@ -600,9 +575,6 @@
 
 pub mod filesystem;
 
-#[cfg(any(feature = "tui", feature = "terminal"))]
-pub mod tui;
-
 #[cfg(feature = "runtime")]
 pub mod ecs;
 #[cfg(feature = "runtime")]
@@ -627,9 +599,6 @@ pub mod steam;
 
 #[cfg(all(windows, feature = "windows-app-icon"))]
 pub mod build;
-
-#[cfg(feature = "interactive_fiction")]
-pub mod interactive_fiction;
 
 #[cfg(feature = "runtime")]
 pub use systems::*;
@@ -696,14 +665,6 @@ pub mod prelude {
     pub use crate::ecs::input::resources::mouse::MouseState;
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::systems::detect_input_mode_system;
-    #[cfg(feature = "lattice")]
-    pub use crate::ecs::lattice::{
-        debug::{LatticeDebugState, get_lattice_point_at_screen_position, lattice_debug_draw},
-        systems::{
-            create_lattice_entity, lattice_deformation_system,
-            register_entity_for_lattice_deformation,
-        },
-    };
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
         loading_pipeline_allocate_source_image, loading_pipeline_completed,
@@ -901,7 +862,6 @@ pub mod prelude {
     pub use serde;
     #[cfg(feature = "assets")]
     pub use serde_json;
-    pub use strum;
     pub use tracing;
     pub use uuid;
     pub use winit;
@@ -977,9 +937,6 @@ pub mod prelude {
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::ecs::file_watcher::FileWatcher;
 
-    #[cfg(feature = "fft")]
-    pub use crate::ecs::audio::AudioAnalyzer;
-
     #[cfg(all(target_os = "android", feature = "android"))]
     pub use crate::filesystem::{get_android_app, read_android_asset};
     #[cfg(all(target_os = "android", feature = "android"))]
@@ -1003,7 +960,7 @@ pub mod prelude {
         ui_data_grid_stop_edit, ui_rich_text_editor_set_color, ui_rich_text_editor_set_value,
         ui_rich_text_editor_toggle_bold, ui_rich_text_editor_toggle_italic,
         ui_rich_text_editor_toggle_style, ui_rich_text_editor_toggle_underline,
-        ui_text_area_set_syntax, ui_text_area_set_value,
+        ui_text_area_set_value,
     };
     pub use crate::ecs::ui::widgets::world_interaction::{
         ui_add_validation_rule, ui_bubbled_events_for, ui_clear_error, ui_close_context_menus,

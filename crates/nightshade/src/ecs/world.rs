@@ -34,8 +34,6 @@ pub mod components {
         GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
     };
     pub use crate::ecs::input::components::Hovered;
-    #[cfg(feature = "lattice")]
-    pub use crate::ecs::lattice::components::{Lattice, LatticeInfluenced};
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{
@@ -191,8 +189,6 @@ freecs::ecs! {
             joint: crate::ecs::skin::components::Joint => JOINT,
             morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
             navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
-            lattice: crate::ecs::lattice::components::Lattice => LATTICE,
-            lattice_influenced: crate::ecs::lattice::components::LatticeInfluenced => LATTICE_INFLUENCED,
             water: crate::ecs::water::components::Water => WATER,
             grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
             grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
