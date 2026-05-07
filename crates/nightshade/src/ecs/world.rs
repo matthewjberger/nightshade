@@ -53,18 +53,10 @@ pub mod components {
     pub use crate::ecs::render_layer::components::{CameraCullingMask, CullingMask, RenderLayer};
     pub use crate::ecs::shadow::components::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
-    pub use crate::ecs::sprite::components::{
-        NineSlice, Sprite, SpriteBlendMode, SpriteStencilMode,
-    };
-    pub use crate::ecs::sprite_animator::components::{LoopMode, SpriteAnimator, SpriteFrame};
-    pub use crate::ecs::sprite_particles::components::{
-        ColorRange2D, EmitterShape2D, SpriteParticleEmitter,
-    };
     pub use crate::ecs::text::components::{
         Text, TextAlignment, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
         VerticalAlignment,
     };
-    pub use crate::ecs::tilemap::components::{TileData, Tilemap};
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
@@ -244,12 +236,6 @@ freecs::ecs! {
             ui_date_picker: crate::ecs::ui::components::UiDatePickerData => UI_DATE_PICKER,
             ui_spinner: crate::ecs::ui::components::UiSpinnerData => UI_SPINNER,
         }
-        Sprite2d {
-            sprite: crate::ecs::sprite::components::Sprite => SPRITE,
-            sprite_animator: crate::ecs::sprite_animator::components::SpriteAnimator => SPRITE_ANIMATOR,
-            tilemap: crate::ecs::tilemap::components::Tilemap => TILEMAP,
-            sprite_particle_emitter: crate::ecs::sprite_particles::components::SpriteParticleEmitter => SPRITE_PARTICLE_EMITTER,
-        }
     }
     Resources {
         world_id: u64,
@@ -285,7 +271,6 @@ freecs::ecs! {
         active_camera: Option<freecs::Entity>,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         ibl_views: crate::ecs::graphics::resources::IblViews,
-        sprite_slot_allocator: crate::ecs::sprite::slot_allocator::SpriteSlotAllocator,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
         schedules: crate::schedule::Schedules,
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]

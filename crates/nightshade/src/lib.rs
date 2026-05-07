@@ -428,21 +428,6 @@
 //! // Runs automatically via frame schedule
 //! ```
 //!
-//! ### Sprites
-//!
-//! ```ignore
-//! let sprite_entity = world.spawn();
-//! world.sprite2d.add_components(sprite_entity, SPRITE);
-//! world.sprite2d.set_sprite(sprite_entity, Sprite::new(
-//!     Vec2::new(100.0, 100.0),  // Screen position
-//!     Vec2::new(64.0, 64.0),    // Size
-//! )
-//!     .with_texture(texture_index)
-//!     .with_color([1.0, 1.0, 1.0, 1.0])
-//!     .with_depth(0.0)  // Lower = in front
-//! );
-//! ```
-//!
 //! ### Water
 //!
 //! ```ignore
@@ -728,31 +713,6 @@ pub mod prelude {
         SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, ScenePhysics,
         ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene, world_to_scene,
     };
-    pub use crate::ecs::scene_2d::{
-        Scene2D, Scene2DError, SceneEntity2D, load_scene_2d, save_scene_2d, spawn_scene_2d,
-        world_to_scene_2d,
-    };
-    pub use crate::ecs::sprite::commands::spawn_sprite;
-    pub use crate::ecs::sprite::components::{SpriteBlendMode, SpriteGradient, SpriteStencilMode};
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::sprite::shapes::spawn_sprite_from_image_bytes;
-    pub use crate::ecs::sprite::shapes::{
-        BlurSource, CubicBezier, SpriteShape, screen_pixels_to_world_size, shape_texture_info,
-        spawn_arrow, spawn_capsule, spawn_circle, spawn_cubic_bezier, spawn_dashed_line,
-        spawn_ellipse, spawn_filled_and_stroked_circle, spawn_filled_and_stroked_ellipse,
-        spawn_filled_and_stroked_rect, spawn_filled_path, spawn_filled_polygon, spawn_glow,
-        spawn_line, spawn_outlined_rect, spawn_path, spawn_quadratic_bezier, spawn_rect,
-        spawn_ring, spawn_rounded_rect, spawn_shadow, spawn_shape, spawn_shape_with_aa,
-        spawn_triangle, spawn_variable_width_path, tessellate_cubic_bezier,
-        tessellate_quadratic_bezier,
-    };
-    pub use crate::ecs::sprite::slot_allocator::{
-        allocate_sprite_slot, sized_slot_uv, try_allocate_sprite_slot,
-    };
-    pub use crate::ecs::sprite_animator::{
-        LoopMode, SpriteAnimator, SpriteFrame, systems::sprite_animation_system,
-    };
-    pub use crate::ecs::sprite_particles::{ColorRange2D, EmitterShape2D, SpriteParticleEmitter};
     #[cfg(feature = "terrain")]
     pub use crate::ecs::terrain::{
         NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,
@@ -770,7 +730,6 @@ pub mod prelude {
         TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
-    pub use crate::ecs::tilemap::commands::spawn_tilemap;
     pub use crate::ecs::transform::commands::mark_local_transform_dirty;
     pub use crate::ecs::tween::{
         EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,

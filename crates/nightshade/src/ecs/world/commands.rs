@@ -26,20 +26,6 @@ pub enum EcsCommand {
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
-    UploadSpriteTexture {
-        slot: u32,
-        rgba_data: Vec<u8>,
-        width: u32,
-        height: u32,
-    },
-    UploadSpriteTextureRegion {
-        slot: u32,
-        offset_x: u32,
-        offset_y: u32,
-        rgba_data: Vec<u8>,
-        width: u32,
-        height: u32,
-    },
     UploadUiImageLayer {
         layer: u32,
         rgba_data: Vec<u8>,

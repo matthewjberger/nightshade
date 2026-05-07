@@ -125,15 +125,12 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if (world
+        if world
             .core
             .entity_has_components(entity, crate::ecs::world::RENDER_MESH)
             || world
                 .core
-                .entity_has_components(entity, crate::ecs::world::INSTANCED_MESH))
-            && !world
-                .sprite2d
-                .entity_has_components(entity, crate::ecs::world::SPRITE)
+                .entity_has_components(entity, crate::ecs::world::INSTANCED_MESH)
         {
             render_dirty_entities.push(entity);
         }
