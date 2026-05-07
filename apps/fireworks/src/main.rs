@@ -331,7 +331,7 @@ impl FireworksDemo {
         let bloom_intensity_initial = world.resources.graphics.bloom_intensity;
 
         let mut tree = UiTreeBuilder::new(world);
-        let panel = tree.add_docked_panel_left("Fireworks", 260.0);
+        let panel = tree.add_docked_panel_left("fireworks", "Fireworks", 260.0);
         let content = panel_content(tree.world_mut(), panel);
         if let Some(node) = tree.world_mut().ui.get_ui_layout_node_mut(content) {
             node.flow_layout = Some(FlowLayout {
@@ -1729,30 +1729,48 @@ impl FireworksDemo {
 
     fn load_all_particle_textures(world: &mut World) {
         let textures: &[(u32, &[u8])] = &[
-            (1, include_bytes!("../assets/particles/flame_01.png")),
-            (2, include_bytes!("../assets/particles/flame_02.png")),
-            (3, include_bytes!("../assets/particles/flame_06.png")),
-            (4, include_bytes!("../assets/particles/smoke_01.png")),
-            (5, include_bytes!("../assets/particles/smoke_04.png")),
-            (6, include_bytes!("../assets/particles/smoke_07.png")),
-            (7, include_bytes!("../assets/particles/spark_01.png")),
-            (8, include_bytes!("../assets/particles/spark_05.png")),
-            (9, include_bytes!("../assets/particles/star_04.png")),
-            (10, include_bytes!("../assets/particles/star_06.png")),
-            (11, include_bytes!("../assets/particles/twirl_01.png")),
-            (12, include_bytes!("../assets/particles/magic_01.png")),
-            (13, include_bytes!("../assets/particles/magic_04.png")),
-            (14, include_bytes!("../assets/particles/circle_01.png")),
-            (15, include_bytes!("../assets/particles/circle_05.png")),
-            (16, include_bytes!("../assets/particles/flare_01.png")),
-            (17, include_bytes!("../assets/particles/light_01.png")),
-            (18, include_bytes!("../assets/particles/fire_01.png")),
-            (19, include_bytes!("../assets/particles/scorch_01.png")),
-            (20, include_bytes!("../assets/particles/slash_01.png")),
-            (21, include_bytes!("../assets/particles/symbol_01.png")),
-            (22, include_bytes!("../assets/particles/trace_05.png")),
-            (23, include_bytes!("../assets/particles/muzzle_03.png")),
-            (24, include_bytes!("../assets/particles/window_01.png")),
+            (1, include_bytes!("../../../assets/particles/flame_01.png")),
+            (2, include_bytes!("../../../assets/particles/flame_02.png")),
+            (3, include_bytes!("../../../assets/particles/flame_06.png")),
+            (4, include_bytes!("../../../assets/particles/smoke_01.png")),
+            (5, include_bytes!("../../../assets/particles/smoke_04.png")),
+            (6, include_bytes!("../../../assets/particles/smoke_07.png")),
+            (7, include_bytes!("../../../assets/particles/spark_01.png")),
+            (8, include_bytes!("../../../assets/particles/spark_05.png")),
+            (9, include_bytes!("../../../assets/particles/star_04.png")),
+            (10, include_bytes!("../../../assets/particles/star_06.png")),
+            (11, include_bytes!("../../../assets/particles/twirl_01.png")),
+            (12, include_bytes!("../../../assets/particles/magic_01.png")),
+            (13, include_bytes!("../../../assets/particles/magic_04.png")),
+            (
+                14,
+                include_bytes!("../../../assets/particles/circle_01.png"),
+            ),
+            (
+                15,
+                include_bytes!("../../../assets/particles/circle_05.png"),
+            ),
+            (16, include_bytes!("../../../assets/particles/flare_01.png")),
+            (17, include_bytes!("../../../assets/particles/light_01.png")),
+            (18, include_bytes!("../../../assets/particles/fire_01.png")),
+            (
+                19,
+                include_bytes!("../../../assets/particles/scorch_01.png"),
+            ),
+            (20, include_bytes!("../../../assets/particles/slash_01.png")),
+            (
+                21,
+                include_bytes!("../../../assets/particles/symbol_01.png"),
+            ),
+            (22, include_bytes!("../../../assets/particles/trace_05.png")),
+            (
+                23,
+                include_bytes!("../../../assets/particles/muzzle_03.png"),
+            ),
+            (
+                24,
+                include_bytes!("../../../assets/particles/window_01.png"),
+            ),
         ];
         for &(slot, bytes) in textures {
             Self::load_particle_texture(world, slot, bytes);

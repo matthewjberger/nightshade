@@ -102,12 +102,14 @@
 //! [`State::on_keyboard_input`]: crate::run::State::on_keyboard_input
 //! [`State::on_dropped_file_data`]: crate::run::State::on_dropped_file_data
 
+pub mod access;
 pub mod components;
 pub mod events;
 pub mod queries;
 pub mod resources;
 pub mod systems;
 
+pub use access::*;
 pub use components::*;
 pub use events::*;
 #[cfg(feature = "gamepad")]

@@ -1,6 +1,6 @@
-//! Debug line rendering for visualization and gizmos.
+//! Debug line rendering for visualization and wireframes.
 //!
-//! Draw lines in 3D space for debugging, visualization, and editor gizmos:
+//! Draw lines in 3D space for debugging and visualization:
 //!
 //! - [`Lines`]: Component holding a collection of lines to render
 //! - [`Line`]: Single line segment with start, end, and color

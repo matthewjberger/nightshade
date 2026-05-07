@@ -13,9 +13,9 @@ use nightshade::ecs::world::components::Visibility;
 use nightshade::prelude::*;
 use std::collections::HashSet;
 
-const FOX_MODEL: &[u8] = include_bytes!("../assets/fox.glb");
+const FOX_MODEL: &[u8] = include_bytes!("../../../assets/gltf/fox.glb");
 const FOX_SCALE: f32 = 0.01;
-const HDR_SKYBOX: &[u8] = include_bytes!("../assets/moonrise.hdr");
+const HDR_SKYBOX: &[u8] = include_bytes!("../../../assets/sky/moonrise.hdr");
 
 const FIRST_NAMES: &[&str] = &[
     "Rusty", "Maple", "Bramble", "Hazel", "Fern", "Copper", "Willow", "Ash", "Clover", "Sage",
@@ -251,7 +251,8 @@ impl State for NavMeshDemo {
 impl NavMeshDemo {
     fn build_ui(&mut self, world: &mut World) {
         let mut tree_builder = UiTreeBuilder::new(world);
-        let panel = tree_builder.add_docked_panel_right("NavMesh Demo Controls", 320.0);
+        let panel =
+            tree_builder.add_docked_panel_right("navmesh_demo", "NavMesh Demo Controls", 320.0);
         let content = panel_content(tree_builder.world_mut(), panel);
         if let Some(node) = tree_builder.world_mut().ui.get_ui_layout_node_mut(content) {
             node.flow_layout = Some(FlowLayout {

@@ -425,7 +425,7 @@ fn build_panel(
     initial_spin: f32,
 ) -> UiHandles {
     let mut tree = UiTreeBuilder::new(world);
-    let panel = tree.add_floating_panel("Picking Demo", PANEL_RECT);
+    let panel = tree.add_floating_panel("picking_demo", "Picking Demo", PANEL_RECT);
     let content = widget::<UiPanelData>(tree.world_mut(), panel)
         .map(|d| d.content_entity)
         .expect("panel content");

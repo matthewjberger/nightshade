@@ -1069,6 +1069,7 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         tree.add_confirm_dialog("Confirm Action", "Are you sure you want to proceed?");
 
     tree.add_floating_panel(
+        "gallery_floating",
         "Floating Panel",
         Rect {
             min: nalgebra_glm::Vec2::new(140.0, 220.0),

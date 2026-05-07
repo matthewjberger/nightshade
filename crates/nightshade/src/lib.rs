@@ -548,7 +548,7 @@ pub mod filesystem;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
-#[cfg(feature = "runtime")]
+#[cfg(all(feature = "runtime", feature = "multi_window"))]
 pub mod multi_window;
 #[cfg(feature = "runtime")]
 pub mod render;
@@ -577,7 +577,7 @@ pub mod prelude {
         EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
     };
     pub use crate::ecs::window::resources::{
-        SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, WindowSpawnRequest,
+        SecondaryWindowState, SecondaryWindows, WindowSpawnRequest,
     };
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
@@ -646,14 +646,16 @@ pub mod prelude {
     pub use crate::ecs::material::resources::material_registry_insert;
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
-    pub use crate::ecs::navmesh::{
-        NavMeshAgent, NavMeshAgentState, NavMeshConnection, NavMeshEdge, NavMeshTriangle,
-        NavMeshWorld, PathRequest, PathResult, PathStatus, PathfindingAlgorithm, SpatialHash,
-        clear_navmesh, find_closest_point_on_navmesh, get_agent_path_length, get_agent_state,
-        run_navmesh_systems, sample_navmesh_height, set_agent_destination, set_agent_speed,
-        set_navmesh_debug_draw, spawn_navmesh_agent, stop_agent,
-    };
+    pub use crate::ecs::navmesh::{NavMeshAgent, NavMeshAgentState};
     #[cfg(feature = "navmesh")]
+    pub use crate::ecs::navmesh::{
+        NavMeshConnection, NavMeshEdge, NavMeshTriangle, NavMeshWorld, PathRequest, PathResult,
+        PathStatus, PathfindingAlgorithm, SpatialHash, clear_navmesh,
+        find_closest_point_on_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
+        sample_navmesh_height, set_agent_destination, set_agent_speed, set_navmesh_debug_draw,
+        spawn_navmesh_agent, stop_agent,
+    };
+    #[cfg(feature = "navmesh-bake")]
     pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     pub use crate::ecs::particles::systems::update_particle_emitters;
     #[cfg(feature = "physics")]
@@ -704,6 +706,8 @@ pub mod prelude {
     pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
+    #[cfg(all(feature = "scene_graph", feature = "navmesh"))]
+    pub use crate::ecs::scene::SceneNavMesh;
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::registry::{
         AssetRegistry, RuntimeAssetEntry, RuntimeAssetRegistry, asset_registry_add_manifest,
@@ -721,9 +725,8 @@ pub mod prelude {
     pub use crate::ecs::scene::{
         AssetMode, AssetUuid, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType, SceneCamera,
         SceneCollider, SceneComponents, SceneEntity, SceneError, SceneHdrSkybox,
-        SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, SceneNavMesh,
-        ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene,
-        world_to_scene,
+        SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, ScenePhysics,
+        ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene, world_to_scene,
     };
     pub use crate::ecs::scene_2d::{
         Scene2D, Scene2DError, SceneEntity2D, load_scene_2d, save_scene_2d, spawn_scene_2d,
@@ -940,13 +943,14 @@ pub mod prelude {
         ui_set_accessible_label, ui_set_reduced_motion, ui_set_state_active,
     };
     pub use crate::ecs::ui::widgets::world_state::{
-        measure_ui_text_width, ui_breadcrumb_set_segments, ui_button_set_text, ui_changed,
-        ui_checkbox_changed, ui_checkbox_value, ui_collapsing_header_open, ui_color_picker_changed,
-        ui_color_picker_color, ui_color_picker_set_value, ui_drag_value, ui_drag_value_changed,
-        ui_dropdown_selected, ui_dropdown_selected_changed, ui_dropdown_set_value,
-        ui_panel_set_header_visible, ui_panel_set_pinned, ui_pointer_over_widget,
-        ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
-        ui_range_slider_set_values, ui_reserved_areas, ui_scroll_area_set_offset,
+        measure_ui_text_width, ui_apply_dock_state, ui_breadcrumb_set_segments, ui_button_set_text,
+        ui_capture_dock_state, ui_changed, ui_checkbox_changed, ui_checkbox_value,
+        ui_collapsing_header_open, ui_color_picker_changed, ui_color_picker_color,
+        ui_color_picker_set_value, ui_dock_layout_for_window, ui_dock_state, ui_drag_value,
+        ui_drag_value_changed, ui_dropdown_selected, ui_dropdown_selected_changed,
+        ui_dropdown_set_value, ui_panel_set_header_visible, ui_panel_set_pinned,
+        ui_pointer_over_widget, ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
+        ui_range_slider_set_values, ui_reserved_areas_for_window, ui_scroll_area_set_offset,
         ui_scroll_area_set_snap, ui_slider_set_value, ui_slider_value, ui_slider_value_changed,
         ui_tab_bar_selected, ui_tab_bar_set_value, ui_text_input_changed, ui_text_input_set_mask,
         ui_text_input_set_password, ui_text_input_set_value, ui_text_input_submitted,

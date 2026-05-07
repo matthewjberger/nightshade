@@ -102,8 +102,8 @@ pub mod resources {
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::window::resources::{
-        SecondaryWindowInput, SecondaryWindowState, SecondaryWindows, ViewportRect, Window,
-        WindowSpawnRequest, WindowTiming,
+        SecondaryWindowState, SecondaryWindows, ViewportRect, Window, WindowSpawnRequest,
+        WindowTiming,
     };
     pub use crate::ecs::world::cleanup::CleanupState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
@@ -255,6 +255,7 @@ freecs::ecs! {
         world_id: u64,
         is_runtime: bool,
         window: crate::ecs::window::resources::Window,
+        #[cfg(feature = "multi_window")]
         secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         user_interface: crate::ecs::ui::UserInterface,
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
@@ -267,6 +268,7 @@ freecs::ecs! {
         #[cfg(feature = "physics")]
         picking_world: crate::ecs::picking::resources::PickingWorld,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+        #[cfg(feature = "navmesh")]
         navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,

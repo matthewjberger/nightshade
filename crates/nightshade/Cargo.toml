@@ -13,7 +13,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["engine", "wgpu"]
+default = ["engine", "multi_window", "wgpu"]
 
 core = [
     "dep:freecs",
@@ -94,6 +94,7 @@ engine = [
     "dep:web-sys",
 ]
 
+multi_window = []
 shell = []
 audio = ["dep:kira"]
 physics = ["dep:rapier3d"]
@@ -101,7 +102,8 @@ picking = []
 behaviors = []
 grass = []
 screenshot = ["dep:image"]
-navmesh = ["dep:rerecast", "dep:glam"]
+navmesh = []
+navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
 
 full = [

@@ -302,9 +302,22 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     let event_loop = EventLoop::builder().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "multi_window"))]
     {
         let mut context = crate::multi_window::MultiWindowContext::new(state, world);
+        event_loop.run_app(&mut context)?;
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "multi_window")))]
+    {
+        let mut context = WindowContext {
+            state,
+            world,
+            renderer: None,
+            snapshot_path: None,
+            snapshot_queued: false,
+            initialized: false,
+        };
         event_loop.run_app(&mut context)?;
     }
 
