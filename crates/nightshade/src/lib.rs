@@ -904,6 +904,9 @@ pub mod prelude {
     pub use crate::ecs::ui::widgets::world_state::{
         measure_ui_text_width, ui_apply_dock_state, ui_breadcrumb_set_segments, ui_button_set_text,
         ui_capture_dock_state, ui_changed, ui_checkbox_changed, ui_checkbox_value,
+        ui_load_dock_state_from_str, ui_save_dock_state_to_str,
+    };
+    pub use crate::ecs::ui::widgets::world_state::{
         ui_collapsing_header_open, ui_color_picker_changed, ui_color_picker_color,
         ui_color_picker_set_value, ui_dock_layout_for_window, ui_dock_state, ui_drag_value,
         ui_drag_value_changed, ui_dropdown_selected, ui_dropdown_selected_changed,
@@ -916,6 +919,10 @@ pub mod prelude {
         ui_text_input_text, ui_toggle_changed, ui_toggle_set_value, ui_toggle_value,
         ui_tree_view_selected, ui_virtual_list_populate, ui_virtual_list_populate_fn,
         ui_virtual_list_selection_changed, ui_virtual_list_set_count, widget,
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use crate::ecs::ui::widgets::world_state::{
+        ui_load_dock_state_from_path, ui_save_dock_state_to_path,
     };
     pub use crate::ecs::ui::widgets::world_tiles::{
         build_tiles, spawn_tile_pane_entity, ui_tile_active_pane, ui_tile_add_pane,
