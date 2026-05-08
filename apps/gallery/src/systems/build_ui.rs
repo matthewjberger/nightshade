@@ -18,24 +18,48 @@ const INACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9,
 const SIDEBAR_PERCENT: f32 = 22.0;
 const CONTENT_OFFSET_PERCENT: f32 = 22.5;
 
-const NAV_LABELS: [&str; 7] = [
-    "BUTTONS",
-    "INPUTS",
-    "PICKERS",
-    "CONTAINERS",
-    "DATA",
-    "EFFECTS",
-    "POLISH",
-];
+struct NavItem {
+    label: &'static str,
+    icon: IconGlyph,
+    tooltip: &'static str,
+}
 
-const NAV_ICONS: [IconGlyph; 7] = [
-    icons::material::TOGGLE_ON,
-    icons::material::KEYBOARD,
-    icons::material::PALETTE,
-    icons::material::VIEW_QUILT,
-    icons::material::TABLE_CHART,
-    icons::material::AUTO_AWESOME,
-    icons::material::TUNE,
+const NAV_ITEMS: [NavItem; 7] = [
+    NavItem {
+        label: "BUTTONS",
+        icon: icons::material::TOGGLE_ON,
+        tooltip: "Buttons, toggles, checkboxes, radios, selectables",
+    },
+    NavItem {
+        label: "INPUTS",
+        icon: icons::material::KEYBOARD,
+        tooltip: "Sliders, drag values, text inputs, progress",
+    },
+    NavItem {
+        label: "PICKERS",
+        icon: icons::material::PALETTE,
+        tooltip: "Dropdowns, color, date, multi-select, menus, tabs",
+    },
+    NavItem {
+        label: "CONTAINERS",
+        icon: icons::material::VIEW_QUILT,
+        tooltip: "Scroll areas, splitters, tiles, modals, breadcrumb",
+    },
+    NavItem {
+        label: "DATA",
+        icon: icons::material::TABLE_CHART,
+        tooltip: "Data grid, property grid, tree view, virtual list",
+    },
+    NavItem {
+        label: "EFFECTS",
+        icon: icons::material::AUTO_AWESOME,
+        tooltip: "Animations, transitions, theme switching",
+    },
+    NavItem {
+        label: "POLISH",
+        icon: icons::material::TUNE,
+        tooltip: "Polish: shadows, focus rings, hover states",
+    },
 ];
 
 pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
@@ -457,16 +481,7 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
 
     tree.push_parent(sidebar);
 
-    let nav_tooltips = [
-        "Buttons, toggles, checkboxes, radios, selectables",
-        "Sliders, drag values, text inputs, progress",
-        "Dropdowns, color, date, multi-select, menus, tabs",
-        "Scroll areas, splitters, tiles, modals, breadcrumb",
-        "Data grid, property grid, tree view, virtual list",
-        "Animations, transitions, theme switching",
-    ];
-
-    for (index, label) in NAV_LABELS.iter().enumerate() {
+    for (index, item) in NAV_ITEMS.iter().enumerate() {
         let y_offset = 20.0 + index as f32 * 52.0;
 
         let indicator = tree
@@ -496,7 +511,7 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
                 Anchor::TopLeft,
             )
             .with_interaction()
-            .with_tooltip(nav_tooltips[index])
+            .with_tooltip(item.tooltip)
             .with_cursor_icon(winit::window::CursorIcon::Pointer)
             .with_rect(4.0, 0.0, TRANSPARENT)
             .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.05, 0.05, 0.09, 0.0))
@@ -513,7 +528,7 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
                 Ab(nalgebra_glm::Vec2::new(20.0, 20.0)),
                 Anchor::CenterLeft,
             )
-            .with_icon(NAV_ICONS[index], 18.0)
+            .with_icon(item.icon, 18.0)
             .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
             .without_pointer_events()
             .done();
@@ -524,7 +539,7 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
                 Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-58.0, 30.0)),
                 Anchor::CenterLeft,
             )
-            .with_text(label, 12.0)
+            .with_text(item.label, 12.0)
             .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
             .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
             .without_pointer_events()
@@ -1699,10 +1714,7 @@ fn spring_demo_button(
         .done()
 }
 
-fn linear_demo_button(
-    ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>,
-    label: &str,
-) -> Entity {
+fn linear_demo_button(ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>, label: &str) -> Entity {
     use nalgebra_glm::Vec2;
     use nightshade::ecs::tween::easing::EasingFunction;
     use nightshade::ecs::ui::state::{UiHover, UiPressed};
