@@ -18,9 +18,7 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         let remaining = seconds % 60;
         ui_set_text(world, text, &format!("{minutes}:{remaining:02}"));
     }
-    if let Some(text) = gallery.resources.handles.entity_count_text {
-        ui_set_text(world, text, &format!("{entity_count} entities"));
-    }
+    let _ = entity_count;
 
     if let Some(progress) = gallery.resources.handles.progress_entity {
         gallery.resources.handles.progress_value += delta * 0.1;

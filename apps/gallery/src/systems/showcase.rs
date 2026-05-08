@@ -445,6 +445,7 @@ fn showcase_activity_card(tree: &mut UiTreeBuilder) {
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
         )
         .with_text("Recent activity", 14.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
         .with_theme_color::<UiBase>(ThemeColor::Text)
         .without_pointer_events()
         .done();
@@ -572,6 +573,7 @@ fn showcase_settings_card(tree: &mut UiTreeBuilder) {
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
         )
         .with_text("Workspace", 14.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
         .with_theme_color::<UiBase>(ThemeColor::Text)
         .without_pointer_events()
         .done();
@@ -611,7 +613,6 @@ fn showcase_setting_row(
             FlowAlignment::Start,
             FlowAlignment::Center,
         )
-        .without_pointer_events()
         .entity();
     tree.push_parent(row);
     tree.add_node()
@@ -625,7 +626,13 @@ fn showcase_setting_row(
         .add_node()
         .flow_child(Ab(nalgebra_glm::Vec2::new(0.0, 32.0)))
         .flex_grow(1.0)
-        .without_pointer_events()
+        .flow_with_alignment(
+            FlowDirection::Horizontal,
+            0.0,
+            8.0,
+            FlowAlignment::Start,
+            FlowAlignment::Center,
+        )
         .entity();
     tree.push_parent(widget_holder);
     body(tree);
