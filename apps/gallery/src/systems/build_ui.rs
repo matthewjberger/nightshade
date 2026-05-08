@@ -809,6 +809,24 @@ fn demo_block(
     tree.pop_parent();
 }
 
+fn fill_child<R>(
+    tree: &mut UiTreeBuilder,
+    height: f32,
+    body: impl FnOnce(&mut UiTreeBuilder) -> R,
+) -> R {
+    let wrapper = tree
+        .add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, height)),
+        )
+        .without_pointer_events()
+        .entity();
+    tree.push_parent(wrapper);
+    let result = body(tree);
+    tree.pop_parent();
+    result
+}
+
 fn build_page_scroll(tree: &mut UiTreeBuilder) -> Entity {
     let pad_holder = tree
         .add_node()
@@ -1219,7 +1237,9 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         "Drag the divider to redistribute space between two panels.",
         96.0,
         |t, _| {
-            t.add_splitter(SplitDirection::Horizontal, 0.5);
+            fill_child(t, 96.0, |t| {
+                t.add_splitter(SplitDirection::Horizontal, 0.5);
+            });
         },
     );
     demo_block(
@@ -1228,10 +1248,12 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         "Dockable panes with drag-to-rearrange and tab-style organization.",
         180.0,
         |t, _| {
-            let tc = t.add_tile_container(nalgebra_glm::Vec2::new(420.0, 160.0));
-            for title in ["Scene", "Inspector", "Console"] {
-                let _ = ui_tile_add_pane(t.world_mut(), tc, title);
-            }
+            fill_child(t, 180.0, |t| {
+                let tc = t.add_tile_container(nalgebra_glm::Vec2::new(420.0, 180.0));
+                for title in ["Scene", "Inspector", "Console"] {
+                    let _ = ui_tile_add_pane(t.world_mut(), tc, title);
+                }
+            });
         },
     );
     demo_block(
@@ -1362,14 +1384,16 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
         "Sortable, scrollable, multi-column grid with cell-level mutation.",
         320.0,
         |t, _| {
-            let grid = t.add_data_grid(
-                &[
-                    DataGridColumn::new("Name", 140.0),
-                    DataGridColumn::new("Type", 90.0),
-                    DataGridColumn::new("Value", 110.0),
-                ],
-                10,
-            );
+            let grid = fill_child(t, 320.0, |t| {
+                t.add_data_grid(
+                    &[
+                        DataGridColumn::new("Name", 140.0),
+                        DataGridColumn::new("Type", 90.0),
+                        DataGridColumn::new("Value", 110.0),
+                    ],
+                    10,
+                )
+            });
             let sample_rows = [
                 ("position.x", "f32", "0.00"),
                 ("position.y", "f32", "1.00"),
@@ -1396,7 +1420,7 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
         "64 items rendered through a small recycling pool. Scroll to see indices update.",
         220.0,
         move |t, _| {
-            let vl = t.add_virtual_list(28.0, 8);
+            let vl = fill_child(t, 220.0, |t| t.add_virtual_list(28.0, 8));
             vl_clone.set(vl);
             ui_virtual_list_set_count(t.world_mut(), vl, 64);
             let pool_containers: Vec<Entity> = t
@@ -1428,24 +1452,26 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
         "Hierarchical tree with expansion state and selection.",
         260.0,
         |t, _| {
-            let tree_view = t.add_tree_view(false);
-            let tv_content = widget::<UiTreeViewData>(t.world_mut(), tree_view)
-                .map(|d| d.content_entity)
-                .unwrap();
-            let project = t.add_tree_node(tree_view, tv_content, "Project", 0, 0);
-            ui_tree_node_set_expanded(t.world_mut(), project, true);
-            let project_children = widget::<UiTreeNodeData>(t.world_mut(), project)
-                .map(|d| d.children_container)
-                .unwrap();
-            t.add_tree_node(tree_view, project_children, "Assets", 1, 1);
-            t.add_tree_node(tree_view, project_children, "Scripts", 1, 2);
-            let scenes = t.add_tree_node(tree_view, project_children, "Scenes", 1, 3);
-            ui_tree_node_set_expanded(t.world_mut(), scenes, true);
-            let scene_children = widget::<UiTreeNodeData>(t.world_mut(), scenes)
-                .map(|d| d.children_container)
-                .unwrap();
-            t.add_tree_node(tree_view, scene_children, "main.scn", 2, 4);
-            t.add_tree_node(tree_view, scene_children, "menu.scn", 2, 5);
+            fill_child(t, 260.0, |t| {
+                let tree_view = t.add_tree_view(false);
+                let tv_content = widget::<UiTreeViewData>(t.world_mut(), tree_view)
+                    .map(|d| d.content_entity)
+                    .unwrap();
+                let project = t.add_tree_node(tree_view, tv_content, "Project", 0, 0);
+                ui_tree_node_set_expanded(t.world_mut(), project, true);
+                let project_children = widget::<UiTreeNodeData>(t.world_mut(), project)
+                    .map(|d| d.children_container)
+                    .unwrap();
+                t.add_tree_node(tree_view, project_children, "Assets", 1, 1);
+                t.add_tree_node(tree_view, project_children, "Scripts", 1, 2);
+                let scenes = t.add_tree_node(tree_view, project_children, "Scenes", 1, 3);
+                ui_tree_node_set_expanded(t.world_mut(), scenes, true);
+                let scene_children = widget::<UiTreeNodeData>(t.world_mut(), scenes)
+                    .map(|d| d.children_container)
+                    .unwrap();
+                t.add_tree_node(tree_view, scene_children, "main.scn", 2, 4);
+                t.add_tree_node(tree_view, scene_children, "menu.scn", 2, 5);
+            });
         },
     );
 

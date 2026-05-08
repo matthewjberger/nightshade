@@ -36,6 +36,7 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         .theme_state
         .active_theme()
         .clone();
+    world.resources.retained_ui.background_color = Some(theme.background_color);
     let accent_dim = nalgebra_glm::Vec4::new(
         theme.accent_color.x,
         theme.accent_color.y,
