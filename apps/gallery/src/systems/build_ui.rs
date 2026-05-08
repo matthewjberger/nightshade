@@ -477,15 +477,16 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
         .without_pointer_events();
 
+    let picker_width = 200.0_f32;
+    let stats_width = 240.0_f32;
+    let gap_to_picker = 16.0_f32;
+    let stats_x = -(PAGE_PADDING + picker_width + gap_to_picker + stats_width);
     let stats_holder = tree
         .add_node()
         .window(
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                + Ab(nalgebra_glm::Vec2::new(
-                    -(PAGE_PADDING + 220.0 + 32.0),
-                    bar_center_y,
-                )),
-            Ab(nalgebra_glm::Vec2::new(220.0, 30.0)),
+                + Ab(nalgebra_glm::Vec2::new(stats_x, bar_center_y)),
+            Ab(nalgebra_glm::Vec2::new(stats_width, 30.0)),
             Anchor::CenterLeft,
         )
         .flow_with_alignment(
@@ -704,7 +705,8 @@ fn build_page_header(tree: &mut UiTreeBuilder, title: &str, subtitle: &str) {
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
         )
         .with_text(subtitle, 13.0)
-        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_text_wrap()
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Top)
         .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
         .without_pointer_events()
         .done();
@@ -774,7 +776,8 @@ fn demo_block(
                 Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 18.0)),
             )
             .with_text(caption, 12.0)
-            .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+            .with_text_wrap()
+            .with_text_alignment(TextAlignment::Left, VerticalAlignment::Top)
             .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
             .without_pointer_events()
             .done();
