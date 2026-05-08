@@ -454,9 +454,10 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .with_theme_color::<UiBase>(ThemeColor::Border)
         .without_pointer_events();
 
+    let bar_center_y = TOP_BAR_HEIGHT * 0.5;
     tree.add_node()
         .window(
-            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING, 0.0)),
+            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING, bar_center_y)),
             Ab(nalgebra_glm::Vec2::new(220.0, 24.0)),
             Anchor::CenterLeft,
         )
@@ -467,7 +468,7 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
 
     tree.add_node()
         .window(
-            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING + 160.0, 0.0)),
+            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING + 160.0, bar_center_y)),
             Ab(nalgebra_glm::Vec2::new(220.0, 20.0)),
             Anchor::CenterLeft,
         )
@@ -480,8 +481,11 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .add_node()
         .window(
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                + Ab(nalgebra_glm::Vec2::new(-(PAGE_PADDING + 200.0 + 32.0), 0.0)),
-            Ab(nalgebra_glm::Vec2::new(200.0, 30.0)),
+                + Ab(nalgebra_glm::Vec2::new(
+                    -(PAGE_PADDING + 220.0 + 32.0),
+                    bar_center_y,
+                )),
+            Ab(nalgebra_glm::Vec2::new(220.0, 30.0)),
             Anchor::CenterLeft,
         )
         .flow_with_alignment(
@@ -524,7 +528,10 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .add_node()
         .window(
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                + Ab(nalgebra_glm::Vec2::new(-(PAGE_PADDING + 200.0), 0.0)),
+                + Ab(nalgebra_glm::Vec2::new(
+                    -(PAGE_PADDING + 200.0),
+                    bar_center_y,
+                )),
             Ab(nalgebra_glm::Vec2::new(200.0, 32.0)),
             Anchor::CenterLeft,
         )
