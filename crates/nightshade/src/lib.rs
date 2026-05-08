@@ -744,7 +744,8 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
-        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiEvent, WindowedUiEvent, blend_color,
+        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiEvent, WindowChrome, WindowShortcut,
+        WindowedUiEvent, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
@@ -906,7 +907,9 @@ pub mod prelude {
     pub use crate::ecs::ui::widgets::world_state::{
         measure_ui_text_width, ui_apply_dock_state, ui_breadcrumb_set_segments, ui_button_set_text,
         ui_capture_dock_state, ui_changed, ui_checkbox_changed, ui_checkbox_value,
-        ui_load_dock_state_from_str, ui_save_dock_state_to_str,
+        ui_clear_window_chrome, ui_load_dock_state_from_str, ui_register_window_shortcut,
+        ui_save_dock_state_to_str, ui_set_window_menu_bar, ui_set_window_status_bar,
+        ui_set_window_toolbar, ui_window_menu_bar, ui_window_status_bar, ui_window_toolbar,
     };
     pub use crate::ecs::ui::widgets::world_state::{
         ui_collapsing_header_open, ui_color_picker_changed, ui_color_picker_color,
