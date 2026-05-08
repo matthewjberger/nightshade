@@ -116,7 +116,8 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let (effects_screen, effects_pulse, effects_blend, effects_progress, effects_spinner) =
         build_effects_screen(&mut tree);
     screen_roots.push(effects_screen);
-    let polish_screen = build_polish_screen(&mut tree);
+    let (polish_screen, progress_slider, progress_indeterminate_btn, progress_clear_btn) =
+        build_polish_screen(&mut tree);
     screen_roots.push(polish_screen);
 
     tree.pop_parent();
@@ -150,6 +151,9 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     gallery.resources.handles.nav_y_offsets = nav_y_offsets.clone();
     gallery.resources.handles.nav_slider_y = nav_y_offsets.first().copied().unwrap_or(20.0);
     gallery.resources.handles.nav_slider_target_y = gallery.resources.handles.nav_slider_y;
+    gallery.resources.handles.progress_slider = Some(progress_slider);
+    gallery.resources.handles.progress_indeterminate_btn = Some(progress_indeterminate_btn);
+    gallery.resources.handles.progress_clear_btn = Some(progress_clear_btn);
     gallery.resources.handles.screen_roots = screen_roots.clone();
     gallery.resources.handles.fps_text = Some(fps_text);
     gallery.resources.handles.uptime_text = Some(uptime_text);
@@ -191,6 +195,9 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     let palette_entity = gallery.resources.handles.palette_entity;
     let disable_toggle = gallery.resources.handles.disable_toggle;
     let disabled_slider = gallery.resources.handles.disabled_slider;
+    let progress_slider = gallery.resources.handles.progress_slider;
+    let progress_indeterminate_btn = gallery.resources.handles.progress_indeterminate_btn;
+    let progress_clear_btn = gallery.resources.handles.progress_clear_btn;
 
     let mut new_active: Option<usize> = None;
     let mut show_modal: Option<Entity> = None;
@@ -200,6 +207,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     let mut focus_request: Option<Entity> = None;
     let mut palette_request: Option<Entity> = None;
     let mut button_toast: Option<(String, ToastSeverity)> = None;
+    let mut progress_action: Option<ProgressAction> = None;
     for event in ui_events(world) {
         match event {
             UiEvent::ButtonClicked(entity) => {
@@ -220,6 +228,14 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                     && let Some(target) = focus_target
                 {
                     focus_request = Some(target);
+                    consumed = true;
+                }
+                if Some(*entity) == progress_indeterminate_btn {
+                    progress_action = Some(ProgressAction::Indeterminate);
+                    consumed = true;
+                }
+                if Some(*entity) == progress_clear_btn {
+                    progress_action = Some(ProgressAction::Clear);
                     consumed = true;
                 }
                 if Some(*entity) == palette_btn
@@ -259,6 +275,9 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             UiEvent::TextInputSubmitted { entity, .. } if Some(*entity) == submit_input => {
                 submit_count_increment += 1;
             }
+            UiEvent::SliderChanged { entity, value } if Some(*entity) == progress_slider => {
+                progress_action = Some(ProgressAction::Set(*value));
+            }
             UiEvent::ModalClosed { entity, confirmed } if Some(*entity) == confirm_dialog => {
                 toast = Some(if *confirmed {
                     ("Confirmed!", ToastSeverity::Success)
@@ -289,6 +308,15 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             if let Some(target_y) = gallery.resources.handles.nav_y_offsets.get(index).copied() {
                 gallery.resources.handles.nav_slider_target_y = target_y;
             }
+        }
+    }
+
+    if let Some(action) = progress_action {
+        let bar = &mut world.resources.retained_ui.top_progress_bar;
+        match action {
+            ProgressAction::Set(value) => bar.set(value),
+            ProgressAction::Indeterminate => bar.set_indeterminate(),
+            ProgressAction::Clear => bar.clear(),
         }
     }
 
@@ -381,6 +409,12 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             ui_set_text(world, text_entity, &format!("Item {item_index}"));
         }
     }
+}
+
+enum ProgressAction {
+    Set(f32),
+    Indeterminate,
+    Clear,
 }
 
 fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
@@ -1577,12 +1611,19 @@ fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, En
     )
 }
 
-fn build_polish_screen(tree: &mut UiTreeBuilder) -> Entity {
+fn build_polish_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity) {
     use nightshade::ecs::ui::components::Spring;
     use nightshade::ecs::ui::state::{UiFocused, UiHover};
 
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+
+    let progress_slider_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let progress_indet_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let progress_clear_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let ps = progress_slider_cell.clone();
+    let pi = progress_indet_cell.clone();
+    let pc = progress_clear_cell.clone();
 
     build_two_column_card(
         tree,
@@ -1710,11 +1751,29 @@ fn build_polish_screen(tree: &mut UiTreeBuilder) -> Entity {
                 })
                 .done();
             let _ = focus_input;
+
+            ui.spacing(12.0);
+            ui.heading("Top-of-Window Progress");
+            ui.separator();
+            ui.label("Drag the slider to set determinate progress, or use the buttons.");
+            ui.spacing(4.0);
+            let slider_entity = ui.slider(0.0, 1.0, 0.0);
+            ps.set(slider_entity);
+            ui.spacing(6.0);
+            let indet_entity = ui.button("Set Indeterminate");
+            pi.set(indet_entity);
+            let clear_entity = ui.button("Clear Progress Bar");
+            pc.set(clear_entity);
         },
     );
 
     tree.pop_parent();
-    screen
+    (
+        screen,
+        progress_slider_cell.get(),
+        progress_indet_cell.get(),
+        progress_clear_cell.get(),
+    )
 }
 
 fn spring_demo_button(

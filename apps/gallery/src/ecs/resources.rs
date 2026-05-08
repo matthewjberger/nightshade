@@ -39,4 +39,7 @@ pub struct GalleryHandles {
     pub nav_slider_y: f32,
     pub nav_slider_target_y: f32,
     pub nav_y_offsets: Vec<f32>,
+    pub progress_slider: Option<Entity>,
+    pub progress_indeterminate_btn: Option<Entity>,
+    pub progress_clear_btn: Option<Entity>,
 }
