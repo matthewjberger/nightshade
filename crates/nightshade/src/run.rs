@@ -1281,6 +1281,11 @@ impl winit::application::ApplicationHandler for WindowContext {
         self.world.resources.window.cached_scale_factor = window_handle.scale_factor() as f32;
         self.world.resources.window.handle = Some(window_handle.clone());
 
+        crate::ecs::window::resources::refresh_monitors_from_event_loop(
+            &mut self.world.resources.monitors,
+            event_loop,
+        );
+
         #[cfg(target_arch = "wasm32")]
         {
             use winit::platform::web::WindowExtWebSys;

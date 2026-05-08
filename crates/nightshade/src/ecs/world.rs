@@ -241,6 +241,7 @@ freecs::ecs! {
         world_id: u64,
         is_runtime: bool,
         window: crate::ecs::window::resources::Window,
+        monitors: crate::ecs::window::resources::Monitors,
         #[cfg(feature = "multi_window")]
         secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         user_interface: crate::ecs::ui::UserInterface,
