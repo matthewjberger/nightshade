@@ -2,9 +2,6 @@ use nightshade::prelude::*;
 
 use crate::ecs::GalleryWorld;
 
-const CYAN: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 1.0);
-const MAGENTA: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(1.0, 0.0, 0.6, 1.0);
-
 pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     let timing = world.resources.window.timing.clone();
     let fps = timing.frames_per_second;
@@ -13,7 +10,7 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     let entity_count = world.core.entity_count();
 
     if let Some(text) = gallery.resources.handles.fps_text {
-        ui_set_text(world, text, &format!("{fps:.0}"));
+        ui_set_text(world, text, &format!("{fps:.0} fps"));
     }
     if let Some(text) = gallery.resources.handles.uptime_text {
         let seconds = uptime_ms / 1000;
@@ -22,7 +19,7 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         ui_set_text(world, text, &format!("{minutes}:{remaining:02}"));
     }
     if let Some(text) = gallery.resources.handles.entity_count_text {
-        ui_set_text(world, text, &format!("{entity_count}"));
+        ui_set_text(world, text, &format!("{entity_count} entities"));
     }
 
     if let Some(progress) = gallery.resources.handles.progress_entity {
@@ -33,14 +30,23 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         ui_progress_bar_set_value(world, progress, gallery.resources.handles.progress_value);
     }
 
+    let theme = world
+        .resources
+        .retained_ui
+        .theme_state
+        .active_theme()
+        .clone();
+    let accent_dim = nalgebra_glm::Vec4::new(
+        theme.accent_color.x,
+        theme.accent_color.y,
+        theme.accent_color.z,
+        0.4,
+    );
+
     if let Some(pulse) = gallery.resources.handles.pulse_entity {
         let time = uptime_ms as f32 / 1000.0;
         let pulse_alpha = (time * 2.0).sin() * 0.5 + 0.5;
-        let pulse_color = blend_color(
-            nalgebra_glm::Vec4::new(0.0, 1.0, 0.5, 0.3),
-            nalgebra_glm::Vec4::new(0.0, 1.0, 0.5, 1.0),
-            pulse_alpha,
-        );
+        let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
         if let Some(color_comp) = world.ui.get_ui_node_color_mut(pulse) {
             color_comp.colors[0] = Some(pulse_color);
         }
@@ -50,33 +56,19 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     if gallery.resources.handles.color_blend_time > 1.0 {
         gallery.resources.handles.color_blend_time -= 1.0;
     }
-    let blended = blend_color(CYAN, MAGENTA, gallery.resources.handles.color_blend_time);
-    let viewport = world
-        .resources
-        .window
-        .cached_viewport_size
-        .map(|(w, h)| (w as f32, h as f32))
-        .unwrap_or((800.0, 600.0));
-    world.resources.retained_ui.draw_rect(
-        nalgebra_glm::Vec2::new(40.0, viewport.1 - 70.0),
-        nalgebra_glm::Vec2::new(160.0, 4.0),
-        blended,
+    let blended = blend_color(
+        theme.accent_color,
+        theme.text_color_accent,
+        gallery.resources.handles.color_blend_time,
     );
 
     let time = uptime_ms as f32 / 1000.0;
     if let Some(entity) = gallery.resources.handles.effects_pulse {
         let pulse_alpha = (time * 2.5).sin() * 0.5 + 0.5;
-        let scale = 0.7 + pulse_alpha * 0.3;
-        let pulse_color = nalgebra_glm::Vec4::new(
-            0.4 + pulse_alpha * 0.6,
-            1.0,
-            0.4 + (1.0 - pulse_alpha) * 0.6,
-            1.0,
-        );
+        let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
         if let Some(color_comp) = world.ui.get_ui_node_color_mut(entity) {
             color_comp.colors[0] = Some(pulse_color);
         }
-        let _ = scale;
     }
 
     if let Some(entity) = gallery.resources.handles.effects_blend

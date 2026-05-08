@@ -1,107 +1,93 @@
+use nightshade::ecs::ui::components::{ThemeEffect, ThemeShadow};
 use nightshade::prelude::*;
 
 use crate::ecs::GalleryWorld;
 
-const CYAN: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 1.0);
-const CYAN_DIM: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.5, 0.6, 1.0);
-const MAGENTA: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(1.0, 0.0, 0.6, 1.0);
-const MAGENTA_DIM: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.6, 0.0, 0.35, 1.0);
-const WHITE: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(1.0, 1.0, 1.0, 1.0);
-const LIGHT_GRAY: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.75, 0.75, 0.8, 1.0);
-const DARK_PANEL_HOVER: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.08, 0.08, 0.14, 1.0);
-const TRANSPARENT: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0);
-const CARD_BG: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.05, 0.05, 0.09, 0.9);
-const CARD_BORDER: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.1, 0.1, 0.18, 0.4);
-const ACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 0.8);
-const INACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9, 1.0, 0.0);
-
-const SIDEBAR_PERCENT: f32 = 22.0;
-const CONTENT_OFFSET_PERCENT: f32 = 22.5;
+const SIDEBAR_WIDTH: f32 = 220.0;
+const TOP_BAR_HEIGHT: f32 = 56.0;
+const PAGE_PADDING: f32 = 32.0;
+const BLOCK_PADDING: f32 = 20.0;
+const BLOCK_GAP: f32 = 16.0;
+const BLOCK_RADIUS: f32 = 8.0;
 
 struct NavItem {
     label: &'static str,
     icon: IconGlyph,
-    tooltip: &'static str,
+    description: &'static str,
 }
 
 const NAV_ITEMS: [NavItem; 7] = [
     NavItem {
-        label: "BUTTONS",
+        label: "Buttons",
         icon: icons::material::TOGGLE_ON,
-        tooltip: "Buttons, toggles, checkboxes, radios, selectables",
+        description: "Buttons, toggles, checkboxes, radios, selectables",
     },
     NavItem {
-        label: "INPUTS",
+        label: "Inputs",
         icon: icons::material::KEYBOARD,
-        tooltip: "Sliders, drag values, text inputs, progress",
+        description: "Sliders, drag values, text fields, progress",
     },
     NavItem {
-        label: "PICKERS",
+        label: "Pickers",
         icon: icons::material::PALETTE,
-        tooltip: "Dropdowns, color, date, multi-select, menus, tabs",
+        description: "Dropdowns, color, date, multi-select, menus, tabs",
     },
     NavItem {
-        label: "CONTAINERS",
+        label: "Containers",
         icon: icons::material::VIEW_QUILT,
-        tooltip: "Scroll areas, splitters, tiles, modals, breadcrumb",
+        description: "Scroll areas, splitters, tiles, modals, breadcrumbs",
     },
     NavItem {
-        label: "DATA",
+        label: "Data",
         icon: icons::material::TABLE_CHART,
-        tooltip: "Data grid, property grid, tree view, virtual list",
+        description: "Data grid, property grid, tree view, virtual list",
     },
     NavItem {
-        label: "EFFECTS",
+        label: "Effects",
         icon: icons::material::AUTO_AWESOME,
-        tooltip: "Animations, transitions, theme switching",
+        description: "Animations, transitions, theme switching",
     },
     NavItem {
-        label: "POLISH",
+        label: "Polish",
         icon: icons::material::TUNE,
-        tooltip: "Polish: shadows, focus rings, hover states",
+        description: "Hover lift, springs, focus glow, progress bar",
     },
 ];
 
 pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let mut tree = UiTreeBuilder::new(world);
 
-    let root_panel = tree
+    let root = tree
         .add_node()
         .boundary(
             Rl(nalgebra_glm::Vec2::new(0.0, 0.0)),
             Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
         )
+        .with_theme_color::<UiBase>(ThemeColor::Background)
         .without_pointer_events()
         .entity();
 
-    tree.push_parent(root_panel);
+    tree.push_parent(root);
 
-    build_top_bar(&mut tree);
+    let (fps_text, entity_count_text, uptime_text) = build_top_bar(&mut tree);
     let (nav_buttons, nav_indicators, nav_labels, nav_slider, nav_y_offsets) =
         build_sidebar(&mut tree);
 
     let content_area = tree
         .add_node()
         .boundary(
-            Rl(nalgebra_glm::Vec2::new(CONTENT_OFFSET_PERCENT, 0.0))
-                + Ab(nalgebra_glm::Vec2::new(0.0, 50.0)),
-            Ab(nalgebra_glm::Vec2::new(0.0, -40.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
+            Ab(nalgebra_glm::Vec2::new(SIDEBAR_WIDTH, TOP_BAR_HEIGHT)),
+            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
         )
+        .with_theme_color::<UiBase>(ThemeColor::Background)
         .without_pointer_events()
         .entity();
 
     tree.push_parent(content_area);
 
     let mut screen_roots = Vec::new();
-    let (
-        buttons_screen,
-        fps_text,
-        uptime_text,
-        entity_count_text,
-        pulse_entity,
-        disable_toggle,
-        disabled_slider,
-    ) = build_buttons_screen(&mut tree);
+    let (buttons_screen, pulse_entity, disable_toggle, disabled_slider) =
+        build_buttons_screen(&mut tree);
     screen_roots.push(buttons_screen);
     let (inputs_screen, progress_entity, submit_input, submit_log, focus_target, focus_button) =
         build_inputs_screen(&mut tree);
@@ -122,8 +108,6 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
 
     tree.pop_parent();
 
-    build_bottom_bar(&mut tree);
-
     let palette_entity = tree.add_command_palette(8);
     for (label, shortcut, category) in [
         ("New File", "Ctrl+N", "File"),
@@ -141,43 +125,43 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     tree.pop_parent();
-
     tree.finish();
 
-    gallery.resources.handles.nav_buttons = nav_buttons.clone();
-    gallery.resources.handles.nav_indicators = nav_indicators.clone();
-    gallery.resources.handles.nav_labels = nav_labels.clone();
-    gallery.resources.handles.nav_slider = Some(nav_slider);
-    gallery.resources.handles.nav_y_offsets = nav_y_offsets.clone();
-    gallery.resources.handles.nav_slider_y = nav_y_offsets.first().copied().unwrap_or(20.0);
-    gallery.resources.handles.nav_slider_target_y = gallery.resources.handles.nav_slider_y;
-    gallery.resources.handles.progress_slider = Some(progress_slider);
-    gallery.resources.handles.progress_indeterminate_btn = Some(progress_indeterminate_btn);
-    gallery.resources.handles.progress_clear_btn = Some(progress_clear_btn);
-    gallery.resources.handles.screen_roots = screen_roots.clone();
-    gallery.resources.handles.fps_text = Some(fps_text);
-    gallery.resources.handles.uptime_text = Some(uptime_text);
-    gallery.resources.handles.entity_count_text = Some(entity_count_text);
-    gallery.resources.handles.progress_entity = Some(progress_entity);
-    gallery.resources.handles.pulse_entity = Some(pulse_entity);
-    gallery.resources.handles.effects_pulse = Some(effects_pulse);
-    gallery.resources.handles.effects_blend = Some(effects_blend);
-    gallery.resources.handles.effects_progress = Some(effects_progress);
-    gallery.resources.handles.effects_spinner = Some(effects_spinner);
-    gallery.resources.handles.modal_trigger = Some(modal_trigger);
-    gallery.resources.handles.modal_dialog = Some(modal_dialog);
-    gallery.resources.handles.confirm_trigger = Some(confirm_trigger);
-    gallery.resources.handles.confirm_dialog = Some(confirm_dialog);
-    gallery.resources.handles.submit_input = Some(submit_input);
-    gallery.resources.handles.submit_log = Some(submit_log);
-    gallery.resources.handles.focus_target = Some(focus_target);
-    gallery.resources.handles.focus_button = Some(focus_button);
-    gallery.resources.handles.palette_btn = Some(palette_btn);
-    gallery.resources.handles.palette_entity = Some(palette_entity);
-    gallery.resources.handles.disable_toggle = Some(disable_toggle);
-    gallery.resources.handles.disabled_slider = Some(disabled_slider);
-    gallery.resources.handles.virtual_list = Some(virtual_list);
-    gallery.resources.handles.virtual_list_text_nodes = virtual_list_text_nodes;
+    let handles = &mut gallery.resources.handles;
+    handles.nav_buttons = nav_buttons.clone();
+    handles.nav_indicators = nav_indicators.clone();
+    handles.nav_labels = nav_labels.clone();
+    handles.screen_roots = screen_roots;
+    handles.fps_text = Some(fps_text);
+    handles.uptime_text = Some(uptime_text);
+    handles.entity_count_text = Some(entity_count_text);
+    handles.progress_entity = Some(progress_entity);
+    handles.pulse_entity = Some(pulse_entity);
+    handles.effects_pulse = Some(effects_pulse);
+    handles.effects_blend = Some(effects_blend);
+    handles.effects_progress = Some(effects_progress);
+    handles.effects_spinner = Some(effects_spinner);
+    handles.modal_trigger = Some(modal_trigger);
+    handles.modal_dialog = Some(modal_dialog);
+    handles.confirm_trigger = Some(confirm_trigger);
+    handles.confirm_dialog = Some(confirm_dialog);
+    handles.submit_input = Some(submit_input);
+    handles.submit_log = Some(submit_log);
+    handles.focus_target = Some(focus_target);
+    handles.focus_button = Some(focus_button);
+    handles.palette_btn = Some(palette_btn);
+    handles.palette_entity = Some(palette_entity);
+    handles.disable_toggle = Some(disable_toggle);
+    handles.disabled_slider = Some(disabled_slider);
+    handles.virtual_list = Some(virtual_list);
+    handles.virtual_list_text_nodes = virtual_list_text_nodes;
+    handles.nav_slider = Some(nav_slider);
+    handles.nav_y_offsets = nav_y_offsets.clone();
+    handles.nav_slider_y = nav_y_offsets.first().copied().unwrap_or(0.0);
+    handles.nav_slider_target_y = handles.nav_slider_y;
+    handles.progress_slider = Some(progress_slider);
+    handles.progress_indeterminate_btn = Some(progress_indeterminate_btn);
+    handles.progress_clear_btn = Some(progress_clear_btn);
 }
 
 pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
@@ -208,6 +192,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     let mut palette_request: Option<Entity> = None;
     let mut button_toast: Option<(String, ToastSeverity)> = None;
     let mut progress_action: Option<ProgressAction> = None;
+
     for event in ui_events(world) {
         match event {
             UiEvent::ButtonClicked(entity) => {
@@ -280,7 +265,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             }
             UiEvent::ModalClosed { entity, confirmed } if Some(*entity) == confirm_dialog => {
                 toast = Some(if *confirmed {
-                    ("Confirmed!", ToastSeverity::Success)
+                    ("Confirmed", ToastSeverity::Success)
                 } else {
                     ("Cancelled", ToastSeverity::Info)
                 });
@@ -293,17 +278,9 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
         let prev = gallery.resources.handles.active_screen;
         if index != prev {
             ui_set_visible(world, screen_roots[prev], false);
-            if let Some(label) = nav_labels.get(prev).copied()
-                && let Some(color) = world.ui.get_ui_node_color_mut(label)
-            {
-                color.colors[UiBase::INDEX] = Some(LIGHT_GRAY);
-            }
+            update_nav_label_color(world, nav_labels.get(prev).copied(), false);
             ui_set_visible(world, screen_roots[index], true);
-            if let Some(label) = nav_labels.get(index).copied()
-                && let Some(color) = world.ui.get_ui_node_color_mut(label)
-            {
-                color.colors[UiBase::INDEX] = Some(CYAN);
-            }
+            update_nav_label_color(world, nav_labels.get(index).copied(), true);
             gallery.resources.handles.active_screen = index;
             if let Some(target_y) = gallery.resources.handles.nav_y_offsets.get(index).copied() {
                 gallery.resources.handles.nav_slider_target_y = target_y;
@@ -335,6 +312,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     if let Some(slider) = slider_entity {
         update_slider_y(world, slider, slider_y);
     }
+
     if let Some(target) = focus_request {
         ui_focus(world, target);
     }
@@ -417,6 +395,23 @@ enum ProgressAction {
     Clear,
 }
 
+fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool) {
+    let Some(label) = label else { return };
+    let theme = world
+        .resources
+        .retained_ui
+        .theme_state
+        .active_theme()
+        .clone();
+    if let Some(color) = world.ui.get_ui_node_color_mut(label) {
+        color.colors[UiBase::INDEX] = Some(if active {
+            theme.text_color
+        } else {
+            theme.text_color_disabled
+        });
+    }
+}
+
 fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
     use nightshade::ecs::ui::layout_types::{UiLayoutType, WindowLayout};
     use nightshade::ecs::ui::units::{Ab, UiValue};
@@ -434,56 +429,104 @@ fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
     nightshade::prelude::ui_mark_layout_dirty(world);
 }
 
-fn build_top_bar(tree: &mut UiTreeBuilder) {
-    let top_bar = tree
+fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
+    let theme = tree.active_theme().clone();
+    let bar = tree
         .add_node()
         .boundary(
             Rl(nalgebra_glm::Vec2::new(0.0, 0.0)),
-            Ab(nalgebra_glm::Vec2::new(0.0, 48.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
+            Ab(nalgebra_glm::Vec2::new(0.0, TOP_BAR_HEIGHT))
+                + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
         )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.03, 0.03, 0.06, 0.98))
+        .with_rect(0.0, 0.0, theme.border_color)
+        .with_theme_color::<UiBase>(ThemeColor::Panel)
         .with_depth(UiDepthMode::Set(10.0))
         .entity();
 
-    tree.push_parent(top_bar);
-
-    tree.add_node()
-        .window(
-            Ab(nalgebra_glm::Vec2::new(20.0, 24.0)),
-            Ab(nalgebra_glm::Vec2::new(300.0, 30.0)),
-            Anchor::CenterLeft,
-        )
-        .with_text("NIGHTSHADE", 22.0)
-        .with_text_outline(nalgebra_glm::Vec4::new(0.0, 0.4, 0.5, 1.0), 1.5)
-        .with_color::<UiBase>(CYAN)
-        .without_pointer_events();
-
-    tree.add_node()
-        .window(
-            Ab(nalgebra_glm::Vec2::new(240.0, 24.0)),
-            Ab(nalgebra_glm::Vec2::new(260.0, 22.0)),
-            Anchor::CenterLeft,
-        )
-        .with_text("// RETAINED UI GALLERY", 14.0)
-        .with_color::<UiBase>(MAGENTA)
-        .without_pointer_events();
+    tree.push_parent(bar);
 
     tree.add_node()
         .boundary(
-            Ab(nalgebra_glm::Vec2::new(0.0, 46.0)),
-            Ab(nalgebra_glm::Vec2::new(0.0, 48.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
+            Rl(nalgebra_glm::Vec2::new(0.0, 100.0)) + Ab(nalgebra_glm::Vec2::new(0.0, -1.0)),
+            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
         )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(CYAN_DIM)
+        .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_theme_color::<UiBase>(ThemeColor::Border)
         .without_pointer_events();
+
+    tree.add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING, 0.0)),
+            Ab(nalgebra_glm::Vec2::new(220.0, 24.0)),
+            Anchor::CenterLeft,
+        )
+        .with_text("Nightshade UI", 18.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::Text)
+        .without_pointer_events();
+
+    tree.add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING + 160.0, 0.0)),
+            Ab(nalgebra_glm::Vec2::new(220.0, 20.0)),
+            Anchor::CenterLeft,
+        )
+        .with_text("Component Gallery", 13.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+        .without_pointer_events();
+
+    let stats_holder = tree
+        .add_node()
+        .window(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                + Ab(nalgebra_glm::Vec2::new(-(PAGE_PADDING + 200.0 + 32.0), 0.0)),
+            Ab(nalgebra_glm::Vec2::new(200.0, 30.0)),
+            Anchor::CenterLeft,
+        )
+        .flow_with_alignment(
+            FlowDirection::Horizontal,
+            0.0,
+            16.0,
+            FlowAlignment::End,
+            FlowAlignment::Center,
+        )
+        .without_pointer_events()
+        .entity();
+    tree.push_parent(stats_holder);
+    let fps_text = tree
+        .add_node()
+        .flow_child(Ab(nalgebra_glm::Vec2::new(70.0, 18.0)))
+        .with_text("0 fps", 12.0)
+        .with_text_alignment(TextAlignment::Right, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+        .without_pointer_events()
+        .done();
+    let entity_count_text = tree
+        .add_node()
+        .flow_child(Ab(nalgebra_glm::Vec2::new(80.0, 18.0)))
+        .with_text("0 entities", 12.0)
+        .with_text_alignment(TextAlignment::Right, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+        .without_pointer_events()
+        .done();
+    let uptime_text = tree
+        .add_node()
+        .flow_child(Ab(nalgebra_glm::Vec2::new(50.0, 18.0)))
+        .with_text("0:00", 12.0)
+        .with_text_alignment(TextAlignment::Right, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+        .without_pointer_events()
+        .done();
+    tree.pop_parent();
 
     let picker_holder = tree
         .add_node()
         .window(
-            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-200.0, 10.0)),
-            Ab(nalgebra_glm::Vec2::new(180.0, 28.0)),
-            Anchor::TopLeft,
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                + Ab(nalgebra_glm::Vec2::new(-(PAGE_PADDING + 200.0), 0.0)),
+            Ab(nalgebra_glm::Vec2::new(200.0, 32.0)),
+            Anchor::CenterLeft,
         )
         .entity();
     tree.push_parent(picker_holder);
@@ -491,152 +534,130 @@ fn build_top_bar(tree: &mut UiTreeBuilder) {
     tree.pop_parent();
 
     tree.pop_parent();
-}
 
-fn build_bottom_bar(tree: &mut UiTreeBuilder) {
-    let bottom_bar = tree
-        .add_node()
-        .boundary(
-            Ab(nalgebra_glm::Vec2::new(0.0, -38.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 100.0)),
-            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
-        )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.03, 0.03, 0.06, 0.98))
-        .with_depth(UiDepthMode::Set(10.0))
-        .without_pointer_events()
-        .entity();
-
-    tree.push_parent(bottom_bar);
-
-    tree.add_node()
-        .boundary(
-            Rl(nalgebra_glm::Vec2::new(0.0, 0.0)),
-            Ab(nalgebra_glm::Vec2::new(0.0, 2.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
-        )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(MAGENTA_DIM)
-        .without_pointer_events();
-
-    tree.add_node()
-        .window(
-            Ab(nalgebra_glm::Vec2::new(20.0, 20.0)),
-            Ab(nalgebra_glm::Vec2::new(440.0, 20.0)),
-            Anchor::CenterLeft,
-        )
-        .with_text("NIGHTSHADE ENGINE  //  RETAINED UI WIDGET GALLERY", 11.0)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.4, 0.4, 0.5, 1.0))
-        .without_pointer_events();
-
-    tree.pop_parent();
+    (fps_text, entity_count_text, uptime_text)
 }
 
 fn build_sidebar(
     tree: &mut UiTreeBuilder,
 ) -> (Vec<Entity>, Vec<Entity>, Vec<Entity>, Entity, Vec<f32>) {
-    let mut nav_buttons = Vec::new();
-    let mut nav_indicators = Vec::new();
-    let mut nav_labels = Vec::new();
-    let mut nav_y_offsets = Vec::new();
-
+    let theme = tree.active_theme().clone();
     let sidebar = tree
         .add_node()
         .boundary(
-            Ab(nalgebra_glm::Vec2::new(0.0, 50.0)),
-            Rl(nalgebra_glm::Vec2::new(SIDEBAR_PERCENT, 100.0))
-                + Ab(nalgebra_glm::Vec2::new(0.0, -40.0)),
+            Ab(nalgebra_glm::Vec2::new(0.0, TOP_BAR_HEIGHT)),
+            Ab(nalgebra_glm::Vec2::new(SIDEBAR_WIDTH, 0.0))
+                + Rl(nalgebra_glm::Vec2::new(0.0, 100.0)),
         )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.03, 0.03, 0.06, 0.95))
+        .with_rect(0.0, 0.0, theme.border_color)
+        .with_theme_color::<UiBase>(ThemeColor::Panel)
         .without_pointer_events()
         .entity();
 
     tree.push_parent(sidebar);
 
-    let slider_indicator = tree
+    tree.add_node()
+        .boundary(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-1.0, 0.0)),
+            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
+        )
+        .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_theme_color::<UiBase>(ThemeColor::Border)
+        .without_pointer_events();
+
+    let item_height = 36.0_f32;
+    let item_gap = 2.0_f32;
+    let top_padding = 16.0_f32;
+
+    let mut nav_buttons = Vec::new();
+    let mut nav_indicators = Vec::new();
+    let mut nav_labels = Vec::new();
+    let mut nav_y_offsets = Vec::new();
+
+    let slider = tree
         .add_node()
         .window(
-            Ab(nalgebra_glm::Vec2::new(0.0, 20.0)),
-            Ab(nalgebra_glm::Vec2::new(3.0, 40.0)),
+            Ab(nalgebra_glm::Vec2::new(0.0, top_padding)),
+            Ab(nalgebra_glm::Vec2::new(3.0, item_height)),
             Anchor::TopLeft,
         )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(ACTIVE_INDICATOR)
+        .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_theme_color::<UiBase>(ThemeColor::Accent)
         .without_pointer_events()
         .done();
 
     for (index, item) in NAV_ITEMS.iter().enumerate() {
-        let y_offset = 20.0 + index as f32 * 52.0;
-        nav_y_offsets.push(y_offset);
+        let y = top_padding + index as f32 * (item_height + item_gap);
+        nav_y_offsets.push(y);
 
-        let indicator = tree
+        let placeholder = tree
             .add_node()
             .window(
-                Ab(nalgebra_glm::Vec2::new(0.0, y_offset)),
-                Ab(nalgebra_glm::Vec2::new(3.0, 40.0)),
+                Ab(nalgebra_glm::Vec2::new(0.0, y)),
+                Ab(nalgebra_glm::Vec2::new(3.0, item_height)),
                 Anchor::TopLeft,
             )
-            .with_rect(0.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(INACTIVE_INDICATOR)
+            .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
             .without_pointer_events()
             .done();
-        nav_indicators.push(indicator);
+        nav_indicators.push(placeholder);
 
         let button = tree
             .add_node()
             .window(
-                Ab(nalgebra_glm::Vec2::new(8.0, y_offset)),
-                Ab(nalgebra_glm::Vec2::new(0.0, 40.0))
-                    + Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                    + Ab(nalgebra_glm::Vec2::new(-12.0, 0.0)),
+                Ab(nalgebra_glm::Vec2::new(8.0, y)),
+                Ab(nalgebra_glm::Vec2::new(SIDEBAR_WIDTH - 16.0, item_height)),
                 Anchor::TopLeft,
             )
-            .with_interaction()
-            .with_tooltip(item.tooltip)
-            .with_cursor_icon(winit::window::CursorIcon::Pointer)
-            .with_rect(4.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.05, 0.05, 0.09, 0.0))
-            .with_color::<UiHover>(DARK_PANEL_HOVER)
-            .with_color::<UiPressed>(nalgebra_glm::Vec4::new(0.04, 0.04, 0.08, 1.0))
+            .with_rect(6.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+            .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+            .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
             .with_transition::<UiHover>(12.0, 6.0)
             .with_transition::<UiPressed>(20.0, 10.0)
+            .with_interaction()
+            .with_tooltip(item.description)
+            .with_cursor_icon(winit::window::CursorIcon::Pointer)
             .entity();
 
         tree.push_parent(button);
+
         tree.add_node()
             .window(
-                Ab(nalgebra_glm::Vec2::new(16.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
-                Ab(nalgebra_glm::Vec2::new(20.0, 20.0)),
+                Ab(nalgebra_glm::Vec2::new(12.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+                Ab(nalgebra_glm::Vec2::new(18.0, 18.0)),
                 Anchor::CenterLeft,
             )
-            .with_icon(item.icon, 18.0)
-            .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
+            .with_icon(item.icon, 16.0)
+            .with_color::<UiBase>(if index == 0 {
+                theme.text_color
+            } else {
+                theme.text_color_disabled
+            })
             .without_pointer_events()
             .done();
-        let label_entity = tree
+
+        let label = tree
             .add_node()
             .window(
-                Ab(nalgebra_glm::Vec2::new(46.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-58.0, 30.0)),
+                Ab(nalgebra_glm::Vec2::new(40.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-52.0, 22.0)),
                 Anchor::CenterLeft,
             )
-            .with_text(item.label, 12.0)
+            .with_text(item.label, 14.0)
             .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
-            .with_color::<UiBase>(if index == 0 { CYAN } else { LIGHT_GRAY })
+            .with_color::<UiBase>(if index == 0 {
+                theme.text_color
+            } else {
+                theme.text_color_disabled
+            })
             .without_pointer_events()
             .done();
+
         tree.pop_parent();
         nav_buttons.push(button);
-        nav_labels.push(label_entity);
+        nav_labels.push(label);
     }
-
-    tree.add_node()
-        .boundary(
-            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-2.0, 0.0)),
-            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
-        )
-        .with_rect(0.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.1, 0.1, 0.18, 0.5))
-        .without_pointer_events();
 
     tree.pop_parent();
 
@@ -644,7 +665,7 @@ fn build_sidebar(
         nav_buttons,
         nav_indicators,
         nav_labels,
-        slider_indicator,
+        slider,
         nav_y_offsets,
     )
 }
@@ -656,239 +677,269 @@ fn build_screen_root(tree: &mut UiTreeBuilder, visible: bool) -> Entity {
             Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
         )
         .with_visible(visible)
-        .with_intro(UiAnimationType::Fade, 0.2)
+        .with_intro(UiAnimationType::Fade, 0.18)
         .without_pointer_events()
         .entity()
 }
 
-fn build_card(tree: &mut UiTreeBuilder) -> Entity {
+fn build_page_header(tree: &mut UiTreeBuilder, title: &str, subtitle: &str) {
     tree.add_node()
-        .boundary(
-            Ab(nalgebra_glm::Vec2::new(10.0, 10.0)),
-            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)) + Ab(nalgebra_glm::Vec2::new(-10.0, -10.0)),
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
         )
-        .with_rect(6.0, 1.0, CARD_BORDER)
-        .with_color::<UiBase>(CARD_BG)
-        .entity()
+        .with_text(title, 24.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::Text)
+        .without_pointer_events()
+        .done();
+    tree.add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
+        )
+        .with_text(subtitle, 13.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+        .without_pointer_events()
+        .done();
+    tree.add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, BLOCK_GAP)),
+        )
+        .without_pointer_events()
+        .done();
 }
 
-fn build_two_column_card(
+fn demo_block(
     tree: &mut UiTreeBuilder,
-    left: impl FnOnce(&mut Ui<'_, '_>),
-    right: impl FnOnce(&mut Ui<'_, '_>),
+    title: &str,
+    caption: &str,
+    content_height: f32,
+    body: impl FnOnce(&mut UiTreeBuilder, Entity),
 ) {
-    let left_card = tree
+    let theme = tree.active_theme().clone();
+    let header_height = 22.0 + 4.0 + 18.0;
+    let total_height = BLOCK_PADDING * 2.0 + header_height + 12.0 + content_height;
+
+    let block = tree
         .add_node()
-        .boundary(
-            Ab(nalgebra_glm::Vec2::new(10.0, 10.0)),
-            Rl(nalgebra_glm::Vec2::new(50.0, 0.0))
-                + Ab(nalgebra_glm::Vec2::new(-5.0, -10.0))
-                + Rl(nalgebra_glm::Vec2::new(0.0, 100.0)),
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                + Ab(nalgebra_glm::Vec2::new(0.0, total_height)),
         )
-        .with_rect(6.0, 1.0, CARD_BORDER)
-        .with_color::<UiBase>(CARD_BG)
+        .with_rect(BLOCK_RADIUS, 1.0, theme.border_color)
+        .with_theme_border_color(ThemeColor::Border)
+        .with_theme_color::<UiBase>(ThemeColor::Panel)
+        .with_theme_effect_role(ThemeEffect::PanelEffect)
         .entity();
 
-    tree.push_parent(left_card);
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
-    tree.build_ui(content, left);
+    tree.push_parent(block);
+
+    let inner = tree
+        .add_node()
+        .boundary(
+            Ab(nalgebra_glm::Vec2::new(BLOCK_PADDING, BLOCK_PADDING)),
+            Ab(nalgebra_glm::Vec2::new(-BLOCK_PADDING, -BLOCK_PADDING))
+                + Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
+        )
+        .flow_with_alignment(
+            FlowDirection::Vertical,
+            0.0,
+            4.0,
+            FlowAlignment::Start,
+            FlowAlignment::Start,
+        )
+        .without_pointer_events()
+        .entity();
+
+    tree.push_parent(inner);
+    tree.add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
+        )
+        .with_text(title, 15.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_theme_color::<UiBase>(ThemeColor::Text)
+        .without_pointer_events()
+        .done();
+    if !caption.is_empty() {
+        tree.add_node()
+            .flow_child(
+                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 18.0)),
+            )
+            .with_text(caption, 12.0)
+            .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+            .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+            .without_pointer_events()
+            .done();
+    }
+    tree.add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 12.0)),
+        )
+        .without_pointer_events()
+        .done();
+
+    let content = tree
+        .add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                + Ab(nalgebra_glm::Vec2::new(0.0, content_height)),
+        )
+        .flow_with_alignment(
+            FlowDirection::Vertical,
+            0.0,
+            8.0,
+            FlowAlignment::Start,
+            FlowAlignment::Start,
+        )
+        .without_pointer_events()
+        .entity();
+    tree.push_parent(content);
+    body(tree, content);
     tree.pop_parent();
 
-    let right_card = tree
-        .add_node()
-        .boundary(
-            Rl(nalgebra_glm::Vec2::new(50.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(5.0, 10.0)),
-            Ab(nalgebra_glm::Vec2::new(-10.0, -10.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
-        )
-        .with_rect(6.0, 1.0, CARD_BORDER)
-        .with_color::<UiBase>(CARD_BG)
-        .entity();
-
-    tree.push_parent(right_card);
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
-    tree.build_ui(content, right);
+    tree.pop_parent();
     tree.pop_parent();
 }
 
-fn build_buttons_screen(
-    tree: &mut UiTreeBuilder,
-) -> (Entity, Entity, Entity, Entity, Entity, Entity, Entity) {
+fn build_page_scroll(tree: &mut UiTreeBuilder) -> Entity {
+    let pad_holder = tree
+        .add_node()
+        .boundary(
+            Ab(nalgebra_glm::Vec2::new(PAGE_PADDING, PAGE_PADDING)),
+            Ab(nalgebra_glm::Vec2::new(-PAGE_PADDING, -PAGE_PADDING))
+                + Rl(nalgebra_glm::Vec2::new(100.0, 100.0)),
+        )
+        .without_pointer_events()
+        .entity();
+
+    tree.push_parent(pad_holder);
+    let scroll = tree.add_scroll_area_fill(0.0, BLOCK_GAP);
+    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
+        .map(|d| d.content_entity)
+        .unwrap();
+    tree.pop_parent();
+    content
+}
+
+fn build_buttons_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity) {
     let screen = build_screen_root(tree, true);
     tree.push_parent(screen);
 
-    let card_data: [(&str, &str, nalgebra_glm::Vec4); 3] = [
-        ("FPS", "60", CYAN),
-        ("ENTITIES", "0", MAGENTA),
-        (
-            "UPTIME",
-            "0:00",
-            nalgebra_glm::Vec4::new(0.4, 1.0, 0.4, 1.0),
-        ),
-    ];
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
-    let mut card_text_entities = [Entity::default(); 3];
-    for (index, (label, initial_text, accent_color)) in card_data.iter().enumerate() {
-        let x_percent = 2.0 + index as f32 * 33.0;
-
-        let card = tree
-            .add_node()
-            .boundary(
-                Rl(nalgebra_glm::Vec2::new(x_percent, 0.0))
-                    + Ab(nalgebra_glm::Vec2::new(0.0, 10.0)),
-                Rl(nalgebra_glm::Vec2::new(x_percent + 31.0, 0.0))
-                    + Ab(nalgebra_glm::Vec2::new(0.0, 110.0)),
-            )
-            .with_rect(6.0, 1.0, CARD_BORDER)
-            .with_color::<UiBase>(CARD_BG)
-            .with_tooltip(match index {
-                0 => "Current frames per second",
-                1 => "Total active ECS entities",
-                _ => "Time since application start",
-            })
-            .entity();
-
-        tree.push_parent(card);
-
-        tree.add_node()
-            .boundary(
-                Rl(nalgebra_glm::Vec2::new(0.0, 0.0)),
-                Ab(nalgebra_glm::Vec2::new(0.0, 3.0)) + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
-            )
-            .with_rect(6.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(*accent_color)
-            .without_pointer_events();
-
-        tree.add_node()
-            .window(
-                Ab(nalgebra_glm::Vec2::new(16.0, 18.0)),
-                Ab(nalgebra_glm::Vec2::new(150.0, 20.0)),
-                Anchor::TopLeft,
-            )
-            .with_text(label, 12.0)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.5, 0.5, 0.6, 1.0))
-            .without_pointer_events();
-
-        card_text_entities[index] = tree
-            .add_node()
-            .window(
-                Ab(nalgebra_glm::Vec2::new(16.0, 45.0)),
-                Ab(nalgebra_glm::Vec2::new(200.0, 42.0)),
-                Anchor::TopLeft,
-            )
-            .with_text(initial_text, 32.0)
-            .with_color::<UiBase>(WHITE)
-            .without_pointer_events()
-            .done();
-
-        tree.pop_parent();
-    }
-
-    let fps_text = card_text_entities[0];
-    let entity_count_text = card_text_entities[1];
-    let uptime_text = card_text_entities[2];
-
-    let pulse_entity = tree
-        .add_node()
-        .window(
-            Rl(nalgebra_glm::Vec2::new(0.0, 100.0)) + Ab(nalgebra_glm::Vec2::new(20.0, -60.0)),
-            Ab(nalgebra_glm::Vec2::new(12.0, 12.0)),
-            Anchor::Center,
-        )
-        .with_rect(6.0, 0.0, TRANSPARENT)
-        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.0, 1.0, 0.5, 1.0))
-        .with_tooltip("Live status indicator (animated)")
-        .done();
-
-    let card = tree
-        .add_node()
-        .boundary(
-            Ab(nalgebra_glm::Vec2::new(10.0, 130.0)),
-            Rl(nalgebra_glm::Vec2::new(100.0, 100.0)) + Ab(nalgebra_glm::Vec2::new(-10.0, -10.0)),
-        )
-        .with_rect(6.0, 1.0, CARD_BORDER)
-        .with_color::<UiBase>(CARD_BG)
-        .entity();
-
-    tree.push_parent(card);
-
-    let disable_toggle_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let pulse_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let disable_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
     let disabled_slider_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let dt = disable_toggle_cell.clone();
-    let ds = disabled_slider_cell.clone();
 
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
-    tree.build_ui(content, |ui| {
-        ui.heading("Buttons");
-        ui.separator();
+    build_page_header(
+        tree,
+        "Buttons",
+        "Standard button variants, toggle controls, and selection patterns.",
+    );
 
-        ui.label("Standard Button");
-        ui.button("Primary Action");
+    demo_block(
+        tree,
+        "Standard Button",
+        "The default button style applies the active theme's button effect and shadow.",
+        36.0,
+        |t, _| {
+            t.add_button("Primary action");
+        },
+    );
+    demo_block(
+        tree,
+        "Colored Buttons",
+        "Pass a color to add_button_colored. Hover, press, and focus glows still derive from the theme.",
+        36.0 * 3.0 + 16.0,
+        |t, _| {
+            let theme = t.active_theme().clone();
+            t.add_button_colored("Success", theme.success_color);
+            t.add_button_colored("Warning", theme.warning_color);
+            t.add_button_colored("Danger", theme.error_color);
+        },
+    );
+    demo_block(
+        tree,
+        "Toggle Switch",
+        "Two-state switch. Press feels physical via per-state scale on the knob.",
+        24.0,
+        |t, _| {
+            t.add_toggle(false);
+        },
+    );
+    demo_block(
+        tree,
+        "Checkbox",
+        "Inline checkbox with label. Focus indicator uses a focused background tint.",
+        28.0,
+        |t, _| {
+            t.add_checkbox("Enable notifications", false);
+        },
+    );
+    demo_block(
+        tree,
+        "Radio Group",
+        "Mutually exclusive set sharing a group id.",
+        96.0,
+        |t, _| {
+            t.add_radio("Option A", 1, 0);
+            t.add_radio("Option B", 1, 1);
+            t.add_radio("Option C", 1, 2);
+        },
+    );
+    demo_block(
+        tree,
+        "Selectable Labels",
+        "Toggleable labels that act like buttons but read as list rows.",
+        96.0,
+        |t, _| {
+            t.add_selectable_label("Renderer: wgpu", Some(2));
+            t.add_selectable_label("Audio: rodio", Some(2));
+            t.add_selectable_label("Physics: rapier", Some(2));
+        },
+    );
+    let pulse_clone = pulse_cell.clone();
+    demo_block(
+        tree,
+        "Spinner & Live Indicator",
+        "An idle spinner and a sine-driven status pulse from the gallery animation system.",
+        48.0,
+        move |t, _| {
+            t.add_spinner();
+            let theme = t.active_theme().clone();
+            let pulse = t
+                .add_node()
+                .flow_child(Ab(nalgebra_glm::Vec2::new(12.0, 12.0)))
+                .with_rect(6.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+                .with_color::<UiBase>(theme.accent_color)
+                .with_tooltip("Live status indicator")
+                .done();
+            pulse_clone.set(pulse);
+        },
+    );
+    let disable_clone = disable_cell.clone();
+    let disabled_slider_clone = disabled_slider_cell.clone();
+    demo_block(
+        tree,
+        "Disabled State",
+        "Toggle the switch to disable the slider below. Disabled widgets ignore pointer input.",
+        72.0,
+        move |t, _| {
+            let toggle = t.add_toggle(false);
+            disable_clone.set(toggle);
+            let slider = t.add_slider(0.0, 100.0, 30.0);
+            disabled_slider_clone.set(slider);
+        },
+    );
 
-        ui.spacing(4.0);
-        ui.label("Colored Buttons");
-        let theme = ui.theme().clone();
-        ui.button_colored("Success", theme.success_color);
-        ui.button_colored("Warning", theme.warning_color);
-        ui.button_colored("Danger", theme.error_color);
-
-        ui.spacing(8.0);
-        ui.heading("Toggle / Checkbox");
-        ui.separator();
-
-        ui.label("Toggle Switch");
-        ui.toggle(false);
-
-        ui.spacing(4.0);
-        ui.label("Checkbox");
-        ui.checkbox("Enable notifications", false);
-
-        ui.spacing(8.0);
-        ui.heading("Radio Group");
-        ui.separator();
-        ui.radio("Option A", 1, 0);
-        ui.radio("Option B", 1, 1);
-        ui.radio("Option C", 1, 2);
-
-        ui.spacing(8.0);
-        ui.heading("Selectable Labels");
-        ui.separator();
-        ui.selectable_label("Renderer: wgpu", Some(1));
-        ui.selectable_label("Audio: rodio", Some(1));
-        ui.selectable_label("Physics: rapier", Some(1));
-
-        ui.spacing(8.0);
-        ui.heading("Spinner");
-        ui.separator();
-        ui.spinner();
-
-        ui.spacing(8.0);
-        ui.heading("Disabled State");
-        ui.separator();
-        ui.label("Toggle to disable the slider below:");
-        let disable_toggle = ui.toggle(false);
-        let disabled_slider = ui.slider(0.0, 100.0, 30.0);
-        dt.set(disable_toggle);
-        ds.set(disabled_slider);
-    });
     tree.pop_parent();
-
     tree.pop_parent();
     (
         screen,
-        fps_text,
-        uptime_text,
-        entity_count_text,
-        pulse_entity,
-        disable_toggle_cell.get(),
+        pulse_cell.get(),
+        disable_cell.get(),
         disabled_slider_cell.get(),
     )
 }
@@ -898,96 +949,130 @@ fn build_inputs_screen(
 ) -> (Entity, Entity, Entity, Entity, Entity, Entity) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
-
-    let card = build_card(tree);
-    tree.push_parent(card);
-
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
     let progress_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let pc = progress_cell.clone();
     let submit_input_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let si = submit_input_cell.clone();
     let submit_log_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let sl = submit_log_cell.clone();
     let focus_target_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let ft = focus_target_cell.clone();
     let focus_button_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let fb = focus_button_cell.clone();
-    tree.build_ui(content, |ui| {
-        ui.heading("Slider Family");
-        ui.separator();
 
-        ui.label("Slider (linear)");
-        ui.slider(0.0, 100.0, 50.0);
+    build_page_header(
+        tree,
+        "Inputs",
+        "Sliders, drag values, text fields, and progress feedback.",
+    );
 
-        ui.spacing(4.0);
-        ui.label("Range Slider");
-        ui.range_slider(0.0, 100.0, 25.0, 75.0);
+    demo_block(
+        tree,
+        "Slider",
+        "Horizontal track with a focus glow when active.",
+        24.0,
+        |t, _| {
+            t.add_slider(0.0, 100.0, 50.0);
+        },
+    );
+    demo_block(
+        tree,
+        "Range Slider",
+        "Two thumbs sharing a track for selecting a numeric range.",
+        24.0,
+        |t, _| {
+            t.add_range_slider(0.0, 100.0, 25.0, 75.0);
+        },
+    );
+    demo_block(
+        tree,
+        "Drag Value",
+        "Click and drag to scrub. Holding focus lets you type a value directly.",
+        32.0,
+        |t, _| {
+            t.add_drag_value_configured(DragValueConfig::new(-10.0, 10.0, 0.5).speed(0.01));
+        },
+    );
+    demo_block(
+        tree,
+        "Text Input",
+        "Single-line text field. Supports clipboard, selection, undo.",
+        32.0,
+        |t, _| {
+            t.add_text_input("Type here...");
+        },
+    );
+    let submit_input_clone = submit_input_cell.clone();
+    let submit_log_clone = submit_log_cell.clone();
+    demo_block(
+        tree,
+        "Submit Detection",
+        "Press Enter to fire a TextInputSubmitted event. The log below increments per submit.",
+        64.0,
+        move |t, _| {
+            let input = t.add_text_input("Press Enter to submit...");
+            submit_input_clone.set(input);
+            let log = t
+                .add_node()
+                .flow_child(
+                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                        + Ab(nalgebra_glm::Vec2::new(0.0, 22.0)),
+                )
+                .with_text("Press Enter to submit", 12.0)
+                .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
+                .without_pointer_events()
+                .done();
+            submit_log_clone.set(log);
+        },
+    );
+    let focus_target_clone = focus_target_cell.clone();
+    let focus_button_clone = focus_button_cell.clone();
+    demo_block(
+        tree,
+        "Programmatic Focus",
+        "Call ui_focus(world, target) to move keyboard focus to any widget.",
+        72.0,
+        move |t, _| {
+            let target = t.add_text_input("Focus target");
+            focus_target_clone.set(target);
+            let btn = t.add_button("Focus the input above");
+            focus_button_clone.set(btn);
+        },
+    );
+    demo_block(
+        tree,
+        "Text Area",
+        "Multi-line text with optional row count.",
+        96.0,
+        |t, _| {
+            t.add_text_area("Multi-line input...", 4);
+        },
+    );
+    demo_block(
+        tree,
+        "Rich Text Editor",
+        "Multi-line editor with inline span styling.",
+        96.0,
+        |t, _| {
+            t.add_rich_text_editor("Rich text content...", 4);
+        },
+    );
+    let progress_clone = progress_cell.clone();
+    demo_block(
+        tree,
+        "Progress Bar",
+        "Live looping bar plus a static 75% fill.",
+        56.0,
+        move |t, _| {
+            let progress = t.add_progress_bar(0.0);
+            progress_clone.set(progress);
+            t.add_progress_bar(0.75);
+        },
+    );
 
-        ui.spacing(4.0);
-        ui.label("Drag Value");
-        ui.drag_value_configured(DragValueConfig::new(-10.0, 10.0, 0.5).speed(0.01));
-
-        ui.spacing(8.0);
-        ui.heading("Text Inputs");
-        ui.separator();
-
-        ui.label("Text Input");
-        ui.text_input("Type here...");
-
-        ui.spacing(4.0);
-        ui.label("Submit detection (press Enter)");
-        let submit_input = ui.text_input("Type and press Enter...");
-        si.set(submit_input);
-        let submit_log = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 24.0)),
-            )
-            .with_text("Press Enter to submit", 12.0)
-            .with_color::<UiBase>(CYAN_DIM)
-            .without_pointer_events()
-            .done();
-        sl.set(submit_log);
-
-        ui.spacing(4.0);
-        ui.label("Programmatic Focus");
-        let focus_target = ui.text_input("Focus target");
-        ft.set(focus_target);
-        let focus_button = ui.button("Focus the input above");
-        fb.set(focus_button);
-
-        ui.spacing(4.0);
-        ui.label("Text Area (multi-line)");
-        ui.text_area("Multi-line input...", 4);
-
-        ui.spacing(4.0);
-        ui.label("Rich Text Editor");
-        ui.rich_text_editor("Rich text content...", 4);
-
-        ui.spacing(8.0);
-        ui.heading("Progress");
-        ui.separator();
-        ui.label("Animated progress bar");
-        let progress = ui.progress_bar(0.0);
-        pc.set(progress);
-
-        ui.spacing(4.0);
-        ui.label("Static progress (75%)");
-        ui.progress_bar(0.75);
-    });
     tree.pop_parent();
     tree.pop_parent();
-
-    let progress_entity = progress_cell.get();
     (
         screen,
-        progress_entity,
+        progress_cell.get(),
         submit_input_cell.get(),
         submit_log_cell.get(),
         focus_target_cell.get(),
@@ -998,163 +1083,200 @@ fn build_inputs_screen(
 fn build_pickers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
-    let card = build_card(tree);
-    tree.push_parent(card);
+    let palette_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
 
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
+    build_page_header(
+        tree,
+        "Pickers",
+        "Selection widgets for discrete values: dropdowns, color, date, multi-select.",
+    );
 
-    let palette_btn_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let pb = palette_btn_cell.clone();
+    demo_block(
+        tree,
+        "Dropdown",
+        "Single-select dropdown with searchable variant available.",
+        32.0,
+        |t, _| {
+            t.add_dropdown(&["Low", "Medium", "High", "Ultra"], 1);
+        },
+    );
+    demo_block(
+        tree,
+        "Tab Bar",
+        "Horizontal tab strip. Each tab is keyboard-navigable.",
+        36.0,
+        |t, _| {
+            t.add_tab_bar(&["General", "Audio", "Display", "Controls"], 0);
+        },
+    );
+    demo_block(
+        tree,
+        "Color Picker",
+        "Compact color picker with HSV controls.",
+        140.0,
+        |t, _| {
+            t.add_color_picker(nalgebra_glm::Vec4::new(0.3, 0.5, 0.9, 1.0));
+        },
+    );
+    demo_block(
+        tree,
+        "Color Wheel",
+        "Circular HSV color wheel.",
+        180.0,
+        |t, _| {
+            t.add_color_wheel(nalgebra_glm::Vec4::new(0.3, 0.5, 0.9, 1.0));
+        },
+    );
+    demo_block(
+        tree,
+        "Date Picker",
+        "Calendar with month navigation.",
+        260.0,
+        |t, _| {
+            t.add_date_picker(2026, 5, 7);
+        },
+    );
+    demo_block(
+        tree,
+        "Multi-Select",
+        "Pick multiple values from a list. Selections highlight inline.",
+        180.0,
+        |t, _| {
+            t.add_multi_select(&["Apple", "Banana", "Cherry", "Date", "Elderberry"]);
+        },
+    );
+    demo_block(
+        tree,
+        "Menu",
+        "Drop-down menu with item list.",
+        36.0,
+        |t, _| {
+            t.add_menu("File", &["New", "Open", "Save", "Save As...", "Quit"]);
+        },
+    );
+    let palette_clone = palette_cell.clone();
+    demo_block(
+        tree,
+        "Command Palette",
+        "Fuzzy-searchable command list. Press Ctrl+P or use the button below.",
+        32.0,
+        move |t, _| {
+            let btn = t.add_button("Open Command Palette (Ctrl+P)");
+            palette_clone.set(btn);
+        },
+    );
 
-    tree.build_ui(content, |ui| {
-        ui.heading("Dropdowns");
-        ui.separator();
-
-        ui.label("Quality preset");
-        ui.dropdown(&["Low", "Medium", "High", "Ultra"], 1);
-
-        ui.spacing(4.0);
-        ui.label("Theme picker");
-        ui.theme_dropdown();
-
-        ui.spacing(8.0);
-        ui.heading("Tab Bar");
-        ui.separator();
-        ui.tab_bar(&["General", "Audio", "Display", "Controls"], 0);
-
-        ui.spacing(8.0);
-        ui.heading("Color Picker");
-        ui.separator();
-        ui.color_picker(nalgebra_glm::Vec4::new(0.3, 0.5, 0.9, 1.0));
-
-        ui.spacing(8.0);
-        ui.heading("Color Wheel");
-        ui.separator();
-        ui.color_wheel(nalgebra_glm::Vec4::new(0.3, 0.5, 0.9, 1.0));
-
-        ui.spacing(8.0);
-        ui.heading("Date Picker");
-        ui.separator();
-        ui.date_picker(2026, 5, 3);
-
-        ui.spacing(8.0);
-        ui.heading("Multi-Select");
-        ui.separator();
-        ui.multi_select(&["Apple", "Banana", "Cherry", "Date", "Elderberry"]);
-
-        ui.spacing(8.0);
-        ui.heading("Menu");
-        ui.separator();
-        ui.menu("File", &["New", "Open", "Save", "Save As...", "Quit"]);
-
-        ui.spacing(8.0);
-        ui.heading("Command Palette");
-        ui.separator();
-        let palette_btn = ui.button("Open Command Palette (Ctrl+P)");
-        pb.set(palette_btn);
-    });
     tree.pop_parent();
     tree.pop_parent();
-    (screen, palette_btn_cell.get())
+    (screen, palette_cell.get())
 }
 
 fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity, Entity) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
-    let confirm_trigger_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let modal_trigger_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let modal_dialog_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let ct = confirm_trigger_cell.clone();
-    let mt = modal_trigger_cell.clone();
-    let md = modal_dialog_cell.clone();
+    let modal_btn_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let confirm_btn_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
 
-    let card = build_card(tree);
-    tree.push_parent(card);
+    build_page_header(
+        tree,
+        "Containers",
+        "Layout primitives and overlay surfaces.",
+    );
 
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
-
-    tree.build_ui(content, |ui| {
-        ui.heading("Collapsing Header");
-        ui.separator();
-        ui.collapsing_header("Click to expand", true, |ui| {
-            ui.label("Content nested inside the collapsing header.");
-            ui.label("Click the header above to toggle visibility.");
-            ui.button("Nested button");
-        });
-
-        ui.spacing(8.0);
-        ui.heading("Splitter");
-        ui.separator();
-        let splitter_box = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 80.0)),
-            )
-            .entity();
-        ui.within(splitter_box, |inner| {
-            inner.splitter(SplitDirection::Horizontal, 0.5);
-        });
-
-        ui.spacing(8.0);
-        ui.heading("Tile Container");
-        ui.separator();
-        let tile_box = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 160.0)),
-            )
-            .entity();
-        let tile_container_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-        let tcc = tile_container_cell.clone();
-        ui.within(tile_box, |inner| {
-            let tc = inner.tile_container(nalgebra_glm::Vec2::new(420.0, 160.0));
-            tcc.set(tc);
-        });
-        let tile_container = tile_container_cell.get();
-        for title in ["Scene", "Inspector", "Console"] {
-            let _ = ui_tile_add_pane(ui.world_mut(), tile_container, title);
-        }
-
-        ui.spacing(8.0);
-        ui.heading("Breadcrumb");
-        ui.separator();
-        ui.breadcrumb(&["Home", "Library", "Sample Item"]);
-
-        ui.spacing(8.0);
-        ui.heading("Scroll Area (fixed size)");
-        ui.separator();
-        ui.scroll_area(nalgebra_glm::Vec2::new(0.0, 140.0), |ui| {
-            for index in 0..30 {
-                ui.label(&format!("Scrollable item {index}"));
+    demo_block(
+        tree,
+        "Collapsing Header",
+        "Click the header to expand and collapse the body.",
+        140.0,
+        |t, content| {
+            let scope = t.add_collapsing_header("Click to expand", true);
+            let body = widget::<UiCollapsingHeaderData>(t.world_mut(), scope)
+                .map(|d| d.content_entity)
+                .unwrap_or(content);
+            t.push_parent(body);
+            t.add_label("Content nested inside the collapsing header.");
+            t.add_label("Click the header above to toggle visibility.");
+            t.add_button("Nested button");
+            t.pop_parent();
+        },
+    );
+    demo_block(
+        tree,
+        "Splitter",
+        "Drag the divider to redistribute space between two panels.",
+        96.0,
+        |t, _| {
+            t.add_splitter(SplitDirection::Horizontal, 0.5);
+        },
+    );
+    demo_block(
+        tree,
+        "Tile Container",
+        "Dockable panes with drag-to-rearrange and tab-style organization.",
+        180.0,
+        |t, _| {
+            let tc = t.add_tile_container(nalgebra_glm::Vec2::new(420.0, 160.0));
+            for title in ["Scene", "Inspector", "Console"] {
+                let _ = ui_tile_add_pane(t.world_mut(), tc, title);
             }
-        });
+        },
+    );
+    demo_block(
+        tree,
+        "Breadcrumb",
+        "Hierarchical navigation trail.",
+        28.0,
+        |t, _| {
+            t.add_breadcrumb(&["Home", "Library", "Sample Item"]);
+        },
+    );
+    demo_block(
+        tree,
+        "Scroll Area",
+        "Fixed-size container with scrollable content overflow.",
+        160.0,
+        |t, _| {
+            let scroll = t.add_scroll_area(nalgebra_glm::Vec2::new(0.0, 140.0));
+            let content = widget::<UiScrollAreaData>(t.world_mut(), scroll)
+                .map(|d| d.content_entity)
+                .unwrap();
+            t.push_parent(content);
+            for index in 0..30 {
+                t.add_label(&format!("Scrollable item {index}"));
+            }
+            t.pop_parent();
+        },
+    );
+    let modal_btn_clone = modal_btn_cell.clone();
+    let confirm_btn_clone = confirm_btn_cell.clone();
+    demo_block(
+        tree,
+        "Modal Dialog",
+        "Open a custom modal or a confirmation prompt with two outcomes.",
+        72.0,
+        move |t, _| {
+            let modal_btn = t.add_button("Show Modal Dialog");
+            modal_btn_clone.set(modal_btn);
+            let confirm_btn = t.add_button("Show Confirm Dialog");
+            confirm_btn_clone.set(confirm_btn);
+        },
+    );
+    demo_block(
+        tree,
+        "Canvas",
+        "Custom drawing surface that emits draw commands you implement.",
+        72.0,
+        |t, _| {
+            t.add_canvas(nalgebra_glm::Vec2::new(280.0, 60.0));
+        },
+    );
 
-        ui.spacing(8.0);
-        ui.heading("Modal Dialog");
-        ui.separator();
-        let modal_btn = ui.button("Show Modal Dialog");
-        mt.set(modal_btn);
-
-        ui.spacing(4.0);
-        ui.label("Confirm Dialog");
-        let confirm_btn = ui.button("Show Confirm Dialog");
-        ct.set(confirm_btn);
-
-        ui.spacing(8.0);
-        ui.heading("Canvas (custom drawing)");
-        ui.separator();
-        ui.canvas(nalgebra_glm::Vec2::new(280.0, 60.0));
-    });
     tree.pop_parent();
 
     let modal_dialog = tree.add_modal_dialog("Custom Modal", 380.0, 220.0);
@@ -1168,7 +1290,6 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         inner.spacing(6.0);
         inner.label("Or close it programmatically from your app.");
     });
-    md.set(modal_dialog);
 
     let confirm_dialog =
         tree.add_confirm_dialog("Confirm Action", "Are you sure you want to proceed?");
@@ -1177,20 +1298,17 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
         "gallery_floating",
         "Floating Panel",
         Rect {
-            min: nalgebra_glm::Vec2::new(140.0, 220.0),
-            max: nalgebra_glm::Vec2::new(380.0, 380.0),
+            min: nalgebra_glm::Vec2::new(SIDEBAR_WIDTH + 280.0, TOP_BAR_HEIGHT + 200.0),
+            max: nalgebra_glm::Vec2::new(SIDEBAR_WIDTH + 520.0, TOP_BAR_HEIGHT + 360.0),
         },
     );
-
-    let modal_trigger = modal_trigger_cell.get();
-    let confirm_trigger = confirm_trigger_cell.get();
 
     tree.pop_parent();
     (
         screen,
-        modal_trigger,
+        modal_btn_cell.get(),
         modal_dialog,
-        confirm_trigger,
+        confirm_btn_cell.get(),
         confirm_dialog,
     )
 }
@@ -1198,57 +1316,53 @@ fn build_containers_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity,
 fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
+
     let virtual_list_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
     let text_nodes_cell = std::rc::Rc::new(std::cell::RefCell::new(Vec::<Entity>::new()));
 
-    build_two_column_card(
-        tree,
-        |ui| {
-            ui.heading("Property Grid");
-            ui.separator();
-            let grid = ui.property_grid(110.0);
-            let transform_section = ui.property_section(grid, "Transform");
-            for (label, default) in [("X", 0.0_f32), ("Y", 1.0), ("Z", 0.0)] {
-                let area = ui.property_row(grid, transform_section, label);
-                ui.tree().push_parent(area);
-                ui.tree().add_drag_value(-10.0, 10.0, default);
-                ui.tree().pop_parent();
-            }
-            let appearance = ui.property_section(grid, "Appearance");
-            let area = ui.property_row(grid, appearance, "Opacity");
-            ui.tree().push_parent(area);
-            ui.tree().add_drag_value(0.0, 1.0, 0.85);
-            ui.tree().pop_parent();
-            let area = ui.property_row(grid, appearance, "Hidden");
-            ui.tree().push_parent(area);
-            ui.tree().add_toggle(false);
-            ui.tree().pop_parent();
+    build_page_header(tree, "Data", "Tabular and hierarchical data widgets.");
 
-            ui.spacing(8.0);
-            ui.heading("Data Grid");
-            ui.separator();
-            let data_grid_box = ui
-                .tree()
-                .add_node()
-                .flow_child(
-                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                        + Ab(nalgebra_glm::Vec2::new(0.0, 320.0)),
-                )
-                .entity();
-            let data_grid_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-            let dgc = data_grid_cell.clone();
-            ui.within(data_grid_box, |inner| {
-                let grid = inner.data_grid(
-                    &[
-                        DataGridColumn::new("Name", 120.0),
-                        DataGridColumn::new("Type", 90.0),
-                        DataGridColumn::new("Value", 90.0),
-                    ],
-                    10,
-                );
-                dgc.set(grid);
-            });
-            let grid = data_grid_cell.get();
+    demo_block(
+        tree,
+        "Property Grid",
+        "Two-column inspector grid with sections, drag values, and toggles.",
+        220.0,
+        |t, _| {
+            let grid = t.add_property_grid(110.0);
+            let transform_section = t.add_property_section(grid, "Transform");
+            for (label, default) in [("X", 0.0_f32), ("Y", 1.0), ("Z", 0.0)] {
+                let area = t.add_property_row(grid, transform_section, label);
+                t.push_parent(area);
+                t.add_drag_value(-10.0, 10.0, default);
+                t.pop_parent();
+            }
+            let appearance = t.add_property_section(grid, "Appearance");
+            let area = t.add_property_row(grid, appearance, "Opacity");
+            t.push_parent(area);
+            t.add_drag_value(0.0, 1.0, 0.85);
+            t.pop_parent();
+            let area = t.add_property_row(grid, appearance, "Hidden");
+            t.push_parent(area);
+            t.add_toggle(false);
+            t.pop_parent();
+        },
+    );
+    demo_block(
+        tree,
+        "Data Grid",
+        "Sortable, scrollable, multi-column grid with cell-level mutation.",
+        320.0,
+        |t, _| {
+            let grid = t.add_data_grid(
+                &[
+                    DataGridColumn::new("Name", 140.0),
+                    DataGridColumn::new("Type", 90.0),
+                    DataGridColumn::new("Value", 110.0),
+                ],
+                10,
+            );
             let sample_rows = [
                 ("position.x", "f32", "0.00"),
                 ("position.y", "f32", "1.00"),
@@ -1259,112 +1373,76 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                 ("name", "str", "Player"),
                 ("tag", "str", "main"),
             ];
-            ui_data_grid_set_row_count(ui.world_mut(), grid, sample_rows.len());
+            ui_data_grid_set_row_count(t.world_mut(), grid, sample_rows.len());
             for (row, (name, ty, value)) in sample_rows.iter().enumerate() {
-                ui_data_grid_set_cell(ui.world_mut(), grid, row, 0, name);
-                ui_data_grid_set_cell(ui.world_mut(), grid, row, 1, ty);
-                ui_data_grid_set_cell(ui.world_mut(), grid, row, 2, value);
+                ui_data_grid_set_cell(t.world_mut(), grid, row, 0, name);
+                ui_data_grid_set_cell(t.world_mut(), grid, row, 1, ty);
+                ui_data_grid_set_cell(t.world_mut(), grid, row, 2, value);
             }
-
-            ui.spacing(8.0);
-            ui.heading("Virtual List");
-            ui.separator();
-            let virtual_list_box = ui
-                .tree()
-                .add_node()
-                .flow_child(
-                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                        + Ab(nalgebra_glm::Vec2::new(0.0, 220.0)),
-                )
-                .entity();
-            let vl_cell = virtual_list_cell.clone();
-            ui.within(virtual_list_box, |inner| {
-                let vl = inner.tree().add_virtual_list(28.0, 8);
-                vl_cell.set(vl);
-            });
-            let vl = virtual_list_cell.get();
-            ui_virtual_list_set_count(ui.world_mut(), vl, 64);
-            let pool_containers: Vec<Entity> = ui
+        },
+    );
+    let vl_clone = virtual_list_cell.clone();
+    let text_nodes_clone = text_nodes_cell.clone();
+    demo_block(
+        tree,
+        "Virtual List",
+        "64 items rendered through a small recycling pool. Scroll to see indices update.",
+        220.0,
+        move |t, _| {
+            let vl = t.add_virtual_list(28.0, 8);
+            vl_clone.set(vl);
+            ui_virtual_list_set_count(t.world_mut(), vl, 64);
+            let pool_containers: Vec<Entity> = t
                 .world_mut()
                 .ui
                 .get_ui_virtual_list(vl)
                 .map(|d| d.pool_items.iter().map(|p| p.container_entity).collect())
                 .unwrap_or_default();
-            let mut text_nodes = text_nodes_cell.borrow_mut();
+            let mut text_nodes = text_nodes_clone.borrow_mut();
             text_nodes.clear();
             for (pool_index, container) in pool_containers.iter().enumerate() {
-                ui.tree().push_parent(*container);
-                let text_entity = ui
-                    .tree()
+                t.push_parent(*container);
+                let text_entity = t
                     .add_node()
                     .flow_child(Rl(nalgebra_glm::Vec2::new(100.0, 100.0)))
-                    .with_text(&format!("Item {pool_index}"), 14.0)
+                    .with_text(&format!("Item {pool_index}"), 13.0)
                     .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
                     .with_theme_color::<UiBase>(ThemeColor::Text)
                     .without_pointer_events()
                     .entity();
                 text_nodes.push(text_entity);
-                ui.tree().pop_parent();
+                t.pop_parent();
             }
         },
-        |ui| {
-            ui.heading("Tree View");
-            ui.separator();
-            let tree_view_box = ui
-                .tree()
-                .add_node()
-                .flow_child(
-                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                        + Ab(nalgebra_glm::Vec2::new(0.0, 240.0)),
-                )
-                .entity();
-            ui.tree().push_parent(tree_view_box);
-            let tree_view = ui.tree().add_tree_view(false);
-            let tv_content = widget::<UiTreeViewData>(ui.world_mut(), tree_view)
+    );
+    demo_block(
+        tree,
+        "Tree View",
+        "Hierarchical tree with expansion state and selection.",
+        260.0,
+        |t, _| {
+            let tree_view = t.add_tree_view(false);
+            let tv_content = widget::<UiTreeViewData>(t.world_mut(), tree_view)
                 .map(|d| d.content_entity)
                 .unwrap();
-            let project = ui
-                .tree()
-                .add_tree_node(tree_view, tv_content, "Project", 0, 0);
-            ui_tree_node_set_expanded(ui.world_mut(), project, true);
-            let project_children = widget::<UiTreeNodeData>(ui.world_mut(), project)
+            let project = t.add_tree_node(tree_view, tv_content, "Project", 0, 0);
+            ui_tree_node_set_expanded(t.world_mut(), project, true);
+            let project_children = widget::<UiTreeNodeData>(t.world_mut(), project)
                 .map(|d| d.children_container)
                 .unwrap();
-            ui.tree()
-                .add_tree_node(tree_view, project_children, "Assets", 1, 1);
-            ui.tree()
-                .add_tree_node(tree_view, project_children, "Scripts", 1, 2);
-            let scenes = ui
-                .tree()
-                .add_tree_node(tree_view, project_children, "Scenes", 1, 3);
-            ui_tree_node_set_expanded(ui.world_mut(), scenes, true);
-            let scene_children = widget::<UiTreeNodeData>(ui.world_mut(), scenes)
+            t.add_tree_node(tree_view, project_children, "Assets", 1, 1);
+            t.add_tree_node(tree_view, project_children, "Scripts", 1, 2);
+            let scenes = t.add_tree_node(tree_view, project_children, "Scenes", 1, 3);
+            ui_tree_node_set_expanded(t.world_mut(), scenes, true);
+            let scene_children = widget::<UiTreeNodeData>(t.world_mut(), scenes)
                 .map(|d| d.children_container)
                 .unwrap();
-            ui.tree()
-                .add_tree_node(tree_view, scene_children, "main.scn", 2, 4);
-            ui.tree()
-                .add_tree_node(tree_view, scene_children, "menu.scn", 2, 5);
-            ui.tree().pop_parent();
-
-            ui.spacing(8.0);
-            ui.heading("Live Status");
-            ui.separator();
-
-            ui.tree()
-                .add_node()
-                .flow_child(
-                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                        + Ab(nalgebra_glm::Vec2::new(0.0, 80.0)),
-                )
-                .with_text("Adjust widgets on left to see live values", 12.0)
-                .with_color::<UiBase>(CYAN_DIM)
-                .with_text_alignment(TextAlignment::Left, VerticalAlignment::Top)
-                .without_pointer_events()
-                .done();
+            t.add_tree_node(tree_view, scene_children, "main.scn", 2, 4);
+            t.add_tree_node(tree_view, scene_children, "menu.scn", 2, 5);
         },
     );
 
+    tree.pop_parent();
     tree.pop_parent();
     let virtual_list = virtual_list_cell.get();
     let text_nodes = text_nodes_cell.borrow().clone();
@@ -1374,399 +1452,256 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
 fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity, Entity) {
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
-    let card = build_card(tree);
-    tree.push_parent(card);
+    let pulse_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let blend_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let progress_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
+    let spinner_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
 
-    let scroll = tree.add_scroll_area_fill(12.0, 6.0);
-    let content = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-        .map(|d| d.content_entity)
-        .unwrap();
+    build_page_header(
+        tree,
+        "Effects",
+        "State transitions, tooltips, toasts, theme switching, and live animation.",
+    );
 
-    let effects_pulse_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let effects_blend_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let effects_progress_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let effects_spinner_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let ept = effects_pulse_cell.clone();
-    let ebl = effects_blend_cell.clone();
-    let epb = effects_progress_cell.clone();
-    let esp = effects_spinner_cell.clone();
+    demo_block(
+        tree,
+        "Hover & Press Transitions",
+        "Eased state-weight color blending. Hover to see CubicOut + BackOut on entry.",
+        36.0 * 3.0 + 16.0,
+        |t, _| {
+            for label in ["Smooth Hover", "Smooth Press", "Both Effects"] {
+                t.add_button(label);
+            }
+        },
+    );
+    demo_block(
+        tree,
+        "Tooltips",
+        "Hover the button below for a tooltip. Configurable per-entity via with_tooltip().",
+        40.0,
+        |t, _| {
+            let theme = t.active_theme().clone();
+            t.add_node()
+                .flow_child(
+                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                        + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
+                )
+                .with_rect(6.0, 1.0, theme.border_color)
+                .with_theme_border_color(ThemeColor::Border)
+                .with_theme_color::<UiBase>(ThemeColor::Background)
+                .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+                .with_transition::<UiHover>(8.0, 6.0)
+                .with_interaction()
+                .with_tooltip("This is a tooltip on a custom button")
+                .with_cursor_icon(winit::window::CursorIcon::Pointer)
+                .with_children(|inner| {
+                    inner
+                        .add_node()
+                        .window(
+                            Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
+                            Ab(nalgebra_glm::Vec2::new(220.0, 22.0)),
+                            Anchor::Center,
+                        )
+                        .with_text("Hover for tooltip", 13.0)
+                        .with_theme_color::<UiBase>(ThemeColor::Text)
+                        .without_pointer_events();
+                })
+                .done();
+        },
+    );
+    demo_block(
+        tree,
+        "Toast Notifications",
+        "Click any of the buttons to fire a toast at that severity. They auto-dismiss after 2s.",
+        36.0 * 4.0 + 24.0,
+        |t, _| {
+            t.add_button("Show Info Toast");
+            t.add_button("Show Success Toast");
+            t.add_button("Show Warning Toast");
+            t.add_button("Show Error Toast");
+        },
+    );
+    demo_block(
+        tree,
+        "Theme Switching",
+        "Use the dropdown in the top bar. Every color token crossfades over 250ms.",
+        24.0,
+        |_, _| {},
+    );
+    let pulse_clone = pulse_cell.clone();
+    let blend_clone = blend_cell.clone();
+    let progress_clone = progress_cell.clone();
+    let spinner_clone = spinner_cell.clone();
+    demo_block(
+        tree,
+        "Live Animation",
+        "Pulse, color blend, looping progress, and a rotating swatch driven from gallery animation systems.",
+        220.0,
+        move |t, _| {
+            let theme = t.active_theme().clone();
+            let pulse = t
+                .add_node()
+                .flow_child(Ab(nalgebra_glm::Vec2::new(64.0, 64.0)))
+                .with_rect(8.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+                .with_color::<UiBase>(theme.accent_color)
+                .without_pointer_events()
+                .entity();
+            pulse_clone.set(pulse);
+            let blend = t
+                .add_node()
+                .flow_child(
+                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 6.0)),
+                )
+                .with_rect(3.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+                .with_color::<UiBase>(theme.accent_color)
+                .without_pointer_events()
+                .entity();
+            blend_clone.set(blend);
+            let progress = t.add_progress_bar(0.0);
+            progress_clone.set(progress);
+            let spinner_holder = t
+                .add_node()
+                .flow_child(Ab(nalgebra_glm::Vec2::new(60.0, 60.0)))
+                .without_pointer_events()
+                .entity();
+            t.push_parent(spinner_holder);
+            let spinner = t
+                .add_node()
+                .window(
+                    Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
+                    Ab(nalgebra_glm::Vec2::new(20.0, 20.0)),
+                    Anchor::Center,
+                )
+                .with_rect(4.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+                .with_color::<UiBase>(theme.accent_color)
+                .without_pointer_events()
+                .done();
+            spinner_clone.set(spinner);
+            t.pop_parent();
+        },
+    );
 
-    tree.build_ui(content, |ui| {
-        ui.heading("Hover & Press Transitions");
-        ui.separator();
-        ui.label("Hover and press the buttons to see smooth color transitions:");
-        for label in ["Smooth Hover", "Smooth Press", "Both Effects"] {
-            ui.button(label);
-        }
-
-        ui.spacing(8.0);
-        ui.heading("Tooltips");
-        ui.separator();
-        ui.label("Hover the widgets below to see tooltips:");
-
-        let tooltip_btn = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 30.0)),
-            )
-            .with_rect(4.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(CARD_BORDER)
-            .with_color::<UiHover>(DARK_PANEL_HOVER)
-            .with_transition::<UiHover>(8.0, 6.0)
-            .with_interaction()
-            .with_tooltip("This is a tooltip on a custom button")
-            .with_cursor_icon(winit::window::CursorIcon::Pointer)
-            .with_children(|tree| {
-                tree.add_node()
-                    .window(
-                        Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                        Ab(nalgebra_glm::Vec2::new(200.0, 24.0)),
-                        Anchor::Center,
-                    )
-                    .with_text("Hover for tooltip", 13.0)
-                    .with_color::<UiBase>(LIGHT_GRAY)
-                    .without_pointer_events();
-            })
-            .done();
-        let _ = tooltip_btn;
-
-        ui.spacing(8.0);
-        ui.heading("Toast Notifications");
-        ui.separator();
-        ui.button("Show Info Toast");
-        ui.button("Show Success Toast");
-        ui.button("Show Warning Toast");
-        ui.button("Show Error Toast");
-
-        ui.spacing(8.0);
-        ui.heading("Theme Switching");
-        ui.separator();
-        ui.label("Use the theme picker in the top bar to cycle through built-in themes.");
-
-        ui.spacing(8.0);
-        ui.heading("Live Animation");
-        ui.separator();
-        ui.label("Pulsing alpha (sine wave):");
-        let effects_pulse = ui
-            .tree()
-            .add_node()
-            .flow_child(Ab(nalgebra_glm::Vec2::new(80.0, 80.0)))
-            .with_rect(8.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.0, 1.0, 0.5, 1.0))
-            .without_pointer_events()
-            .entity();
-        ept.set(effects_pulse);
-
-        ui.spacing(6.0);
-        ui.label("Cyan-to-magenta blend:");
-        let effects_blend = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 14.0)),
-            )
-            .with_rect(4.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(CYAN)
-            .without_pointer_events()
-            .entity();
-        ebl.set(effects_blend);
-
-        ui.spacing(6.0);
-        ui.label("Looping progress bar:");
-        let effects_progress = ui.progress_bar(0.0);
-        epb.set(effects_progress);
-
-        ui.spacing(6.0);
-        ui.label("Rotating swatch:");
-        let effects_spinner_holder = ui
-            .tree()
-            .add_node()
-            .flow_child(Ab(nalgebra_glm::Vec2::new(60.0, 60.0)))
-            .without_pointer_events()
-            .entity();
-        ui.tree().push_parent(effects_spinner_holder);
-        let effects_spinner = ui
-            .tree()
-            .add_node()
-            .window(
-                Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                Ab(nalgebra_glm::Vec2::new(40.0, 40.0)),
-                Anchor::Center,
-            )
-            .with_rect(6.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(CYAN)
-            .without_pointer_events()
-            .entity();
-        esp.set(effects_spinner);
-        ui.tree().pop_parent();
-
-        ui.spacing(8.0);
-        ui.heading("Intro Animations");
-        ui.separator();
-        ui.label("Each screen fades in via with_intro(UiAnimationType::Fade, 0.2)");
-        ui.label("Switch screens via the sidebar to see the effect.");
-
-        ui.spacing(8.0);
-        ui.heading("SDF Drop Shadows");
-        ui.separator();
-        ui.label("Shadows are computed in the rect shader as a second SDF pass.");
-        ui.spacing(4.0);
-
-        let shadow_demo_row = ui
-            .tree()
-            .add_node()
-            .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 140.0)),
-            )
-            .flow(FlowDirection::Horizontal, 16.0, 24.0)
-            .with_clip()
-            .without_pointer_events()
-            .entity();
-        ui.tree().push_parent(shadow_demo_row);
-
-        ui.tree()
-            .add_node()
-            .flow_child(Ab(nalgebra_glm::Vec2::new(140.0, 100.0)))
-            .with_rect(8.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.15, 0.15, 0.22, 1.0))
-            .with_shadow(
-                nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.7),
-                nalgebra_glm::Vec2::new(0.0, 6.0),
-                12.0,
-                0.0,
-            )
-            .with_children(|tree| {
-                tree.add_node()
-                    .window(
-                        Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                        Ab(nalgebra_glm::Vec2::new(120.0, 24.0)),
-                        Anchor::Center,
-                    )
-                    .with_text("Soft", 14.0)
-                    .with_color::<UiBase>(WHITE)
-                    .without_pointer_events();
-            })
-            .done();
-
-        ui.tree()
-            .add_node()
-            .flow_child(Ab(nalgebra_glm::Vec2::new(140.0, 100.0)))
-            .with_rect(8.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.15, 0.15, 0.22, 1.0))
-            .with_shadow(
-                nalgebra_glm::Vec4::new(0.0, 0.6, 0.8, 0.6),
-                nalgebra_glm::Vec2::new(0.0, 0.0),
-                20.0,
-                4.0,
-            )
-            .with_children(|tree| {
-                tree.add_node()
-                    .window(
-                        Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                        Ab(nalgebra_glm::Vec2::new(120.0, 24.0)),
-                        Anchor::Center,
-                    )
-                    .with_text("Glow", 14.0)
-                    .with_color::<UiBase>(CYAN)
-                    .without_pointer_events();
-            })
-            .done();
-
-        ui.tree()
-            .add_node()
-            .flow_child(Ab(nalgebra_glm::Vec2::new(140.0, 100.0)))
-            .with_rect(8.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.15, 0.15, 0.22, 1.0))
-            .with_shadow(
-                nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.85),
-                nalgebra_glm::Vec2::new(8.0, 8.0),
-                4.0,
-                0.0,
-            )
-            .with_children(|tree| {
-                tree.add_node()
-                    .window(
-                        Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                        Ab(nalgebra_glm::Vec2::new(120.0, 24.0)),
-                        Anchor::Center,
-                    )
-                    .with_text("Hard", 14.0)
-                    .with_color::<UiBase>(WHITE)
-                    .without_pointer_events();
-            })
-            .done();
-
-        ui.tree().pop_parent();
-    });
     tree.pop_parent();
     tree.pop_parent();
     (
         screen,
-        effects_pulse_cell.get(),
-        effects_blend_cell.get(),
-        effects_progress_cell.get(),
-        effects_spinner_cell.get(),
+        pulse_cell.get(),
+        blend_cell.get(),
+        progress_cell.get(),
+        spinner_cell.get(),
     )
 }
 
 fn build_polish_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity) {
     use nightshade::ecs::ui::components::Spring;
-    use nightshade::ecs::ui::state::{UiFocused, UiHover};
 
     let screen = build_screen_root(tree, false);
     tree.push_parent(screen);
+    let content = build_page_scroll(tree);
+    tree.push_parent(content);
 
     let progress_slider_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
     let progress_indet_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
     let progress_clear_cell = std::rc::Rc::new(std::cell::Cell::new(Entity::default()));
-    let ps = progress_slider_cell.clone();
-    let pi = progress_indet_cell.clone();
-    let pc = progress_clear_cell.clone();
 
-    build_two_column_card(
+    build_page_header(
         tree,
-        |ui| {
-            ui.heading("Hover Lift + Press Compress");
-            ui.separator();
-            ui.label("Hover any button to see it rise. Click to see it sink.");
-            ui.spacing(4.0);
-            ui.button("Standard Button");
-            ui.button("Another Button");
-            let theme = ui.theme().clone();
-            ui.button_colored("Success", theme.success_color);
-            ui.button_colored("Warning", theme.warning_color);
-            ui.button_colored("Danger", theme.error_color);
+        "Polish",
+        "Hover lift, press compression, focus glow, spring tuning, and the top progress bar.",
+    );
 
-            ui.spacing(12.0);
-            ui.heading("Focus Glow");
-            ui.separator();
-            ui.label("Tab through these to see focus rings:");
-            ui.spacing(4.0);
-            ui.text_input("type to focus");
-            ui.button("Focusable Button A");
-            ui.button("Focusable Button B");
-
-            ui.spacing(12.0);
-            ui.heading("Toggle + Slider Scale");
-            ui.separator();
-            ui.label("Toggle scales up on hover, compresses on press:");
-            ui.spacing(4.0);
-            ui.toggle(false);
-            ui.spacing(6.0);
-            ui.label("Slider track gains focus ring when active:");
-            ui.spacing(4.0);
-            ui.slider(0.0, 100.0, 50.0);
+    demo_block(
+        tree,
+        "Hover Lift + Press Compress",
+        "Standard buttons lift 2px on hover (BackOut spring) and sink 2px on press (snappy spring).",
+        36.0 * 3.0 + 16.0,
+        |t, _| {
+            t.add_button("Hover me");
+            t.add_button("Then press me");
+            let theme = t.active_theme().clone();
+            t.add_button_colored("Colored too", theme.accent_color);
         },
-        |ui| {
-            ui.heading("Spring Physics Tuning");
-            ui.separator();
-            ui.label("Each button below has the same hover-lift but a different spring config.");
-            ui.spacing(6.0);
-
-            ui.label("Soft (low stiffness, low damping)");
+    );
+    demo_block(
+        tree,
+        "Toggle & Slider Scale",
+        "Toggle scales up subtly on hover, compresses on press. Slider gains a focus glow when active.",
+        96.0,
+        |t, _| {
+            t.add_toggle(false);
+            t.add_slider(0.0, 100.0, 50.0);
+        },
+    );
+    demo_block(
+        tree,
+        "Focus Glow",
+        "Tab through the inputs to see the focused border tint and tight focus ring.",
+        96.0,
+        |t, _| {
+            t.add_text_input("First input");
+            t.add_text_input("Second input");
+        },
+    );
+    demo_block(
+        tree,
+        "Spring Tuning",
+        "Same hover-lift offset, four different spring configs. Hover each to compare overshoot and damping.",
+        36.0 * 4.0 + 24.0,
+        |t, _| {
             spring_demo_button(
-                ui,
-                "Soft Spring",
+                t,
+                "Soft (80, 12)",
                 Spring {
                     stiffness: 80.0,
                     damping: 12.0,
                     mass: 1.0,
                 },
             );
-            ui.spacing(4.0);
-
-            ui.label("Default (Framer baseline)");
-            spring_demo_button(ui, "Default Spring", Spring::default());
-            ui.spacing(4.0);
-
-            ui.label("Stiff (high stiffness, well damped)");
+            spring_demo_button(t, "Lively (default)", Spring::lively());
+            spring_demo_button(t, "Snappy", Spring::snappy());
             spring_demo_button(
-                ui,
-                "Stiff Spring",
-                Spring {
-                    stiffness: 400.0,
-                    damping: 40.0,
-                    mass: 1.0,
-                },
-            );
-            ui.spacing(4.0);
-
-            ui.label("Bouncy (high stiffness, low damping)");
-            spring_demo_button(
-                ui,
-                "Bouncy Spring",
+                t,
+                "Bouncy (350, 14)",
                 Spring {
                     stiffness: 350.0,
                     damping: 14.0,
                     mass: 1.0,
                 },
             );
-
-            ui.spacing(12.0);
-            ui.heading("Linear vs Spring");
-            ui.separator();
-            ui.label("Linear easing (stiff, mechanical):");
-            linear_demo_button(ui, "Linear Hover");
-            ui.spacing(4.0);
-            ui.label("Spring (settles with overshoot and damping):");
-            spring_demo_button(ui, "Spring Hover", Spring::default());
-
-            ui.spacing(12.0);
-            ui.heading("Focus Radius Grow");
-            ui.separator();
-            ui.label("Click in this input. The corner radius grows on focus.");
-            ui.spacing(4.0);
-            let focus_input = ui
-                .tree()
-                .add_node()
-                .flow_child(
-                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
-                        + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
-                )
-                .with_rect(4.0, 1.0, CARD_BORDER)
-                .with_theme_color::<UiBase>(ThemeColor::InputBackground)
-                .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
-                .with_theme_color::<UiFocused>(ThemeColor::InputBackgroundFocused)
-                .with_theme_shadow_role::<UiFocused>(
-                    nightshade::ecs::ui::components::ThemeShadow::FocusGlow,
-                )
-                .with_state_radius::<UiFocused>(12.0)
-                .with_transition::<UiHover>(8.0, 6.0)
-                .with_transition::<UiFocused>(8.0, 6.0)
-                .with_interaction()
-                .with_cursor_icon(winit::window::CursorIcon::Text)
-                .with_children(|tree| {
-                    tree.add_node()
-                        .window(
-                            Ab(nalgebra_glm::Vec2::new(12.0, 0.0)),
-                            Ab(nalgebra_glm::Vec2::new(0.0, 32.0))
-                                + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
-                            Anchor::CenterLeft,
-                        )
-                        .with_text("Click to focus", 14.0)
-                        .with_color::<UiBase>(LIGHT_GRAY)
-                        .without_pointer_events();
-                })
-                .done();
-            let _ = focus_input;
-
-            ui.spacing(12.0);
-            ui.heading("Top-of-Window Progress");
-            ui.separator();
-            ui.label("Drag the slider to set determinate progress, or use the buttons.");
-            ui.spacing(4.0);
-            let slider_entity = ui.slider(0.0, 1.0, 0.0);
-            ps.set(slider_entity);
-            ui.spacing(6.0);
-            let indet_entity = ui.button("Set Indeterminate");
-            pi.set(indet_entity);
-            let clear_entity = ui.button("Clear Progress Bar");
-            pc.set(clear_entity);
+        },
+    );
+    demo_block(
+        tree,
+        "Linear vs Spring",
+        "Same offset, different motion. Linear feels mechanical; spring overshoots and settles.",
+        36.0 * 2.0 + 8.0,
+        |t, _| {
+            linear_demo_button(t, "Linear hover");
+            spring_demo_button(t, "Spring hover", Spring::lively());
+        },
+    );
+    let ps = progress_slider_cell.clone();
+    let pi = progress_indet_cell.clone();
+    let pc = progress_clear_cell.clone();
+    demo_block(
+        tree,
+        "Top-of-Window Progress Bar",
+        "Drag the slider to set a determinate value, click indeterminate for a sliding bar, or clear to hide.",
+        36.0 * 2.0 + 24.0 + 28.0,
+        move |t, _| {
+            let slider = t.add_slider(0.0, 1.0, 0.0);
+            ps.set(slider);
+            let indet = t.add_button("Set Indeterminate");
+            pi.set(indet);
+            let clear = t.add_button("Clear Progress Bar");
+            pc.set(clear);
         },
     );
 
+    tree.pop_parent();
     tree.pop_parent();
     (
         screen,
@@ -1777,92 +1712,78 @@ fn build_polish_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Ent
 }
 
 fn spring_demo_button(
-    ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>,
+    tree: &mut UiTreeBuilder,
     label: &str,
     spring: nightshade::ecs::ui::components::Spring,
 ) -> Entity {
     use nalgebra_glm::Vec2;
-    use nightshade::ecs::ui::state::{UiHover, UiPressed};
-
-    let theme = ui.theme().clone();
-    ui.tree()
-        .add_node()
+    let theme = tree.active_theme().clone();
+    tree.add_node()
         .flow_child(
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
         )
         .with_rect(theme.corner_radius, theme.border_width, theme.border_color)
         .with_theme_border_color(ThemeColor::Border)
-        .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Background)
+        .with_theme_color::<UiBase>(ThemeColor::Background)
         .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
         .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
-        .with_theme_effect_role(nightshade::ecs::ui::components::ThemeEffect::ButtonEffect)
-        .with_theme_shadow_role::<nightshade::ecs::ui::state::UiBase>(
-            nightshade::ecs::ui::components::ThemeShadow::ButtonShadow,
-        )
-        .with_theme_shadow_role::<UiHover>(
-            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowHover,
-        )
-        .with_theme_shadow_role::<UiPressed>(
-            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowPressed,
-        )
+        .with_theme_effect_role(ThemeEffect::ButtonEffect)
+        .with_theme_shadow_role::<UiBase>(ThemeShadow::ButtonShadow)
+        .with_theme_shadow_role::<UiHover>(ThemeShadow::ButtonShadowHover)
+        .with_theme_shadow_role::<UiPressed>(ThemeShadow::ButtonShadowPressed)
         .with_state_offset::<UiHover>(Vec2::new(0.0, -3.0))
         .with_state_offset::<UiPressed>(Vec2::new(0.0, 2.0))
         .with_spring_transition::<UiHover>(spring)
         .with_spring_transition::<UiPressed>(spring)
         .with_interaction()
         .with_cursor_icon(winit::window::CursorIcon::Pointer)
-        .with_children(|tree| {
-            tree.add_node()
+        .with_children(|inner| {
+            inner
+                .add_node()
                 .window(
                     Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                    Ab(nalgebra_glm::Vec2::new(200.0, 24.0)),
+                    Ab(nalgebra_glm::Vec2::new(240.0, 22.0)),
                     Anchor::Center,
                 )
                 .with_text(label, 14.0)
-                .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Text)
+                .with_theme_color::<UiBase>(ThemeColor::Text)
                 .without_pointer_events();
         })
         .done()
 }
 
-fn linear_demo_button(ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>, label: &str) -> Entity {
+fn linear_demo_button(tree: &mut UiTreeBuilder, label: &str) -> Entity {
     use nalgebra_glm::Vec2;
     use nightshade::ecs::tween::easing::EasingFunction;
-    use nightshade::ecs::ui::state::{UiHover, UiPressed};
-
-    let theme = ui.theme().clone();
-    ui.tree()
-        .add_node()
+    let theme = tree.active_theme().clone();
+    tree.add_node()
         .flow_child(
             Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
         )
         .with_rect(theme.corner_radius, theme.border_width, theme.border_color)
         .with_theme_border_color(ThemeColor::Border)
-        .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Background)
+        .with_theme_color::<UiBase>(ThemeColor::Background)
         .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
         .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
-        .with_theme_effect_role(nightshade::ecs::ui::components::ThemeEffect::ButtonEffect)
-        .with_theme_shadow_role::<nightshade::ecs::ui::state::UiBase>(
-            nightshade::ecs::ui::components::ThemeShadow::ButtonShadow,
-        )
-        .with_theme_shadow_role::<UiHover>(
-            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowHover,
-        )
+        .with_theme_effect_role(ThemeEffect::ButtonEffect)
+        .with_theme_shadow_role::<UiBase>(ThemeShadow::ButtonShadow)
+        .with_theme_shadow_role::<UiHover>(ThemeShadow::ButtonShadowHover)
         .with_state_offset::<UiHover>(Vec2::new(0.0, -3.0))
         .with_state_offset::<UiPressed>(Vec2::new(0.0, 2.0))
         .with_eased_transition::<UiHover>(8.0, 6.0, EasingFunction::Linear)
         .with_eased_transition::<UiPressed>(12.0, 8.0, EasingFunction::Linear)
         .with_interaction()
         .with_cursor_icon(winit::window::CursorIcon::Pointer)
-        .with_children(|tree| {
-            tree.add_node()
+        .with_children(|inner| {
+            inner
+                .add_node()
                 .window(
                     Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
-                    Ab(nalgebra_glm::Vec2::new(200.0, 24.0)),
+                    Ab(nalgebra_glm::Vec2::new(240.0, 22.0)),
                     Anchor::Center,
                 )
                 .with_text(label, 14.0)
-                .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Text)
+                .with_theme_color::<UiBase>(ThemeColor::Text)
                 .without_pointer_events();
         })
         .done()
