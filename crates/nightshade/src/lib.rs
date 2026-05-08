@@ -102,7 +102,6 @@
 //! | `ANIMATION_PLAYER` | Animation controller |
 //! | `PARTICLE_EMITTER` | GPU particles |
 //! | `AUDIO_SOURCE` | Sound playback |
-//! | `WATER` | Water surface/volume |
 //! | `DECAL` | Projected texture |
 //!
 //! ### Resources
@@ -426,23 +425,6 @@
 //! world.core.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
 //!
 //! // Runs automatically via frame schedule
-//! ```
-//!
-//! ### Water
-//!
-//! ```ignore
-//! // Simple water plane
-//! spawn_water_plane_at(world, Vec3::new(0.0, 0.0, 0.0), 100.0);
-//!
-//! // Or with full control
-//! let water = spawn_entities(world, WATER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.core.set_water(water, Water {
-//!     color: Vec3::new(0.0, 0.3, 0.5),
-//!     opacity: 0.8,
-//!     wave_speed: 1.0,
-//!     wave_amplitude: 0.2,
-//!     ..Default::default()
-//! });
 //! ```
 //!
 //! ### Decals
@@ -780,7 +762,7 @@ pub mod prelude {
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun,
-        spawn_sun_without_shadows, spawn_torus_at, spawn_water_plane_at,
+        spawn_sun_without_shadows, spawn_torus_at,
     };
     pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;

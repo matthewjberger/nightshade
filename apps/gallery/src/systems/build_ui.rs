@@ -18,22 +18,24 @@ const INACTIVE_INDICATOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.0, 0.9,
 const SIDEBAR_PERCENT: f32 = 22.0;
 const CONTENT_OFFSET_PERCENT: f32 = 22.5;
 
-const NAV_LABELS: [&str; 6] = [
+const NAV_LABELS: [&str; 7] = [
     "BUTTONS",
     "INPUTS",
     "PICKERS",
     "CONTAINERS",
     "DATA",
     "EFFECTS",
+    "POLISH",
 ];
 
-const NAV_ICONS: [IconGlyph; 6] = [
+const NAV_ICONS: [IconGlyph; 7] = [
     icons::material::TOGGLE_ON,
     icons::material::KEYBOARD,
     icons::material::PALETTE,
     icons::material::VIEW_QUILT,
     icons::material::TABLE_CHART,
     icons::material::AUTO_AWESOME,
+    icons::material::TUNE,
 ];
 
 pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
@@ -89,6 +91,8 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let (effects_screen, effects_pulse, effects_blend, effects_progress, effects_spinner) =
         build_effects_screen(&mut tree);
     screen_roots.push(effects_screen);
+    let polish_screen = build_polish_screen(&mut tree);
+    screen_roots.push(polish_screen);
 
     tree.pop_parent();
 
@@ -1504,4 +1508,239 @@ fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, En
         effects_progress_cell.get(),
         effects_spinner_cell.get(),
     )
+}
+
+fn build_polish_screen(tree: &mut UiTreeBuilder) -> Entity {
+    use nightshade::ecs::ui::components::Spring;
+    use nightshade::ecs::ui::state::{UiFocused, UiHover};
+
+    let screen = build_screen_root(tree, false);
+    tree.push_parent(screen);
+
+    build_two_column_card(
+        tree,
+        |ui| {
+            ui.heading("Hover Lift + Press Compress");
+            ui.separator();
+            ui.label("Hover any button to see it rise. Click to see it sink.");
+            ui.spacing(4.0);
+            ui.button("Standard Button");
+            ui.button("Another Button");
+            let theme = ui.theme().clone();
+            ui.button_colored("Success", theme.success_color);
+            ui.button_colored("Warning", theme.warning_color);
+            ui.button_colored("Danger", theme.error_color);
+
+            ui.spacing(12.0);
+            ui.heading("Focus Glow");
+            ui.separator();
+            ui.label("Tab through these to see focus rings:");
+            ui.spacing(4.0);
+            ui.text_input("type to focus");
+            ui.button("Focusable Button A");
+            ui.button("Focusable Button B");
+
+            ui.spacing(12.0);
+            ui.heading("Toggle + Slider Scale");
+            ui.separator();
+            ui.label("Toggle scales up on hover, compresses on press:");
+            ui.spacing(4.0);
+            ui.toggle(false);
+            ui.spacing(6.0);
+            ui.label("Slider track gains focus ring when active:");
+            ui.spacing(4.0);
+            ui.slider(0.0, 100.0, 50.0);
+        },
+        |ui| {
+            ui.heading("Spring Physics Tuning");
+            ui.separator();
+            ui.label("Each button below has the same hover-lift but a different spring config.");
+            ui.spacing(6.0);
+
+            ui.label("Soft (low stiffness, low damping)");
+            spring_demo_button(
+                ui,
+                "Soft Spring",
+                Spring {
+                    stiffness: 80.0,
+                    damping: 12.0,
+                    mass: 1.0,
+                },
+            );
+            ui.spacing(4.0);
+
+            ui.label("Default (Framer baseline)");
+            spring_demo_button(ui, "Default Spring", Spring::default());
+            ui.spacing(4.0);
+
+            ui.label("Stiff (high stiffness, well damped)");
+            spring_demo_button(
+                ui,
+                "Stiff Spring",
+                Spring {
+                    stiffness: 400.0,
+                    damping: 40.0,
+                    mass: 1.0,
+                },
+            );
+            ui.spacing(4.0);
+
+            ui.label("Bouncy (high stiffness, low damping)");
+            spring_demo_button(
+                ui,
+                "Bouncy Spring",
+                Spring {
+                    stiffness: 350.0,
+                    damping: 14.0,
+                    mass: 1.0,
+                },
+            );
+
+            ui.spacing(12.0);
+            ui.heading("Linear vs Spring");
+            ui.separator();
+            ui.label("Linear easing (stiff, mechanical):");
+            linear_demo_button(ui, "Linear Hover");
+            ui.spacing(4.0);
+            ui.label("Spring (settles with overshoot and damping):");
+            spring_demo_button(ui, "Spring Hover", Spring::default());
+
+            ui.spacing(12.0);
+            ui.heading("Focus Radius Grow");
+            ui.separator();
+            ui.label("Click in this input. The corner radius grows on focus.");
+            ui.spacing(4.0);
+            let focus_input = ui
+                .tree()
+                .add_node()
+                .flow_child(
+                    Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                        + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
+                )
+                .with_rect(4.0, 1.0, CARD_BORDER)
+                .with_theme_color::<UiBase>(ThemeColor::InputBackground)
+                .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+                .with_theme_color::<UiFocused>(ThemeColor::InputBackgroundFocused)
+                .with_theme_shadow_role::<UiFocused>(
+                    nightshade::ecs::ui::components::ThemeShadow::FocusGlow,
+                )
+                .with_state_radius::<UiFocused>(12.0)
+                .with_transition::<UiHover>(8.0, 6.0)
+                .with_transition::<UiFocused>(8.0, 6.0)
+                .with_interaction()
+                .with_cursor_icon(winit::window::CursorIcon::Text)
+                .with_children(|tree| {
+                    tree.add_node()
+                        .window(
+                            Ab(nalgebra_glm::Vec2::new(12.0, 0.0)),
+                            Ab(nalgebra_glm::Vec2::new(0.0, 32.0))
+                                + Rl(nalgebra_glm::Vec2::new(100.0, 0.0)),
+                            Anchor::CenterLeft,
+                        )
+                        .with_text("Click to focus", 14.0)
+                        .with_color::<UiBase>(LIGHT_GRAY)
+                        .without_pointer_events();
+                })
+                .done();
+            let _ = focus_input;
+        },
+    );
+
+    tree.pop_parent();
+    screen
+}
+
+fn spring_demo_button(
+    ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>,
+    label: &str,
+    spring: nightshade::ecs::ui::components::Spring,
+) -> Entity {
+    use nalgebra_glm::Vec2;
+    use nightshade::ecs::ui::state::{UiHover, UiPressed};
+
+    let theme = ui.theme().clone();
+    ui.tree()
+        .add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
+        )
+        .with_rect(theme.corner_radius, theme.border_width, theme.border_color)
+        .with_theme_border_color(ThemeColor::Border)
+        .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Background)
+        .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+        .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
+        .with_theme_effect_role(nightshade::ecs::ui::components::ThemeEffect::ButtonEffect)
+        .with_theme_shadow_role::<nightshade::ecs::ui::state::UiBase>(
+            nightshade::ecs::ui::components::ThemeShadow::ButtonShadow,
+        )
+        .with_theme_shadow_role::<UiHover>(
+            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowHover,
+        )
+        .with_theme_shadow_role::<UiPressed>(
+            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowPressed,
+        )
+        .with_state_offset::<UiHover>(Vec2::new(0.0, -3.0))
+        .with_state_offset::<UiPressed>(Vec2::new(0.0, 2.0))
+        .with_spring_transition::<UiHover>(spring)
+        .with_spring_transition::<UiPressed>(spring)
+        .with_interaction()
+        .with_cursor_icon(winit::window::CursorIcon::Pointer)
+        .with_children(|tree| {
+            tree.add_node()
+                .window(
+                    Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
+                    Ab(nalgebra_glm::Vec2::new(200.0, 24.0)),
+                    Anchor::Center,
+                )
+                .with_text(label, 14.0)
+                .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Text)
+                .without_pointer_events();
+        })
+        .done()
+}
+
+fn linear_demo_button(
+    ui: &mut nightshade::ecs::ui::scope::Ui<'_, '_>,
+    label: &str,
+) -> Entity {
+    use nalgebra_glm::Vec2;
+    use nightshade::ecs::tween::easing::EasingFunction;
+    use nightshade::ecs::ui::state::{UiHover, UiPressed};
+
+    let theme = ui.theme().clone();
+    ui.tree()
+        .add_node()
+        .flow_child(
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 32.0)),
+        )
+        .with_rect(theme.corner_radius, theme.border_width, theme.border_color)
+        .with_theme_border_color(ThemeColor::Border)
+        .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Background)
+        .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+        .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
+        .with_theme_effect_role(nightshade::ecs::ui::components::ThemeEffect::ButtonEffect)
+        .with_theme_shadow_role::<nightshade::ecs::ui::state::UiBase>(
+            nightshade::ecs::ui::components::ThemeShadow::ButtonShadow,
+        )
+        .with_theme_shadow_role::<UiHover>(
+            nightshade::ecs::ui::components::ThemeShadow::ButtonShadowHover,
+        )
+        .with_state_offset::<UiHover>(Vec2::new(0.0, -3.0))
+        .with_state_offset::<UiPressed>(Vec2::new(0.0, 2.0))
+        .with_eased_transition::<UiHover>(8.0, 6.0, EasingFunction::Linear)
+        .with_eased_transition::<UiPressed>(12.0, 8.0, EasingFunction::Linear)
+        .with_interaction()
+        .with_cursor_icon(winit::window::CursorIcon::Pointer)
+        .with_children(|tree| {
+            tree.add_node()
+                .window(
+                    Rl(nalgebra_glm::Vec2::new(50.0, 50.0)),
+                    Ab(nalgebra_glm::Vec2::new(200.0, 24.0)),
+                    Anchor::Center,
+                )
+                .with_text(label, 14.0)
+                .with_theme_color::<nightshade::ecs::ui::state::UiBase>(ThemeColor::Text)
+                .without_pointer_events();
+        })
+        .done()
 }

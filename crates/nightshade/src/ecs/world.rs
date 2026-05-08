@@ -69,7 +69,6 @@ pub mod components {
         UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
     };
     pub use crate::ecs::visibility::components::Visibility;
-    pub use crate::ecs::water::components::Water;
 }
 
 pub mod resources {
@@ -115,7 +114,6 @@ pub use commands::{
     spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
     spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
     spawn_mesh_at, spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_torus_at,
-    spawn_water_plane_at,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use commands::{capture_screenshot, capture_screenshot_to_path};
@@ -181,7 +179,6 @@ freecs::ecs! {
             joint: crate::ecs::skin::components::Joint => JOINT,
             morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
             navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
-            water: crate::ecs::water::components::Water => WATER,
             grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
             grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
             tween: crate::ecs::tween::components::Tween => TWEEN,
@@ -194,6 +191,8 @@ freecs::ecs! {
             ui_node_content: crate::ecs::ui::components::UiNodeContent => UI_NODE_CONTENT,
             ui_node_shadow: crate::ecs::ui::components::UiNodeShadow => UI_NODE_SHADOW,
             ui_node_shadow_states: crate::ecs::ui::components::UiNodeShadowStates => UI_NODE_SHADOW_STATES,
+            ui_node_transform_states: crate::ecs::ui::components::UiNodeTransformStates => UI_NODE_TRANSFORM_STATES,
+            ui_node_blended_transform: crate::ecs::ui::components::UiNodeBlendedTransform => UI_NODE_BLENDED_TRANSFORM,
             ui_node_effect: crate::ecs::ui::components::UiNodeEffect => UI_NODE_EFFECT,
             ui_node_interaction: crate::ecs::ui::components::UiNodeInteraction => UI_NODE_INTERACTION,
             ui_state_weights: crate::ecs::ui::components::UiStateWeights => UI_STATE_WEIGHTS,

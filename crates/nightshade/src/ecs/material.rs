@@ -87,7 +87,7 @@
 //!     ..Default::default()
 //! };
 //!
-//! // Alpha blend (glass, water)
+//! // Alpha blend (glass)
 //! let glass = Material {
 //!     alpha_mode: AlphaMode::Blend,
 //!     base_color: [1.0, 1.0, 1.0, 0.3],  // 30% opacity
