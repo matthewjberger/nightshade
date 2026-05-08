@@ -105,6 +105,18 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     let (polish_screen, progress_slider, progress_indeterminate_btn, progress_clear_btn) =
         build_polish_screen(&mut tree);
     screen_roots.push(polish_screen);
+    let showcase_screen = build_screen_root(&mut tree, false);
+    {
+        tree.push_parent(showcase_screen);
+        let showcase_content = build_page_scroll(&mut tree);
+        crate::systems::showcase::build_showcase_screen(
+            &mut tree,
+            showcase_screen,
+            showcase_content,
+        );
+        tree.pop_parent();
+    }
+    screen_roots.push(showcase_screen);
 
     tree.pop_parent();
 
@@ -478,8 +490,8 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .without_pointer_events();
 
     let picker_width = 200.0_f32;
-    let stats_width = 240.0_f32;
-    let gap_to_picker = 16.0_f32;
+    let stats_width = 140.0_f32;
+    let gap_to_picker = 32.0_f32;
     let stats_x = -(PAGE_PADDING + picker_width + gap_to_picker + stats_width);
     let stats_holder = tree
         .add_node()
@@ -496,6 +508,7 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
             FlowAlignment::End,
             FlowAlignment::Center,
         )
+        .with_clip()
         .without_pointer_events()
         .entity();
     tree.push_parent(stats_holder);
@@ -503,14 +516,6 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .add_node()
         .flow_child(Ab(nalgebra_glm::Vec2::new(70.0, 18.0)))
         .with_text("0 fps", 12.0)
-        .with_text_alignment(TextAlignment::Right, VerticalAlignment::Middle)
-        .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
-        .without_pointer_events()
-        .done();
-    let entity_count_text = tree
-        .add_node()
-        .flow_child(Ab(nalgebra_glm::Vec2::new(80.0, 18.0)))
-        .with_text("0 entities", 12.0)
         .with_text_alignment(TextAlignment::Right, VerticalAlignment::Middle)
         .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
         .without_pointer_events()
@@ -523,6 +528,7 @@ fn build_top_bar(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity) {
         .with_theme_color::<UiBase>(ThemeColor::TextDisabled)
         .without_pointer_events()
         .done();
+    let entity_count_text = uptime_text;
     tree.pop_parent();
 
     let picker_holder = tree
@@ -667,6 +673,81 @@ fn build_sidebar(
         nav_labels.push(label);
     }
 
+    let separator_y = top_padding + NAV_ITEMS.len() as f32 * (item_height + item_gap) + 12.0;
+    tree.add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(16.0, separator_y)),
+            Ab(nalgebra_glm::Vec2::new(SIDEBAR_WIDTH - 32.0, 1.0)),
+            Anchor::TopLeft,
+        )
+        .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_theme_color::<UiBase>(ThemeColor::Border)
+        .without_pointer_events()
+        .done();
+
+    let showcase_y = separator_y + 1.0 + 12.0;
+    nav_y_offsets.push(showcase_y);
+
+    let placeholder = tree
+        .add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(0.0, showcase_y)),
+            Ab(nalgebra_glm::Vec2::new(3.0, item_height)),
+            Anchor::TopLeft,
+        )
+        .with_rect(0.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .without_pointer_events()
+        .done();
+    nav_indicators.push(placeholder);
+
+    let showcase_button = tree
+        .add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(8.0, showcase_y)),
+            Ab(nalgebra_glm::Vec2::new(SIDEBAR_WIDTH - 16.0, item_height)),
+            Anchor::TopLeft,
+        )
+        .with_rect(6.0, 0.0, nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_color::<UiBase>(nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 0.0))
+        .with_theme_color::<UiHover>(ThemeColor::BackgroundHover)
+        .with_theme_color::<UiPressed>(ThemeColor::BackgroundActive)
+        .with_transition::<UiHover>(12.0, 6.0)
+        .with_transition::<UiPressed>(20.0, 10.0)
+        .with_interaction()
+        .with_tooltip("A polished demo using engine widgets together")
+        .with_cursor_icon(winit::window::CursorIcon::Pointer)
+        .entity();
+
+    tree.push_parent(showcase_button);
+
+    tree.add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(12.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+            Ab(nalgebra_glm::Vec2::new(18.0, 18.0)),
+            Anchor::CenterLeft,
+        )
+        .with_icon(icons::material::AUTO_AWESOME, 16.0)
+        .with_color::<UiBase>(theme.text_color_disabled)
+        .without_pointer_events()
+        .done();
+
+    let showcase_label = tree
+        .add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(40.0, 0.0)) + Rl(nalgebra_glm::Vec2::new(0.0, 50.0)),
+            Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(-52.0, 22.0)),
+            Anchor::CenterLeft,
+        )
+        .with_text("Showcase", 14.0)
+        .with_text_alignment(TextAlignment::Left, VerticalAlignment::Middle)
+        .with_color::<UiBase>(theme.text_color_disabled)
+        .without_pointer_events()
+        .done();
+
+    tree.pop_parent();
+    nav_buttons.push(showcase_button);
+    nav_labels.push(showcase_label);
+
     tree.pop_parent();
 
     (
@@ -726,7 +807,17 @@ fn demo_block(
     body: impl FnOnce(&mut UiTreeBuilder, Entity),
 ) {
     let theme = tree.active_theme().clone();
-    let header_height = 22.0 + 4.0 + 18.0;
+    let title_height = 22.0_f32;
+    let caption_line_height = 18.0_f32;
+    let caption_lines = if caption.is_empty() {
+        0.0
+    } else {
+        let chars_per_line = 78.0_f32;
+        ((caption.chars().count() as f32 / chars_per_line).ceil()).max(1.0)
+    };
+    let caption_total = caption_lines * caption_line_height;
+    let header_gap = if caption.is_empty() { 0.0 } else { 4.0 };
+    let header_height = title_height + header_gap + caption_total;
     let total_height = BLOCK_PADDING * 2.0 + header_height + 12.0 + content_height;
 
     let block = tree
@@ -773,7 +864,8 @@ fn demo_block(
     if !caption.is_empty() {
         tree.add_node()
             .flow_child(
-                Rl(nalgebra_glm::Vec2::new(100.0, 0.0)) + Ab(nalgebra_glm::Vec2::new(0.0, 18.0)),
+                Rl(nalgebra_glm::Vec2::new(100.0, 0.0))
+                    + Ab(nalgebra_glm::Vec2::new(0.0, caption_total)),
             )
             .with_text(caption, 12.0)
             .with_text_wrap()
