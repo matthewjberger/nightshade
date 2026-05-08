@@ -562,9 +562,9 @@ pub mod prelude {
         EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
     };
     pub use crate::ecs::window::resources::{
-        SecondaryWindowState, SecondaryWindows, WindowSpawnRequest, active_window_scale_factor,
-        active_window_viewport_size, cursor_over_window, window_scale_factor_for,
-        window_viewport_size_for,
+        SecondaryWindowState, SecondaryWindows, WindowRelationship, WindowSpawnRequest,
+        active_window_scale_factor, active_window_viewport_size, cursor_over_window,
+        window_scale_factor_for, window_viewport_size_for,
     };
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
