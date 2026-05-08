@@ -35,4 +35,8 @@ pub struct GalleryHandles {
     pub submit_count: u32,
     pub virtual_list: Option<Entity>,
     pub virtual_list_text_nodes: Vec<Entity>,
+    pub nav_slider: Option<Entity>,
+    pub nav_slider_y: f32,
+    pub nav_slider_target_y: f32,
+    pub nav_y_offsets: Vec<f32>,
 }

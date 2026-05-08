@@ -77,7 +77,8 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     tree.push_parent(root_panel);
 
     build_top_bar(&mut tree);
-    let (nav_buttons, nav_indicators, nav_labels) = build_sidebar(&mut tree);
+    let (nav_buttons, nav_indicators, nav_labels, nav_slider, nav_y_offsets) =
+        build_sidebar(&mut tree);
 
     let content_area = tree
         .add_node()
@@ -145,6 +146,10 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     gallery.resources.handles.nav_buttons = nav_buttons.clone();
     gallery.resources.handles.nav_indicators = nav_indicators.clone();
     gallery.resources.handles.nav_labels = nav_labels.clone();
+    gallery.resources.handles.nav_slider = Some(nav_slider);
+    gallery.resources.handles.nav_y_offsets = nav_y_offsets.clone();
+    gallery.resources.handles.nav_slider_y = nav_y_offsets.first().copied().unwrap_or(20.0);
+    gallery.resources.handles.nav_slider_target_y = gallery.resources.handles.nav_slider_y;
     gallery.resources.handles.screen_roots = screen_roots.clone();
     gallery.resources.handles.fps_text = Some(fps_text);
     gallery.resources.handles.uptime_text = Some(uptime_text);
@@ -173,7 +178,6 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
 
 pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     let nav_buttons = gallery.resources.handles.nav_buttons.clone();
-    let nav_indicators = gallery.resources.handles.nav_indicators.clone();
     let nav_labels = gallery.resources.handles.nav_labels.clone();
     let screen_roots = gallery.resources.handles.screen_roots.clone();
     let modal_trigger = gallery.resources.handles.modal_trigger;
@@ -270,25 +274,38 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
         let prev = gallery.resources.handles.active_screen;
         if index != prev {
             ui_set_visible(world, screen_roots[prev], false);
-            if let Some(color) = world.ui.get_ui_node_color_mut(nav_indicators[prev]) {
-                color.colors[UiBase::INDEX] = Some(INACTIVE_INDICATOR);
-            }
             if let Some(label) = nav_labels.get(prev).copied()
                 && let Some(color) = world.ui.get_ui_node_color_mut(label)
             {
                 color.colors[UiBase::INDEX] = Some(LIGHT_GRAY);
             }
             ui_set_visible(world, screen_roots[index], true);
-            if let Some(color) = world.ui.get_ui_node_color_mut(nav_indicators[index]) {
-                color.colors[UiBase::INDEX] = Some(ACTIVE_INDICATOR);
-            }
             if let Some(label) = nav_labels.get(index).copied()
                 && let Some(color) = world.ui.get_ui_node_color_mut(label)
             {
                 color.colors[UiBase::INDEX] = Some(CYAN);
             }
             gallery.resources.handles.active_screen = index;
+            if let Some(target_y) = gallery.resources.handles.nav_y_offsets.get(index).copied() {
+                gallery.resources.handles.nav_slider_target_y = target_y;
+            }
         }
+    }
+
+    let slider_entity = gallery.resources.handles.nav_slider;
+    let mut slider_y = gallery.resources.handles.nav_slider_y;
+    let slider_target = gallery.resources.handles.nav_slider_target_y;
+    let delta_time = world.resources.window.timing.delta_time.clamp(0.0, 0.05);
+    let stiffness = 220.0_f32;
+    let displacement = slider_y - slider_target;
+    let damping_factor = (-stiffness * delta_time * 0.5).exp();
+    slider_y = slider_target + displacement * damping_factor;
+    if (slider_y - slider_target).abs() < 0.05 {
+        slider_y = slider_target;
+    }
+    gallery.resources.handles.nav_slider_y = slider_y;
+    if let Some(slider) = slider_entity {
+        update_slider_y(world, slider, slider_y);
     }
     if let Some(target) = focus_request {
         ui_focus(world, target);
@@ -364,6 +381,23 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             ui_set_text(world, text_entity, &format!("Item {item_index}"));
         }
     }
+}
+
+fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
+    use nightshade::ecs::ui::layout_types::{UiLayoutType, WindowLayout};
+    use nightshade::ecs::ui::units::{Ab, UiValue};
+    let Some(node) = world.ui.get_ui_layout_node_mut(slider) else {
+        return;
+    };
+    let Some(layout) = node.base_layout.as_mut() else {
+        return;
+    };
+    let UiLayoutType::Window(WindowLayout { position, .. }) = layout else {
+        return;
+    };
+    let new_position: UiValue<nalgebra_glm::Vec2> = Ab(nalgebra_glm::Vec2::new(0.0, y)).into();
+    *position = new_position;
+    nightshade::prelude::ui_mark_layout_dirty(world);
 }
 
 fn build_top_bar(tree: &mut UiTreeBuilder) {
@@ -462,10 +496,13 @@ fn build_bottom_bar(tree: &mut UiTreeBuilder) {
     tree.pop_parent();
 }
 
-fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Entity>) {
+fn build_sidebar(
+    tree: &mut UiTreeBuilder,
+) -> (Vec<Entity>, Vec<Entity>, Vec<Entity>, Entity, Vec<f32>) {
     let mut nav_buttons = Vec::new();
     let mut nav_indicators = Vec::new();
     let mut nav_labels = Vec::new();
+    let mut nav_y_offsets = Vec::new();
 
     let sidebar = tree
         .add_node()
@@ -481,8 +518,21 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
 
     tree.push_parent(sidebar);
 
+    let slider_indicator = tree
+        .add_node()
+        .window(
+            Ab(nalgebra_glm::Vec2::new(0.0, 20.0)),
+            Ab(nalgebra_glm::Vec2::new(3.0, 40.0)),
+            Anchor::TopLeft,
+        )
+        .with_rect(0.0, 0.0, TRANSPARENT)
+        .with_color::<UiBase>(ACTIVE_INDICATOR)
+        .without_pointer_events()
+        .done();
+
     for (index, item) in NAV_ITEMS.iter().enumerate() {
         let y_offset = 20.0 + index as f32 * 52.0;
+        nav_y_offsets.push(y_offset);
 
         let indicator = tree
             .add_node()
@@ -492,11 +542,7 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
                 Anchor::TopLeft,
             )
             .with_rect(0.0, 0.0, TRANSPARENT)
-            .with_color::<UiBase>(if index == 0 {
-                ACTIVE_INDICATOR
-            } else {
-                INACTIVE_INDICATOR
-            })
+            .with_color::<UiBase>(INACTIVE_INDICATOR)
             .without_pointer_events()
             .done();
         nav_indicators.push(indicator);
@@ -560,7 +606,13 @@ fn build_sidebar(tree: &mut UiTreeBuilder) -> (Vec<Entity>, Vec<Entity>, Vec<Ent
 
     tree.pop_parent();
 
-    (nav_buttons, nav_indicators, nav_labels)
+    (
+        nav_buttons,
+        nav_indicators,
+        nav_labels,
+        slider_indicator,
+        nav_y_offsets,
+    )
 }
 
 fn build_screen_root(tree: &mut UiTreeBuilder, visible: bool) -> Entity {
