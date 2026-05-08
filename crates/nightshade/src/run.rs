@@ -1432,6 +1432,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
+                crate::ecs::window::resources::refresh_monitors_from_event_loop(
+                    &mut self.world.resources.monitors,
+                    event_loop,
+                );
             }
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
                 if width > 0 && height > 0 =>
@@ -1439,6 +1443,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
                 }
+                crate::ecs::window::resources::refresh_monitors_from_event_loop(
+                    &mut self.world.resources.monitors,
+                    event_loop,
+                );
 
                 #[cfg(target_arch = "wasm32")]
                 let (surface_width, surface_height) = {
