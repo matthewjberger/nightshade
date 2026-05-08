@@ -563,7 +563,8 @@ pub mod prelude {
     };
     pub use crate::ecs::window::resources::{
         SecondaryWindowState, SecondaryWindows, WindowSpawnRequest, active_window_scale_factor,
-        active_window_viewport_size, window_scale_factor_for, window_viewport_size_for,
+        active_window_viewport_size, cursor_over_window, window_scale_factor_for,
+        window_viewport_size_for,
     };
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
