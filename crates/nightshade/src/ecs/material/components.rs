@@ -455,6 +455,37 @@ impl Material {
     pub fn is_transparent(&self) -> bool {
         matches!(self.alpha_mode, AlphaMode::Mask | AlphaMode::Blend)
     }
+
+    /// Yields every texture name referenced by this material across every
+    /// PBR slot (base color, normal map, metallic-roughness, all glTF
+    /// extension textures). Used by the texture cache to bump and drop
+    /// reference counts without missing any slots.
+    pub fn texture_names(&self) -> impl Iterator<Item = &str> {
+        [
+            self.base_texture.as_deref(),
+            self.emissive_texture.as_deref(),
+            self.normal_texture.as_deref(),
+            self.metallic_roughness_texture.as_deref(),
+            self.occlusion_texture.as_deref(),
+            self.transmission_texture.as_deref(),
+            self.thickness_texture.as_deref(),
+            self.specular_texture.as_deref(),
+            self.specular_color_texture.as_deref(),
+            self.diffuse_transmission_texture.as_deref(),
+            self.diffuse_transmission_color_texture.as_deref(),
+            self.scatter_color_texture.as_deref(),
+            self.anisotropy_texture.as_deref(),
+            self.iridescence_texture.as_deref(),
+            self.iridescence_thickness_texture.as_deref(),
+            self.sheen_color_texture.as_deref(),
+            self.sheen_roughness_texture.as_deref(),
+            self.clearcoat_texture.as_deref(),
+            self.clearcoat_roughness_texture.as_deref(),
+            self.clearcoat_normal_texture.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+    }
 }
 
 impl Default for Material {

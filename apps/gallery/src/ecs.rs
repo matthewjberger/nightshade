@@ -15,6 +15,6 @@ freecs::ecs! {
     Events {
     }
     Resources {
-        handles: GalleryHandles,
+        state: GalleryState,
     }
 }

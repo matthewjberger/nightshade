@@ -232,10 +232,10 @@ impl State for FireworksDemo {
             Vec2::zeros(),
             TextProperties {
                 font_size: 18.0,
-                color: Vec4::new(1.0, 1.0, 1.0, 0.9),
+                color: vec4(1.0, 1.0, 1.0, 0.9),
                 alignment: TextAlignment::Center,
                 outline_width: 0.01,
-                outline_color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+                outline_color: vec4(0.0, 0.0, 0.0, 1.0),
                 ..Default::default()
             },
         );
@@ -343,81 +343,96 @@ impl FireworksDemo {
                 wrap: false,
             });
         }
-        tree.push_parent(content);
-
-        let scroll = tree.add_scroll_area_fill(8.0, 6.0);
-        let scroll_body = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
-            .map(|data| data.content_entity)
-            .expect("scroll body");
-        tree.push_parent(scroll_body);
-
-        let auto_launch = tree.add_checkbox("Auto-launch", auto_launch_initial);
-        tree.add_label("Launch interval (s)");
-        let launch_interval = tree.add_slider(0.1, 2.0, launch_interval_initial);
-
-        let salvo_mode = tree.add_checkbox("Salvo mode", salvo_mode_initial);
-        let salvo_count_label = tree.add_label("Salvo count");
-        let salvo_count = tree.add_slider(3.0, 15.0, salvo_count_initial);
-
-        tree.add_label("Bloom intensity");
-        let bloom_intensity = tree.add_slider(0.0, 2.0, bloom_intensity_initial);
-
-        let launch_single = tree.add_button("Launch Single");
-        let launch_salvo = tree.add_button("Launch Salvo (5)");
-        let finale = tree.add_button("FINALE!");
-
+        let mut auto_launch = Entity::default();
+        let mut launch_interval = Entity::default();
+        let mut salvo_mode = Entity::default();
+        let mut salvo_count_label = Entity::default();
+        let mut salvo_count = Entity::default();
+        let mut bloom_intensity = Entity::default();
+        let mut launch_single = Entity::default();
+        let mut launch_salvo = Entity::default();
+        let mut finale = Entity::default();
         let mut type_buttons: HashMap<Entity, ExplosionType> = HashMap::new();
-        collapsing(&mut tree, "Launch by Type", false, |tree| {
-            tree.add_label("Standard");
-            for (label, explosion_type) in [
-                ("Peony", ExplosionType::Peony),
-                ("Chrysanthemum", ExplosionType::Chrysanthemum),
-                ("Willow", ExplosionType::Willow),
-                ("Ring", ExplosionType::Ring),
-                ("MultiBreak", ExplosionType::MultiBreak),
-                ("Glitter", ExplosionType::Glitter),
-                ("Crackle", ExplosionType::Crackle),
-                ("Palm", ExplosionType::Palm),
-                ("Crossette", ExplosionType::Crossette),
-                ("Strobe", ExplosionType::Strobe),
-                ("Kamuro", ExplosionType::Kamuro),
-            ] {
-                type_buttons.insert(tree.add_button(label), explosion_type);
-            }
+        let mut show_status_label = Entity::default();
+        let mut show_play = Entity::default();
+        let mut shells_label = Entity::default();
+        let mut sub_shells_label = Entity::default();
+        let mut fire_label = Entity::default();
+        let mut sprite_label = Entity::default();
+        let mut smoke_label = Entity::default();
+        let mut emitters_label = Entity::default();
 
-            tree.add_label("Shapes");
-            for (label, explosion_type) in [
-                ("Smiley", ExplosionType::ShapeSmiley),
-                ("Heart", ExplosionType::ShapeHeart),
-                ("Star", ExplosionType::ShapeStar),
-                ("Circle", ExplosionType::ShapeCircle),
-                ("Cross", ExplosionType::ShapeCross),
-                ("Diamond", ExplosionType::ShapeDiamond),
-            ] {
-                type_buttons.insert(tree.add_button(label), explosion_type);
-            }
+        tree.in_parent(content, |tree| {
+            let scroll = tree.add_scroll_area_fill(8.0, 6.0);
+            let scroll_body = widget::<UiScrollAreaData>(tree.world_mut(), scroll)
+                .map(|data| data.content_entity)
+                .expect("scroll body");
+            tree.in_parent(scroll_body, |tree| {
+                auto_launch = tree.add_checkbox("Auto-launch", auto_launch_initial);
+                tree.add_label("Launch interval (s)");
+                launch_interval = tree.add_slider(0.1, 2.0, launch_interval_initial);
 
-            tree.add_label("Special");
-            type_buttons.insert(
-                tree.add_button("Splitting Shell"),
-                ExplosionType::SplittingShell,
-            );
+                salvo_mode = tree.add_checkbox("Salvo mode", salvo_mode_initial);
+                salvo_count_label = tree.add_label("Salvo count");
+                salvo_count = tree.add_slider(3.0, 15.0, salvo_count_initial);
+
+                tree.add_label("Bloom intensity");
+                bloom_intensity = tree.add_slider(0.0, 2.0, bloom_intensity_initial);
+
+                launch_single = tree.add_button("Launch Single");
+                launch_salvo = tree.add_button("Launch Salvo (5)");
+                finale = tree.add_button("FINALE!");
+
+                collapsing(tree, "Launch by Type", false, |tree| {
+                    tree.add_label("Standard");
+                    for (label, explosion_type) in [
+                        ("Peony", ExplosionType::Peony),
+                        ("Chrysanthemum", ExplosionType::Chrysanthemum),
+                        ("Willow", ExplosionType::Willow),
+                        ("Ring", ExplosionType::Ring),
+                        ("MultiBreak", ExplosionType::MultiBreak),
+                        ("Glitter", ExplosionType::Glitter),
+                        ("Crackle", ExplosionType::Crackle),
+                        ("Palm", ExplosionType::Palm),
+                        ("Crossette", ExplosionType::Crossette),
+                        ("Strobe", ExplosionType::Strobe),
+                        ("Kamuro", ExplosionType::Kamuro),
+                    ] {
+                        type_buttons.insert(tree.add_button(label), explosion_type);
+                    }
+
+                    tree.add_label("Shapes");
+                    for (label, explosion_type) in [
+                        ("Smiley", ExplosionType::ShapeSmiley),
+                        ("Heart", ExplosionType::ShapeHeart),
+                        ("Star", ExplosionType::ShapeStar),
+                        ("Circle", ExplosionType::ShapeCircle),
+                        ("Cross", ExplosionType::ShapeCross),
+                        ("Diamond", ExplosionType::ShapeDiamond),
+                    ] {
+                        type_buttons.insert(tree.add_button(label), explosion_type);
+                    }
+
+                    tree.add_label("Special");
+                    type_buttons.insert(
+                        tree.add_button("Splitting Shell"),
+                        ExplosionType::SplittingShell,
+                    );
+                });
+
+                show_status_label = tree.add_label("");
+                show_play = tree.add_button("Play Fireworks Show");
+
+                tree.add_label("");
+                tree.add_label("Stats");
+                shells_label = tree.add_label("Active shells: 0");
+                sub_shells_label = tree.add_label("Sub-shells: 0");
+                fire_label = tree.add_label("Fire effects: 0");
+                sprite_label = tree.add_label("Sprite effects: 0 (0 entities)");
+                smoke_label = tree.add_label("Smoke effects: 0");
+                emitters_label = tree.add_label("Active emitters: 0");
+            });
         });
-
-        let show_status_label = tree.add_label("");
-        let show_play = tree.add_button("Play Fireworks Show");
-
-        tree.add_label("");
-        tree.add_label("Stats");
-        let shells_label = tree.add_label("Active shells: 0");
-        let sub_shells_label = tree.add_label("Sub-shells: 0");
-        let fire_label = tree.add_label("Fire effects: 0");
-        let sprite_label = tree.add_label("Sprite effects: 0 (0 entities)");
-        let smoke_label = tree.add_label("Smoke effects: 0");
-        let emitters_label = tree.add_label("Active emitters: 0");
-
-        tree.pop_parent();
-        tree.pop_parent();
         tree.finish();
 
         ui_set_visible(world, salvo_count_label, salvo_mode_initial);
@@ -701,13 +716,13 @@ impl FireworksDemo {
 
         for index in 0..60 {
             let angle = (index as f32) * std::f32::consts::TAU / 60.0;
-            points.push(Vec2::new(angle.cos(), angle.sin()));
+            points.push(vec2(angle.cos(), angle.sin()));
         }
 
         for index in 0..16 {
             let angle = (index as f32) * std::f32::consts::TAU / 16.0;
             let radius = 0.15;
-            points.push(Vec2::new(
+            points.push(vec2(
                 -0.38 + angle.cos() * radius,
                 0.32 + angle.sin() * radius,
             ));
@@ -716,7 +731,7 @@ impl FireworksDemo {
         for index in 0..16 {
             let angle = (index as f32) * std::f32::consts::TAU / 16.0;
             let radius = 0.15;
-            points.push(Vec2::new(
+            points.push(vec2(
                 0.38 + angle.cos() * radius,
                 0.32 + angle.sin() * radius,
             ));
@@ -725,7 +740,7 @@ impl FireworksDemo {
         for index in 0..30 {
             let t = index as f32 / 29.0;
             let angle = std::f32::consts::PI * 0.2 + t * std::f32::consts::PI * 0.6;
-            points.push(Vec2::new(angle.cos() * 0.5, -angle.sin() * 0.5 + 0.05));
+            points.push(vec2(angle.cos() * 0.5, -angle.sin() * 0.5 + 0.05));
         }
 
         points
@@ -738,7 +753,7 @@ impl FireworksDemo {
             let x = 16.0 * t.sin().powi(3);
             let y =
                 13.0 * t.cos() - 5.0 * (2.0 * t).cos() - 2.0 * (3.0 * t).cos() - (4.0 * t).cos();
-            points.push(Vec2::new(x / 17.0, y / 17.0));
+            points.push(vec2(x / 17.0, y / 17.0));
         }
         points
     }
@@ -753,32 +768,32 @@ impl FireworksDemo {
                 (point_index as f32) * std::f32::consts::TAU / 5.0 - std::f32::consts::FRAC_PI_2;
             let inner_angle = outer_angle + std::f32::consts::TAU / 10.0;
 
-            let outer_point = Vec2::new(
+            let outer_point = vec2(
                 outer_angle.cos() * outer_radius,
                 outer_angle.sin() * outer_radius,
             );
-            let inner_point = Vec2::new(
+            let inner_point = vec2(
                 inner_angle.cos() * inner_radius,
                 inner_angle.sin() * inner_radius,
             );
 
             let next_outer_angle = ((point_index + 1) as f32) * std::f32::consts::TAU / 5.0
                 - std::f32::consts::FRAC_PI_2;
-            let next_outer_point = Vec2::new(
+            let next_outer_point = vec2(
                 next_outer_angle.cos() * outer_radius,
                 next_outer_angle.sin() * outer_radius,
             );
 
             for step in 0..10 {
                 let t = step as f32 / 10.0;
-                points.push(Vec2::new(
+                points.push(vec2(
                     outer_point.x * (1.0 - t) + inner_point.x * t,
                     outer_point.y * (1.0 - t) + inner_point.y * t,
                 ));
             }
             for step in 0..10 {
                 let t = step as f32 / 10.0;
-                points.push(Vec2::new(
+                points.push(vec2(
                     inner_point.x * (1.0 - t) + next_outer_point.x * t,
                     inner_point.y * (1.0 - t) + next_outer_point.y * t,
                 ));
@@ -792,11 +807,11 @@ impl FireworksDemo {
         let mut points = Vec::new();
         for index in 0..60 {
             let angle = (index as f32) * std::f32::consts::TAU / 60.0;
-            points.push(Vec2::new(angle.cos(), angle.sin()));
+            points.push(vec2(angle.cos(), angle.sin()));
         }
         for index in 0..40 {
             let angle = (index as f32) * std::f32::consts::TAU / 40.0;
-            points.push(Vec2::new(angle.cos() * 0.5, angle.sin() * 0.5));
+            points.push(vec2(angle.cos() * 0.5, angle.sin() * 0.5));
         }
         points
     }
@@ -808,13 +823,13 @@ impl FireworksDemo {
         for index in 0..25 {
             let t = index as f32 / 24.0;
             let pos = -arm_length + t * 2.0 * arm_length;
-            points.push(Vec2::new(0.0, pos));
+            points.push(vec2(0.0, pos));
         }
 
         for index in 0..25 {
             let t = index as f32 / 24.0;
             let pos = -arm_length + t * 2.0 * arm_length;
-            points.push(Vec2::new(pos, 0.0));
+            points.push(vec2(pos, 0.0));
         }
 
         points
@@ -825,10 +840,10 @@ impl FireworksDemo {
         let size = 1.0;
 
         let corners = [
-            Vec2::new(0.0, size),
-            Vec2::new(size, 0.0),
-            Vec2::new(0.0, -size),
-            Vec2::new(-size, 0.0),
+            vec2(0.0, size),
+            vec2(size, 0.0),
+            vec2(0.0, -size),
+            vec2(-size, 0.0),
         ];
 
         for edge in 0..4 {
@@ -836,7 +851,7 @@ impl FireworksDemo {
             let end = corners[(edge + 1) % 4];
             for step in 0..15 {
                 let t = step as f32 / 15.0;
-                points.push(Vec2::new(
+                points.push(vec2(
                     start.x * (1.0 - t) + end.x * t,
                     start.y * (1.0 - t) + end.y * t,
                 ));
@@ -845,11 +860,11 @@ impl FireworksDemo {
 
         for index in 0..12 {
             let t = index as f32 / 11.0;
-            points.push(Vec2::new(0.0, -size * 0.5 + t * size));
+            points.push(vec2(0.0, -size * 0.5 + t * size));
         }
         for index in 0..12 {
             let t = index as f32 / 11.0;
-            points.push(Vec2::new(-size * 0.5 + t * size, 0.0));
+            points.push(vec2(-size * 0.5 + t * size, 0.0));
         }
 
         points
@@ -1798,11 +1813,11 @@ impl FireworksDemo {
             position,
             TextProperties {
                 font_size: 24.0,
-                color: Vec4::new(1.0, 1.0, 1.0, 0.9),
+                color: vec4(1.0, 1.0, 1.0, 0.9),
                 alignment: TextAlignment::Center,
                 vertical_alignment: VerticalAlignment::Middle,
                 outline_width: 0.03,
-                outline_color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+                outline_color: vec4(0.0, 0.0, 0.0, 1.0),
                 ..Default::default()
             },
         );
@@ -1834,10 +1849,10 @@ impl FireworksDemo {
                 size_end: 0.5,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 1.0, 1.0, 1.0)),
-                        (0.2, Vec4::new(1.0, 0.95, 0.4, 1.0)),
-                        (0.6, Vec4::new(1.0, 0.7, 0.1, 0.9)),
-                        (1.0, Vec4::new(0.8, 0.3, 0.0, 0.0)),
+                        (0.0, vec4(1.0, 1.0, 1.0, 1.0)),
+                        (0.2, vec4(1.0, 0.95, 0.4, 1.0)),
+                        (0.6, vec4(1.0, 0.7, 0.1, 0.9)),
+                        (1.0, vec4(0.8, 0.3, 0.0, 0.0)),
                     ],
                 },
                 emissive_strength: 12.0,
@@ -1873,10 +1888,10 @@ impl FireworksDemo {
                 size_end: 5.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 0.3, 0.5, 0.9)),
-                        (0.3, Vec4::new(1.0, 0.2, 0.4, 0.8)),
-                        (0.7, Vec4::new(0.9, 0.1, 0.3, 0.5)),
-                        (1.0, Vec4::new(0.6, 0.0, 0.2, 0.0)),
+                        (0.0, vec4(1.0, 0.3, 0.5, 0.9)),
+                        (0.3, vec4(1.0, 0.2, 0.4, 0.8)),
+                        (0.7, vec4(0.9, 0.1, 0.3, 0.5)),
+                        (1.0, vec4(0.6, 0.0, 0.2, 0.0)),
                     ],
                 },
                 emissive_strength: 6.0,
@@ -1912,10 +1927,10 @@ impl FireworksDemo {
                 size_end: 6.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(0.5, 0.2, 1.0, 0.8)),
-                        (0.3, Vec4::new(0.7, 0.3, 1.0, 0.7)),
-                        (0.6, Vec4::new(0.9, 0.5, 1.0, 0.4)),
-                        (1.0, Vec4::new(1.0, 0.8, 1.0, 0.0)),
+                        (0.0, vec4(0.5, 0.2, 1.0, 0.8)),
+                        (0.3, vec4(0.7, 0.3, 1.0, 0.7)),
+                        (0.6, vec4(0.9, 0.5, 1.0, 0.4)),
+                        (1.0, vec4(1.0, 0.8, 1.0, 0.0)),
                     ],
                 },
                 emissive_strength: 5.0,
@@ -1951,10 +1966,10 @@ impl FireworksDemo {
                 size_end: 1.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 1.0, 1.0, 1.0)),
-                        (0.15, Vec4::new(0.6, 0.8, 1.0, 1.0)),
-                        (0.5, Vec4::new(0.3, 0.5, 1.0, 0.8)),
-                        (1.0, Vec4::new(0.1, 0.2, 0.8, 0.0)),
+                        (0.0, vec4(1.0, 1.0, 1.0, 1.0)),
+                        (0.15, vec4(0.6, 0.8, 1.0, 1.0)),
+                        (0.5, vec4(0.3, 0.5, 1.0, 0.8)),
+                        (1.0, vec4(0.1, 0.2, 0.8, 0.0)),
                     ],
                 },
                 emissive_strength: 10.0,
@@ -1990,10 +2005,10 @@ impl FireworksDemo {
                 size_end: 5.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(0.2, 0.9, 1.0, 0.7)),
-                        (0.3, Vec4::new(0.3, 0.8, 1.0, 0.6)),
-                        (0.6, Vec4::new(0.1, 0.6, 0.9, 0.4)),
-                        (1.0, Vec4::new(0.05, 0.3, 0.7, 0.0)),
+                        (0.0, vec4(0.2, 0.9, 1.0, 0.7)),
+                        (0.3, vec4(0.3, 0.8, 1.0, 0.6)),
+                        (0.6, vec4(0.1, 0.6, 0.9, 0.4)),
+                        (1.0, vec4(0.05, 0.3, 0.7, 0.0)),
                     ],
                 },
                 emissive_strength: 3.0,
@@ -2029,10 +2044,10 @@ impl FireworksDemo {
                 size_end: 1.5,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 1.0, 0.9, 1.0)),
-                        (0.2, Vec4::new(1.0, 0.8, 0.3, 0.9)),
-                        (0.5, Vec4::new(1.0, 0.5, 0.1, 0.7)),
-                        (1.0, Vec4::new(0.6, 0.15, 0.0, 0.0)),
+                        (0.0, vec4(1.0, 1.0, 0.9, 1.0)),
+                        (0.2, vec4(1.0, 0.8, 0.3, 0.9)),
+                        (0.5, vec4(1.0, 0.5, 0.1, 0.7)),
+                        (1.0, vec4(0.6, 0.15, 0.0, 0.0)),
                     ],
                 },
                 emissive_strength: 8.0,
@@ -2068,10 +2083,10 @@ impl FireworksDemo {
                 size_end: 4.5,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(0.1, 1.0, 0.6, 0.7)),
-                        (0.3, Vec4::new(0.2, 0.9, 0.8, 0.6)),
-                        (0.6, Vec4::new(0.3, 0.8, 1.0, 0.4)),
-                        (1.0, Vec4::new(0.5, 1.0, 0.9, 0.0)),
+                        (0.0, vec4(0.1, 1.0, 0.6, 0.7)),
+                        (0.3, vec4(0.2, 0.9, 0.8, 0.6)),
+                        (0.6, vec4(0.3, 0.8, 1.0, 0.4)),
+                        (1.0, vec4(0.5, 1.0, 0.9, 0.0)),
                     ],
                 },
                 emissive_strength: 4.0,
@@ -2110,11 +2125,11 @@ impl FireworksDemo {
                 size_end: 1.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 1.0, 1.0, 1.0)),
-                        (0.15, Vec4::new(1.0, 0.8, 0.2, 1.0)),
-                        (0.4, Vec4::new(1.0, 0.5, 0.05, 0.9)),
-                        (0.7, Vec4::new(1.0, 0.2, 0.0, 0.6)),
-                        (1.0, Vec4::new(0.5, 0.05, 0.0, 0.0)),
+                        (0.0, vec4(1.0, 1.0, 1.0, 1.0)),
+                        (0.15, vec4(1.0, 0.8, 0.2, 1.0)),
+                        (0.4, vec4(1.0, 0.5, 0.05, 0.9)),
+                        (0.7, vec4(1.0, 0.2, 0.0, 0.6)),
+                        (1.0, vec4(0.5, 0.05, 0.0, 0.0)),
                     ],
                 },
                 emissive_strength: 10.0,
@@ -2150,10 +2165,10 @@ impl FireworksDemo {
                 size_end: 2.0,
                 color_gradient: ColorGradient {
                     colors: vec![
-                        (0.0, Vec4::new(1.0, 1.0, 1.0, 0.9)),
-                        (0.2, Vec4::new(1.0, 0.9, 0.6, 0.8)),
-                        (0.5, Vec4::new(0.9, 0.8, 0.4, 0.6)),
-                        (1.0, Vec4::new(0.6, 0.5, 0.2, 0.0)),
+                        (0.0, vec4(1.0, 1.0, 1.0, 0.9)),
+                        (0.2, vec4(1.0, 0.9, 0.6, 0.8)),
+                        (0.5, vec4(0.9, 0.8, 0.4, 0.6)),
+                        (1.0, vec4(0.6, 0.5, 0.2, 0.0)),
                     ],
                 },
                 emissive_strength: 5.0,
@@ -2221,7 +2236,5 @@ where
     else {
         return;
     };
-    tree.push_parent(content);
-    f(tree);
-    tree.pop_parent();
+    tree.in_parent(content, f);
 }

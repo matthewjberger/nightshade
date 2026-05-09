@@ -192,24 +192,16 @@ fn reload_material_command(
 ) {
     use crate::ecs::world::MATERIAL_REF;
 
-    let old_textures =
+    let old_textures: Vec<String> =
         registry_entry_by_name(&world.resources.assets.material_registry.registry, &name)
-            .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
-
-    if let Some((old_base, old_emissive)) = &old_textures {
-        if let Some(base_texture) = old_base {
-            texture_cache_remove_reference(&mut world.resources.texture_cache, base_texture);
-        }
-        if let Some(emissive_texture) = old_emissive {
-            texture_cache_remove_reference(&mut world.resources.texture_cache, emissive_texture);
-        }
+            .map(|mat| mat.texture_names().map(str::to_string).collect())
+            .unwrap_or_default();
+    for texture in &old_textures {
+        texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
     }
 
-    if let Some(base_texture) = &new_material.base_texture {
-        texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
-    }
-    if let Some(emissive_texture) = &new_material.emissive_texture {
-        texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
+    for texture in new_material.texture_names() {
+        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
     }
 
     if let Some(existing) = registry_entry_by_name_mut(
@@ -328,22 +320,14 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 
             if let Some(material_ref) = world.core.get_material_ref(entity) {
                 let material_name = material_ref.name.clone();
-                if let Some(material) = registry_entry_by_name(
+                let texture_names: Vec<String> = registry_entry_by_name(
                     &world.resources.assets.material_registry.registry,
                     &material_name,
-                ) {
-                    if let Some(base_texture) = &material.base_texture {
-                        texture_cache_remove_reference(
-                            &mut world.resources.texture_cache,
-                            base_texture,
-                        );
-                    }
-                    if let Some(emissive_texture) = &material.emissive_texture {
-                        texture_cache_remove_reference(
-                            &mut world.resources.texture_cache,
-                            emissive_texture,
-                        );
-                    }
+                )
+                .map(|material| material.texture_names().map(str::to_string).collect())
+                .unwrap_or_default();
+                for texture in &texture_names {
+                    texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
                 }
                 if let Some(&index) = world
                     .resources
@@ -741,30 +725,19 @@ pub fn set_material_with_textures(
     let material_ref = world.core.get_material_ref(entity).cloned();
 
     if let Some(ref mat_ref) = material_ref {
-        let old_textures = registry_entry_by_name(
+        let old_textures: Vec<String> = registry_entry_by_name(
             &world.resources.assets.material_registry.registry,
             &mat_ref.name,
         )
-        .map(|mat| (mat.base_texture.clone(), mat.emissive_texture.clone()));
-
-        if let Some((old_base, old_emissive)) = old_textures {
-            if let Some(base_texture) = old_base {
-                texture_cache_remove_reference(&mut world.resources.texture_cache, &base_texture);
-            }
-            if let Some(emissive_texture) = old_emissive {
-                texture_cache_remove_reference(
-                    &mut world.resources.texture_cache,
-                    &emissive_texture,
-                );
-            }
+        .map(|mat| mat.texture_names().map(str::to_string).collect())
+        .unwrap_or_default();
+        for texture in &old_textures {
+            texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
         }
     }
 
-    if let Some(base_texture) = &material.base_texture {
-        texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
-    }
-    if let Some(emissive_texture) = &material.emissive_texture {
-        texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
+    for texture in material.texture_names() {
+        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
     }
 
     if let Some(ref mat_ref) = material_ref {
@@ -1069,16 +1042,14 @@ pub fn spawn_instanced_mesh_with_material(
         );
     }
 
-    if let Some(mat) = registry_entry_by_name(
+    let texture_names: Vec<String> = registry_entry_by_name(
         &world.resources.assets.material_registry.registry,
         material_name,
-    ) {
-        if let Some(base_texture) = &mat.base_texture {
-            texture_cache_add_reference(&mut world.resources.texture_cache, base_texture);
-        }
-        if let Some(emissive_texture) = &mat.emissive_texture {
-            texture_cache_add_reference(&mut world.resources.texture_cache, emissive_texture);
-        }
+    )
+    .map(|mat| mat.texture_names().map(str::to_string).collect())
+    .unwrap_or_default();
+    for texture in &texture_names {
+        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
     }
 
     world

@@ -429,19 +429,22 @@ fn build_panel(
     let content = widget::<UiPanelData>(tree.world_mut(), panel)
         .map(|d| d.content_entity)
         .expect("panel content");
-    tree.push_parent(content);
-
-    tree.add_label("Hover for outline, click to lock.");
-    tree.add_label("Drag to orbit, scroll to zoom.");
-    tree.add_label("F1 toggles this panel.");
-    let mode_button = tree.add_button(mode_label(initial_mode));
-    let status_label = tree.add_label("Selected: none");
-    let detail_label = tree.add_label("");
-    tree.add_label("Spin speed");
-    let spin_slider = tree.add_slider(initial_spin, 0.0, 5.0);
-    let debug_volumes_toggle = tree.add_checkbox("Show debug volumes", initial_show_volumes);
-
-    tree.pop_parent();
+    let mut mode_button = Entity::default();
+    let mut status_label = Entity::default();
+    let mut detail_label = Entity::default();
+    let mut spin_slider = Entity::default();
+    let mut debug_volumes_toggle = Entity::default();
+    tree.in_parent(content, |tree| {
+        tree.add_label("Hover for outline, click to lock.");
+        tree.add_label("Drag to orbit, scroll to zoom.");
+        tree.add_label("F1 toggles this panel.");
+        mode_button = tree.add_button(mode_label(initial_mode));
+        status_label = tree.add_label("Selected: none");
+        detail_label = tree.add_label("");
+        tree.add_label("Spin speed");
+        spin_slider = tree.add_slider(initial_spin, 0.0, 5.0);
+        debug_volumes_toggle = tree.add_checkbox("Show debug volumes", initial_show_volumes);
+    });
     tree.finish();
 
     UiHandles {
@@ -455,7 +458,7 @@ fn build_panel(
 }
 
 fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32) -> Entity {
-    let lines = sphere_wireframe(radius, Vec4::new(0.0, 1.0, 1.0, 1.0), 16);
+    let lines = sphere_wireframe(radius, vec4(0.0, 1.0, 1.0, 1.0), 16);
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
@@ -548,8 +551,8 @@ fn preview_marker(position: Vec3, normal: Vec3, size: f32) -> Lines {
     let tangent = nalgebra_glm::normalize(&nalgebra_glm::cross(&normal, &helper));
     let bitangent = nalgebra_glm::cross(&normal, &tangent);
     let half = size * 0.5;
-    let color = Vec4::new(0.0, 1.0, 0.0, 1.0);
-    let normal_color = Vec4::new(1.0, 1.0, 0.0, 1.0);
+    let color = vec4(0.0, 1.0, 0.0, 1.0);
+    let normal_color = vec4(1.0, 1.0, 0.0, 1.0);
 
     let corners = [
         position + tangent * half + bitangent * half,

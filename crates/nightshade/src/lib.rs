@@ -727,8 +727,8 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
-        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiEvent, WindowChrome, WindowShortcut,
-        WindowedUiEvent, blend_color,
+        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent, UiViewport,
+        WindowChrome, WindowShortcut, WindowedUiEvent, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
@@ -739,18 +739,18 @@ pub mod prelude {
     pub use crate::ecs::ui::widgets::world_layout::open_url_in_browser;
     pub use crate::ecs::ui::{
         Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
-        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, ResizeEdge, Rh, Rl, Rw,
-        ScalingMode, SliderConfig, SplitDirection, StateTransition, TextOverflow, TextSpan,
-        ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode, TileNode, Ui,
-        UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData, UiButtonData, UiCanvasData,
-        UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData, UiCommandPaletteData,
-        UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode, UiDisabled,
-        UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode, UiLayoutRoot,
-        UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData, UiNodeAnimation,
-        UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind, UiPressed,
-        UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData, UiRichTextData,
-        UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected, UiSliderData,
-        UiSplitterData, UiStateTrait, UiStateWeights, UiTabBarData, UiTextAreaData,
+        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, Length, LengthExt,
+        ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig, SplitDirection, StateTransition,
+        TextOverflow, TextSpan, ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode,
+        TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData, UiButtonData,
+        UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
+        UiCommandPaletteData, UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode,
+        UiDisabled, UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode,
+        UiLayoutRoot, UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData,
+        UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind,
+        UiPressed, UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData,
+        UiRichTextData, UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected,
+        UiSliderData, UiSplitterData, UiStateTrait, UiStateWeights, UiTabBarData, UiTextAreaData,
         UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
         UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
     };
@@ -824,6 +824,7 @@ pub mod prelude {
     #[cfg(feature = "gamepad")]
     pub use gilrs;
     pub use nalgebra_glm;
+    pub use nalgebra_glm::{vec2, vec3, vec4};
     #[cfg(feature = "physics")]
     pub use rapier3d;
     pub use wgpu;
@@ -875,12 +876,12 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::widgets::world_layout::{
         ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for,
-        ui_events_for_window, ui_focus, ui_is_disabled, ui_label_text, ui_node_effectively_visible,
-        ui_node_visible, ui_read_system_clipboard, ui_rebuild_children, ui_rect,
-        ui_release_image_layer, ui_set_clipboard_text, ui_set_disabled, ui_set_disabled_recursive,
-        ui_set_icon, ui_set_label_text, ui_set_test_id, ui_set_text, ui_set_tooltip_entity,
-        ui_set_tooltip_text, ui_set_visible, ui_set_visible_exclusive, ui_size,
-        ui_text_slot_for_entity, ui_upload_image,
+        ui_events_for_window, ui_focus, ui_is_disabled, ui_label_text, ui_named_entity,
+        ui_node_effectively_visible, ui_node_visible, ui_read_system_clipboard,
+        ui_rebuild_children, ui_rect, ui_release_image_layer, ui_set_clipboard_text,
+        ui_set_disabled, ui_set_disabled_recursive, ui_set_icon, ui_set_label_text, ui_set_named,
+        ui_set_test_id, ui_set_text, ui_set_tooltip_entity, ui_set_tooltip_text, ui_set_visible,
+        ui_set_visible_exclusive, ui_size, ui_text_slot_for_entity, ui_upload_image,
     };
     pub use crate::ecs::ui::widgets::world_reactive::{
         ui_announce, ui_announcements, ui_clicked, ui_data_grid_enable_filters,

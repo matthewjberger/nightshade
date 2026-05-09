@@ -264,101 +264,99 @@ impl NavMeshDemo {
                 wrap: false,
             });
         }
-        tree_builder.push_parent(content);
-
-        let scroll = tree_builder.add_scroll_area_fill(8.0, 6.0);
-        let scroll_body = widget::<UiScrollAreaData>(tree_builder.world_mut(), scroll)
-            .map(|data| data.content_entity)
-            .expect("scroll area body");
-        tree_builder.push_parent(scroll_body);
-
-        tree_builder.add_label("Left-click: move all foxes");
-        tree_builder.add_label("Right-click: spawn a new fox");
-
         let mut show_navmesh = Entity::default();
         let mut show_grass = Entity::default();
         let mut show_grass_interactors = Entity::default();
         let mut show_interactor_debug = Entity::default();
-        collapsing(&mut tree_builder, "Visualization", true, |tree| {
-            show_navmesh = tree.add_checkbox("Show NavMesh", self.show_navmesh);
-            show_grass = tree.add_checkbox("Show Grass", self.show_grass);
-            show_grass_interactors =
-                tree.add_checkbox("Grass Interactors", self.show_grass_interactors);
-            show_interactor_debug =
-                tree.add_checkbox("Show Interactor Debug", self.show_interactor_debug);
-        });
-
         let mut wind_strength = Entity::default();
         let mut wind_frequency = Entity::default();
         let mut interaction_strength = Entity::default();
         let mut wind_dir_x = Entity::default();
         let mut wind_dir_z = Entity::default();
-        collapsing(&mut tree_builder, "Grass", false, |tree| {
-            tree.add_label("Wind Strength");
-            wind_strength = tree.add_slider(0.0, 2.0, 0.6);
-            tree.add_label("Wind Frequency");
-            wind_frequency = tree.add_slider(0.1, 3.0, 1.0);
-            tree.add_label("Interaction Strength");
-            interaction_strength = tree.add_slider(0.0, 3.0, 0.5);
-            tree.add_label("Wind Direction X");
-            wind_dir_x = tree.add_slider(-1.0, 1.0, 1.0);
-            tree.add_label("Wind Direction Z");
-            wind_dir_z = tree.add_slider(-1.0, 1.0, 0.3);
-        });
-
         let mut interactor_radius = Entity::default();
         let mut interactor_strength = Entity::default();
-        collapsing(&mut tree_builder, "Fox Interactor", false, |tree| {
-            tree.add_label("Radius");
-            interactor_radius = tree.add_slider(0.1, 2.0, self.interactor_radius);
-            tree.add_label("Strength");
-            interactor_strength = tree.add_slider(0.0, 2.0, self.interactor_strength);
-        });
-
         let mut wander_mode = Entity::default();
         let mut follow_mode = Entity::default();
         let mut following_label = Entity::default();
-        collapsing(&mut tree_builder, "Behavior", true, |tree| {
-            wander_mode = tree.add_checkbox("Wander Mode", self.wander_mode);
-            follow_mode = tree.add_checkbox("Follow Mode", self.follow_mode);
-            following_label = tree.add_label("");
-        });
-
         let mut algorithm = Entity::default();
-        collapsing(&mut tree_builder, "Pathfinding", false, |tree| {
-            let algorithm_options: Vec<&str> = PathfindingAlgorithm::all()
-                .iter()
-                .map(|alg| alg.name())
-                .collect();
-            algorithm = tree.add_dropdown(&algorithm_options, 0);
-        });
-
         let mut speed = Entity::default();
-        collapsing(&mut tree_builder, "Fox Settings", false, |tree| {
-            tree.add_label("Speed");
-            speed = tree.add_slider(1.0, 15.0, self.agent_speed);
-        });
-
         let mut spawn_button = Entity::default();
         let mut clear_button = Entity::default();
-        collapsing(&mut tree_builder, "Spawning", true, |tree| {
-            spawn_button = tree.add_button("Spawn Fox");
-            clear_button = tree.add_button("Clear Foxes");
-        });
-
         let mut foxes_label = Entity::default();
         let mut trees_label = Entity::default();
         let mut triangles_label = Entity::default();
         let mut fps_label = Entity::default();
-        collapsing(&mut tree_builder, "Stats", true, |tree| {
-            foxes_label = tree.add_label("Foxes: 0");
-            trees_label = tree.add_label("Trees: 0");
-            triangles_label = tree.add_label("NavMesh Triangles: 0");
-            fps_label = tree.add_label("FPS: 0");
-        });
 
-        tree_builder.pop_parent();
-        tree_builder.pop_parent();
+        tree_builder.in_parent(content, |tree_builder| {
+            let scroll = tree_builder.add_scroll_area_fill(8.0, 6.0);
+            let scroll_body = widget::<UiScrollAreaData>(tree_builder.world_mut(), scroll)
+                .map(|data| data.content_entity)
+                .expect("scroll area body");
+            tree_builder.in_parent(scroll_body, |tree_builder| {
+                tree_builder.add_label("Left-click: move all foxes");
+                tree_builder.add_label("Right-click: spawn a new fox");
+
+                collapsing(tree_builder, "Visualization", true, |tree| {
+                    show_navmesh = tree.add_checkbox("Show NavMesh", self.show_navmesh);
+                    show_grass = tree.add_checkbox("Show Grass", self.show_grass);
+                    show_grass_interactors =
+                        tree.add_checkbox("Grass Interactors", self.show_grass_interactors);
+                    show_interactor_debug =
+                        tree.add_checkbox("Show Interactor Debug", self.show_interactor_debug);
+                });
+
+                collapsing(tree_builder, "Grass", false, |tree| {
+                    tree.add_label("Wind Strength");
+                    wind_strength = tree.add_slider(0.0, 2.0, 0.6);
+                    tree.add_label("Wind Frequency");
+                    wind_frequency = tree.add_slider(0.1, 3.0, 1.0);
+                    tree.add_label("Interaction Strength");
+                    interaction_strength = tree.add_slider(0.0, 3.0, 0.5);
+                    tree.add_label("Wind Direction X");
+                    wind_dir_x = tree.add_slider(-1.0, 1.0, 1.0);
+                    tree.add_label("Wind Direction Z");
+                    wind_dir_z = tree.add_slider(-1.0, 1.0, 0.3);
+                });
+
+                collapsing(tree_builder, "Fox Interactor", false, |tree| {
+                    tree.add_label("Radius");
+                    interactor_radius = tree.add_slider(0.1, 2.0, self.interactor_radius);
+                    tree.add_label("Strength");
+                    interactor_strength = tree.add_slider(0.0, 2.0, self.interactor_strength);
+                });
+
+                collapsing(tree_builder, "Behavior", true, |tree| {
+                    wander_mode = tree.add_checkbox("Wander Mode", self.wander_mode);
+                    follow_mode = tree.add_checkbox("Follow Mode", self.follow_mode);
+                    following_label = tree.add_label("");
+                });
+
+                collapsing(tree_builder, "Pathfinding", false, |tree| {
+                    let algorithm_options: Vec<&str> = PathfindingAlgorithm::all()
+                        .iter()
+                        .map(|alg| alg.name())
+                        .collect();
+                    algorithm = tree.add_dropdown(&algorithm_options, 0);
+                });
+
+                collapsing(tree_builder, "Fox Settings", false, |tree| {
+                    tree.add_label("Speed");
+                    speed = tree.add_slider(1.0, 15.0, self.agent_speed);
+                });
+
+                collapsing(tree_builder, "Spawning", true, |tree| {
+                    spawn_button = tree.add_button("Spawn Fox");
+                    clear_button = tree.add_button("Clear Foxes");
+                });
+
+                collapsing(tree_builder, "Stats", true, |tree| {
+                    foxes_label = tree.add_label("Foxes: 0");
+                    trees_label = tree.add_label("Trees: 0");
+                    triangles_label = tree.add_label("NavMesh Triangles: 0");
+                    fps_label = tree.add_label("FPS: 0");
+                });
+            });
+        });
         tree_builder.finish();
 
         self.ui = UiHandles {
@@ -1360,7 +1358,7 @@ impl NavMeshDemo {
 
         let mut lines = Vec::new();
         let segments = 24;
-        let color = Vec4::new(1.0, 0.5, 0.0, 1.0);
+        let color = vec4(1.0, 0.5, 0.0, 1.0);
 
         for fox in &self.foxes {
             let Some(interactor) = world.core.get_grass_interactor(fox.agent_entity) else {
@@ -1392,7 +1390,7 @@ impl NavMeshDemo {
             lines.push(Line {
                 start: center + Vec3::new(0.0, 0.05, 0.0),
                 end: center + Vec3::new(0.0, 0.5, 0.0),
-                color: Vec4::new(0.0, 1.0, 0.0, 1.0),
+                color: vec4(0.0, 1.0, 0.0, 1.0),
             });
         }
 
@@ -1416,7 +1414,5 @@ where
     else {
         return;
     };
-    tree.push_parent(content);
-    f(tree);
-    tree.pop_parent();
+    tree.in_parent(content, f);
 }
