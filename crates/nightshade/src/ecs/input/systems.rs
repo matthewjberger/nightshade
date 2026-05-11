@@ -25,34 +25,6 @@ pub fn reset_mouse_system(world: &mut World) {
     mouse.state.set(MouseState::LEFT_JUST_RELEASED, false);
     mouse.state.set(MouseState::MIDDLE_JUST_RELEASED, false);
     mouse.state.set(MouseState::RIGHT_JUST_RELEASED, false);
-
-    #[cfg(feature = "multi_window")]
-    for state in &mut world.resources.secondary_windows.states {
-        if state.mouse.state.contains(MouseState::SCROLLED) {
-            state.mouse.wheel_delta = Vec2::new(0.0, 0.0);
-        }
-        state.mouse.state.set(MouseState::SCROLLED, false);
-        if state.mouse.state.contains(MouseState::MOVED) {
-            state.mouse.position_delta = Vec2::new(0.0, 0.0);
-        }
-        state.mouse.state.set(MouseState::MOVED, false);
-        state.mouse.raw_mouse_delta = Vec2::new(0.0, 0.0);
-        state.mouse.state.set(MouseState::LEFT_JUST_PRESSED, false);
-        state
-            .mouse
-            .state
-            .set(MouseState::MIDDLE_JUST_PRESSED, false);
-        state.mouse.state.set(MouseState::RIGHT_JUST_PRESSED, false);
-        state.mouse.state.set(MouseState::LEFT_JUST_RELEASED, false);
-        state
-            .mouse
-            .state
-            .set(MouseState::MIDDLE_JUST_RELEASED, false);
-        state
-            .mouse
-            .state
-            .set(MouseState::RIGHT_JUST_RELEASED, false);
-    }
 }
 
 pub fn reset_touch_system(world: &mut World) {
@@ -128,14 +100,6 @@ pub fn reset_keyboard_system(world: &mut World) {
     keyboard.just_released_keys.clear();
     keyboard.frame_chars.clear();
     keyboard.frame_keys.clear();
-
-    #[cfg(feature = "multi_window")]
-    for state in &mut world.resources.secondary_windows.states {
-        state.keyboard.just_pressed_keys.clear();
-        state.keyboard.just_released_keys.clear();
-        state.keyboard.frame_chars.clear();
-        state.keyboard.frame_keys.clear();
-    }
 }
 
 pub fn escape_key_exit_system(world: &mut World) {

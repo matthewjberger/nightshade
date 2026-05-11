@@ -13,7 +13,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["engine", "multi_window", "wgpu"]
+default = ["engine", "wgpu"]
 
 core = [
     "dep:freecs",
@@ -94,7 +94,6 @@ engine = [
     "dep:web-sys",
 ]
 
-multi_window = []
 shell = []
 audio = ["dep:kira"]
 physics = ["dep:rapier3d"]

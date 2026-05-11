@@ -44,19 +44,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 }
 
 pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f32> {
-    let rect = world
-        .resources
-        .window
-        .camera_tile_rects
-        .get(&entity)
-        .or_else(|| {
-            world
-                .resources
-                .window
-                .secondary_camera_tile_rects
-                .values()
-                .find_map(|rects| rects.get(&entity))
-        })?;
+    let rect = world.resources.window.camera_tile_rects.get(&entity)?;
     if rect.height <= 0.0 {
         return None;
     }

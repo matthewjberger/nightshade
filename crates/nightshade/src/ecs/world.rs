@@ -89,10 +89,7 @@ pub mod resources {
     pub use crate::ecs::text::resources::{TextCache, TextState};
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
-    pub use crate::ecs::window::resources::{
-        SecondaryWindowState, SecondaryWindows, ViewportRect, Window, WindowSpawnRequest,
-        WindowTiming,
-    };
+    pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
     pub use crate::ecs::world::cleanup::CleanupState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
 }
@@ -262,8 +259,6 @@ freecs::ecs! {
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
         schedules: crate::schedule::Schedules,
         scratch: crate::ecs::world::scratch::Scratch,
-        #[cfg(feature = "multi_window")]
-        secondary_windows: crate::ecs::window::resources::SecondaryWindows,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
         text: crate::ecs::text::resources::TextState,

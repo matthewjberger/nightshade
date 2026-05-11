@@ -515,8 +515,6 @@ pub mod filesystem;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
-#[cfg(all(feature = "runtime", feature = "multi_window"))]
-pub mod multi_window;
 #[cfg(feature = "runtime")]
 pub mod render;
 #[cfg(feature = "runtime")]
@@ -544,8 +542,7 @@ pub mod prelude {
         EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
     };
     pub use crate::ecs::window::resources::{
-        Monitor, Monitors, SecondaryWindowState, SecondaryWindows, WindowRelationship,
-        WindowSpawnRequest, active_window_scale_factor, active_window_viewport_size,
+        Monitor, Monitors, active_window_scale_factor, active_window_viewport_size,
         cursor_over_window, refresh_monitors_from_event_loop, window_scale_factor_for,
         window_viewport_size_for,
     };
