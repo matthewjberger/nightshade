@@ -117,9 +117,6 @@ pub mod animation_systems {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
 }
 
-mod render_trait;
-pub use render_trait::Render;
-
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 

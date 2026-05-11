@@ -370,7 +370,7 @@ fn sync_min_window_size(_world: &mut World) {}
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
-    renderer: &mut Option<Box<dyn crate::ecs::world::Render>>,
+    renderer: &mut Option<crate::render::wgpu::WgpuRenderer>,
     event: &WindowEvent,
 ) -> Option<Box<dyn State>> {
     let delta_ms = (world.resources.window.timing.delta_time * 1000.0) as u32;
@@ -444,7 +444,7 @@ pub(crate) fn step(
                     tracing::error!("Failed to update render graph: {error}");
                 }
 
-                state.pre_render(&mut **renderer, world);
+                state.pre_render(renderer, world);
 
                 if let Err(error) = renderer.render_frame(world) {
                     tracing::error!("Failed to draw frame: {error}");
@@ -1123,7 +1123,12 @@ pub trait State {
     /// Called every frame to run game logic.
     fn run_systems(&mut self, _world: &mut World) {}
     /// Called before main rendering to allow custom world rendering.
-    fn pre_render(&mut self, _renderer: &mut dyn crate::ecs::world::Render, _world: &mut World) {}
+    fn pre_render(
+        &mut self,
+        _renderer: &mut crate::render::wgpu::WgpuRenderer,
+        _world: &mut World,
+    ) {
+    }
     /// Update render graph state each frame.
     fn update_render_graph(
         &mut self,
@@ -1185,11 +1190,11 @@ pub struct WindowContext {
     /// The current application state.
     pub state: Box<dyn State>,
     /// The renderer (None until initialization completes).
-    pub renderer: Option<Box<dyn crate::ecs::world::Render>>,
+    pub renderer: Option<crate::render::wgpu::WgpuRenderer>,
     #[cfg(target_arch = "wasm32")]
     /// Receiver for async renderer creation on web.
     pub renderer_receiver:
-        Option<futures::channel::oneshot::Receiver<Box<dyn crate::ecs::world::Render>>>,
+        Option<futures::channel::oneshot::Receiver<crate::render::wgpu::WgpuRenderer>>,
     #[cfg(not(target_arch = "wasm32"))]
     pub snapshot_path: Option<std::path::PathBuf>,
     #[cfg(not(target_arch = "wasm32"))]
