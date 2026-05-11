@@ -4,7 +4,6 @@ pub use crate::ecs::camera::systems::*;
 
 pub use crate::ecs::input::systems::*;
 pub use crate::ecs::transform::systems::*;
-pub use crate::ecs::tween::systems::*;
 pub use crate::ecs::ui::picking::*;
 pub use crate::ecs::ui::render_sync::*;
 pub use crate::ecs::ui::systems::*;

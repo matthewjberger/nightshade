@@ -30,6 +30,7 @@ pub mod entity_registry;
 pub mod file_watcher;
 
 pub mod decal;
+pub mod easing;
 pub mod event_bus;
 pub mod generational_registry;
 pub mod gizmos;
@@ -62,7 +63,6 @@ pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;
 pub mod transform;
-pub mod tween;
 pub mod ui;
 pub mod visibility;
 pub mod window;

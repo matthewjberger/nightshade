@@ -585,6 +585,7 @@ pub mod prelude {
         camera_controllers_system, first_person_camera_look_system, fly_camera_system,
         ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
+    pub use crate::ecs::easing::EasingFunction;
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     pub use crate::ecs::generational_registry::{
@@ -716,9 +717,6 @@ pub mod prelude {
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
     pub use crate::ecs::transform::commands::mark_local_transform_dirty;
-    pub use crate::ecs::tween::{
-        EasingFunction, Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
-    };
     pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{

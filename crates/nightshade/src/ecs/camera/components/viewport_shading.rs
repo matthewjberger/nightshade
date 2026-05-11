@@ -26,7 +26,7 @@
 //! a separate global toggle.
 
 use crate::ecs::graphics::resources::{Atmosphere, ColorGrading, DepthOfField, Fog, Graphics};
-use crate::ecs::render_layer::components::CameraCullingMask;
+use crate::ecs::render_layer::CameraCullingMask;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ShadingMode {
@@ -92,7 +92,7 @@ pub struct EffectiveShading {
     pub ssr_intensity: f32,
     pub ambient_light: [f32; 4],
     /// Bitmask of "culling layers" this view will render. Compared
-    /// against each entity's [`CullingMask`](crate::ecs::render_layer::components::CullingMask)
+    /// against each entity's [`CullingMask`](crate::ecs::render_layer::CullingMask)
     /// at render-collection time; an entity is skipped when
     /// `(entity_layers & culling_mask) == 0`. Defaults to `!0` (all
     /// layers) so cameras without a `CameraCullingMask` component

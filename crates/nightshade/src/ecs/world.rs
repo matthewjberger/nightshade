@@ -29,6 +29,7 @@ pub mod components {
     };
 
     pub use crate::ecs::decal::components::Decal;
+    pub use crate::ecs::easing::EasingFunction;
     #[cfg(feature = "grass")]
     pub use crate::ecs::grass::components::{
         GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
@@ -50,8 +51,8 @@ pub mod components {
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
     };
-    pub use crate::ecs::render_layer::components::{CameraCullingMask, CullingMask, RenderLayer};
-    pub use crate::ecs::shadow::components::CastsShadow;
+    pub use crate::ecs::render_layer::{CameraCullingMask, CullingMask, RenderLayer};
+    pub use crate::ecs::shadow::CastsShadow;
     pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::text::components::{
         Text, TextAlignment, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
@@ -60,15 +61,11 @@ pub mod components {
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
     };
-    pub use crate::ecs::tween::components::{
-        Tween, TweenLoopMode, TweenState, TweenTrack, TweenValue,
-    };
-    pub use crate::ecs::tween::easing::EasingFunction;
     pub use crate::ecs::ui::components::{
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
         UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
     };
-    pub use crate::ecs::visibility::components::Visibility;
+    pub use crate::ecs::visibility::Visibility;
 }
 
 pub mod resources {
@@ -136,16 +133,16 @@ freecs::ecs! {
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
             bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
-            camera_culling_mask: crate::ecs::render_layer::components::CameraCullingMask => CAMERA_CULLING_MASK,
+            camera_culling_mask: crate::ecs::render_layer::CameraCullingMask => CAMERA_CULLING_MASK,
             camera_environment: crate::ecs::camera::components::CameraEnvironment => CAMERA_ENVIRONMENT,
             camera_post_process: crate::ecs::camera::components::CameraPostProcess => CAMERA_POST_PROCESS,
             camera: crate::ecs::camera::components::Camera => CAMERA,
-            casts_shadow: crate::ecs::shadow::components::CastsShadow => CASTS_SHADOW,
+            casts_shadow: crate::ecs::shadow::CastsShadow => CASTS_SHADOW,
             character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
             collider: crate::ecs::physics::components::ColliderComponent => COLLIDER,
             collision_listener: crate::ecs::physics::components::CollisionListener => COLLISION_LISTENER,
             constrained_aspect: crate::ecs::camera::components::ConstrainedAspect => CONSTRAINED_ASPECT,
-            culling_mask: crate::ecs::render_layer::components::CullingMask => CULLING_MASK,
+            culling_mask: crate::ecs::render_layer::CullingMask => CULLING_MASK,
             decal: crate::ecs::decal::components::Decal => DECAL,
             global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
             grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
@@ -169,7 +166,7 @@ freecs::ecs! {
             physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
             prefab_instance: crate::ecs::prefab::components::PrefabInstance => PREFAB_INSTANCE,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
-            render_layer: crate::ecs::render_layer::components::RenderLayer => RENDER_LAYER,
+            render_layer: crate::ecs::render_layer::RenderLayer => RENDER_LAYER,
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
             rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
             rotation: crate::ecs::transform::components::Rotation => ROTATION,
@@ -178,10 +175,9 @@ freecs::ecs! {
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
             text: crate::ecs::text::components::Text => TEXT,
             third_person_camera: crate::ecs::camera::components::ThirdPersonCamera => THIRD_PERSON_CAMERA,
-            tween: crate::ecs::tween::components::Tween => TWEEN,
             viewport_shading: crate::ecs::camera::components::ViewportShading => VIEWPORT_SHADING,
             viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
-            visibility: crate::ecs::visibility::components::Visibility => VISIBILITY,
+            visibility: crate::ecs::visibility::Visibility => VISIBILITY,
         }
         Ui {
             ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,

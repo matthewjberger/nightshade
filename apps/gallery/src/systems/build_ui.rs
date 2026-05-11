@@ -1747,7 +1747,7 @@ fn spring_demo_button(
 }
 
 fn linear_demo_button(tree: &mut UiTreeBuilder, label: &str) -> Entity {
-    use nightshade::ecs::tween::easing::EasingFunction;
+    use nightshade::ecs::easing::EasingFunction;
     let theme = tree.active_theme().clone();
     tree.add_node()
         .size(100.pct(), (32.0).px())
