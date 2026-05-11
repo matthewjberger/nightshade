@@ -381,6 +381,7 @@ pub(crate) fn step(
 
     match event {
         WindowEvent::RedrawRequested => {
+            throttle_to_frame_rate_limit(world);
             world.core.increment_tick();
 
             #[cfg(feature = "gamepad")]
@@ -715,6 +716,125 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
             }
             _ => {}
         }
+    }
+}
+
+/// Sleeps until the next frame slot when
+/// `world.resources.graphics.frame_rate_limit` is set. Uses the previous
+/// frame's start instant from `window.timing` plus the target interval.
+/// Idle-sleeps most of the gap and busy-waits the last 1ms to absorb OS
+/// scheduler jitter (Windows `Sleep` resolution is ~15.6ms by default).
+///
+/// No-op on wasm: browsers throttle via `requestAnimationFrame` already.
+#[cfg(not(target_arch = "wasm32"))]
+fn throttle_to_frame_rate_limit(world: &mut World) {
+    use web_time::Instant;
+
+    let Some(target_fps) = world.resources.graphics.frame_rate_limit else {
+        return;
+    };
+    if !target_fps.is_finite() || target_fps <= 0.0 {
+        return;
+    }
+    let Some(last_frame_start) = world.resources.window.timing.last_frame_start_instant else {
+        return;
+    };
+
+    let target_interval = std::time::Duration::from_secs_f32(1.0 / target_fps);
+    let deadline = last_frame_start + target_interval;
+    let busy_wait_floor = std::time::Duration::from_millis(1);
+
+    let now = Instant::now();
+    if now >= deadline {
+        return;
+    }
+    let remaining = deadline - now;
+    if remaining > busy_wait_floor {
+        std::thread::sleep(remaining - busy_wait_floor);
+    }
+    while Instant::now() < deadline {
+        std::hint::spin_loop();
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn throttle_to_frame_rate_limit(_world: &mut World) {}
+
+/// Apply the macOS auto-default `frame_rate_limit` at window creation.
+/// macOS uses `PresentMode::Immediate` (Mailbox degrades to FIFO on the
+/// Metal backend), so the loop tears unless rate-capped. Picks
+/// `refresh_rate - 1` from the window's current monitor when the app
+/// has not already set a cap. Other platforms leave the cap as `None`.
+#[cfg(not(target_arch = "wasm32"))]
+fn apply_macos_default_frame_rate_limit(
+    world: &mut World,
+    window_handle: &std::sync::Arc<winit::window::Window>,
+) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    if world.resources.graphics.frame_rate_limit.is_some() {
+        return;
+    }
+    let Some(target) = current_monitor_frame_rate_target(window_handle) else {
+        return;
+    };
+    world.resources.graphics.frame_rate_limit = Some(target);
+    world.resources.graphics.auto_frame_rate_limit_baseline = Some(target);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn apply_macos_default_frame_rate_limit(
+    _world: &mut World,
+    _window_handle: &std::sync::Arc<winit::window::Window>,
+) {
+}
+
+/// Re-apply the macOS auto-default when the window moves to a monitor
+/// with a different refresh rate. Only updates when
+/// `graphics.frame_rate_limit` still matches the engine-applied
+/// baseline; if the app has overridden the cap, the override is left
+/// alone.
+#[cfg(not(target_arch = "wasm32"))]
+fn refresh_macos_frame_rate_limit(
+    world: &mut World,
+    window_handle: &std::sync::Arc<winit::window::Window>,
+) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    let baseline = world.resources.graphics.auto_frame_rate_limit_baseline;
+    if baseline.is_none() {
+        return;
+    }
+    if world.resources.graphics.frame_rate_limit != baseline {
+        return;
+    }
+    let Some(target) = current_monitor_frame_rate_target(window_handle) else {
+        return;
+    };
+    world.resources.graphics.frame_rate_limit = Some(target);
+    world.resources.graphics.auto_frame_rate_limit_baseline = Some(target);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn refresh_macos_frame_rate_limit(
+    _world: &mut World,
+    _window_handle: &std::sync::Arc<winit::window::Window>,
+) {
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn current_monitor_frame_rate_target(
+    window_handle: &std::sync::Arc<winit::window::Window>,
+) -> Option<f32> {
+    let monitor = window_handle.current_monitor()?;
+    let millihertz = monitor.refresh_rate_millihertz()?;
+    let refresh_hz = millihertz as f32 / 1000.0;
+    if refresh_hz > 1.0 {
+        Some(refresh_hz - 1.0)
+    } else {
+        None
     }
 }
 
@@ -1285,6 +1405,8 @@ impl winit::application::ApplicationHandler for WindowContext {
             event_loop,
         );
 
+        apply_macos_default_frame_rate_limit(&mut self.world, &window_handle);
+
         #[cfg(target_arch = "wasm32")]
         {
             use winit::platform::web::WindowExtWebSys;
@@ -1427,6 +1549,11 @@ impl winit::application::ApplicationHandler for WindowContext {
                     self.world.resources.input.mouse.position_initialized = false;
                 }
             }
+            winit::event::WindowEvent::Moved(_) => {
+                if let Some(handle) = self.world.resources.window.handle.clone() {
+                    refresh_macos_frame_rate_limit(&mut self.world, &handle);
+                }
+            }
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(handle) = self.world.resources.window.handle.as_ref() {
                     self.world.resources.window.cached_scale_factor = handle.scale_factor() as f32;
@@ -1435,6 +1562,9 @@ impl winit::application::ApplicationHandler for WindowContext {
                     &mut self.world.resources.monitors,
                     event_loop,
                 );
+                if let Some(handle) = self.world.resources.window.handle.clone() {
+                    refresh_macos_frame_rate_limit(&mut self.world, &handle);
+                }
             }
             winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height })
                 if width > 0 && height > 0 =>
