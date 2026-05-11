@@ -377,11 +377,13 @@ pub(crate) fn step(
     let _span = tracing::info_span!("frame", delta_ms).entered();
 
     sync_min_window_size(world);
+    if matches!(event, WindowEvent::RedrawRequested) {
+        throttle_to_frame_rate_limit(world);
+    }
     handle_event_systems(world, event);
 
     match event {
         WindowEvent::RedrawRequested => {
-            throttle_to_frame_rate_limit(world);
             world.core.increment_tick();
 
             #[cfg(feature = "gamepad")]
