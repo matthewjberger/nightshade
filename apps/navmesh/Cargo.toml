@@ -9,4 +9,7 @@ publish = false
 
 [dependencies]
 nightshade = { workspace = true, features = ["tracing", "navmesh-bake", "physics", "grass"] }
+nalgebra-glm = { workspace = true }
+noise = { workspace = true }
 rand = "0.9"
+serde = { workspace = true }

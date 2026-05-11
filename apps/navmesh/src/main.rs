@@ -1,11 +1,13 @@
+mod terrain;
+
 use nightshade::ecs::animation::components::{AnimationClip, AnimationProperty};
 use nightshade::ecs::grass::{
     GrassConfig, GrassSpecies, add_grass_species, attach_grass_interactor, enable_grass,
-    enable_grass_interactors, set_grass_terrain, spawn_grass_region, update_grass_player_position,
+    enable_grass_interactors, set_grass_heightmap, spawn_grass_region,
+    update_grass_player_position,
 };
 use nightshade::ecs::lines::components::{Line, Lines};
 use nightshade::ecs::material::resources::material_registry_insert;
-use nightshade::ecs::terrain::spawn_terrain_with_material;
 use nightshade::ecs::text::components::TextProperties;
 use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::ecs::ui::state::UiBase;
@@ -82,20 +84,20 @@ impl Default for TerrainConfig {
 }
 
 impl TerrainConfig {
-    fn to_nightshade_config(&self) -> nightshade::ecs::terrain::TerrainConfig {
-        nightshade::ecs::terrain::TerrainConfig {
+    fn to_terrain_config(&self) -> terrain::TerrainConfig {
+        terrain::TerrainConfig {
             width: self.width,
             depth: self.depth,
             resolution_x: self.resolution_x,
             resolution_z: self.resolution_z,
             height_scale: self.height_scale,
-            noise: nightshade::ecs::terrain::NoiseConfig {
+            noise: terrain::NoiseConfig {
                 seed: self.seed,
                 frequency: self.frequency,
                 octaves: self.octaves,
                 lacunarity: self.lacunarity,
                 persistence: self.persistence,
-                noise_type: nightshade::ecs::terrain::NoiseType::Perlin,
+                noise_type: terrain::NoiseType::Perlin,
             },
             uv_scale: [10.0, 10.0],
         }
@@ -158,6 +160,7 @@ struct NavMeshDemo {
     skins: Vec<nightshade::ecs::prefab::GltfSkin>,
     prefab: Option<nightshade::ecs::prefab::Prefab>,
     terrain_config: TerrainConfig,
+    terrain_heights: Option<(terrain::TerrainConfig, Vec<f32>)>,
     ui: UiHandles,
     last_following_index: Option<usize>,
 }
@@ -188,6 +191,7 @@ impl Default for NavMeshDemo {
             skins: Vec::new(),
             prefab: None,
             terrain_config: TerrainConfig::default(),
+            terrain_heights: None,
             ui: UiHandles::default(),
             last_following_index: None,
         }
@@ -597,14 +601,10 @@ impl NavMeshDemo {
     }
 
     fn sample_height(&self, x: f32, z: f32) -> f32 {
-        nightshade::ecs::terrain::sample_terrain_height(
-            x,
-            z,
-            &self.terrain_config.to_nightshade_config(),
-        )
+        terrain::sample_terrain_height(x, z, &self.terrain_config.to_terrain_config())
     }
 
-    fn spawn_terrain(&self, world: &mut World) {
+    fn spawn_terrain(&mut self, world: &mut World) {
         let terrain_material = Material {
             base_color: [0.08, 0.12, 0.05, 1.0],
             roughness: 0.95,
@@ -612,12 +612,14 @@ impl NavMeshDemo {
             ..Default::default()
         };
 
-        spawn_terrain_with_material(
+        let config = self.terrain_config.to_terrain_config();
+        let (_, heights) = terrain::spawn_terrain_with_heights(
             world,
-            self.terrain_config.to_nightshade_config(),
+            config.clone(),
             Vec3::zeros(),
             terrain_material,
         );
+        self.terrain_heights = Some((config, heights));
     }
 
     fn spawn_grass(&mut self, world: &mut World) {
@@ -633,11 +635,10 @@ impl NavMeshDemo {
         let grass_region = spawn_grass_region(world, config);
         self.grass_region = Some(grass_region);
 
-        set_grass_terrain(
-            world,
-            grass_region,
-            self.terrain_config.to_nightshade_config(),
-        );
+        if let Some((terrain_config, heights)) = &self.terrain_heights {
+            let heightmap = terrain::build_terrain_heightmap(terrain_config, heights.clone());
+            set_grass_heightmap(world, grass_region, heightmap);
+        }
 
         add_grass_species(world, grass_region, GrassSpecies::meadow(), 4.0);
         add_grass_species(world, grass_region, GrassSpecies::short(), 3.0);
@@ -806,8 +807,8 @@ impl NavMeshDemo {
     }
 
     fn build_navmesh(&self, world: &mut World) {
-        let terrain_config = self.terrain_config.to_nightshade_config();
-        let terrain_result = generate_terrain_mesh(&terrain_config);
+        let terrain_config = self.terrain_config.to_terrain_config();
+        let terrain_result = terrain::generate_terrain_mesh(&terrain_config);
 
         let mut vertices: Vec<[f32; 3]> = terrain_result
             .mesh
@@ -1104,7 +1105,7 @@ impl NavMeshDemo {
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
         let delta_time = world.resources.window.timing.delta_time;
-        let terrain_config = self.terrain_config.to_nightshade_config();
+        let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {
             let agent_pos = world
@@ -1113,11 +1114,8 @@ impl NavMeshDemo {
                 .map(|t| t.translation)
                 .unwrap_or(Vec3::zeros());
 
-            let terrain_y = nightshade::ecs::terrain::sample_terrain_height(
-                agent_pos.x,
-                agent_pos.z,
-                &terrain_config,
-            );
+            let terrain_y =
+                terrain::sample_terrain_height(agent_pos.x, agent_pos.z, &terrain_config);
             let fox_pos = Vec3::new(agent_pos.x, terrain_y, agent_pos.z);
 
             let agent = world.core.get_navmesh_agent(fox.agent_entity);
@@ -1205,7 +1203,7 @@ impl NavMeshDemo {
             return;
         }
 
-        let terrain_config = self.terrain_config.to_nightshade_config();
+        let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &self.foxes {
             let agent = world.core.get_navmesh_agent(fox.agent_entity);
@@ -1220,7 +1218,7 @@ impl NavMeshDemo {
             if needs_destination {
                 let x = (rand::random::<f32>() - 0.5) * 60.0;
                 let z = (rand::random::<f32>() - 0.5) * 60.0;
-                let y = nightshade::ecs::terrain::sample_terrain_height(x, z, &terrain_config);
+                let y = terrain::sample_terrain_height(x, z, &terrain_config);
                 let target = nalgebra_glm::vec3(x, y, z);
                 set_agent_destination(world, fox.agent_entity, target);
             }

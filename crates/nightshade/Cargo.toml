@@ -59,12 +59,6 @@ text = [
 
 scene_graph = ["assets"]
 
-terrain = [
-    "core",
-    "dep:noise",
-    "dep:rand",
-]
-
 file_dialog = [
     "core",
     "dep:rfd",
@@ -83,7 +77,6 @@ engine = [
     "scene_graph",
     "picking",
     "file_dialog",
-    "terrain",
     "screenshot",
     "dep:rand",
     "dep:ehttp",
@@ -145,7 +138,6 @@ petgraph = { workspace = true, optional = true }
 rand = { version = "0.9", optional = true }
 rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.30", optional = true }
-noise = { workspace = true, optional = true }
 rapier3d = { workspace = true, optional = true }
 raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }

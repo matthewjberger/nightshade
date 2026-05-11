@@ -57,8 +57,6 @@ pub mod scene;
 pub mod shadow;
 pub mod skin;
 pub mod sync;
-#[cfg(feature = "terrain")]
-pub mod terrain;
 pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;

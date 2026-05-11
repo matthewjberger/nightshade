@@ -162,7 +162,7 @@
 //! ### Aggregate Features
 //!
 //! - **`engine`** (default) - Full engine functionality including asset loading, scene graphs,
-//!   terrain, file dialogs, and more. This is the standard feature for building games.
+//!   file dialogs, and more. This is the standard feature for building games.
 //!
 //! - **`runtime`** - Minimal rendering without asset loading. Use with `wgpu` for
 //!   lightweight apps that don't need gltf/image loading.
@@ -182,8 +182,6 @@
 //! - **`assets`** - Asset loading: gltf, image, half, bincode, serde_json. Requires `core`.
 //!
 //! - **`scene_graph`** - Scene hierarchy system. Requires `assets`.
-//!
-//! - **`terrain`** - Procedural terrain generation using noise. Requires `core`.
 //!
 //! - **`file_dialog`** - Native file dialogs using rfd. Requires `core`.
 //!
@@ -311,23 +309,6 @@
 //!     );
 //! }
 //! // Press ` (backtick) to open console, type "spawn 10"
-//! ```
-//!
-//! ### Procedural Terrain (`terrain` feature)
-//!
-//! ```ignore
-//! let config = TerrainConfig {
-//!     size: 100.0,
-//!     resolution: 128,
-//!     height_scale: 10.0,
-//!     noise: NoiseConfig {
-//!         noise_type: NoiseType::Perlin,
-//!         frequency: 0.02,
-//!         octaves: 4,
-//!         ..Default::default()
-//!     },
-//! };
-//! let terrain = spawn_terrain_with_material(world, &config, material_id);
 //! ```
 //!
 //! ### Gamepad Input (`gamepad` feature)
@@ -694,11 +675,6 @@ pub mod prelude {
         SceneCollider, SceneComponents, SceneEntity, SceneError, SceneHdrSkybox,
         SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, ScenePhysics,
         ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene, world_to_scene,
-    };
-    #[cfg(feature = "terrain")]
-    pub use crate::ecs::terrain::{
-        NoiseConfig, NoiseType, TerrainConfig, TerrainGenerationResult, generate_terrain_mesh,
-        sample_terrain_height, spawn_terrain, spawn_terrain_with_material,
     };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
