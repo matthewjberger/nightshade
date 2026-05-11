@@ -542,9 +542,8 @@ pub mod prelude {
         EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
     };
     pub use crate::ecs::window::resources::{
-        Monitor, Monitors, active_window_scale_factor, active_window_viewport_size,
-        cursor_over_window, refresh_monitors_from_event_loop, window_scale_factor_for,
-        window_viewport_size_for,
+        Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
+        window_viewport_size,
     };
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
@@ -723,7 +722,7 @@ pub mod prelude {
     pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
         RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent, UiViewport,
-        WindowChrome, WindowShortcut, WindowedUiEvent, blend_color,
+        WindowChrome, WindowShortcut, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
@@ -870,13 +869,13 @@ pub mod prelude {
         ui_tree_view_select_node, ui_tree_view_set_filter, ui_validate, ui_widget_content,
     };
     pub use crate::ecs::ui::widgets::world_layout::{
-        ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for,
-        ui_events_for_window, ui_focus, ui_is_disabled, ui_label_text, ui_named_entity,
-        ui_node_effectively_visible, ui_node_visible, ui_read_system_clipboard,
-        ui_rebuild_children, ui_rect, ui_release_image_layer, ui_set_clipboard_text,
-        ui_set_disabled, ui_set_disabled_recursive, ui_set_icon, ui_set_label_text, ui_set_named,
-        ui_set_test_id, ui_set_text, ui_set_tooltip_entity, ui_set_tooltip_text, ui_set_visible,
-        ui_set_visible_exclusive, ui_size, ui_text_slot_for_entity, ui_upload_image,
+        ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events, ui_events_for, ui_focus,
+        ui_is_disabled, ui_label_text, ui_named_entity, ui_node_effectively_visible,
+        ui_node_visible, ui_read_system_clipboard, ui_rebuild_children, ui_rect,
+        ui_release_image_layer, ui_set_clipboard_text, ui_set_disabled, ui_set_disabled_recursive,
+        ui_set_icon, ui_set_label_text, ui_set_named, ui_set_test_id, ui_set_text,
+        ui_set_tooltip_entity, ui_set_tooltip_text, ui_set_visible, ui_set_visible_exclusive,
+        ui_size, ui_text_slot_for_entity, ui_upload_image,
     };
     pub use crate::ecs::ui::widgets::world_reactive::{
         ui_announce, ui_announcements, ui_clicked, ui_data_grid_enable_filters,
@@ -892,11 +891,11 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::widgets::world_state::{
         ui_collapsing_header_open, ui_color_picker_changed, ui_color_picker_color,
-        ui_color_picker_set_value, ui_dock_layout_for_window, ui_dock_state, ui_drag_value,
+        ui_color_picker_set_value, ui_dock_layout, ui_dock_state, ui_drag_value,
         ui_drag_value_changed, ui_dropdown_selected, ui_dropdown_selected_changed,
         ui_dropdown_set_value, ui_panel_set_header_visible, ui_panel_set_pinned,
         ui_pointer_over_widget, ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
-        ui_range_slider_set_values, ui_reserved_areas_for_window, ui_scroll_area_set_offset,
+        ui_range_slider_set_values, ui_reserved_areas, ui_scroll_area_set_offset,
         ui_scroll_area_set_snap, ui_slider_set_value, ui_slider_value, ui_slider_value_changed,
         ui_tab_bar_selected, ui_tab_bar_set_value, ui_text_input_changed, ui_text_input_set_mask,
         ui_text_input_set_password, ui_text_input_set_value, ui_text_input_submitted,
