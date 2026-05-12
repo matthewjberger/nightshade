@@ -563,9 +563,7 @@ pub mod prelude {
         ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
     #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::entity_registry::{
-        entity_get_blueprint, entity_remove_blueprint, entity_set_blueprint,
-    };
+    pub use crate::ecs::entity_registry::{assign_guid, ensure_guid, find_entity_by_guid};
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     pub use crate::ecs::generational_registry::{
@@ -592,7 +590,11 @@ pub mod prelude {
         loading_pipeline_mark_completed, loading_pipeline_pending_len, loading_pipeline_pop,
         loading_pipeline_push, loading_pipeline_release_recipe_sources,
         loading_pipeline_release_source, loading_pipeline_reset_source_arena,
-        loading_pipeline_store_decoded, loading_pipeline_total,
+        loading_pipeline_store_decoded, loading_pipeline_total, queue_decoded_texture,
+    };
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::loading::{
+        load_texture_from_image_bytes, load_texture_pack_from_image_bytes,
     };
     pub use crate::ecs::material::resources::material_registry_insert;
     pub use crate::ecs::mesh::commands::spawn_mesh;
@@ -658,6 +660,7 @@ pub mod prelude {
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
     pub use crate::ecs::primitives::EasingFunction;
+    pub use crate::ecs::primitives::Guid;
     #[cfg(all(feature = "scene_graph", feature = "navmesh"))]
     pub use crate::ecs::scene::SceneNavMesh;
     #[cfg(feature = "scene_graph")]
@@ -675,11 +678,14 @@ pub mod prelude {
     };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::{
-        AssetMode, AssetUuid, EntityBlueprint, Scene, SceneAlphaMode, SceneAudioSource,
-        SceneBodyType, SceneCamera, SceneCollider, SceneComponents, SceneEntity, SceneError,
+        AssetMode, AssetUuid, ComponentDescriptor, ComponentTypeRegistry, FieldDescriptor,
+        FieldKind, Persistence, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType,
+        SceneCamera, SceneCollider, SceneComponents, SceneDeserializer, SceneEntity, SceneError,
         SceneHdrSkybox, SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh,
-        SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene,
-        save_scene, spawn_scene, world_to_scene,
+        SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SceneSerializer, SpawnSceneResult,
+        TypedComponent, TypedPayload, TypedResource, apply_field_overrides, component_descriptor,
+        load_scene, register_component_descriptor, save_scene, spawn_scene,
+        spawn_scene_with_deserializer, world_to_scene, world_to_scene_with_serializer,
     };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,

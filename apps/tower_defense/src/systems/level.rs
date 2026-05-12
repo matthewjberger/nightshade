@@ -1,7 +1,6 @@
 use crate::ecs::{GRID_CELL, GameWorld, GridCell};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
-use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub const LEVEL_PATH: &str = "apps/tower_defense/tower_defense.nsmap";
@@ -11,22 +10,9 @@ pub const WAYPOINT_TAG: &str = "td_waypoint";
 pub const START_MARKER_TAG: &str = "td_start_marker";
 pub const END_MARKER_TAG: &str = "td_end_marker";
 
-const TILE_BLUEPRINT: &str = "td_tile";
-const WAYPOINT_BLUEPRINT: &str = "td_waypoint";
-
 const GRID_HALF_EXTENT: i32 = 6;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct TileBlueprint {
-    x: i32,
-    z: i32,
-    is_path: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct WaypointBlueprint {
-    index: u32,
-}
+const PATH_TILE_COLOR: [f32; 4] = [0.5, 0.3, 0.1, 1.0];
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_or_build_level(game_world: &mut GameWorld, world: &mut World) {
@@ -187,17 +173,11 @@ fn spawn_waypoint(world: &mut World, index: u32, position: Vec3) {
         .core
         .set_global_transform(entity, GlobalTransform::default());
     push_tag(world, entity, WAYPOINT_TAG);
-    entity_set_blueprint(
-        world,
-        entity,
-        WAYPOINT_BLUEPRINT,
-        &WaypointBlueprint { index },
-    );
 }
 
 fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
     let color = if is_path {
-        [0.5, 0.3, 0.1, 1.0]
+        PATH_TILE_COLOR
     } else {
         [0.1, 0.3, 0.1, 1.0]
     };
@@ -234,12 +214,6 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
         .core
         .set_material_ref(entity, MaterialRef::new(material_name));
     push_tag(world, entity, TILE_TAG);
-    entity_set_blueprint(
-        world,
-        entity,
-        TILE_BLUEPRINT,
-        &TileBlueprint { x, z, is_path },
-    );
 }
 
 fn spawn_marker(
@@ -302,10 +276,10 @@ fn link_path_from_world(game_world: &mut GameWorld, world: &World) {
             if !tags.iter().any(|tag| tag == WAYPOINT_TAG) {
                 return None;
             }
-            let blueprint =
-                entity_get_blueprint::<WaypointBlueprint>(world, *entity, WAYPOINT_BLUEPRINT)?;
+            let name = world.core.get_name(*entity)?;
+            let index = name.0.strip_prefix("PathWaypoint_")?.parse::<u32>().ok()?;
             let transform = world.core.get_local_transform(*entity)?;
-            Some((blueprint.index, transform.translation))
+            Some((index, transform.translation))
         })
         .collect();
     waypoints.sort_by_key(|(index, _)| *index);
@@ -319,7 +293,7 @@ fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
     game_world.resources.grid_tiles.clear();
     game_world.resources.tile_original_colors.clear();
 
-    let tile_entries: Vec<(Entity, TileBlueprint, Vec4)> = world
+    let tile_entries: Vec<(Entity, i32, i32, bool, Vec4)> = world
         .resources
         .entities
         .tags
@@ -328,29 +302,31 @@ fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
             if !tags.iter().any(|tag| tag == TILE_TAG) {
                 return None;
             }
-            let blueprint = entity_get_blueprint::<TileBlueprint>(world, *entity, TILE_BLUEPRINT)?;
+            let transform = world.core.get_local_transform(*entity)?;
+            let x = transform.translation.x.round() as i32;
+            let z = transform.translation.z.round() as i32;
             let color = tile_color(world, *entity);
-            Some((*entity, blueprint, color))
+            let is_path = (color.x - PATH_TILE_COLOR[0]).abs() < 1e-3
+                && (color.y - PATH_TILE_COLOR[1]).abs() < 1e-3
+                && (color.z - PATH_TILE_COLOR[2]).abs() < 1e-3;
+            Some((*entity, x, z, is_path, color))
         })
         .collect();
 
-    for (entity, blueprint, color) in tile_entries {
-        game_world
-            .resources
-            .grid_tiles
-            .insert((blueprint.x, blueprint.z), entity);
+    for (entity, x, z, is_path, color) in tile_entries {
+        game_world.resources.grid_tiles.insert((x, z), entity);
         game_world
             .resources
             .tile_original_colors
-            .insert((blueprint.x, blueprint.z), color);
+            .insert((x, z), color);
 
         let cell = game_world.spawn_entities(GRID_CELL, 1)[0];
         game_world.set_grid_cell(
             cell,
             GridCell {
-                x: blueprint.x,
-                z: blueprint.z,
-                occupied: blueprint.is_path,
+                x,
+                z,
+                occupied: is_path,
             },
         );
     }

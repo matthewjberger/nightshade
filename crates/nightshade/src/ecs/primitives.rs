@@ -5,13 +5,9 @@
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
-// ---------- Name ----------
-
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Name(pub String);
-
-// ---------- Visibility ----------
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -25,12 +21,17 @@ impl Default for Visibility {
     }
 }
 
-// ---------- CastsShadow ----------
-
 #[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CastsShadow;
 
-// ---------- RenderLayer + culling masks ----------
+/// Stable engine-side identity for entities that round-trip through a
+/// save file or that other entities cross-reference. Opt-in: omit on
+/// transient entities (particles, projectiles, popups). Engine mints
+/// values from `world.resources.entities.next_guid`, which is itself
+/// persisted in the scene file so freshly-loaded scenes don't collide
+/// with the writer's ids.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Guid(pub u64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderLayer(pub u32);
@@ -117,8 +118,6 @@ impl CameraCullingMask {
         (self.0 & layer.0) != 0
     }
 }
-
-// ---------- EasingFunction ----------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum EasingFunction {

@@ -51,6 +51,7 @@ pub mod components {
     };
     pub use crate::ecs::primitives::CastsShadow;
     pub use crate::ecs::primitives::EasingFunction;
+    pub use crate::ecs::primitives::Guid;
     pub use crate::ecs::primitives::Name;
     pub use crate::ecs::primitives::Visibility;
     pub use crate::ecs::primitives::{CameraCullingMask, CullingMask, RenderLayer};
@@ -141,6 +142,7 @@ freecs::ecs! {
             global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
             grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
             grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
+            guid: crate::ecs::primitives::Guid => GUID,
             hovered: crate::ecs::input::components::Hovered => HOVERED,
             ignore_parent_scale: crate::ecs::transform::components::IgnoreParentScale => IGNORE_PARENT_SCALE,
             instanced_mesh: crate::ecs::mesh::components::InstancedMesh => INSTANCED_MESH,
@@ -235,6 +237,7 @@ freecs::ecs! {
         audio: crate::ecs::audio::resources::AudioEngine,
         cleanup: crate::ecs::world::cleanup::CleanupState,
         commands: crate::ecs::world::commands::CommandQueues,
+        component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
         entities: crate::ecs::entity_registry::EntityRegistry,
         event_bus: crate::ecs::event_bus::resources::EventBus,
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
