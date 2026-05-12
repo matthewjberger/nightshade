@@ -17,6 +17,7 @@ logs/
 !docs/book/**/*.md
 !site/content/*.md
 apps/game/game.json
+apps/game/game.nsmap
 *.tmp
 *.report.json
 screenshots/

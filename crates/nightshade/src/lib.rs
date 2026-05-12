@@ -562,7 +562,6 @@ pub mod prelude {
         camera_controllers_system, first_person_camera_look_system, fly_camera_system,
         ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
-    pub use crate::ecs::easing::EasingFunction;
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     pub use crate::ecs::generational_registry::{
@@ -614,7 +613,7 @@ pub mod prelude {
         spawn_dynamic_physics_cube_with_material, spawn_dynamic_physics_cylinder_with_material,
         spawn_dynamic_physics_sphere_with_material, spawn_static_physics_cube_with_material,
     };
-    #[cfg(feature = "physics")]
+    #[cfg(all(feature = "physics", feature = "debug_render"))]
     pub use crate::ecs::physics::debug::physics_debug_draw_system;
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
@@ -654,6 +653,7 @@ pub mod prelude {
     pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
+    pub use crate::ecs::primitives::EasingFunction;
     #[cfg(all(feature = "scene_graph", feature = "navmesh"))]
     pub use crate::ecs::scene::SceneNavMesh;
     #[cfg(feature = "scene_graph")]
@@ -671,10 +671,15 @@ pub mod prelude {
     };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::{
-        AssetMode, AssetUuid, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType, SceneCamera,
-        SceneCollider, SceneComponents, SceneEntity, SceneError, SceneHdrSkybox,
-        SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh, SceneMeshInstance, ScenePhysics,
-        ScenePrefabInstance, SpawnSceneResult, load_scene, save_scene, spawn_scene, world_to_scene,
+        AssetMode, AssetUuid, EntityBlueprint, Scene, SceneAlphaMode, SceneAudioSource,
+        SceneBodyType, SceneCamera, SceneCollider, SceneComponents, SceneEntity, SceneError,
+        SceneHdrSkybox, SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh,
+        SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene,
+        save_scene, spawn_scene, world_to_scene,
+    };
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::entity_registry::{
+        entity_get_blueprint, entity_remove_blueprint, entity_set_blueprint,
     };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,

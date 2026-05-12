@@ -30,9 +30,9 @@ pub mod entity_registry;
 pub mod file_watcher;
 
 pub mod decal;
-pub mod easing;
 pub mod event_bus;
 pub mod generational_registry;
+#[cfg(feature = "gizmos")]
 pub mod gizmos;
 pub mod gpu_picking;
 pub mod graphics;
@@ -44,17 +44,15 @@ pub mod loading;
 pub mod material;
 pub mod mesh;
 pub mod morph;
-pub mod name;
 pub mod navmesh;
 pub mod particles;
 pub mod physics;
 #[cfg(feature = "picking")]
 pub mod picking;
 pub mod prefab;
-pub mod render_layer;
+pub mod primitives;
 #[cfg(feature = "scene_graph")]
 pub mod scene;
-pub mod shadow;
 pub mod skin;
 pub mod sync;
 pub mod text;
@@ -62,7 +60,6 @@ pub mod text;
 pub mod texture_loader;
 pub mod transform;
 pub mod ui;
-pub mod visibility;
 pub mod window;
 pub mod world;
 

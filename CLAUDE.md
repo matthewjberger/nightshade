@@ -15,7 +15,7 @@ Read `docs/USAGE.md` before writing or modifying engine code.
 - Default: `world.core.query().with(MASK).iter(|entity, table, idx| { ... })` for reads, `query_mut()` for writes. Direct table access, no allocation, no per-entity getter cost.
 - Use `.without(MASK)` for negative filters at table level instead of `.filter(|e| !world.core.entity_has_components(*e, MASK))`.
 - For structural mutations during iteration (add/remove components, despawn, set component triggering archetype migration), use the two-pass pattern: closure-form gather into a small `Vec` of `(entity, payload)` tuples, then a second loop that applies the mutations.
-- Two command queues at `world.resources.commands`: `commands.ecs` (DespawnRecursive, ReloadMaterial) is drained by `process_commands_system` in the frame schedule. `commands.render` (texture uploads, HDR skybox, IBL captures, screenshot) is drained by the renderer at frame setup. Push via `world.queue_ecs_command(EcsCommand::...)` or `world.queue_render_command(RenderCommand::...)`.
+- Two command queues at `world.resources.commands`: `commands.ecs` (DespawnRecursive, ReloadMaterial) is drained by `process_commands_system` in the frame schedule. `commands.render` (texture uploads, HDR skybox, IBL captures, screenshot) is drained by the renderer at frame setup. Push via `queue_ecs_command(world, EcsCommand::...)` or `queue_render_command(world, RenderCommand::...)` (free fns in the prelude, not methods).
 - Escape hatches: `query_entities(MASK).collect::<Vec<_>>()` allocates per call; `for entity in query_entities(...)` doesn't allocate but pays per-entity getter overhead. Only use when the closure form can't return component references or when a helper requires `&World`.
 
 ## Dual-World Pattern

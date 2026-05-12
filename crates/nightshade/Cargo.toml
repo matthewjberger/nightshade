@@ -89,6 +89,8 @@ engine = [
 
 shell = []
 audio = ["dep:kira"]
+debug_render = []
+gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
 behaviors = []
