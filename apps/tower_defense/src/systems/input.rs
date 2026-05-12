@@ -1,4 +1,4 @@
-﻿use crate::ecs::{GameWorld, TowerType, UiAction};
+use crate::ecs::{GameWorld, TowerType, UiAction};
 use crate::systems::{
     can_place_tower_at, get_grid_position_from_mouse, mark_cell_occupied, sell_tower,
     spawn_money_popup, spawn_tower,
@@ -28,7 +28,8 @@ pub fn input_system(game_world: &mut GameWorld, world: &mut World) {
             .text
             .cache
             .add_text(format!("${}", sell_value));
-        let text_entity = spawn_entities(world, 
+        let text_entity = spawn_entities(
+            world,
             NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
             1,
         )[0];
@@ -149,12 +150,10 @@ fn apply_ui_actions(game_world: &mut GameWorld, _world: &mut World) {
                 game_world.resources.selected_tower_type = tower_type;
             }
             UiAction::DecreaseSpeed => {
-                game_world.resources.game_speed =
-                    (game_world.resources.game_speed - 0.5).max(0.5);
+                game_world.resources.game_speed = (game_world.resources.game_speed - 0.5).max(0.5);
             }
             UiAction::IncreaseSpeed => {
-                game_world.resources.game_speed =
-                    (game_world.resources.game_speed + 0.5).min(3.0);
+                game_world.resources.game_speed = (game_world.resources.game_speed + 0.5).min(3.0);
             }
             UiAction::ResetSpeed => {
                 game_world.resources.game_speed = 1.0;

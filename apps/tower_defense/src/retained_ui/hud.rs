@@ -175,11 +175,7 @@ pub fn build(tree: &mut UiTreeBuilder, selected_tower: TowerType) -> UiHandles {
         tree.in_parent(announce_root, |tree| {
             announce_label = tree
                 .add_node()
-                .window(
-                    Rl(vec2(50.0, 50.0)),
-                    Ab(vec2(400.0, 60.0)),
-                    Anchor::Center,
-                )
+                .window(Rl(vec2(50.0, 50.0)), Ab(vec2(400.0, 60.0)), Anchor::Center)
                 .with_text("WAVE 1", 36.0)
                 .text_center()
                 .with_text_outline(SHADOW_DARK, 2.5)
@@ -189,11 +185,7 @@ pub fn build(tree: &mut UiTreeBuilder, selected_tower: TowerType) -> UiHandles {
 
         status_root = tree
             .add_node()
-            .window(
-                Rl(vec2(50.0, 50.0)),
-                Ab(vec2(520.0, 120.0)),
-                Anchor::Center,
-            )
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(520.0, 120.0)), Anchor::Center)
             .with_rect(14.0, 2.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(SHADOW_DARK, vec2(0.0, 10.0), 32.0, 0.0)
@@ -201,11 +193,7 @@ pub fn build(tree: &mut UiTreeBuilder, selected_tower: TowerType) -> UiHandles {
         tree.in_parent(status_root, |tree| {
             status_label = tree
                 .add_node()
-                .window(
-                    Rl(vec2(50.0, 50.0)),
-                    Ab(vec2(500.0, 80.0)),
-                    Anchor::Center,
-                )
+                .window(Rl(vec2(50.0, 50.0)), Ab(vec2(500.0, 80.0)), Anchor::Center)
                 .with_text("GAME OVER", 48.0)
                 .text_center()
                 .with_text_outline(SHADOW_DARK, 3.0)

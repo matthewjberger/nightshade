@@ -1,4 +1,4 @@
-﻿use crate::ecs::{GameWorld, RANGE_INDICATOR};
+use crate::ecs::{GameWorld, RANGE_INDICATOR};
 use crate::systems::can_place_tower_at;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
@@ -90,7 +90,10 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
             .name_to_index
             .get(&material_name)
         {
-            registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+            registry_add_reference(
+                &mut world.resources.assets.material_registry.registry,
+                index,
+            );
         }
         world
             .core
@@ -111,7 +114,8 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
             let end =
                 position + nalgebra_glm::vec3(angle2.cos() * range, 0.1, angle2.sin() * range);
 
-            let line_entity = spawn_entities(world, 
+            let line_entity = spawn_entities(
+                world,
                 NAME | LOCAL_TRANSFORM
                     | GLOBAL_TRANSFORM
                     | LOCAL_TRANSFORM_DIRTY
@@ -305,7 +309,8 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
             });
         }
 
-        let box_entity = spawn_entities(world, 
+        let box_entity = spawn_entities(
+            world,
             NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
             1,
         )[0];

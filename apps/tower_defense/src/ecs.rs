@@ -328,7 +328,6 @@ pub struct GridCell {
     pub x: i32,
     pub z: i32,
     pub occupied: bool,
-    pub is_path: bool,
 }
 
 #[derive(Debug, Clone, Default)]

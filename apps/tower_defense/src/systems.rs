@@ -2,6 +2,7 @@ mod effects;
 mod enemy;
 mod grid;
 mod input;
+mod level;
 mod popup;
 mod preview;
 mod projectile;
@@ -14,11 +15,9 @@ pub use effects::{
     update_visual_effects,
 };
 pub use enemy::{enemy_movement_system, spawn_enemy};
-pub use grid::{
-    can_place_tower_at, create_path, get_grid_position_from_mouse, initialize_grid,
-    mark_cell_occupied, spawn_grid_tiles,
-};
+pub use grid::{can_place_tower_at, get_grid_position_from_mouse, mark_cell_occupied};
 pub use input::input_system;
+pub use level::load_or_build_level;
 pub use popup::{spawn_money_popup, update_money_popups};
 pub use preview::{placement_preview_system, range_indicator_system};
 pub use projectile::projectile_movement_system;

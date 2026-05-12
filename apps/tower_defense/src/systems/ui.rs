@@ -1,11 +1,10 @@
-﻿use crate::ecs::GameWorld;
+use crate::ecs::GameWorld;
 use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
 use nightshade::prelude::*;
 
 pub fn ui_update_system(game_world: &mut GameWorld, world: &mut World) {
     if game_world.resources.wave_announce_timer > 0.0 {
-        let delta_time =
-            world.resources.window.timing.delta_time * game_world.resources.game_speed;
+        let delta_time = world.resources.window.timing.delta_time * game_world.resources.game_speed;
         game_world.resources.wave_announce_timer =
             (game_world.resources.wave_announce_timer - delta_time).max(0.0);
     }

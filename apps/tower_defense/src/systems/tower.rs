@@ -1,4 +1,4 @@
-﻿use crate::ecs::{
+use crate::ecs::{
     ENTITY_HANDLE, EntityHandle, GRID_CELL, GameWorld, POSITION, PROJECTILE, Position, Projectile,
     RANGE_INDICATOR, RangeIndicator, TOWER, Tower, TowerType,
 };
@@ -34,14 +34,17 @@ pub fn spawn_tower(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -96,7 +99,8 @@ pub fn spawn_range_indicator(
         let start = center + nalgebra_glm::vec3(angle1.cos() * range, 0.1, angle1.sin() * range);
         let end = center + nalgebra_glm::vec3(angle2.cos() * range, 0.1, angle2.sin() * range);
 
-        let line_entity = spawn_entities(world, 
+        let line_entity = spawn_entities(
+            world,
             NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
             1,
         )[0];
@@ -304,7 +308,8 @@ pub fn tower_targeting_system(game_world: &mut GameWorld, world: &mut World) {
                             if let Some(enemy_pos) = game_world.get_position(enemy_entity).copied()
                             {
                                 if tower.target_line.is_none() {
-                                    let line_entity = spawn_entities(world, 
+                                    let line_entity = spawn_entities(
+                                        world,
                                         LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
                                         1,
                                     )[0];
@@ -396,14 +401,17 @@ pub fn tower_shooting_system(game_world: &mut GameWorld, world: &mut World) {
                             },
                         );
                         if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+                            .resources
+                            .assets
+                            .material_registry
                             .registry
                             .name_to_index
                             .get(&material_name)
                         {
-                            registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+                            registry_add_reference(
+                                &mut world.resources.assets.material_registry.registry,
+                                index,
+                            );
                         }
                         world
                             .core

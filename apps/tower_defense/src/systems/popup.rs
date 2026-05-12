@@ -1,4 +1,4 @@
-﻿use crate::ecs::{GameWorld, MONEY_POPUP, MoneyPopup};
+use crate::ecs::{GameWorld, MONEY_POPUP, MoneyPopup};
 use nightshade::prelude::*;
 
 pub fn spawn_money_popup(
@@ -20,7 +20,8 @@ pub fn spawn_money_popup(
     };
 
     let text_index = world.resources.text.cache.add_text(&text);
-    let text_entity = spawn_entities(world, 
+    let text_entity = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
         1,
     )[0];

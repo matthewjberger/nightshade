@@ -1,4 +1,4 @@
-﻿use crate::ecs::{
+use crate::ecs::{
     ENEMY, ENTITY_HANDLE, Enemy, EnemyType, EntityHandle, GameState, GameWorld, POSITION, Position,
 };
 use crate::systems::{
@@ -68,14 +68,17 @@ fn spawn_normal_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -126,14 +129,17 @@ fn spawn_fast_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -168,14 +174,17 @@ fn spawn_tank_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -227,14 +236,17 @@ fn spawn_flying_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -279,14 +291,17 @@ fn spawn_shielded_enemy(world: &mut World, position: Vec3, base_y: f32, color: V
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -331,14 +346,17 @@ fn spawn_healer_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -374,14 +392,17 @@ fn spawn_boss_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -432,7 +453,8 @@ fn spawn_child_sphere(
     scale: Vec3,
     color: [f32; 4],
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -468,14 +490,17 @@ fn spawn_child_sphere(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -495,7 +520,8 @@ fn spawn_child_sphere_emissive(
     color: [f32; 4],
     emissive: [f32; 3],
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -532,14 +558,17 @@ fn spawn_child_sphere_emissive(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -558,7 +587,8 @@ fn spawn_child_cube(
     scale: Vec3,
     color: [f32; 4],
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -594,14 +624,17 @@ fn spawn_child_cube(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -621,7 +654,8 @@ fn spawn_child_cylinder(
     color: [f32; 4],
     blend: bool,
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -671,14 +705,17 @@ fn spawn_child_cylinder(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -698,7 +735,8 @@ fn spawn_child_cone_rotated(
     color: [f32; 4],
     rotation_z: f32,
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -735,14 +773,17 @@ fn spawn_child_cone_rotated(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -762,7 +803,8 @@ fn spawn_child_cone_emissive(
     color: [f32; 4],
     emissive: [f32; 3],
 ) {
-    let child = spawn_entities(world, 
+    let child = spawn_entities(
+        world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
             | LOCAL_TRANSFORM_DIRTY
@@ -799,14 +841,17 @@ fn spawn_child_cone_emissive(
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core

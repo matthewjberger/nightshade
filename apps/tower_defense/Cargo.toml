@@ -17,3 +17,5 @@ path = "src/main.rs"
 nightshade = { workspace = true, features = ["tracing", "physics"] }
 freecs.workspace = true
 nalgebra-glm.workspace = true
+serde.workspace = true
+tracing.workspace = true

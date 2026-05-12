@@ -1,4 +1,4 @@
-﻿use crate::ecs::{ENTITY_HANDLE, EffectType, EntityHandle, GameWorld, VISUAL_EFFECT, VisualEffect};
+use crate::ecs::{ENTITY_HANDLE, EffectType, EntityHandle, GameWorld, VISUAL_EFFECT, VisualEffect};
 use crate::systems::despawn_entity;
 use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
 use nightshade::ecs::material::resources::material_registry_insert;
@@ -38,7 +38,10 @@ pub fn create_explosion_effect(game_world: &mut GameWorld, world: &mut World, po
             .name_to_index
             .get(&material_name)
         {
-            registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+            registry_add_reference(
+                &mut world.resources.assets.material_registry.registry,
+                index,
+            );
         }
         world
             .core
@@ -101,14 +104,17 @@ pub fn create_poison_bubble_effect(game_world: &mut GameWorld, world: &mut World
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -141,14 +147,17 @@ pub fn create_muzzle_flash(game_world: &mut GameWorld, world: &mut World, positi
         },
     );
     if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
+        .resources
+        .assets
+        .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
-        registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
     }
     world
         .core
@@ -195,7 +204,10 @@ pub fn create_muzzle_flash(game_world: &mut GameWorld, world: &mut World, positi
             .name_to_index
             .get(&material_name)
         {
-            registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+            registry_add_reference(
+                &mut world.resources.assets.material_registry.registry,
+                index,
+            );
         }
         world
             .core
