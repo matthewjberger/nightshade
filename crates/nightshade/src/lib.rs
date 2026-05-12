@@ -562,6 +562,10 @@ pub mod prelude {
         camera_controllers_system, first_person_camera_look_system, fly_camera_system,
         ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::entity_registry::{
+        entity_get_blueprint, entity_remove_blueprint, entity_set_blueprint,
+    };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     pub use crate::ecs::generational_registry::{
@@ -676,10 +680,6 @@ pub mod prelude {
         SceneHdrSkybox, SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh,
         SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SpawnSceneResult, load_scene,
         save_scene, spawn_scene, world_to_scene,
-    };
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::entity_registry::{
-        entity_get_blueprint, entity_remove_blueprint, entity_set_blueprint,
     };
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
