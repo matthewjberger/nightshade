@@ -54,6 +54,13 @@ impl Default for ViewportShading {
 
 pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72, 0.72, 0.72, 1.0);
 
+/// Sentinel `flat_color` used to tell the mesh fragment shaders that the
+/// camera is in wireframe mode and that the surface should be discarded.
+/// `flat_color.a >= 2.0` is impossible for a regular color and is reserved
+/// for this purpose.
+pub const WIREFRAME_SENTINEL_COLOR: nalgebra_glm::Vec4 =
+    nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 2.0);
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EffectiveShading {
     pub unlit_mode: bool,
@@ -235,7 +242,7 @@ impl EffectiveShading {
                 effective.ssgi_enabled = false;
                 effective.ssr_enabled = false;
                 effective.shadow_depth_enabled = false;
-                effective.flat_shading_color = Some(FLAT_SHADING_COLOR);
+                effective.flat_shading_color = Some(WIREFRAME_SENTINEL_COLOR);
                 effective.show_wireframe = true;
             }
         }
