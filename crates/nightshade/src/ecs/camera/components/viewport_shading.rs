@@ -63,6 +63,7 @@ pub struct EffectiveShading {
     pub ssr_enabled: bool,
     pub show_normals: bool,
     pub show_bounding_volumes: bool,
+    pub show_wireframe: bool,
     pub selection_outline_enabled: bool,
     pub flat_shading_color: Option<nalgebra_glm::Vec4>,
     pub shadow_depth_enabled: bool,
@@ -119,6 +120,7 @@ impl EffectiveShading {
             ssr_enabled: graphics.ssr_enabled,
             show_normals: graphics.show_normals,
             show_bounding_volumes: graphics.show_bounding_volumes,
+            show_wireframe: false,
             selection_outline_enabled: graphics.selection_outline_enabled,
             flat_shading_color: None,
             shadow_depth_enabled: true,
@@ -233,8 +235,7 @@ impl EffectiveShading {
                 effective.ssgi_enabled = false;
                 effective.ssr_enabled = false;
                 effective.shadow_depth_enabled = false;
-                effective.show_normals = true;
-                effective.show_bounding_volumes = true;
+                effective.show_wireframe = true;
             }
         }
         if !shading.show_overlays {
@@ -242,10 +243,8 @@ impl EffectiveShading {
             effective.show_bounding_volumes = false;
             effective.selection_outline_enabled = false;
         }
-        effective.lines_enabled = match shading.mode {
-            ShadingMode::Wireframe => shading.show_overlays,
-            _ => effective.show_normals || effective.show_bounding_volumes,
-        };
+        effective.lines_enabled =
+            effective.show_normals || effective.show_bounding_volumes || effective.show_wireframe;
         effective
     }
 }
@@ -260,6 +259,7 @@ impl Default for EffectiveShading {
             ssr_enabled: false,
             show_normals: false,
             show_bounding_volumes: false,
+            show_wireframe: false,
             selection_outline_enabled: false,
             flat_shading_color: None,
             shadow_depth_enabled: true,
