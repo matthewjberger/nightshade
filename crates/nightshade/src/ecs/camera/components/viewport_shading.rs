@@ -235,6 +235,7 @@ impl EffectiveShading {
                 effective.ssgi_enabled = false;
                 effective.ssr_enabled = false;
                 effective.shadow_depth_enabled = false;
+                effective.flat_shading_color = Some(FLAT_SHADING_COLOR);
                 effective.show_wireframe = true;
             }
         }
