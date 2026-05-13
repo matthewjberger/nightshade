@@ -5,13 +5,27 @@ pub const MAX_LINES: u32 = 1_000_000;
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Lines {
     pub lines: Vec<Line>,
+    #[serde(default)]
+    pub always_on_top: bool,
     #[serde(skip)]
     pub version: u64,
 }
 
 impl Lines {
     pub fn new(lines: Vec<Line>) -> Self {
-        Self { lines, version: 0 }
+        Self {
+            lines,
+            always_on_top: false,
+            version: 0,
+        }
+    }
+
+    pub fn new_always_on_top(lines: Vec<Line>) -> Self {
+        Self {
+            lines,
+            always_on_top: true,
+            version: 0,
+        }
     }
 
     pub fn mark_dirty(&mut self) {
