@@ -1,0 +1,20 @@
+[package]
+name = "sandbox"
+description = "Minimal first-person sandbox that loads or emits a saved map"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "sandbox"
+path = "src/main.rs"
+
+[dependencies]
+nightshade = { workspace = true, features = ["tracing", "physics", "gamepad"] }
+freecs.workspace = true
+nalgebra-glm.workspace = true
+serde.workspace = true

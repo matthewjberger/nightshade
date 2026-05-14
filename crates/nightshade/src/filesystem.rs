@@ -1,5 +1,5 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 
 pub struct FileFilter {
     pub name: String,
@@ -27,30 +27,49 @@ pub struct LoadedFile {
     pub bytes: Vec<u8>,
 }
 
-#[derive(Clone)]
+thread_local! {
+    static COMPLETED_LOADS: RefCell<HashMap<u64, LoadedFile>> = RefCell::new(HashMap::new());
+    static NEXT_LOAD_ID: Cell<u64> = const { Cell::new(1) };
+}
+
+fn allocate_load_id() -> u64 {
+    NEXT_LOAD_ID.with(|cell| {
+        let id = cell.get();
+        cell.set(id + 1);
+        id
+    })
+}
+
+fn store_completed_load(id: u64, file: LoadedFile) {
+    COMPLETED_LOADS.with(|cell| {
+        cell.borrow_mut().insert(id, file);
+    });
+}
+
+#[derive(Clone, Copy)]
 pub struct PendingFileLoad {
-    inner: Rc<RefCell<Option<LoadedFile>>>,
+    id: u64,
 }
 
 impl PendingFileLoad {
     pub fn empty() -> Self {
         Self {
-            inner: Rc::new(RefCell::new(None)),
+            id: allocate_load_id(),
         }
     }
 
     pub fn ready(file: LoadedFile) -> Self {
-        Self {
-            inner: Rc::new(RefCell::new(Some(file))),
-        }
+        let id = allocate_load_id();
+        store_completed_load(id, file);
+        Self { id }
     }
 
     pub fn is_ready(&self) -> bool {
-        self.inner.borrow().is_some()
+        COMPLETED_LOADS.with(|cell| cell.borrow().contains_key(&self.id))
     }
 
     pub fn take(&self) -> Option<LoadedFile> {
-        self.inner.borrow_mut().take()
+        COMPLETED_LOADS.with(|cell| cell.borrow_mut().remove(&self.id))
     }
 }
 
@@ -208,6 +227,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     use wasm_bindgen::prelude::*;
 
     let pending = PendingFileLoad::empty();
+    let pending_id = pending.id;
 
     let Some(window) = web_sys::window() else {
         return pending;
@@ -239,11 +259,9 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
         input.set_accept(&accept);
     }
 
-    let pending_clone = pending.clone();
     let input_for_closure = input.clone();
     let closure = Closure::once(Box::new(move |_event: web_sys::Event| {
         let captured_input = input_for_closure;
-        let captured_pending = pending_clone;
 
         wasm_bindgen_futures::spawn_local(async move {
             if let Some(files) = captured_input.files()
@@ -256,7 +274,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
                 {
                     let uint8_array = js_sys::Uint8Array::new(&array_buffer);
                     let bytes = uint8_array.to_vec();
-                    *captured_pending.inner.borrow_mut() = Some(LoadedFile { name, bytes });
+                    store_completed_load(pending_id, LoadedFile { name, bytes });
                 }
             }
         });

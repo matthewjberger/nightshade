@@ -409,6 +409,9 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             outer_cone_angle: std::f32::consts::PI / 4.0,
             cast_shadows: true,
             shadow_bias: 0.0005,
+            shadow_resolution: 0,
+            shadow_distance: 0.0,
+            cookie_texture: None,
         },
     );
 
@@ -458,6 +461,9 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             outer_cone_angle: std::f32::consts::PI / 4.0,
             cast_shadows: false,
             shadow_bias: 0.0,
+            shadow_resolution: 0,
+            shadow_distance: 0.0,
+            cookie_texture: None,
         },
     );
 
