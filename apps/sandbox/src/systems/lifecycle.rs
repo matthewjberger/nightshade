@@ -1,8 +1,9 @@
-use crate::state::{Action, Sandbox, Screen};
-use crate::systems::{hud, level, pause, player, textures, title};
+use crate::ecs::{SandboxWorld, Screen};
+use crate::systems::screens::{hud, pause, title};
+use crate::systems::world::{enemies, level, player, textures};
 use nightshade::prelude::*;
 
-pub fn initialize(sandbox: &mut Sandbox, world: &mut World) {
+pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     world.resources.user_interface.enabled = true;
     world.resources.retained_ui.enabled = true;
     world.resources.graphics.atmosphere = Atmosphere::DayNight;
@@ -14,85 +15,87 @@ pub fn initialize(sandbox: &mut Sandbox, world: &mut World) {
 
     textures::load_prototype_textures(world);
     level::load_or_build_level(world);
-    player::spawn(sandbox, world);
+    player::spawn(sandbox_world, world);
+    enemies::spawn(sandbox_world, world);
 
     let mut tree = UiTreeBuilder::new(world);
-    sandbox.title = title::build(&mut tree);
-    sandbox.pause = pause::build(&mut tree);
-    sandbox.hud = hud::build(&mut tree);
+    let title_handles = title::build(&mut tree);
+    let pause_handles = pause::build(&mut tree);
+    let hud_handles = hud::build(&mut tree);
     tree.finish();
+    sandbox_world.resources.ui_handles.title = title_handles;
+    sandbox_world.resources.ui_handles.pause = pause_handles;
+    sandbox_world.resources.ui_handles.hud = hud_handles;
 
-    enter_title(sandbox, world);
+    enter(sandbox_world, world, Screen::Title);
 }
 
-pub fn drain_actions(sandbox: &mut Sandbox, world: &mut World) {
-    let actions = std::mem::take(&mut sandbox.pending_actions);
-    for action in actions {
-        apply_action(sandbox, world, action);
+/// Drive every screen transition through one function so the
+/// physics/cursor/gamepad-nav booleans and the initial focused
+/// button all live in a single place. Each screen contributes a
+/// small config block and the body just applies it.
+pub fn enter(sandbox_world: &mut SandboxWorld, world: &mut World, screen: Screen) {
+    let config = screen_config(&sandbox_world.resources.ui_handles, screen);
+
+    sandbox_world.resources.screen.current = screen;
+    apply_visibility(sandbox_world, world);
+
+    world.resources.physics.enabled = config.physics_enabled;
+    set_cursor_locked(world, config.cursor_locked);
+    set_cursor_visible(world, !config.cursor_locked);
+    world.resources.retained_ui.gamepad_nav.enabled = config.gamepad_nav;
+
+    let interaction = world.resources.retained_ui.interaction_for_active_mut();
+    interaction.focused_entity = config.focus;
+    world.resources.retained_ui.overlays.focus_ring_visible = config.focus.is_some();
+    if config.focus.is_none() {
+        world.resources.retained_ui.gamepad_nav.held_direction = None;
     }
 }
 
-pub fn apply_action(sandbox: &mut Sandbox, world: &mut World, action: Action) {
-    match action {
-        Action::StartGame | Action::ResumeGame => enter_game(sandbox, world),
-        Action::PauseGame => enter_paused(sandbox, world),
-        Action::ReturnToTitle => {
-            player::reset(sandbox, world);
-            enter_title(sandbox, world);
-        }
-        Action::ResetPlayer => player::reset(sandbox, world),
-        Action::Quit => world.resources.window.should_exit = true,
+struct ScreenConfig {
+    physics_enabled: bool,
+    cursor_locked: bool,
+    gamepad_nav: bool,
+    focus: Option<Entity>,
+}
+
+fn screen_config(handles: &crate::ecs::UiHandles, screen: Screen) -> ScreenConfig {
+    match screen {
+        Screen::Title => ScreenConfig {
+            physics_enabled: false,
+            cursor_locked: false,
+            gamepad_nav: true,
+            focus: Some(handles.title.play_button),
+        },
+        Screen::Paused => ScreenConfig {
+            physics_enabled: false,
+            cursor_locked: false,
+            gamepad_nav: true,
+            focus: Some(handles.pause.resume_button),
+        },
+        Screen::InGame => ScreenConfig {
+            physics_enabled: true,
+            cursor_locked: true,
+            gamepad_nav: false,
+            focus: None,
+        },
     }
 }
 
-pub fn enter_title(sandbox: &mut Sandbox, world: &mut World) {
-    sandbox.screen = Screen::Title;
-    apply_visibility(sandbox, world);
-    world.resources.physics.enabled = false;
-    set_cursor_locked(world, false);
-    set_cursor_visible(world, true);
-    world.resources.retained_ui.gamepad_nav.enabled = true;
-}
-
-pub fn enter_game(sandbox: &mut Sandbox, world: &mut World) {
-    sandbox.screen = Screen::InGame;
-    apply_visibility(sandbox, world);
-    world.resources.physics.enabled = true;
-    set_cursor_locked(world, true);
-    set_cursor_visible(world, false);
-    world.resources.retained_ui.gamepad_nav.enabled = false;
-    world.resources.retained_ui.gamepad_nav.held_direction = None;
-    world
-        .resources
-        .retained_ui
-        .interaction_for_active_mut()
-        .focused_entity = None;
-    world.resources.retained_ui.overlays.focus_ring_visible = false;
-}
-
-pub fn enter_paused(sandbox: &mut Sandbox, world: &mut World) {
-    sandbox.screen = Screen::Paused;
-    apply_visibility(sandbox, world);
-    world.resources.physics.enabled = false;
-    set_cursor_locked(world, false);
-    set_cursor_visible(world, true);
-    world.resources.retained_ui.gamepad_nav.enabled = true;
-}
-
-pub fn apply_visibility(sandbox: &Sandbox, world: &mut World) {
+pub fn apply_visibility(sandbox_world: &SandboxWorld, world: &mut World) {
+    let handles = &sandbox_world.resources.ui_handles;
+    let screen = sandbox_world.resources.screen.current;
+    ui_set_visible(world, handles.title.root, matches!(screen, Screen::Title));
+    ui_set_visible(world, handles.pause.root, matches!(screen, Screen::Paused));
     ui_set_visible(
         world,
-        sandbox.title.root,
-        matches!(sandbox.screen, Screen::Title),
+        handles.hud.root,
+        matches!(screen, Screen::InGame | Screen::Paused),
     );
     ui_set_visible(
         world,
-        sandbox.pause.root,
-        matches!(sandbox.screen, Screen::Paused),
-    );
-    ui_set_visible(
-        world,
-        sandbox.hud.root,
-        matches!(sandbox.screen, Screen::InGame | Screen::Paused),
+        handles.hud.crosshair,
+        matches!(screen, Screen::InGame),
     );
 }

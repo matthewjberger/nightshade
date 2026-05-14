@@ -1,32 +1,35 @@
-use crate::state::{Action, Sandbox, Screen};
+use crate::ecs::{SandboxWorld, Screen};
+use crate::systems::lifecycle;
+use crate::systems::world::player;
 use nightshade::prelude::*;
 
-pub fn handle_global(sandbox: &mut Sandbox, world: &World) {
-    let escape_pressed = world.resources.input.keyboard.just_pressed(KeyCode::Escape);
-    let start_pressed = world
+pub fn handle_global(sandbox_world: &mut SandboxWorld, world: &mut World) {
+    let escape = world.resources.input.keyboard.just_pressed(KeyCode::Escape);
+    let start = world
         .resources
         .input
         .gamepad
         .just_pressed_buttons
         .contains(&gilrs::Button::Start);
+    let r = world.resources.input.keyboard.just_pressed(KeyCode::KeyR);
+    let screen = sandbox_world.resources.screen.current;
 
-    match sandbox.screen {
+    match screen {
         Screen::Title => {
-            if escape_pressed {
-                sandbox.pending_actions.push(Action::Quit);
+            if escape {
+                world.resources.window.should_exit = true;
             }
         }
         Screen::InGame => {
-            if escape_pressed || start_pressed {
-                sandbox.pending_actions.push(Action::PauseGame);
-            }
-            if world.resources.input.keyboard.just_pressed(KeyCode::KeyR) {
-                sandbox.pending_actions.push(Action::ResetPlayer);
+            if escape || start {
+                lifecycle::enter(sandbox_world, world, Screen::Paused);
+            } else if r {
+                player::reset(sandbox_world, world);
             }
         }
         Screen::Paused => {
-            if escape_pressed || start_pressed {
-                sandbox.pending_actions.push(Action::ResumeGame);
+            if escape || start {
+                lifecycle::enter(sandbox_world, world, Screen::InGame);
             }
         }
     }
