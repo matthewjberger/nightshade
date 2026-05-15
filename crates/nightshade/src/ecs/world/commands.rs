@@ -48,6 +48,10 @@ pub enum RenderCommand {
     },
     CaptureScreenshot {
         path: Option<std::path::PathBuf>,
+        /// When set, the saved PNG is downscaled (preserving aspect) so
+        /// the longer side is at most this many pixels. Used for prefab
+        /// thumbnails where a full-resolution screenshot is wasteful.
+        max_dimension: Option<u32>,
     },
     ReloadTexture {
         name: String,
@@ -905,7 +909,13 @@ pub fn capture_ibl_snapshots(world: &mut World, atmosphere: Atmosphere, hours: V
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn capture_screenshot(world: &mut World) {
-    queue_render_command(world, RenderCommand::CaptureScreenshot { path: None });
+    queue_render_command(
+        world,
+        RenderCommand::CaptureScreenshot {
+            path: None,
+            max_dimension: None,
+        },
+    );
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -914,6 +924,22 @@ pub fn capture_screenshot_to_path(world: &mut World, path: impl Into<std::path::
         world,
         RenderCommand::CaptureScreenshot {
             path: Some(path.into()),
+            max_dimension: None,
+        },
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn capture_thumbnail_to_path(
+    world: &mut World,
+    path: impl Into<std::path::PathBuf>,
+    max_dimension: u32,
+) {
+    queue_render_command(
+        world,
+        RenderCommand::CaptureScreenshot {
+            path: Some(path.into()),
+            max_dimension: Some(max_dimension),
         },
     );
 }

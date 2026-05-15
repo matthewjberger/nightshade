@@ -286,6 +286,9 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
                 .as_ref()
                 .map(collect_material_texture_names)
                 .unwrap_or_default();
+            let content_hash = registry.registry.entries[index]
+                .as_ref()
+                .map(compute_material_content_hash);
             for texture_name in texture_names {
                 if let Some(materials) = registry.texture_name_to_materials.get_mut(&texture_name) {
                     materials.remove(&(index as u32));
@@ -299,6 +302,12 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
                 .retain(|&pending_index| pending_index != index as u32);
             if let Some(name) = registry.registry.index_to_name[index].take() {
                 registry.registry.name_to_index.remove(&name);
+                if let Some(hash) = content_hash
+                    && let Some(mapped) = registry.content_hash_to_name.get(&hash)
+                    && *mapped == name
+                {
+                    registry.content_hash_to_name.remove(&hash);
+                }
                 removed.push(name);
             }
             registry.registry.entries[index] = None;
@@ -401,8 +410,17 @@ pub fn material_registry_find_or_insert(
     material: Material,
 ) -> String {
     let content_hash = compute_material_content_hash(&material);
-    if let Some(existing_name) = registry.content_hash_to_name.get(&content_hash) {
-        return existing_name.clone();
+    if let Some(existing_name) = registry.content_hash_to_name.get(&content_hash).cloned() {
+        let still_valid = registry
+            .registry
+            .name_to_index
+            .get(&existing_name)
+            .and_then(|&index| registry.registry.entries.get(index as usize))
+            .is_some_and(|entry| entry.is_some());
+        if still_valid {
+            return existing_name;
+        }
+        registry.content_hash_to_name.remove(&content_hash);
     }
     registry
         .content_hash_to_name
