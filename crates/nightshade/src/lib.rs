@@ -667,7 +667,7 @@ pub mod prelude {
     pub use crate::ecs::prefab::resources::mesh_cache_insert;
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
-    #[cfg(all(feature = "scene_graph", feature = "navmesh"))]
+    #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::SceneNavMesh;
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::scene::registry::{
