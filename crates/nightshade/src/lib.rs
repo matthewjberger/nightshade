@@ -587,6 +587,7 @@ pub mod prelude {
     pub use crate::ecs::input::resources::mouse::MouseState;
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::systems::detect_input_mode_system;
+    pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
         loading_pipeline_allocate_source_image, loading_pipeline_completed,

@@ -7,6 +7,23 @@ use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::events::*;
 use crate::ecs::world::{Vec2, World, resources::MouseState};
 
+pub fn apply_ime_allowed_system(world: &mut World) {
+    let _span = tracing::info_span!("apply_ime_allowed").entered();
+    let ime = &mut world.resources.input.keyboard.ime;
+    if ime.allowed == ime.applied {
+        return;
+    }
+    let Some(window) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    window.set_ime_allowed(ime.allowed);
+    ime.applied = ime.allowed;
+}
+
+pub fn set_ime_allowed(world: &mut World, allowed: bool) {
+    world.resources.input.keyboard.ime.allowed = allowed;
+}
+
 pub fn reset_mouse_system(world: &mut World) {
     let _span = tracing::info_span!("reset_mouse").entered();
     let mouse = &mut world.resources.input.mouse;

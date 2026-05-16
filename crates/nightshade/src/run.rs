@@ -552,6 +552,25 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
         publish_event(world, Message::Input { event: event_state });
     }
 
+    if let winit::event::WindowEvent::Ime(ime_event) = window_event {
+        let ime = &mut world.resources.input.keyboard.ime;
+        match ime_event {
+            winit::event::Ime::Enabled => {
+                ime.preedit = None;
+            }
+            winit::event::Ime::Preedit(text, cursor) => {
+                ime.preedit = Some((text.clone(), *cursor));
+            }
+            winit::event::Ime::Commit(text) => {
+                ime.committed_this_frame.push(text.clone());
+                ime.preedit = None;
+            }
+            winit::event::Ime::Disabled => {
+                ime.preedit = None;
+            }
+        }
+    }
+
     #[cfg(target_arch = "wasm32")]
     let cursor_scale = world
         .resources
