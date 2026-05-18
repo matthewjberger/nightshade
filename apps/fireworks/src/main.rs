@@ -143,11 +143,8 @@ struct Stats {
 }
 
 impl State for FireworksDemo {
-    fn title(&self) -> &str {
-        "Fireworks Demo"
-    }
-
     fn initialize(&mut self, world: &mut World) {
+        world.resources.window.title = "Fireworks Demo".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.graphics.atmosphere = Atmosphere::Space;
         world.resources.graphics.show_grid = true;

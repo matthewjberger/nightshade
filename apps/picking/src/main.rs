@@ -81,11 +81,8 @@ const PANEL_RECT: Rect = Rect {
 };
 
 impl State for PickingDemo {
-    fn title(&self) -> &str {
-        "Picking Demo"
-    }
-
     fn initialize(&mut self, world: &mut World) {
+        world.resources.window.title = "Picking Demo".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.retained_ui.enabled = true;
         world.resources.graphics.show_grid = true;

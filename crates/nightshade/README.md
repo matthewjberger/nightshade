@@ -28,11 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct MyGame;
 
 impl State for MyGame {
-    fn title(&self) -> &str {
-        "My Game"
-    }
-
     fn initialize(&mut self, world: &mut World) {
+        world.resources.window.title = "My Game".to_string();
         world.resources.user_interface.enabled = true;
 
         let camera_position = Vec3::new(0.0, 2.0, 10.0);

@@ -199,11 +199,8 @@ impl Default for NavMeshDemo {
 }
 
 impl State for NavMeshDemo {
-    fn title(&self) -> &str {
-        "NavMesh Pathfinding Demo"
-    }
-
     fn initialize(&mut self, world: &mut World) {
+        world.resources.window.title = "NavMesh Pathfinding Demo".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.retained_ui.enabled = true;
         world.resources.graphics.atmosphere = Atmosphere::Hdr;

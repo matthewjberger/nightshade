@@ -27,9 +27,9 @@
 //! }
 //!
 //! impl State for Game {
-//!     fn title(&self) -> &str { "My Game" }
-//!
 //!     fn initialize(&mut self, world: &mut World) {
+//!         world.resources.window.title = "My Game".to_string();
+//!
 //!         // Graphics setup
 //!         world.resources.graphics.atmosphere = Atmosphere::Sky;
 //!         spawn_sun(world);
@@ -452,7 +452,9 @@
 //! struct Game;
 //!
 //! impl State for Game {
-//!     fn title(&self) -> &str { "My Game" }
+//!     fn initialize(&mut self, world: &mut World) {
+//!         world.resources.window.title = "My Game".to_string();
+//!     }
 //! }
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -6,9 +6,8 @@
 //! struct MyGame;
 //!
 //! impl State for MyGame {
-//!     fn title(&self) -> &str { "My Game" }
-//!
 //!     fn initialize(&mut self, world: &mut World) {
+//!         world.resources.window.title = "My Game".to_string();
 //!         // Set up camera, lights, entities
 //!     }
 //!
@@ -28,7 +27,6 @@
 //!
 //! | Method | When Called | Use For |
 //! |--------|-------------|---------|
-//! | `title()` | Window creation | Window title (desktop) |
 //! | `icon_bytes()` | Window creation | Window icon PNG (desktop) |
 //! | `initialize()` | After renderer ready | Scene setup, spawn entities |
 //! | `run_systems()` | Every frame | Game logic, entity updates |
@@ -130,10 +128,13 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 
 /// Launches a windowed application (desktop or web).
 pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
+    #[allow(unused_mut)]
+    let mut world = World::default();
+
     #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
     let (log_config, log_file_name) = {
         let config = state.log_config();
-        let file_name = log_file_name(state.title(), &config);
+        let file_name = log_file_name(&world.resources.window.title, &config);
         (config, file_name)
     };
 
@@ -296,9 +297,6 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
 
     let state = Box::new(state);
 
-    #[allow(unused_mut)]
-    let world = World::default();
-
     let event_loop = EventLoop::builder().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
 
@@ -367,6 +365,21 @@ fn sync_min_window_size(world: &mut World) {
 #[cfg(target_arch = "wasm32")]
 fn sync_min_window_size(_world: &mut World) {}
 
+#[cfg(not(target_arch = "wasm32"))]
+fn sync_window_title(world: &mut World) {
+    if world.resources.window.applied_title.as_deref() == Some(&world.resources.window.title) {
+        return;
+    }
+    let Some(handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    handle.set_title(&world.resources.window.title);
+    world.resources.window.applied_title = Some(world.resources.window.title.clone());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn sync_window_title(_world: &mut World) {}
+
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -377,6 +390,7 @@ pub(crate) fn step(
     let _span = tracing::info_span!("frame", delta_ms).entered();
 
     sync_min_window_size(world);
+    sync_window_title(world);
     if matches!(event, WindowEvent::RedrawRequested) {
         throttle_to_frame_rate_limit(world);
     }
@@ -1234,11 +1248,6 @@ pub fn log_file_name(title: &str, config: &LogConfig) -> String {
 /// Implement this trait to define your application behavior. The engine calls
 /// these methods at appropriate points in the frame loop.
 pub trait State {
-    /// Window title (desktop only).
-    fn title(&self) -> &str {
-        "Nightshade"
-    }
-
     /// Logging configuration (desktop only, requires `tracing` feature).
     fn log_config(&self) -> LogConfig {
         LogConfig::default()
@@ -1360,7 +1369,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             attributes = attributes
-                .with_title(self.state.title())
+                .with_title(&self.world.resources.window.title)
                 .with_resizable(true)
                 .with_decorations(true)
                 .with_min_inner_size(winit::dpi::LogicalSize::new(400.0, 300.0));
