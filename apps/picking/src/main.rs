@@ -173,15 +173,23 @@ impl State for PickingDemo {
         self.handle_click(world);
         self.sync_outline(world);
         self.sync_panel(world);
-    }
 
-    fn on_keyboard_input(&mut self, world: &mut World, key_code: KeyCode, key_state: KeyState) {
-        if matches!((key_code, key_state), (KeyCode::Escape, KeyState::Pressed)) {
-            world.resources.window.should_exit = true;
-        }
-        if matches!((key_code, key_state), (KeyCode::F1, KeyState::Pressed)) {
-            let panel = self.handles.panel;
-            ui_set_visible(world, panel, !ui_node_visible(world, panel));
+        let events = std::mem::take(&mut world.resources.input.events);
+        for event in events {
+            if let AppEvent::Keyboard {
+                key,
+                state: KeyState::Pressed,
+            } = event
+            {
+                match key {
+                    KeyCode::Escape => world.resources.window.should_exit = true,
+                    KeyCode::F1 => {
+                        let panel = self.handles.panel;
+                        ui_set_visible(world, panel, !ui_node_visible(world, panel));
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 }

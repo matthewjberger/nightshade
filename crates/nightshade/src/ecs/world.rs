@@ -97,7 +97,10 @@ pub mod resources {
 
 pub mod events {
     pub use crate::ecs::event_bus::resources::{InputEvent, KeyState, Message};
+    pub use crate::ecs::input::events::AppEvent;
 }
+
+pub use crate::ecs::input::events::AppEvent;
 
 pub mod cleanup;
 pub mod commands;

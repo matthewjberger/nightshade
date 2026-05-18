@@ -265,56 +265,60 @@ impl State for FireworksDemo {
         self.update_shells(world, delta_time);
         self.update_sub_shells(world, delta_time);
         self.cleanup_expired_effects(world, delta_time);
-    }
 
-    fn on_keyboard_input(&mut self, world: &mut World, key: KeyCode, state: KeyState) {
-        if state != KeyState::Pressed {
-            return;
-        }
-
-        match key {
-            KeyCode::Space => {
-                self.launch_firework(world);
-            }
-            KeyCode::Digit1 => {
-                for _ in 0..3 {
+        let events = std::mem::take(&mut world.resources.input.events);
+        for event in events {
+            let AppEvent::Keyboard {
+                key,
+                state: KeyState::Pressed,
+            } = event
+            else {
+                continue;
+            };
+            match key {
+                KeyCode::Space => {
                     self.launch_firework(world);
                 }
-            }
-            KeyCode::Digit2 => {
-                for _ in 0..5 {
-                    self.launch_firework(world);
+                KeyCode::Digit1 => {
+                    for _ in 0..3 {
+                        self.launch_firework(world);
+                    }
                 }
-            }
-            KeyCode::Digit3 => {
-                for _ in 0..10 {
-                    self.launch_firework(world);
+                KeyCode::Digit2 => {
+                    for _ in 0..5 {
+                        self.launch_firework(world);
+                    }
                 }
-            }
-            KeyCode::Digit4 => {
-                self.launch_finale(world);
-            }
-            KeyCode::Digit5 => {
-                self.salvo_mode = !self.salvo_mode;
-            }
-            KeyCode::KeyA => {
-                self.auto_launch = !self.auto_launch;
-            }
-            KeyCode::KeyF => {
-                self.show_fire = !self.show_fire;
-                if self.show_fire {
-                    self.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
-                    self.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
+                KeyCode::Digit3 => {
+                    for _ in 0..10 {
+                        self.launch_firework(world);
+                    }
                 }
-            }
-            KeyCode::KeyS => {
-                self.show_smoke = !self.show_smoke;
-                if self.show_smoke {
-                    self.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
-                    self.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
+                KeyCode::Digit4 => {
+                    self.launch_finale(world);
                 }
+                KeyCode::Digit5 => {
+                    self.salvo_mode = !self.salvo_mode;
+                }
+                KeyCode::KeyA => {
+                    self.auto_launch = !self.auto_launch;
+                }
+                KeyCode::KeyF => {
+                    self.show_fire = !self.show_fire;
+                    if self.show_fire {
+                        self.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
+                        self.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
+                    }
+                }
+                KeyCode::KeyS => {
+                    self.show_smoke = !self.show_smoke;
+                    if self.show_smoke {
+                        self.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
+                        self.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 }

@@ -27,20 +27,19 @@
 //!
 //! | Method | When Called | Use For |
 //! |--------|-------------|---------|
-//! | `icon_bytes()` | Window creation | Window icon PNG (desktop) |
 //! | `initialize()` | After renderer ready | Scene setup, spawn entities |
-//! | `run_systems()` | Every frame | Game logic, entity updates |
+//! | `run_systems()` | Every frame | Game logic, drain `world.resources.input.events` |
 //! | `configure_render_graph()` | Once at startup | Custom post-processing |
 //! | `update_render_graph()` | Every frame | Dynamic render graph changes |
-//! | `handle_event()` | On event bus message | Cross-system communication |
-//! | `on_keyboard_input()` | On key press/release | Keyboard handling |
-//! | `on_mouse_input()` | On mouse button | Mouse button handling |
-//! | `on_gamepad_event()` | On gamepad event | Controller input |
-//! | `on_dropped_file()` | On file drop (desktop) | File path handling |
-//! | `on_dropped_file_data()` | On file drop (all) | File bytes handling |
-//! | `on_suspend()` | App suspended (Android) | Release resources |
-//! | `on_resume()` | App resumed (Android) | Restore resources |
-//! | `next_state()` | Every frame | State transitions |
+//! | `pre_render()` | Each frame before render | Custom GPU uploads |
+//!
+//! Input, file-drop, gamepad, and lifecycle events arrive on
+//! `world.resources.input.events` as [`AppEvent`](crate::ecs::input::events::AppEvent)
+//! values. Drain them in [`State::run_systems`].
+//!
+//! To transition to a different `State`, set
+//! `world.resources.window.next_state = Some(Box::new(NewState))` from inside
+//! `run_systems`; the engine takes it at the end of the frame.
 //!
 //! # Typical Initialize Pattern
 //!
@@ -65,14 +64,14 @@
 //!
 //! # State Transitions
 //!
-//! Switch between game states (menu, gameplay, pause) via `next_state()`:
+//! Switch between game states (menu, gameplay, pause) by writing to the
+//! `next_state` field of the [`Window`](crate::ecs::window::resources::Window)
+//! resource from inside [`State::run_systems`]:
 //!
 //! ```ignore
-//! fn next_state(&mut self, world: &mut World) -> Option<Box<dyn State>> {
+//! fn run_systems(&mut self, world: &mut World) {
 //!     if self.should_go_to_menu {
-//!         Some(Box::new(MenuState::default()))
-//!     } else {
-//!         None  // Stay in current state
+//!         world.resources.window.next_state = Some(Box::new(MenuState::default()));
 //!     }
 //! }
 //! ```
@@ -133,7 +132,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
     let (log_config, log_file_name) = {
-        let config = state.log_config();
+        let config = world.resources.window.log_config.clone();
         let file_name = log_file_name(&world.resources.window.title, &config);
         (config, file_name)
     };
@@ -380,6 +379,34 @@ fn sync_window_title(world: &mut World) {
 #[cfg(target_arch = "wasm32")]
 fn sync_window_title(_world: &mut World) {}
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "assets"))]
+fn sync_window_icon(world: &mut World) {
+    let current = world.resources.window.icon_bytes;
+    let applied = world.resources.window.applied_icon_bytes;
+    let unchanged = match (current, applied) {
+        (None, None) => true,
+        (Some(left), Some(right)) => std::ptr::eq(left.as_ptr(), right.as_ptr()),
+        _ => false,
+    };
+    if unchanged {
+        return;
+    }
+    let Some(handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    let icon = current.and_then(|bytes| {
+        let image = image::load_from_memory(bytes).ok()?;
+        let rgba = image.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        winit::window::Icon::from_rgba(rgba.into_raw(), width, height).ok()
+    });
+    handle.set_window_icon(icon);
+    world.resources.window.applied_icon_bytes = current;
+}
+
+#[cfg(any(target_arch = "wasm32", not(feature = "assets")))]
+fn sync_window_icon(_world: &mut World) {}
+
 pub(crate) fn step(
     world: &mut World,
     state: &mut Box<dyn State + 'static>,
@@ -391,6 +418,7 @@ pub(crate) fn step(
 
     sync_min_window_size(world);
     sync_window_title(world);
+    sync_window_icon(world);
     if matches!(event, WindowEvent::RedrawRequested) {
         throttle_to_frame_rate_limit(world);
     }
@@ -402,7 +430,7 @@ pub(crate) fn step(
 
             #[cfg(feature = "gamepad")]
             crate::ecs::input::systems::gamepad_input_system(world);
-            process_dropped_files(world, state);
+            process_dropped_files(world);
 
             if let Some(renderer) = renderer.as_mut() {
                 renderer.initialize_fonts(world);
@@ -415,20 +443,21 @@ pub(crate) fn step(
             {
                 let gamepad_events = world.resources.input.gamepad.events.clone();
                 for event in gamepad_events {
-                    state.on_gamepad_event(world, event);
+                    world
+                        .resources
+                        .input
+                        .events
+                        .push(crate::ecs::input::events::AppEvent::Gamepad(event));
                 }
             }
 
             crate::ecs::graphics::systems::day_night_cycle_system(world);
             state.run_systems(world);
-
-            crate::ecs::event_bus::systems::process_events_system(world, |world, message| {
-                state.handle_event(world, message);
-            });
+            world.resources.input.events.clear();
 
             run_frame_systems(world);
 
-            if let Some(new_state) = state.next_state(world) {
+            if let Some(new_state) = world.resources.window.next_state.take() {
                 return Some(new_state);
             }
 
@@ -471,7 +500,7 @@ pub(crate) fn step(
             None
         }
         event => {
-            forward_window_events(world, state, event);
+            forward_window_events(world, event);
             None
         }
     }
@@ -949,7 +978,7 @@ fn collect_directory_files(
     }
 }
 
-fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>) {
+fn process_dropped_files(world: &mut World) {
     #[cfg(target_arch = "wasm32")]
     {
         WASM_DROPPED_FILES.with(|files| {
@@ -962,8 +991,12 @@ fn process_dropped_files(world: &mut World, state: &mut Box<dyn State + 'static>
     }
 
     let dropped_files: Vec<_> = world.resources.loading.dropped_files.drain(..).collect();
-    if !dropped_files.is_empty() {
-        state.on_dropped_files(world, &dropped_files);
+    for file in dropped_files {
+        world
+            .resources
+            .input
+            .events
+            .push(crate::ecs::input::events::AppEvent::FileDropped(file));
     }
 }
 
@@ -1108,11 +1141,9 @@ async fn read_file_entry(
     })
 }
 
-fn forward_window_events(
-    world: &mut World,
-    state: &mut Box<dyn State + 'static>,
-    event: &WindowEvent,
-) {
+fn forward_window_events(world: &mut World, event: &WindowEvent) {
+    use crate::ecs::input::events::AppEvent;
+
     match event {
         WindowEvent::DroppedFile(path) => {
             #[cfg(not(target_arch = "wasm32"))]
@@ -1121,24 +1152,50 @@ fn forward_window_events(
                     let mut files = Vec::new();
                     collect_directory_files(path, path, &mut files);
                     if files.is_empty() {
-                        state.on_dropped_file(world, path);
+                        world
+                            .resources
+                            .input
+                            .events
+                            .push(AppEvent::FileDroppedPath(path.clone()));
                     } else {
-                        state.on_dropped_files(world, &files);
+                        for file in files {
+                            world
+                                .resources
+                                .input
+                                .events
+                                .push(AppEvent::FileDropped(file));
+                        }
                     }
                 } else {
-                    state.on_dropped_file(world, path);
+                    world
+                        .resources
+                        .input
+                        .events
+                        .push(AppEvent::FileDroppedPath(path.clone()));
                 }
             }
             #[cfg(target_arch = "wasm32")]
             {
-                state.on_dropped_file(world, path);
+                world
+                    .resources
+                    .input
+                    .events
+                    .push(AppEvent::FileDroppedPath(path.clone()));
             }
         }
         WindowEvent::HoveredFile(path) => {
-            state.on_hovered_file(world, path);
+            world
+                .resources
+                .input
+                .events
+                .push(AppEvent::FileHovered(path.clone()));
         }
         WindowEvent::HoveredFileCancelled => {
-            state.on_hovered_file_cancelled(world);
+            world
+                .resources
+                .input
+                .events
+                .push(AppEvent::FileHoverCancelled);
         }
         _ => {}
     }
@@ -1168,7 +1225,10 @@ fn forward_window_events(
         ..
     } = event
     {
-        state.on_keyboard_input(world, *key_code, *key_state);
+        world.resources.input.events.push(AppEvent::Keyboard {
+            key: *key_code,
+            state: *key_state,
+        });
     }
 
     if let WindowEvent::MouseInput {
@@ -1177,7 +1237,10 @@ fn forward_window_events(
         ..
     } = event
     {
-        state.on_mouse_input(world, *mouse_state, *button);
+        world.resources.input.events.push(AppEvent::Mouse {
+            button: *button,
+            state: *mouse_state,
+        });
     }
 }
 
@@ -1248,20 +1311,8 @@ pub fn log_file_name(title: &str, config: &LogConfig) -> String {
 /// Implement this trait to define your application behavior. The engine calls
 /// these methods at appropriate points in the frame loop.
 pub trait State {
-    /// Logging configuration (desktop only, requires `tracing` feature).
-    fn log_config(&self) -> LogConfig {
-        LogConfig::default()
-    }
-    /// Window icon as PNG bytes (desktop only).
-    fn icon_bytes(&self) -> Option<&'static [u8]> {
-        Some(include_bytes!("../images/icon.png"))
-    }
     /// Called once after the renderer is created to set up the initial scene.
     fn initialize(&mut self, _world: &mut World) {}
-    /// Returns a new state to transition to, or None to continue with current state.
-    fn next_state(&mut self, _world: &mut World) -> Option<Box<dyn State>> {
-        None
-    }
     fn configure_render_graph(
         &mut self,
         _: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
@@ -1284,51 +1335,6 @@ pub trait State {
         &mut self,
         _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
         _world: &World,
-    ) {
-    }
-    /// Handle events from the event bus.
-    fn handle_event(&mut self, _world: &mut World, _message: &crate::ecs::world::events::Message) {}
-    /// Handle keyboard input (not consumed by UI).
-    fn on_keyboard_input(
-        &mut self,
-        _world: &mut World,
-        _key_code: winit::keyboard::KeyCode,
-        _key_state: winit::event::ElementState,
-    ) {
-    }
-    /// Handle file dropped onto window (desktop only, provides path).
-    fn on_dropped_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
-    /// Handle file dropped onto window (web-compatible, provides data).
-    fn on_dropped_file_data(&mut self, _world: &mut World, _name: &str, _data: &[u8]) {}
-    /// Handle a batch of files dropped together. Default delegates to
-    /// `on_dropped_file_data` per file. Override to handle multi-file formats
-    /// like `.gltf` plus external `.bin` and texture files.
-    fn on_dropped_files(
-        &mut self,
-        world: &mut World,
-        files: &[crate::ecs::input::resources::DroppedFile],
-    ) {
-        for file in files {
-            self.on_dropped_file_data(world, &file.name, &file.data);
-        }
-    }
-    /// Handle file hover over window.
-    fn on_hovered_file(&mut self, _world: &mut World, _path: &std::path::Path) {}
-    /// Handle file hover cancelled.
-    fn on_hovered_file_cancelled(&mut self, _world: &mut World) {}
-    /// Handle gamepad events (requires `gamepad` feature).
-    #[cfg(feature = "gamepad")]
-    fn on_gamepad_event(&mut self, _world: &mut World, _event: gilrs::Event) {}
-    /// Called when the application is suspended (Android lifecycle).
-    fn on_suspend(&mut self, _world: &mut World) {}
-    /// Called when the application is resumed (Android lifecycle).
-    fn on_resume(&mut self, _world: &mut World) {}
-    /// Handle mouse button input (not consumed by UI).
-    fn on_mouse_input(
-        &mut self,
-        _world: &mut World,
-        _state: winit::event::ElementState,
-        _button: winit::event::MouseButton,
     ) {
     }
 }
@@ -1354,7 +1360,11 @@ pub struct WindowContext {
 
 impl winit::application::ApplicationHandler for WindowContext {
     fn suspended(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
-        self.state.on_suspend(&mut self.world);
+        self.world
+            .resources
+            .input
+            .events
+            .push(crate::ecs::input::events::AppEvent::Suspended);
         self.renderer = None;
         self.world.resources.window.handle = None;
     }
@@ -1375,7 +1385,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .with_min_inner_size(winit::dpi::LogicalSize::new(400.0, 300.0));
 
             #[cfg(feature = "assets")]
-            if let Some(icon_bytes) = self.state.icon_bytes()
+            if let Some(icon_bytes) = self.world.resources.window.icon_bytes
                 && let Ok(icon_image) = image::load_from_memory(icon_bytes)
             {
                 let icon_rgba = icon_image.to_rgba8();
@@ -1386,6 +1396,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                     attributes = attributes.with_window_icon(Some(icon));
                 }
             }
+            self.world.resources.window.applied_icon_bytes = self.world.resources.window.icon_bytes;
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -1509,7 +1520,11 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.initialized = true;
             }
 
-            self.state.on_resume(&mut self.world);
+            self.world
+                .resources
+                .input
+                .events
+                .push(crate::ecs::input::events::AppEvent::Resumed);
 
             if self.world.resources.graphics.use_fullscreen
                 && let Some(window_handle) = &self.world.resources.window.handle
