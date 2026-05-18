@@ -11,7 +11,7 @@
 
 `Nightshade` is a data-oriented game engine written in rust 🦀
 
-<img width="2124" height="1440" alt="demo" src="https://github.com/user-attachments/assets/b476d112-c10e-40c3-8dd3-2816153c2a32" />
+<img alt="nightshade" src="crates/nightshade/images/hero.png" />
 <img width="2560" height="1440" alt="Screenshot 2025-12-28 121420" src="https://github.com/user-attachments/assets/5ac1e414-a615-4ceb-ac58-0e209cba60f1" />
 
 ## Documentation
