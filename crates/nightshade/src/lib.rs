@@ -503,12 +503,15 @@ pub mod filesystem;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
+pub mod logging;
 #[cfg(feature = "runtime")]
 pub mod render;
 #[cfg(feature = "runtime")]
 pub mod run;
 #[cfg(feature = "runtime")]
 pub mod schedule;
+#[cfg(feature = "runtime")]
+pub mod state;
 #[cfg(feature = "runtime")]
 mod systems;
 
@@ -536,6 +539,7 @@ pub mod prelude {
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
+    pub use crate::logging::{LogConfig, LogRotation};
     pub use crate::run::*;
     pub use crate::schedule::{
         FrameSchedule, FrameScheduleEntry, Schedules, SystemFn, build_default_retained_ui_schedule,
@@ -543,6 +547,7 @@ pub mod prelude {
         schedule_insert_after, schedule_insert_before, schedule_push, schedule_remove,
         schedule_run, system_names,
     };
+    pub use crate::state::{NextStateBuilder, RenderResources, State};
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

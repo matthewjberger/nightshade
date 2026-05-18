@@ -38,8 +38,10 @@
 //! values. Drain them in [`State::run_systems`].
 //!
 //! To transition to a different `State`, set
-//! `world.resources.window.next_state = Some(Box::new(NewState))` from inside
-//! `run_systems`; the engine takes it at the end of the frame.
+//! `world.resources.window.next_state = Some(Box::new(|world| Box::new(NewState::new(world))))`
+//! from inside `run_systems`; the engine takes the builder at the end of the
+//! frame and invokes it with `&mut World` so the new state can be constructed
+//! against the live world.
 //!
 //! # Typical Initialize Pattern
 //!
@@ -64,14 +66,17 @@
 //!
 //! # State Transitions
 //!
-//! Switch between game states (menu, gameplay, pause) by writing to the
-//! `next_state` field of the [`Window`](crate::ecs::window::resources::Window)
-//! resource from inside [`State::run_systems`]:
+//! Switch between game states (menu, gameplay, pause) by writing a builder
+//! closure to the `next_state` field of the
+//! [`Window`](crate::ecs::window::resources::Window) resource from inside
+//! [`State::run_systems`]. The closure receives `&mut World` so the new state
+//! can be constructed against live engine data.
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
 //!     if self.should_go_to_menu {
-//!         world.resources.window.next_state = Some(Box::new(MenuState::default()));
+//!         world.resources.window.next_state =
+//!             Some(Box::new(|_world| Box::new(MenuState::default())));
 //!     }
 //! }
 //! ```
@@ -84,35 +89,10 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
-/// Resource IDs for render graph configuration.
-///
-/// Provided to [`State::configure_render_graph`] for custom pass setup.
-pub struct RenderResources {
-    /// Main HDR scene color target.
-    pub scene_color: crate::render::wgpu::rendergraph::ResourceId,
-    /// Depth buffer (reverse-Z format).
-    pub depth: crate::render::wgpu::rendergraph::ResourceId,
-    /// Compute shader output texture.
-    pub compute_output: crate::render::wgpu::rendergraph::ResourceId,
-    /// Final swapchain output.
-    pub swapchain: crate::render::wgpu::rendergraph::ResourceId,
-    /// View-space normals for SSAO.
-    pub view_normals: crate::render::wgpu::rendergraph::ResourceId,
-    /// Raw SSAO output before blur.
-    pub ssao_raw: crate::render::wgpu::rendergraph::ResourceId,
-    /// Blurred SSAO output.
-    pub ssao: crate::render::wgpu::rendergraph::ResourceId,
-    /// Raw SSGI output before blur.
-    pub ssgi_raw: crate::render::wgpu::rendergraph::ResourceId,
-    /// Blurred SSGI output.
-    pub ssgi: crate::render::wgpu::rendergraph::ResourceId,
-    /// Raw SSR output before blur.
-    pub ssr_raw: crate::render::wgpu::rendergraph::ResourceId,
-    /// Blurred SSR output.
-    pub ssr: crate::render::wgpu::rendergraph::ResourceId,
-    pub surface_width: u32,
-    pub surface_height: u32,
-}
+#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
+pub use crate::logging::log_file_name;
+pub use crate::logging::{LogConfig, LogRotation};
+pub use crate::state::{NextStateBuilder, RenderResources, State};
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
@@ -457,8 +437,8 @@ pub(crate) fn step(
 
             run_frame_systems(world);
 
-            if let Some(new_state) = world.resources.window.next_state.take() {
-                return Some(new_state);
+            if let Some(builder) = world.resources.window.next_state.take() {
+                return Some(builder(world));
             }
 
             let window_handle = world.resources.window.handle.as_ref()?;
@@ -1244,101 +1224,6 @@ fn forward_window_events(world: &mut World, event: &WindowEvent) {
     }
 }
 
-/// Controls how log files are rotated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LogRotation {
-    /// New log file each application launch (timestamp in filename).
-    PerSession,
-    /// One log file per day.
-    Daily,
-    /// Single log file, appended to on each launch.
-    Never,
-}
-
-/// Configuration for file-based logging (desktop only, requires `tracing` feature).
-#[derive(Debug, Clone)]
-pub struct LogConfig {
-    /// Directory for log files (relative to working directory).
-    pub directory: String,
-    /// Log rotation strategy.
-    pub rotation: LogRotation,
-    /// Default `RUST_LOG` filter when the environment variable is not set.
-    pub default_filter: String,
-    /// chrono format string for per-session log timestamps.
-    /// Default: `"%Y-%m-%d_%H-%M-%S"` produces `2026-03-04_14-30-00`.
-    pub timestamp_format: String,
-}
-
-impl Default for LogConfig {
-    fn default() -> Self {
-        Self {
-            directory: "logs".to_string(),
-            rotation: LogRotation::PerSession,
-            default_filter: "info".to_string(),
-            timestamp_format: "%Y-%m-%d_%H-%M-%S".to_string(),
-        }
-    }
-}
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
-pub fn log_file_name(title: &str, config: &LogConfig) -> String {
-    let sanitized: String = title
-        .chars()
-        .map(|character| {
-            if character.is_alphanumeric() || character == '-' || character == '_' {
-                character
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    let base_name = if sanitized.is_empty() {
-        "app".to_string()
-    } else {
-        sanitized.to_lowercase()
-    };
-    match config.rotation {
-        LogRotation::PerSession => {
-            let timestamp = chrono::Local::now().format(&config.timestamp_format);
-            format!("{base_name}_{timestamp}.log")
-        }
-        LogRotation::Daily | LogRotation::Never => format!("{base_name}.log"),
-    }
-}
-
-/// Application state trait for game logic and rendering.
-///
-/// Implement this trait to define your application behavior. The engine calls
-/// these methods at appropriate points in the frame loop.
-pub trait State {
-    /// Called once after the renderer is created to set up the initial scene.
-    fn initialize(&mut self, _world: &mut World) {}
-    fn configure_render_graph(
-        &mut self,
-        _: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
-        _: &wgpu::Device,
-        _: wgpu::TextureFormat,
-        _: RenderResources,
-    ) {
-    }
-    /// Called every frame to run game logic.
-    fn run_systems(&mut self, _world: &mut World) {}
-    /// Called before main rendering to allow custom world rendering.
-    fn pre_render(
-        &mut self,
-        _renderer: &mut crate::render::wgpu::WgpuRenderer,
-        _world: &mut World,
-    ) {
-    }
-    /// Update render graph state each frame.
-    fn update_render_graph(
-        &mut self,
-        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
-        _world: &World,
-    ) {
-    }
-}
-
 /// Application context for the winit event loop.
 pub struct WindowContext {
     /// The ECS world containing all game state.
@@ -1396,6 +1281,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                     attributes = attributes.with_window_icon(Some(icon));
                 }
             }
+            self.world.resources.window.applied_title =
+                Some(self.world.resources.window.title.clone());
             self.world.resources.window.applied_icon_bytes = self.world.resources.window.icon_bytes;
         }
 
