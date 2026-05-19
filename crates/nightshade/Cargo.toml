@@ -11,6 +11,15 @@ categories = ["game-engines", "graphics", "rendering::engine"]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+exclude = [
+    "images/apps/*",
+    "images/gallery/*",
+    "images/hero.png",
+    "images/dragon-attenuation.png",
+    "images/live-demo.png",
+    "images/logo2.png",
+    "images/logo2.svg",
+]
 
 [features]
 default = ["engine", "wgpu"]
