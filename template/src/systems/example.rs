@@ -6,6 +6,9 @@ use nightshade::prelude::*;
 /// engine's renderer-visible world. Add more files in `src/systems/` and
 /// register them in `src/systems.rs` to grow your game.
 pub fn tick(template_world: &mut TemplateWorld, _world: &mut World) {
-    template_world.resources.example.frame_count =
-        template_world.resources.example.frame_count.saturating_add(1);
+    template_world.resources.example.frame_count = template_world
+        .resources
+        .example
+        .frame_count
+        .saturating_add(1);
 }
