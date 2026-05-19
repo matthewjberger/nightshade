@@ -231,7 +231,6 @@ fn resolve_one_material(
         clearcoat: lookup(&material.clearcoat_texture),
         clearcoat_roughness: lookup(&material.clearcoat_roughness_texture),
         clearcoat_normal: lookup(&material.clearcoat_normal_texture),
-        scatter_color: lookup(&material.scatter_color_texture),
     };
     if slot >= registry.texture_ids.len() {
         registry
@@ -425,12 +424,6 @@ fn compute_material_content_hash(material: &Material) -> u64 {
         &mut hasher,
     );
     material.dispersion.to_bits().hash(&mut hasher);
-    for component in &material.scatter_color_factor {
-        component.to_bits().hash(&mut hasher);
-    }
-    material.scatter_color_texture.hash(&mut hasher);
-    hash_texture_transform(&material.scatter_color_texture_transform, &mut hasher);
-    material.scatter_anisotropy.to_bits().hash(&mut hasher);
     material.anisotropy_strength.to_bits().hash(&mut hasher);
     material.anisotropy_rotation.to_bits().hash(&mut hasher);
     material.anisotropy_texture.hash(&mut hasher);
