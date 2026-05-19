@@ -14,15 +14,17 @@
 <img alt="nightshade" src="crates/nightshade/images/hero.png" />
 <img width="2560" height="1440" alt="Screenshot 2025-12-28 121420" src="https://github.com/user-attachments/assets/5ac1e414-a615-4ceb-ac58-0e209cba60f1" />
 
+<img alt="dragon attenuation" src="crates/nightshade/images/dragon-attenuation.png" />
+
 ## Documentation
 
 📖 **[Read the Book](https://matthewjberger.github.io/nightshade/book/)** - Comprehensive guide covering all engine systems.
 
-## Gallery
+## Live Demo
 
-[View the gallery here](https://matthewberger.dev/nightshade) 🔎
- 
-<img width="1238" height="1346" alt="image" src="https://github.com/user-attachments/assets/dcfab536-f067-4988-b3f5-d8839444aaea" />
+[Try the editor in your browser](https://matthewberger.dev/nightshade) 🔎
+
+<img alt="live demo" src="crates/nightshade/images/live-demo.png" />
 
 ## Getting Started
 
