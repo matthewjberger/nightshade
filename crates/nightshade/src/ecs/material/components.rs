@@ -435,7 +435,7 @@ fn default_diffuse_transmission_color() -> [f32; 3] {
 }
 
 fn default_scatter_color() -> [f32; 3] {
-    [1.0, 1.0, 1.0]
+    [0.0, 0.0, 0.0]
 }
 
 fn default_iridescence_ior() -> f32 {
@@ -537,7 +537,7 @@ impl Default for Material {
             diffuse_transmission_color_texture: None,
             diffuse_transmission_color_texture_transform: TextureTransform::IDENTITY,
             dispersion: 0.0,
-            scatter_color_factor: [1.0, 1.0, 1.0],
+            scatter_color_factor: [0.0, 0.0, 0.0],
             scatter_color_texture: None,
             scatter_color_texture_transform: TextureTransform::IDENTITY,
             scatter_anisotropy: 0.0,
