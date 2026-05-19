@@ -27,55 +27,38 @@
 - Scene authoring editor that runs natively or in the browser, with multi-viewport docking, gizmos, undo, and a Khronos sample browser.
 - Same code path on native and web. Native uses DX12 / Metal / Vulkan, the browser uses WebGPU.
 
-## Hello, Nightshade
-
-```rust
-use nightshade::prelude::*;
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(SpinCube::default())
-}
-
-#[derive(Default)]
-struct SpinCube {
-    cube: Option<Entity>,
-    time: f32,
-}
-
-impl State for SpinCube {
-    fn initialize(&mut self, world: &mut World) {
-        world.resources.graphics.atmosphere = Atmosphere::Nebula;
-        capture_procedural_atmosphere_ibl(world, Atmosphere::Nebula, 0.0);
-        let camera = spawn_pan_orbit_camera(
-            world,
-            Vec3::zeros(), 5.0, 0.5, 0.3,
-            "Camera".to_string(),
-        );
-        world.resources.active_camera = Some(camera);
-        spawn_sun(world);
-        self.cube = Some(spawn_mesh_at(world, "Cube", Vec3::zeros(), Vec3::new(1.0, 1.0, 1.0)));
-    }
-
-    fn run_systems(&mut self, world: &mut World) {
-        pan_orbit_camera_system(world);
-        self.time += world.resources.window.timing.delta_time;
-        if let Some(entity) = self.cube
-            && let Some(transform) = world.core.get_local_transform_mut(entity)
-        {
-            transform.rotation = nalgebra_glm::quat_angle_axis(self.time, &Vec3::y_axis());
-            mark_local_transform_dirty(world, entity);
-        }
-    }
-}
-```
-
-The full annotated version with three objects, materials, and animation lives in the [book's interactive demo](https://matthewjberger.github.io/nightshade/book/interactive-demo.html).
-
 ## Live Demo
 
 [Try the editor in your browser](https://matthewberger.dev/nightshade). Requires a WebGPU-capable browser (Chromium 113+, Firefox 141+, Safari Technology Preview 18+).
 
 <img alt="Nightshade editor running in the browser" src="crates/nightshade/images/live-demo.png" />
+
+## Apps
+
+Example apps in [`apps/`](apps/) that exercise the engine end-to-end. Each app is buildable with `just run <name>`.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/winter.png" alt="winter" width="100%" />
+<br><b><a href="apps/winter">winter</a></b>
+<br><sub>Outdoor snow scene. Atmospheric lighting, large terrain, animated foliage, animated characters.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/navmesh.png" alt="navmesh" width="100%" />
+<br><b><a href="apps/navmesh">navmesh</a></b>
+<br><sub>Terrain, grass, and pathfinding. Heightmap-driven grass regions, navmesh baking, AI navigation.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/fireworks.png" alt="fireworks" width="100%" />
+<br><b><a href="apps/fireworks">fireworks</a></b>
+<br><sub>GPU particle system. Bursts, chrysanthemums, rings, glitter, and patterned shape emitters.</sub>
+</td>
+<td width="50%" valign="top"></td>
+</tr>
+</table>
 
 ## glTF Showcase
 
@@ -151,32 +134,51 @@ Anisotropic GGX, thin-film iridescence, sheen, and clearcoat layers stacked on t
 </tr>
 </table>
 
-## Apps
+## Hello, Nightshade
 
-Example apps in [`apps/`](apps/) that exercise the engine end-to-end. Each app is buildable with `just run <name>`.
+```rust
+use nightshade::prelude::*;
 
-<table>
-<tr>
-<td width="50%" valign="top">
-<img src="crates/nightshade/images/apps/winter.png" alt="winter" width="100%" />
-<br><b><a href="apps/winter">winter</a></b>
-<br><sub>Outdoor snow scene. Atmospheric lighting, large terrain, animated foliage, animated characters.</sub>
-</td>
-<td width="50%" valign="top">
-<img src="crates/nightshade/images/apps/navmesh.png" alt="navmesh" width="100%" />
-<br><b><a href="apps/navmesh">navmesh</a></b>
-<br><sub>Terrain, grass, and pathfinding. Heightmap-driven grass regions, navmesh baking, AI navigation.</sub>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-<img src="crates/nightshade/images/apps/fireworks.png" alt="fireworks" width="100%" />
-<br><b><a href="apps/fireworks">fireworks</a></b>
-<br><sub>GPU particle system. Bursts, chrysanthemums, rings, glitter, and patterned shape emitters.</sub>
-</td>
-<td width="50%" valign="top"></td>
-</tr>
-</table>
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    launch(SpinCube::default())
+}
+
+#[derive(Default)]
+struct SpinCube {
+    cube: Option<Entity>,
+    time: f32,
+}
+
+impl State for SpinCube {
+    fn initialize(&mut self, world: &mut World) {
+        world.resources.graphics.atmosphere = Atmosphere::Nebula;
+        capture_procedural_atmosphere_ibl(world, Atmosphere::Nebula, 0.0);
+        let camera = spawn_pan_orbit_camera(
+            world,
+            Vec3::zeros(), 5.0, 0.5, 0.3,
+            "Camera".to_string(),
+        );
+        world.resources.active_camera = Some(camera);
+        spawn_sun(world);
+        self.cube = Some(spawn_mesh_at(world, "Cube", Vec3::zeros(), Vec3::new(1.0, 1.0, 1.0)));
+    }
+
+    fn run_systems(&mut self, world: &mut World) {
+        pan_orbit_camera_system(world);
+        self.time += world.resources.window.timing.delta_time;
+        if let Some(entity) = self.cube
+            && let Some(transform) = world.core.get_local_transform_mut(entity)
+        {
+            transform.rotation = nalgebra_glm::quat_angle_axis(self.time, &Vec3::y_axis());
+            mark_local_transform_dirty(world, entity);
+        }
+    }
+}
+```
+
+The full annotated version with three objects, materials, and animation lives in the [book's interactive demo](https://matthewjberger.github.io/nightshade/book/interactive-demo.html).
+
+The fastest way to bootstrap a new project is the [nightshade-template](https://github.com/matthewjberger/nightshade-template), which scaffolds the right dependencies, justfile, and trunk config out of the box.
 
 ## Quickstart
 
@@ -195,40 +197,57 @@ cd site && just serve   # full local site with editor + book
 
 Run `just` with no arguments to list every recipe.
 
-## Crate Features
-
-Nightshade is split into composable cargo features so apps only pay for what they use.
-
-```
-nightshade features:
-├── core ─────────────── windowing, math, ECS, time
-├── text ─────────────── 3D text rendering (cosmic-text + swash)
-├── behaviors ────────── stateless WASM-compatible entity behaviors
-├── assets ───────────── asset loading (gltf, image, bincode, lz4)
-├── runtime ──────────── core + text + behaviors
-├── engine (default) ─── runtime + assets + scene_graph + terrain + picking + file_dialog + more
-├── full ─────────────── engine + audio + physics + gamepad + navmesh
-│
-│ Add-on features:
-├── wgpu ─────────────── GPU rendering (DX12, Metal, Vulkan, WebGPU)
-├── audio ────────────── audio playback (kira)
-├── physics ──────────── 3D physics (rapier3d)
-├── gamepad ──────────── controller input (gilrs)
-├── navmesh ──────────── navigation mesh (rerecast)
-├── grass ────────────── GPU grass rendering
-├── terrain ──────────── procedural terrain generation
-└── steam ────────────── Steam integration
-```
-
-The fastest way to bootstrap a new project is the [nightshade-template](https://github.com/matthewjberger/nightshade-template).
-
 ## Documentation
 
 - 📖 [Book](https://matthewjberger.github.io/nightshade/book/) - architecture, systems, and tutorials
 - 🦀 [docs.rs](https://docs.rs/nightshade) - generated API reference
-- 🛠️ [STEAM_DECK.md](docs/STEAM_DECK.md) - Steam Deck deployment
-- 🎮 [STEAM.md](docs/STEAM.md) - Steam integration (achievements, stats, friends)
+- 📚 [USAGE.md](docs/USAGE.md) - engine usage, conventions, gotchas
+- 🧪 [UI_TESTING.md](docs/UI_TESTING.md) - retained UI test driver
 - 📊 [PROFILING.md](docs/PROFILING.md) - tracing, tracy, chrome-trace
+- 🎮 [STEAM.md](docs/STEAM.md) - Steam integration (achievements, stats, friends)
+- 🛠️ [STEAM_DECK.md](docs/STEAM_DECK.md) - Steam Deck deployment
+- 🚀 [RELEASES.md](docs/RELEASES.md) - release process
+- 📜 [LICENSING.md](docs/LICENSING.md) - third-party license notes
+- 🤝 [CONTRIBUTING.md](docs/CONTRIBUTING.md) - contributor guidelines (when contributions open)
+
+## Crate Features
+
+Nightshade is split into composable cargo features so apps only pay for what they use. `default = ["engine", "wgpu"]`.
+
+```
+Composite:
+├── core ─────────────── ECS, math, windowing, time
+├── runtime ──────────── core + text
+├── engine (default) ── runtime + assets + scene_graph + picking + file_dialog + screenshot
+└── full ─────────────── engine + wgpu + shell + audio + physics + gamepad + navmesh
+
+Building blocks:
+├── assets ───────────── glTF / image / bincode / lz4 asset loading
+├── text ─────────────── 3D text rendering (cosmic-text)
+├── scene_graph ──────── ECS scene round-trip
+├── picking ──────────── entity picking
+├── file_dialog ──────── native open/save dialogs (rfd)
+├── file_watcher ─────── live asset reload (notify)
+├── screenshot ───────── capture viewport to PNG
+├── shell ────────────── in-game shell commands
+└── gizmos ───────────── translate / rotate / scale gizmos
+
+Renderer & subsystems:
+├── wgpu ─────────────── GPU rendering (DX12 / Metal / Vulkan / WebGPU)
+├── audio ────────────── audio playback (kira)
+├── physics ──────────── 3D physics (rapier3d)
+├── gamepad ──────────── controller input (gilrs)
+├── navmesh ──────────── runtime navmesh queries
+├── navmesh-bake ─────── navmesh baking (rerecast)
+├── debug_render ─────── line / shape debug overlays
+├── steam ────────────── Steam integration (steamworks)
+└── windows-app-icon ── embed app icon on Windows
+
+Profiling:
+├── tracing ──────────── tracing-subscriber logging
+├── tracy ────────────── Tracy profiler integration
+└── chrome ───────────── chrome-trace output
+```
 
 ## Maintainer Tools
 
