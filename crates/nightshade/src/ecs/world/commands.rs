@@ -67,6 +67,7 @@ pub struct CommandQueues {
     pub render: Vec<RenderCommand>,
 }
 
+/// Spawn `count` entities in the `core` archetype with the supplied component mask.
 pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<Entity> {
     let entities = world.spawn_count(count);
     for &entity in &entities {
@@ -75,6 +76,7 @@ pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<En
     entities
 }
 
+/// Spawn `count` entities in the retained-UI archetype with the supplied component mask.
 pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<Entity> {
     let entities = world.spawn_count(count);
     for &entity in &entities {
@@ -83,14 +85,17 @@ pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<E
     entities
 }
 
+/// Queue an [`EcsCommand`] to be drained by `process_commands_system` later in the frame schedule.
 pub fn queue_ecs_command(world: &mut World, command: EcsCommand) {
     world.resources.commands.ecs.push(command);
 }
 
+/// Queue a [`RenderCommand`] to be drained by the renderer at frame setup.
 pub fn queue_render_command(world: &mut World, command: RenderCommand) {
     world.resources.commands.render.push(command);
 }
 
+/// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
 pub fn set_cursor_locked(world: &mut World, locked: bool) {
     if let Some(window_handle) = &world.resources.window.handle {
         if locked {
@@ -106,12 +111,14 @@ pub fn set_cursor_locked(world: &mut World, locked: bool) {
     }
 }
 
+/// Show or hide the OS cursor.
 pub fn set_cursor_visible(world: &mut World, visible: bool) {
     if let Some(window_handle) = &world.resources.window.handle {
         window_handle.set_cursor_visible(visible);
     }
 }
 
+/// Insert a material into the registry, ref-count it, and attach it to `entity` via [`MaterialRef`].
 pub fn register_material(
     world: &mut World,
     entity: Entity,
@@ -256,6 +263,8 @@ fn query_descendents(world: &World, target_entity: Entity) -> Vec<Entity> {
     descendents
 }
 
+/// Despawn a batch of entities and clean up cached references (textures, materials, meshes).
+/// Does not walk the hierarchy; use [`despawn_recursive_immediate`] or [`EcsCommand::DespawnRecursive`] for that.
 pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     let mut has_parent_entities = false;
     let is_runtime = world.resources.is_runtime;
@@ -359,6 +368,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
     world.despawn_entities(entities);
 }
 
+/// Despawn `entity` and all of its descendants immediately (no deferral).
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     if !world.resources.transform_state.children_cache_valid {
         validate_and_rebuild_children_cache(world);
@@ -367,6 +377,7 @@ pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     despawn_entities_with_cache_cleanup(world, &descendents);
 }
 
+/// Spawn a default directional light positioned above the origin, with shadows enabled.
 pub fn spawn_sun(world: &mut World) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
@@ -422,6 +433,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
     entity
 }
 
+/// Spawn a directional light positioned above the origin without shadow casting.
 pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
@@ -474,6 +486,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     entity
 }
 
+/// Spawn an entity that references `mesh_name` in the mesh cache, with default material, at `position` scaled by `scale`.
 pub fn spawn_mesh_at(
     world: &mut World,
     mesh_name: &str,
@@ -589,6 +602,7 @@ pub fn spawn_mesh_at(
     entity
 }
 
+/// Spawn a unit cube mesh at `position` with the default material.
 pub fn spawn_cube_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -598,6 +612,7 @@ pub fn spawn_cube_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity 
     )
 }
 
+/// Spawn a unit sphere mesh at `position` with the default material.
 pub fn spawn_sphere_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -607,6 +622,7 @@ pub fn spawn_sphere_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entit
     )
 }
 
+/// Spawn a unit cylinder mesh at `position` with the default material.
 pub fn spawn_cylinder_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -616,6 +632,7 @@ pub fn spawn_cylinder_at(world: &mut World, position: nalgebra_glm::Vec3) -> Ent
     )
 }
 
+/// Spawn a torus mesh at `position` with the default material.
 pub fn spawn_torus_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -625,6 +642,7 @@ pub fn spawn_torus_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity
     )
 }
 
+/// Spawn a cone mesh at `position` with the default material.
 pub fn spawn_cone_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -634,6 +652,7 @@ pub fn spawn_cone_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity 
     )
 }
 
+/// Spawn a unit-sized plane mesh at `position` with the default material.
 pub fn spawn_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity {
     spawn_mesh_at(
         world,
@@ -643,6 +662,7 @@ pub fn spawn_plane_at(world: &mut World, position: nalgebra_glm::Vec3) -> Entity
     )
 }
 
+/// Spawn a 3D text entity at `position` with the supplied text and properties.
 pub fn spawn_3d_text_with_properties(
     world: &mut World,
     text: &str,
@@ -652,6 +672,7 @@ pub fn spawn_3d_text_with_properties(
     spawn_3d_text_impl(world, text, position, properties, false)
 }
 
+/// Spawn a 3D billboard text entity that always faces the active camera.
 pub fn spawn_3d_billboard_text_with_properties(
     world: &mut World,
     text: &str,
@@ -944,6 +965,7 @@ pub fn capture_thumbnail_to_path(
     );
 }
 
+/// Spawn an entity that draws `count` instanced copies of `mesh_name` using per-instance transforms.
 pub fn spawn_instanced_mesh(
     world: &mut World,
     mesh_name: &str,
@@ -1015,6 +1037,7 @@ pub fn spawn_instanced_mesh(
     entity
 }
 
+/// Spawn an instanced-mesh entity using `mesh_name` and the supplied material.
 pub fn spawn_instanced_mesh_with_material(
     world: &mut World,
     mesh_name: &str,
@@ -1105,6 +1128,7 @@ pub fn find_entity_by_name(world: &World, name: &str) -> Option<Entity> {
         .find(|&entity| world.core.get_name(entity).is_some_and(|n| n.0 == name))
 }
 
+/// Register `material` in the registry under `name` and attach it to `entity` via [`MaterialRef`].
 pub fn spawn_material(
     world: &mut World,
     entity: Entity,
