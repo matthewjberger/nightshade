@@ -363,6 +363,10 @@ fn compute_material_content_hash(material: &Material) -> u64 {
     }
     material.alpha_mode.hash(&mut hasher);
     material.alpha_cutoff.to_bits().hash(&mut hasher);
+    material
+        .blend_opaque_alpha_threshold
+        .to_bits()
+        .hash(&mut hasher);
     material.base_texture.hash(&mut hasher);
     hash_texture_transform(&material.base_texture_transform, &mut hasher);
     material.emissive_texture.hash(&mut hasher);
@@ -401,6 +405,73 @@ fn compute_material_content_hash(material: &Material) -> u64 {
     material.specular_color_texture.hash(&mut hasher);
     hash_texture_transform(&material.specular_color_texture_transform, &mut hasher);
     material.emissive_strength.to_bits().hash(&mut hasher);
+    material
+        .diffuse_transmission_factor
+        .to_bits()
+        .hash(&mut hasher);
+    material.diffuse_transmission_texture.hash(&mut hasher);
+    hash_texture_transform(
+        &material.diffuse_transmission_texture_transform,
+        &mut hasher,
+    );
+    for component in &material.diffuse_transmission_color_factor {
+        component.to_bits().hash(&mut hasher);
+    }
+    material
+        .diffuse_transmission_color_texture
+        .hash(&mut hasher);
+    hash_texture_transform(
+        &material.diffuse_transmission_color_texture_transform,
+        &mut hasher,
+    );
+    material.dispersion.to_bits().hash(&mut hasher);
+    for component in &material.scatter_color_factor {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.scatter_color_texture.hash(&mut hasher);
+    hash_texture_transform(&material.scatter_color_texture_transform, &mut hasher);
+    material.scatter_anisotropy.to_bits().hash(&mut hasher);
+    material.anisotropy_strength.to_bits().hash(&mut hasher);
+    material.anisotropy_rotation.to_bits().hash(&mut hasher);
+    material.anisotropy_texture.hash(&mut hasher);
+    hash_texture_transform(&material.anisotropy_texture_transform, &mut hasher);
+    material.iridescence_factor.to_bits().hash(&mut hasher);
+    material.iridescence_texture.hash(&mut hasher);
+    hash_texture_transform(&material.iridescence_texture_transform, &mut hasher);
+    material.iridescence_ior.to_bits().hash(&mut hasher);
+    material
+        .iridescence_thickness_minimum
+        .to_bits()
+        .hash(&mut hasher);
+    material
+        .iridescence_thickness_maximum
+        .to_bits()
+        .hash(&mut hasher);
+    material.iridescence_thickness_texture.hash(&mut hasher);
+    hash_texture_transform(
+        &material.iridescence_thickness_texture_transform,
+        &mut hasher,
+    );
+    for component in &material.sheen_color_factor {
+        component.to_bits().hash(&mut hasher);
+    }
+    material.sheen_color_texture.hash(&mut hasher);
+    hash_texture_transform(&material.sheen_color_texture_transform, &mut hasher);
+    material.sheen_roughness_factor.to_bits().hash(&mut hasher);
+    material.sheen_roughness_texture.hash(&mut hasher);
+    hash_texture_transform(&material.sheen_roughness_texture_transform, &mut hasher);
+    material.clearcoat_factor.to_bits().hash(&mut hasher);
+    material.clearcoat_texture.hash(&mut hasher);
+    hash_texture_transform(&material.clearcoat_texture_transform, &mut hasher);
+    material
+        .clearcoat_roughness_factor
+        .to_bits()
+        .hash(&mut hasher);
+    material.clearcoat_roughness_texture.hash(&mut hasher);
+    hash_texture_transform(&material.clearcoat_roughness_texture_transform, &mut hasher);
+    material.clearcoat_normal_texture.hash(&mut hasher);
+    hash_texture_transform(&material.clearcoat_normal_texture_transform, &mut hasher);
+    material.clearcoat_normal_scale.to_bits().hash(&mut hasher);
     hasher.finish()
 }
 
