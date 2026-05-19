@@ -77,6 +77,107 @@ The full annotated version with three objects, materials, and animation lives in
 
 <img alt="Nightshade editor running in the browser" src="crates/nightshade/images/live-demo.png" />
 
+## glTF Showcase
+
+Conformance shots of [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) rendered in the Nightshade editor. Demonstrates the engine's PBR pipeline and KHR material extensions.
+
+### Transmission & Volume
+
+Refractive glass, volumetric absorption, and chromatic dispersion. Transmissive materials route through weighted-blended OIT with a screen-space scene-color sample for refraction.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/dragon-attenuation.png" alt="Dragon Attenuation" width="100%" />
+<br><b>Dragon Attenuation</b>
+<br><sub><code>KHR_materials_transmission</code> <code>KHR_materials_volume</code> <code>KHR_materials_ior</code></sub>
+<br><sub>Volume attenuation through a thick glass dragon. Beer-Lambert absorption tinting and IOR-driven refraction.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/dragon-dispersion.png" alt="Dragon Dispersion" width="100%" />
+<br><b>Dragon Dispersion</b>
+<br><sub><code>KHR_materials_dispersion</code> <code>KHR_materials_volume</code></sub>
+<br><sub>Chromatic dispersion split into per-wavelength refraction directions, producing visible R/G/B fringing on glass edges.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/compare-transmission.png" alt="Compare Transmission" width="100%" />
+<br><b>Compare Transmission</b>
+<br><sub><code>KHR_materials_transmission</code> <code>Roughness on glass</code></sub>
+<br><sub>Smooth and frosted glass bowls side by side. The frosted version exercises roughness applied to refraction.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/glass-vase-flowers.png" alt="Glass Vase with Flowers" width="100%" />
+<br><b>Glass Vase with Flowers</b>
+<br><sub><code>KHR_materials_transmission</code> <code>KHR_materials_volume</code> <code>Multi-mesh transmission</code></sub>
+<br><sub>Real-world asset with opaque flora inside transmissive glass. Tests transmission against complex opaque occluders.</sub>
+</td>
+</tr>
+</table>
+
+### Advanced Shading
+
+Anisotropic GGX, thin-film iridescence, sheen, and clearcoat layers stacked on top of the PBR base.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/anisotropy-compare.png" alt="Anisotropy Compare" width="100%" />
+<br><b>Anisotropy Compare</b>
+<br><sub><code>KHR_materials_anisotropy</code> <code>Anisotropic GGX</code></sub>
+<br><sub>Brushed-metal directional reflections driven by anisotropy strength, rotation, and tangent-space direction maps.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/iridescence-compare.png" alt="Iridescence Compare" width="100%" />
+<br><b>Iridescence Compare</b>
+<br><sub><code>KHR_materials_iridescence</code></sub>
+<br><sub>Thin-film interference colors that shift with viewing angle. Driven by film thickness and IOR.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/sheen-test.png" alt="Sheen Chair" width="100%" />
+<br><b>Sheen Chair</b>
+<br><sub><code>KHR_materials_sheen</code> <code>Velvet / cloth</code></sub>
+<br><sub>Velvet upholstered chair driven by the sheen extension. Soft Fresnel-based sheen layer stacks on top of the underlying PBR base.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/gallery/compare-clearcoat.png" alt="Compare Clearcoat" width="100%" />
+<br><b>Compare Clearcoat</b>
+<br><sub><code>KHR_materials_clearcoat</code> <code>Layered specular</code></sub>
+<br><sub>Side-by-side clearcoat variations. A second specular layer over the base material, with its own roughness, models car paint and lacquered finishes.</sub>
+</td>
+</tr>
+</table>
+
+## Apps
+
+Example apps in [`apps/`](apps/) that exercise the engine end-to-end. Each app is buildable with `just run <name>`.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/winter.png" alt="winter" width="100%" />
+<br><b><a href="apps/winter">winter</a></b>
+<br><sub>Outdoor snow scene. Atmospheric lighting, large terrain, animated foliage, animated characters.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/navmesh.png" alt="navmesh" width="100%" />
+<br><b><a href="apps/navmesh">navmesh</a></b>
+<br><sub>Terrain, grass, and pathfinding. Heightmap-driven grass regions, navmesh baking, AI navigation.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/fireworks.png" alt="fireworks" width="100%" />
+<br><b><a href="apps/fireworks">fireworks</a></b>
+<br><sub>GPU particle system. Bursts, chrysanthemums, rings, glitter, and patterned shape emitters.</sub>
+</td>
+<td width="50%" valign="top"></td>
+</tr>
+</table>
+
 ## Quickstart
 
 Install the tooling:

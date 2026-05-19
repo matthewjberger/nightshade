@@ -1,5 +1,6 @@
 use nalgebra_glm::{Quat, Vec3, vec3};
 use nightshade::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
+use nightshade::ecs::generational_registry::registry_add_reference;
 use nightshade::ecs::grass::components::TerrainHeightmap;
 use nightshade::ecs::material::components::{Material, MaterialRef};
 use nightshade::ecs::material::resources::material_registry_insert;
@@ -275,6 +276,19 @@ pub fn spawn_terrain_with_heights(
         material_name.clone(),
         material,
     );
+    if let Some(&index) = world
+        .resources
+        .assets
+        .material_registry
+        .registry
+        .name_to_index
+        .get(&material_name)
+    {
+        registry_add_reference(
+            &mut world.resources.assets.material_registry.registry,
+            index,
+        );
+    }
     world
         .core
         .set_material_ref(entity, MaterialRef::new(material_name));
