@@ -18,7 +18,7 @@
 ## Highlights
 
 - Clustered forward PBR renderer with shadows, IBL, OIT transparency, and post-processing (bloom, SSAO, tone mapping, color grading).
-- Full glTF 2.0 support including every relevant KHR extension: transmission, volume + attenuation, anisotropy, iridescence, dispersion, sheen, clearcoat, diffuse transmission, specular, emissive strength, variants, gpu instancing.
+- Full glTF 2.0 support including the KHR extensions: transmission, volume + attenuation, anisotropy, iridescence, dispersion, sheen, clearcoat, diffuse transmission, specular, emissive strength, variants, gpu instancing.
 - HDR environments (`.hdr`) and procedural atmospheres (day / night cycle, nebula, space) with prefiltered IBL.
 - Skeletal animation, morph targets, and a clip player driven by a frame schedule.
 - Data-oriented ECS via [freecs](https://github.com/jessfraz/freecs) with archetype storage and bitflag components.
@@ -35,7 +35,7 @@
 
 ## Apps
 
-Example apps in [`apps/`](apps/) that exercise the engine end-to-end. Each app is buildable with `just run <name>`.
+Example apps in [`apps/`](apps/). Each is buildable with `just run <name>`.
 
 <table>
 <tr>
@@ -178,7 +178,7 @@ impl State for SpinCube {
 
 The full annotated version with three objects, materials, and animation lives in the [book's interactive demo](https://matthewjberger.github.io/nightshade/book/interactive-demo.html).
 
-The fastest way to bootstrap a new project is the [nightshade-template](https://github.com/matthewjberger/nightshade-template), which scaffolds the right dependencies, justfile, and trunk config out of the box.
+To bootstrap a new project, use the [nightshade-template](https://github.com/matthewjberger/nightshade-template), which scaffolds the dependencies, justfile, and trunk config.
 
 ## Quickstart
 
