@@ -61,11 +61,6 @@ file_watcher = [
     "dep:notify",
 ]
 
-text = [
-    "core",
-    "dep:cosmic-text",
-]
-
 scene_graph = ["assets"]
 
 file_dialog = [
@@ -76,8 +71,7 @@ file_dialog = [
 
 runtime = [
     "core",
-    "text",
-    "behaviors",
+    "dep:cosmic-text",
 ]
 
 engine = [
@@ -102,7 +96,6 @@ debug_render = []
 gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
-behaviors = []
 grass = []
 screenshot = ["dep:image"]
 navmesh = []

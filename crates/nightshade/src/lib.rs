@@ -177,8 +177,6 @@
 //!
 //! - **`core`** - Foundation: ECS (freecs), math (nalgebra), windowing (winit), time, petgraph.
 //!
-//! - **`text`** - MSDF text rendering using ttf-parser. Requires `core`.
-//!
 //! - **`assets`** - Asset loading: gltf, image, half, bincode, serde_json. Requires `core`.
 //!
 //! - **`scene_graph`** - Scene hierarchy system. Requires `assets`.
