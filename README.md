@@ -217,7 +217,7 @@ Nightshade is split into composable cargo features so apps only pay for what the
 ```
 Composite:
 ├── core ─────────────── ECS, math, windowing, time
-├── runtime ──────────── core + text
+├── runtime ──────────── core + text + behaviors
 ├── engine (default) ── runtime + assets + scene_graph + picking + file_dialog + screenshot
 └── full ─────────────── engine + wgpu + shell + audio + physics + gamepad + navmesh
 
@@ -226,6 +226,7 @@ Building blocks:
 ├── text ─────────────── 3D text rendering (cosmic-text)
 ├── scene_graph ──────── ECS scene round-trip
 ├── picking ──────────── entity picking
+├── behaviors ─────────── built-in behavior components
 ├── file_dialog ──────── native open/save dialogs (rfd)
 ├── file_watcher ─────── live asset reload (notify)
 ├── screenshot ───────── capture viewport to PNG
@@ -237,6 +238,7 @@ Renderer & subsystems:
 ├── audio ────────────── audio playback (kira)
 ├── physics ──────────── 3D physics (rapier3d)
 ├── gamepad ──────────── controller input (gilrs)
+├── grass ─────────────── GPU-instanced grass regions
 ├── navmesh ──────────── runtime navmesh queries
 ├── navmesh-bake ─────── navmesh baking (rerecast)
 ├── debug_render ─────── line / shape debug overlays
