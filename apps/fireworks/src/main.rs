@@ -150,7 +150,7 @@ impl State for FireworksDemo {
         world.resources.graphics.show_grid = true;
         world.resources.graphics.clear_color = [0.01, 0.01, 0.02, 1.0];
         world.resources.graphics.bloom_enabled = true;
-        world.resources.graphics.bloom_intensity = 0.1;
+        world.resources.graphics.bloom_intensity = 0.5;
 
         let camera = spawn_entities(
             world,
@@ -378,7 +378,7 @@ impl FireworksDemo {
                 salvo_count = tree.add_slider(3.0, 15.0, salvo_count_initial);
 
                 tree.add_label("Bloom intensity");
-                bloom_intensity = tree.add_slider(0.0, 2.0, bloom_intensity_initial);
+                bloom_intensity = tree.add_slider(0.0, 1.0, bloom_intensity_initial);
 
                 launch_single = tree.add_button("Launch Single");
                 launch_salvo = tree.add_button("Launch Salvo (5)");

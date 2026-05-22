@@ -274,7 +274,7 @@ impl Default for EffectiveShading {
             lines_enabled: false,
             color_grading: ColorGrading::default(),
             depth_of_field: DepthOfField::default(),
-            bloom_intensity: 0.08,
+            bloom_intensity: 0.5,
             bloom_threshold: 1.0,
             bloom_knee: 0.5,
             bloom_filter_radius: 0.005,
