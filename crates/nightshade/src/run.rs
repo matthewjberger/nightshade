@@ -981,6 +981,13 @@ fn process_dropped_files(world: &mut World) {
 }
 
 #[cfg(target_arch = "wasm32")]
+fn wasm_capped_dpr(css_width: f64, css_height: f64, raw_dpr: f64) -> f64 {
+    let smallest_css = css_width.min(css_height);
+    let max_dpr = if smallest_css < 700.0 { 1.5 } else { 2.0 };
+    raw_dpr.clamp(1.0, max_dpr)
+}
+
+#[cfg(target_arch = "wasm32")]
 fn setup_wasm_file_drop() {
     use wasm_bindgen::JsCast;
     use wasm_bindgen::prelude::*;
@@ -1298,7 +1305,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .unwrap()
                 .dyn_into::<wgpu::web_sys::HtmlCanvasElement>()
                 .unwrap();
-            let dpr = web_window.device_pixel_ratio().max(1.0);
+            let raw_dpr = web_window.device_pixel_ratio().max(1.0);
             let css_width = web_window
                 .inner_width()
                 .ok()
@@ -1309,6 +1316,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .ok()
                 .and_then(|v| v.as_f64())
                 .unwrap_or(600.0);
+            let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
             let physical_width = (css_width * dpr).round() as u32;
             let physical_height = (css_height * dpr).round() as u32;
             canvas.set_width(physical_width);
@@ -1512,7 +1520,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 #[cfg(target_arch = "wasm32")]
                 let (surface_width, surface_height) = {
                     let web_window = wgpu::web_sys::window().unwrap();
-                    let dpr = web_window.device_pixel_ratio().max(1.0);
+                    let raw_dpr = web_window.device_pixel_ratio().max(1.0);
                     let css_width = web_window
                         .inner_width()
                         .ok()
@@ -1523,6 +1531,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                         .ok()
                         .and_then(|v| v.as_f64())
                         .unwrap_or(height as f64);
+                    let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
                     let physical_width = (css_width * dpr).round() as u32;
                     let physical_height = (css_height * dpr).round() as u32;
                     use winit::platform::web::WindowExtWebSys;
