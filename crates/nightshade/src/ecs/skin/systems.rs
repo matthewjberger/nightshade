@@ -200,6 +200,14 @@ impl SkinningCache {
             0
         }
     }
+
+    pub fn get_base_bone_index(&self, skin_index: u32) -> u32 {
+        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
+            skin_data.base_bone_index
+        } else {
+            0
+        }
+    }
 }
 
 pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
