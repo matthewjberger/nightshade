@@ -455,13 +455,10 @@ pub fn sample_animation_channel(channel: &AnimationChannel, time: f32) -> Option
         };
     }
 
-    let mut key_index = sampler.input.len() - 2;
-    for index in 0..sampler.input.len() - 1 {
-        if sampler.input[index + 1] > time {
-            key_index = index;
-            break;
-        }
-    }
+    let key_index = sampler
+        .input
+        .partition_point(|&keyframe_time| keyframe_time <= time)
+        - 1;
 
     let next_key_index = key_index + 1;
 

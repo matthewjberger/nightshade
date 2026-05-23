@@ -19,86 +19,55 @@ pub fn update_animation_players(world: &mut World) {
         });
 }
 
-struct AnimationSampleDataMulti {
-    clips: Vec<AnimationClip>,
-    time: f32,
-    from_clip: Option<AnimationClip>,
-    from_time: f32,
-    blend_factor: f32,
-    node_mapping: HashMap<usize, Entity>,
-    bone_name_mapping: HashMap<String, Entity>,
-}
-
 pub fn apply_animations(world: &mut World) {
-    let mut sample_data: Vec<(Entity, AnimationSampleDataMulti)> = Vec::new();
+    let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
     world
         .core
         .query()
         .with(ANIMATION_PLAYER)
-        .iter(|entity, table, idx| {
+        .iter(|_, table, idx| {
             let player = &table.animation_player[idx];
             if !player.playing {
                 return;
             }
-            let clips_to_sample: Vec<AnimationClip> = if player.play_all {
-                player.clips.clone()
-            } else if let Some(to_clip) = player.get_current_clip() {
-                vec![to_clip.clone()]
-            } else {
-                vec![]
-            };
-            let from_clip = player
+            let node_mapping = &player.node_index_to_entity;
+            let bone_name_mapping = &player.bone_name_to_entity;
+
+            let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
+            if player.play_all {
+                for clip in &player.clips {
+                    merge_accumulators(
+                        &mut final_values,
+                        sample_clip(clip, player.time, node_mapping, bone_name_mapping),
+                    );
+                }
+            } else if let Some(clip) = player.get_current_clip() {
+                merge_accumulators(
+                    &mut final_values,
+                    sample_clip(clip, player.time, node_mapping, bone_name_mapping),
+                );
+            }
+
+            if let Some(from_clip) = player
                 .blend_from_clip
                 .and_then(|index| player.clips.get(index))
-                .cloned();
-            sample_data.push((
-                entity,
-                AnimationSampleDataMulti {
-                    clips: clips_to_sample,
-                    time: player.time,
+            {
+                let from_values = sample_clip(
                     from_clip,
-                    from_time: player.blend_from_time,
-                    blend_factor: player.blend_factor,
-                    node_mapping: player.node_index_to_entity.clone(),
-                    bone_name_mapping: player.bone_name_to_entity.clone(),
-                },
-            ));
+                    player.blend_from_time,
+                    node_mapping,
+                    bone_name_mapping,
+                );
+                final_values =
+                    blend_animation_values(&from_values, &final_values, player.blend_factor);
+            }
+
+            if !final_values.is_empty() {
+                per_player_values.push(final_values);
+            }
         });
 
-    for (_entity, data) in sample_data {
-        let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
-
-        for clip in &data.clips {
-            let clip_values =
-                sample_clip(clip, data.time, &data.node_mapping, &data.bone_name_mapping);
-
-            for (target_entity, values) in clip_values {
-                let entry = final_values.entry(target_entity).or_default();
-                if values.translation.is_some() {
-                    entry.translation = values.translation;
-                }
-                if values.rotation.is_some() {
-                    entry.rotation = values.rotation;
-                }
-                if values.scale.is_some() {
-                    entry.scale = values.scale;
-                }
-                if values.morph_weights.is_some() {
-                    entry.morph_weights = values.morph_weights;
-                }
-            }
-        }
-
-        if let Some(from_clip) = &data.from_clip {
-            let from_values = sample_clip(
-                from_clip,
-                data.from_time,
-                &data.node_mapping,
-                &data.bone_name_mapping,
-            );
-            final_values = blend_animation_values(&from_values, &final_values, data.blend_factor);
-        }
-
+    for final_values in per_player_values {
         for (target_entity, values) in final_values {
             if let Some(transform) = mutate_local_transform(world, target_entity) {
                 if let Some(translation) = values.translation {
@@ -114,6 +83,27 @@ pub fn apply_animations(world: &mut World) {
             if let Some(weights) = values.morph_weights {
                 apply_morph_weights_to_entity_and_children(world, target_entity, &weights);
             }
+        }
+    }
+}
+
+fn merge_accumulators(
+    into: &mut HashMap<Entity, AnimationAccumulator>,
+    from: HashMap<Entity, AnimationAccumulator>,
+) {
+    for (target_entity, values) in from {
+        let entry = into.entry(target_entity).or_default();
+        if values.translation.is_some() {
+            entry.translation = values.translation;
+        }
+        if values.rotation.is_some() {
+            entry.rotation = values.rotation;
+        }
+        if values.scale.is_some() {
+            entry.scale = values.scale;
+        }
+        if values.morph_weights.is_some() {
+            entry.morph_weights = values.morph_weights;
         }
     }
 }
