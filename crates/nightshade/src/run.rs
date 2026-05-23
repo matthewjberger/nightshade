@@ -49,8 +49,8 @@
 //! fn initialize(&mut self, world: &mut World) {
 //!     // Configure graphics
 //!     world.resources.user_interface.enabled = true;
-//!     world.resources.graphics.atmosphere = Atmosphere::Sky;
-//!     world.resources.graphics.show_grid = true;
+//!     world.resources.render_settings.atmosphere = Atmosphere::Sky;
+//!     world.resources.debug_draw.show_grid = true;
 //!
 //!     // Spawn camera
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
@@ -310,7 +310,7 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
 
 #[cfg(not(target_arch = "wasm32"))]
 fn sync_min_window_size(world: &mut World) {
-    let desired = world.resources.graphics.min_window_size;
+    let desired = world.resources.renderer_state.min_window_size;
     if world.resources.window.applied_min_window_size == desired {
         return;
     }
@@ -764,7 +764,7 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
 }
 
 /// Sleeps until the next frame slot when
-/// `world.resources.graphics.frame_rate_limit` is set. Uses the previous
+/// `world.resources.render_settings.frame_rate_limit` is set. Uses the previous
 /// frame's start instant from `window.timing` plus the target interval.
 /// Idle-sleeps most of the gap and busy-waits the last 1ms to absorb OS
 /// scheduler jitter (Windows `Sleep` resolution is ~15.6ms by default).
@@ -774,7 +774,7 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
 fn throttle_to_frame_rate_limit(world: &mut World) {
     use web_time::Instant;
 
-    let Some(target_fps) = world.resources.graphics.frame_rate_limit else {
+    let Some(target_fps) = world.resources.render_settings.frame_rate_limit else {
         return;
     };
     if !target_fps.is_finite() || target_fps <= 0.0 {
@@ -817,14 +817,17 @@ fn apply_macos_default_frame_rate_limit(
     if !cfg!(target_os = "macos") {
         return;
     }
-    if world.resources.graphics.frame_rate_limit.is_some() {
+    if world.resources.render_settings.frame_rate_limit.is_some() {
         return;
     }
     let Some(target) = current_monitor_frame_rate_target(window_handle) else {
         return;
     };
-    world.resources.graphics.frame_rate_limit = Some(target);
-    world.resources.graphics.auto_frame_rate_limit_baseline = Some(target);
+    world.resources.render_settings.frame_rate_limit = Some(target);
+    world
+        .resources
+        .renderer_state
+        .auto_frame_rate_limit_baseline = Some(target);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -847,18 +850,24 @@ fn refresh_macos_frame_rate_limit(
     if !cfg!(target_os = "macos") {
         return;
     }
-    let baseline = world.resources.graphics.auto_frame_rate_limit_baseline;
+    let baseline = world
+        .resources
+        .renderer_state
+        .auto_frame_rate_limit_baseline;
     if baseline.is_none() {
         return;
     }
-    if world.resources.graphics.frame_rate_limit != baseline {
+    if world.resources.render_settings.frame_rate_limit != baseline {
         return;
     }
     let Some(target) = current_monitor_frame_rate_target(window_handle) else {
         return;
     };
-    world.resources.graphics.frame_rate_limit = Some(target);
-    world.resources.graphics.auto_frame_rate_limit_baseline = Some(target);
+    world.resources.render_settings.frame_rate_limit = Some(target);
+    world
+        .resources
+        .renderer_state
+        .auto_frame_rate_limit_baseline = Some(target);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1421,14 +1430,14 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .events
                 .push(crate::ecs::input::events::AppEvent::Resumed);
 
-            if self.world.resources.graphics.use_fullscreen
+            if self.world.resources.renderer_state.use_fullscreen
                 && let Some(window_handle) = &self.world.resources.window.handle
             {
                 window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
             }
 
             if let Some(window_handle) = &self.world.resources.window.handle {
-                window_handle.set_cursor_visible(self.world.resources.graphics.show_cursor);
+                window_handle.set_cursor_visible(self.world.resources.renderer_state.show_cursor);
             }
         }
     }
@@ -1458,14 +1467,15 @@ impl winit::application::ApplicationHandler for WindowContext {
                 #[cfg(target_arch = "wasm32")]
                 crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
 
-                if self.world.resources.graphics.use_fullscreen
+                if self.world.resources.renderer_state.use_fullscreen
                     && let Some(window_handle) = &self.world.resources.window.handle
                 {
                     window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
                 }
 
                 if let Some(window_handle) = &self.world.resources.window.handle {
-                    window_handle.set_cursor_visible(self.world.resources.graphics.show_cursor);
+                    window_handle
+                        .set_cursor_visible(self.world.resources.renderer_state.show_cursor);
                 }
 
                 renderer_received = true;

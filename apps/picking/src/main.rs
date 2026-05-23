@@ -85,9 +85,9 @@ impl State for PickingDemo {
         world.resources.window.title = "Picking Demo".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.retained_ui.enabled = true;
-        world.resources.graphics.show_grid = true;
-        world.resources.graphics.atmosphere = Atmosphere::Sky;
-        world.resources.graphics.selection_outline_enabled = true;
+        world.resources.debug_draw.show_grid = true;
+        world.resources.render_settings.atmosphere = Atmosphere::Sky;
+        world.resources.debug_draw.selection_outline_enabled = true;
         self.show_debug_volumes = true;
         self.spin_speed = 1.0;
 
@@ -372,8 +372,10 @@ impl PickingDemo {
     }
 
     fn sync_outline(&self, world: &mut World) {
-        world.resources.graphics.bounding_volume_selected_entity =
-            self.highlighted_entity.or(self.selected_entity);
+        world
+            .resources
+            .editor_selection
+            .bounding_volume_selected_entity = self.highlighted_entity.or(self.selected_entity);
     }
 
     fn sync_panel(&self, world: &mut World) {

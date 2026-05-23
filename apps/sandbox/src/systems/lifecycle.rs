@@ -6,11 +6,11 @@ use nightshade::prelude::*;
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     world.resources.user_interface.enabled = true;
     world.resources.retained_ui.enabled = true;
-    world.resources.graphics.atmosphere = Atmosphere::DayNight;
-    world.resources.graphics.show_grid = false;
-    world.resources.graphics.use_fullscreen = true;
-    world.resources.graphics.day_night.hour = 9.5;
-    world.resources.graphics.day_night.auto_cycle = false;
+    world.resources.render_settings.atmosphere = Atmosphere::DayNight;
+    world.resources.debug_draw.show_grid = false;
+    world.resources.renderer_state.use_fullscreen = true;
+    world.resources.renderer_state.day_night.hour = 9.5;
+    world.resources.renderer_state.day_night.auto_cycle = false;
     capture_procedural_atmosphere_ibl(world, Atmosphere::DayNight, 9.5);
 
     textures::load_prototype_textures(world);

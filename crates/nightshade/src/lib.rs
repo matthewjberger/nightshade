@@ -31,7 +31,7 @@
 //!         world.resources.window.title = "My Game".to_string();
 //!
 //!         // Graphics setup
-//!         world.resources.graphics.atmosphere = Atmosphere::Sky;
+//!         world.resources.render_settings.atmosphere = Atmosphere::Sky;
 //!         spawn_sun(world);
 //!
 //!         // Camera
@@ -117,8 +117,8 @@
 //! let mouse = &world.resources.input.mouse;
 //!
 //! // Graphics
-//! world.resources.graphics.bloom_enabled = true;
-//! world.resources.graphics.atmosphere = Atmosphere::Sky;
+//! world.resources.render_settings.bloom_enabled = true;
+//! world.resources.render_settings.atmosphere = Atmosphere::Sky;
 //!
 //! // Camera
 //! world.resources.active_camera = Some(camera_entity);

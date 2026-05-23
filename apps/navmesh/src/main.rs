@@ -203,8 +203,8 @@ impl State for NavMeshDemo {
         world.resources.window.title = "NavMesh Pathfinding Demo".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.retained_ui.enabled = true;
-        world.resources.graphics.atmosphere = Atmosphere::Hdr;
-        world.resources.graphics.show_grid = false;
+        world.resources.render_settings.atmosphere = Atmosphere::Hdr;
+        world.resources.debug_draw.show_grid = false;
 
         load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 

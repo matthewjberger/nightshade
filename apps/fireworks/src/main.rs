@@ -146,11 +146,11 @@ impl State for FireworksDemo {
     fn initialize(&mut self, world: &mut World) {
         world.resources.window.title = "Fireworks Demo".to_string();
         world.resources.user_interface.enabled = true;
-        world.resources.graphics.atmosphere = Atmosphere::Space;
-        world.resources.graphics.show_grid = true;
-        world.resources.graphics.clear_color = [0.01, 0.01, 0.02, 1.0];
-        world.resources.graphics.bloom_enabled = true;
-        world.resources.graphics.bloom_intensity = 0.5;
+        world.resources.render_settings.atmosphere = Atmosphere::Space;
+        world.resources.debug_draw.show_grid = true;
+        world.resources.render_settings.clear_color = [0.01, 0.01, 0.02, 1.0];
+        world.resources.render_settings.bloom_enabled = true;
+        world.resources.render_settings.bloom_intensity = 0.5;
 
         let camera = spawn_entities(
             world,
@@ -329,7 +329,7 @@ impl FireworksDemo {
         let launch_interval_initial = self.launch_interval;
         let salvo_mode_initial = self.salvo_mode;
         let salvo_count_initial = self.salvo_count as f32;
-        let bloom_intensity_initial = world.resources.graphics.bloom_intensity;
+        let bloom_intensity_initial = world.resources.render_settings.bloom_intensity;
 
         let mut tree = UiTreeBuilder::new(world);
         let panel = tree.add_docked_panel_left("fireworks", "Fireworks", 260.0);
@@ -501,7 +501,7 @@ impl FireworksDemo {
             self.salvo_count = value.round().clamp(3.0, 15.0) as u32;
         }
         if let Some(value) = ui_slider_value(world, self.ui.bloom_intensity) {
-            world.resources.graphics.bloom_intensity = value;
+            world.resources.render_settings.bloom_intensity = value;
         }
 
         if launch_single {

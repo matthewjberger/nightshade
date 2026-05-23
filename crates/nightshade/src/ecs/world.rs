@@ -76,8 +76,8 @@ pub mod resources {
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
-        Atmosphere, ColorGrading, ColorGradingPreset, Fog, Graphics, IblViews, MeshLodChain,
-        MeshLodLevel, TonemapAlgorithm, VertexSnap,
+        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, IblViews,
+        MeshLodChain, MeshLodLevel, RenderSettings, RendererState, TonemapAlgorithm, VertexSnap,
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
@@ -246,7 +246,10 @@ freecs::ecs! {
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
-        graphics: crate::ecs::graphics::resources::Graphics,
+        render_settings: crate::ecs::graphics::resources::RenderSettings,
+        debug_draw: crate::ecs::graphics::resources::DebugDraw,
+        editor_selection: crate::ecs::graphics::resources::EditorSelection,
+        renderer_state: crate::ecs::graphics::resources::RendererState,
         ibl_views: crate::ecs::graphics::resources::IblViews,
         input: crate::ecs::input::resources::Input,
         is_runtime: bool,

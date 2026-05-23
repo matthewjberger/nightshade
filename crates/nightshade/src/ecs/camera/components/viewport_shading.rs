@@ -6,7 +6,7 @@
 //! for that camera's tile. The renderer reads it together with the global
 //! [`Graphics`](crate::ecs::graphics::resources::Graphics) defaults to
 //! produce an [`EffectiveShading`] for the camera, then writes it into
-//! `world.resources.graphics.active_view` while the camera's render
+//! `world.resources.renderer_state.active_view` while the camera's render
 //! graph executes. Passes read from `graphics.active_view`, never from
 //! the user-set defaults on `Graphics` directly, so each camera renders
 //! with its own view-local shading without the renderer having to
@@ -25,7 +25,9 @@
 //! the selection outline) for that camera only. The world ground grid is
 //! a separate global toggle.
 
-use crate::ecs::graphics::resources::{Atmosphere, ColorGrading, DepthOfField, Fog, Graphics};
+use crate::ecs::graphics::resources::{
+    Atmosphere, ColorGrading, DebugDraw, DepthOfField, Fog, RenderSettings,
+};
 use crate::ecs::primitives::CameraCullingMask;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
@@ -118,58 +120,59 @@ pub struct EffectiveShading {
 }
 
 impl EffectiveShading {
-    pub fn from_graphics(graphics: &Graphics) -> Self {
+    pub fn from_graphics(render: &RenderSettings, debug: &DebugDraw) -> Self {
         Self {
-            unlit_mode: graphics.unlit_mode,
-            bloom_enabled: graphics.bloom_enabled,
-            ssao_enabled: graphics.ssao_enabled,
-            ssgi_enabled: graphics.ssgi_enabled,
-            ssr_enabled: graphics.ssr_enabled,
-            show_normals: graphics.show_normals,
-            show_bounding_volumes: graphics.show_bounding_volumes,
+            unlit_mode: render.unlit_mode,
+            bloom_enabled: render.bloom_enabled,
+            ssao_enabled: render.ssao_enabled,
+            ssgi_enabled: render.ssgi_enabled,
+            ssr_enabled: render.ssr_enabled,
+            show_normals: debug.show_normals,
+            show_bounding_volumes: debug.show_bounding_volumes,
             show_wireframe: false,
-            selection_outline_enabled: graphics.selection_outline_enabled,
+            selection_outline_enabled: debug.selection_outline_enabled,
             flat_shading_color: None,
             shadow_depth_enabled: true,
-            lines_enabled: graphics.show_normals || graphics.show_bounding_volumes,
-            color_grading: graphics.color_grading,
-            depth_of_field: graphics.depth_of_field,
-            bloom_intensity: graphics.bloom_intensity,
-            bloom_threshold: graphics.bloom_threshold,
-            bloom_knee: graphics.bloom_knee,
-            bloom_filter_radius: graphics.bloom_filter_radius,
-            ssao_radius: graphics.ssao_radius,
-            ssao_bias: graphics.ssao_bias,
-            ssao_intensity: graphics.ssao_intensity,
-            ssao_sample_count: graphics.ssao_sample_count,
-            ssao_visualization: graphics.ssao_visualization,
-            ssao_blur_depth_threshold: graphics.ssao_blur_depth_threshold,
-            ssao_blur_normal_power: graphics.ssao_blur_normal_power,
-            ssgi_radius: graphics.ssgi_radius,
-            ssgi_intensity: graphics.ssgi_intensity,
-            ssgi_max_steps: graphics.ssgi_max_steps,
-            ssr_max_steps: graphics.ssr_max_steps,
-            ssr_thickness: graphics.ssr_thickness,
-            ssr_max_distance: graphics.ssr_max_distance,
-            ssr_stride: graphics.ssr_stride,
-            ssr_fade_start: graphics.ssr_fade_start,
-            ssr_fade_end: graphics.ssr_fade_end,
-            ssr_intensity: graphics.ssr_intensity,
-            ambient_light: graphics.ambient_light,
+            lines_enabled: debug.show_normals || debug.show_bounding_volumes,
+            color_grading: render.color_grading,
+            depth_of_field: render.depth_of_field,
+            bloom_intensity: render.bloom_intensity,
+            bloom_threshold: render.bloom_threshold,
+            bloom_knee: render.bloom_knee,
+            bloom_filter_radius: render.bloom_filter_radius,
+            ssao_radius: render.ssao_radius,
+            ssao_bias: render.ssao_bias,
+            ssao_intensity: render.ssao_intensity,
+            ssao_sample_count: render.ssao_sample_count,
+            ssao_visualization: debug.ssao_visualization,
+            ssao_blur_depth_threshold: render.ssao_blur_depth_threshold,
+            ssao_blur_normal_power: render.ssao_blur_normal_power,
+            ssgi_radius: render.ssgi_radius,
+            ssgi_intensity: render.ssgi_intensity,
+            ssgi_max_steps: render.ssgi_max_steps,
+            ssr_max_steps: render.ssr_max_steps,
+            ssr_thickness: render.ssr_thickness,
+            ssr_max_distance: render.ssr_max_distance,
+            ssr_stride: render.ssr_stride,
+            ssr_fade_start: render.ssr_fade_start,
+            ssr_fade_end: render.ssr_fade_end,
+            ssr_intensity: render.ssr_intensity,
+            ambient_light: render.ambient_light,
             culling_mask: !0,
-            fog: graphics.fog,
-            atmosphere: graphics.atmosphere,
+            fog: render.fog,
+            atmosphere: render.atmosphere,
         }
     }
 
     pub fn for_camera(
-        graphics: &Graphics,
+        render: &RenderSettings,
+        debug: &DebugDraw,
         shading: &ViewportShading,
         post_process: Option<&CameraPostProcess>,
         culling_mask: Option<&CameraCullingMask>,
         environment: Option<&CameraEnvironment>,
     ) -> Self {
-        let mut effective = Self::from_graphics(graphics);
+        let mut effective = Self::from_graphics(render, debug);
         if let Some(mask) = culling_mask {
             effective.culling_mask = mask.0;
         }
