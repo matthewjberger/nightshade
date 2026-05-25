@@ -614,12 +614,11 @@ pub mod prelude {
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
         loading_pipeline_allocate_source_image, loading_pipeline_completed,
-        loading_pipeline_decoded, loading_pipeline_fraction, loading_pipeline_is_active,
-        loading_pipeline_last_category, loading_pipeline_last_label,
-        loading_pipeline_mark_completed, loading_pipeline_pending_len, loading_pipeline_pop,
-        loading_pipeline_push, loading_pipeline_release_recipe_sources,
+        loading_pipeline_fraction, loading_pipeline_is_active, loading_pipeline_last_category,
+        loading_pipeline_last_label, loading_pipeline_mark_completed, loading_pipeline_pending_len,
+        loading_pipeline_pop, loading_pipeline_push, loading_pipeline_release_recipe_sources,
         loading_pipeline_release_source, loading_pipeline_reset_source_arena,
-        loading_pipeline_store_decoded, loading_pipeline_total, queue_decoded_texture,
+        loading_pipeline_total, queue_decoded_texture,
     };
     #[cfg(feature = "assets")]
     pub use crate::ecs::loading::{
