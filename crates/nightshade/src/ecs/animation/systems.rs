@@ -1,7 +1,7 @@
 use crate::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationValue, sample_animation_channel,
 };
-use crate::ecs::world::{ANIMATION_PLAYER, JOINT, MORPH_WEIGHTS, World};
+use crate::ecs::world::{ANIMATION_PLAYER, MORPH_WEIGHTS, World};
 use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
 use std::collections::HashMap;
@@ -20,11 +20,12 @@ pub fn update_animation_players(world: &mut World) {
 }
 
 pub fn apply_animations(world: &mut World) {
-    // The GPU animation pass evaluates joint transforms for every playing,
-    // non-`play_all` player, so the CPU only needs to apply joints for
-    // `play_all` players. Morph weights and non-joint node targets are always
-    // applied here.
-    let mut per_player_values: Vec<(bool, HashMap<Entity, AnimationAccumulator>)> = Vec::new();
+    // Joint transforms are applied on the CPU so that joint global transforms
+    // reflect the current pose. Consumers that read those transforms on the CPU
+    // (skinned shadow casting, attachment sockets, picking) then match the
+    // rendered pose instead of the bind pose. Morph weights and non-joint node
+    // targets are applied here as well.
+    let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
     world
         .core
         .query()
@@ -34,7 +35,6 @@ pub fn apply_animations(world: &mut World) {
             if !player.playing {
                 return;
             }
-            let joints_on_gpu = !player.play_all;
             let node_mapping = &player.node_index_to_entity;
             let bone_name_mapping = &player.bone_name_to_entity;
 
@@ -68,16 +68,13 @@ pub fn apply_animations(world: &mut World) {
             }
 
             if !final_values.is_empty() {
-                per_player_values.push((joints_on_gpu, final_values));
+                per_player_values.push(final_values);
             }
         });
 
-    for (joints_on_gpu, final_values) in per_player_values {
+    for final_values in per_player_values {
         for (target_entity, values) in final_values {
-            let target_is_joint = world.core.entity_has_components(target_entity, JOINT);
-            if !(joints_on_gpu && target_is_joint)
-                && let Some(transform) = mutate_local_transform(world, target_entity)
-            {
+            if let Some(transform) = mutate_local_transform(world, target_entity) {
                 if let Some(translation) = values.translation {
                     transform.translation = translation;
                 }
