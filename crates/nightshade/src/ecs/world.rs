@@ -240,6 +240,7 @@ freecs::ecs! {
         audio: crate::ecs::audio::resources::AudioEngine,
         cleanup: crate::ecs::world::cleanup::CleanupState,
         commands: crate::ecs::world::commands::CommandQueues,
+        cutscene: crate::ecs::cutscene::resources::CutsceneDirector,
         component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
         entities: crate::ecs::entity_registry::EntityRegistry,
         event_bus: crate::ecs::event_bus::resources::EventBus,
