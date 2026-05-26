@@ -593,8 +593,9 @@ pub mod prelude {
     pub use crate::ecs::cutscene::{
         Cutscene, CutsceneAction, CutsceneDirector, CutsceneEvent, CutsceneShot,
         advance_cutscene_system, bind_cutscene_actor, camera_look_rotation, cutscene_finished,
-        cutscene_playing, cutscene_progress, cutscene_time, play_cutscene, play_cutscene_reel,
-        queue_cutscene, set_cutscene_camera, stop_cutscene,
+        cutscene_playing, cutscene_progress, cutscene_time, pause_cutscene, play_cutscene,
+        play_cutscene_reel, queue_cutscene, resume_cutscene, seek_cutscene, set_cutscene_camera,
+        set_cutscene_localization, stop_cutscene, take_cutscene_markers,
     };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::entity_registry::{assign_guid, ensure_guid, find_entity_by_guid};
