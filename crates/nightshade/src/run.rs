@@ -477,6 +477,12 @@ pub(crate) fn step(
                 }
             }
 
+            if world.resources.render_settings.render_world_to_swapchain
+                && let Some(handle) = world.resources.window.handle.as_ref()
+            {
+                handle.request_redraw();
+            }
+
             None
         }
         event => {
