@@ -1,17 +1,10 @@
 mod terrain;
 
 use nightshade::ecs::animation::components::{AnimationClip, AnimationProperty};
-use nightshade::ecs::grass::{
-    GrassConfig, GrassSpecies, add_grass_species, attach_grass_interactor, enable_grass,
-    enable_grass_interactors, set_grass_heightmap, spawn_grass_region,
-    update_grass_player_position,
-};
-use nightshade::ecs::lines::components::{Line, Lines};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::text::components::TextProperties;
 use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::ecs::ui::state::UiBase;
-use nightshade::ecs::world::components::Visibility;
 use nightshade::prelude::*;
 use std::collections::HashSet;
 
@@ -113,16 +106,6 @@ struct TreeObstacle {
 #[derive(Default, Clone, Copy)]
 struct UiHandles {
     show_navmesh: Entity,
-    show_grass: Entity,
-    show_grass_interactors: Entity,
-    show_interactor_debug: Entity,
-    wind_strength: Entity,
-    wind_frequency: Entity,
-    interaction_strength: Entity,
-    wind_dir_x: Entity,
-    wind_dir_z: Entity,
-    interactor_radius: Entity,
-    interactor_strength: Entity,
     wander_mode: Entity,
     follow_mode: Entity,
     algorithm: Entity,
@@ -138,17 +121,10 @@ struct UiHandles {
 
 struct NavMeshDemo {
     camera_entity: Option<Entity>,
-    grass_region: Option<Entity>,
     foxes: Vec<FoxData>,
     tree_count: usize,
     tree_obstacles: Vec<TreeObstacle>,
     show_navmesh: bool,
-    show_grass: bool,
-    show_grass_interactors: bool,
-    show_interactor_debug: bool,
-    interactor_debug_entity: Option<Entity>,
-    interactor_radius: f32,
-    interactor_strength: f32,
     wander_mode: bool,
     follow_mode: bool,
     followed_fox_index: Option<usize>,
@@ -160,7 +136,6 @@ struct NavMeshDemo {
     skins: Vec<nightshade::ecs::prefab::GltfSkin>,
     prefab: Option<nightshade::ecs::prefab::Prefab>,
     terrain_config: TerrainConfig,
-    terrain_heights: Option<(terrain::TerrainConfig, Vec<f32>)>,
     ui: UiHandles,
     last_following_index: Option<usize>,
 }
@@ -169,17 +144,10 @@ impl Default for NavMeshDemo {
     fn default() -> Self {
         Self {
             camera_entity: None,
-            grass_region: None,
             foxes: Vec::new(),
             tree_count: 0,
             tree_obstacles: Vec::new(),
             show_navmesh: false,
-            show_grass: true,
-            show_grass_interactors: true,
-            show_interactor_debug: false,
-            interactor_debug_entity: None,
-            interactor_radius: 0.5,
-            interactor_strength: 0.3,
             wander_mode: false,
             follow_mode: false,
             followed_fox_index: None,
@@ -191,7 +159,6 @@ impl Default for NavMeshDemo {
             skins: Vec::new(),
             prefab: None,
             terrain_config: TerrainConfig::default(),
-            terrain_heights: None,
             ui: UiHandles::default(),
             last_following_index: None,
         }
@@ -221,7 +188,6 @@ impl State for NavMeshDemo {
         self.camera_entity = Some(camera);
 
         self.spawn_terrain(world);
-        self.spawn_grass(world);
         self.spawn_trees(world);
         self.build_navmesh(world);
         self.load_fox_model(world);
@@ -243,8 +209,6 @@ impl State for NavMeshDemo {
         self.sync_foxes_to_agents(world);
         self.update_fox_animations(world);
         self.update_follow_camera(world);
-        self.update_grass(world);
-        self.update_interactor_debug(world);
         self.update_ui_labels(world);
     }
 }
@@ -266,16 +230,6 @@ impl NavMeshDemo {
             });
         }
         let mut show_navmesh = Entity::default();
-        let mut show_grass = Entity::default();
-        let mut show_grass_interactors = Entity::default();
-        let mut show_interactor_debug = Entity::default();
-        let mut wind_strength = Entity::default();
-        let mut wind_frequency = Entity::default();
-        let mut interaction_strength = Entity::default();
-        let mut wind_dir_x = Entity::default();
-        let mut wind_dir_z = Entity::default();
-        let mut interactor_radius = Entity::default();
-        let mut interactor_strength = Entity::default();
         let mut wander_mode = Entity::default();
         let mut follow_mode = Entity::default();
         let mut following_label = Entity::default();
@@ -299,31 +253,6 @@ impl NavMeshDemo {
 
                 collapsing(tree_builder, "Visualization", true, |tree| {
                     show_navmesh = tree.add_checkbox("Show NavMesh", self.show_navmesh);
-                    show_grass = tree.add_checkbox("Show Grass", self.show_grass);
-                    show_grass_interactors =
-                        tree.add_checkbox("Grass Interactors", self.show_grass_interactors);
-                    show_interactor_debug =
-                        tree.add_checkbox("Show Interactor Debug", self.show_interactor_debug);
-                });
-
-                collapsing(tree_builder, "Grass", false, |tree| {
-                    tree.add_label("Wind Strength");
-                    wind_strength = tree.add_slider(0.0, 2.0, 0.6);
-                    tree.add_label("Wind Frequency");
-                    wind_frequency = tree.add_slider(0.1, 3.0, 1.0);
-                    tree.add_label("Interaction Strength");
-                    interaction_strength = tree.add_slider(0.0, 3.0, 0.5);
-                    tree.add_label("Wind Direction X");
-                    wind_dir_x = tree.add_slider(-1.0, 1.0, 1.0);
-                    tree.add_label("Wind Direction Z");
-                    wind_dir_z = tree.add_slider(-1.0, 1.0, 0.3);
-                });
-
-                collapsing(tree_builder, "Fox Interactor", false, |tree| {
-                    tree.add_label("Radius");
-                    interactor_radius = tree.add_slider(0.1, 2.0, self.interactor_radius);
-                    tree.add_label("Strength");
-                    interactor_strength = tree.add_slider(0.0, 2.0, self.interactor_strength);
                 });
 
                 collapsing(tree_builder, "Behavior", true, |tree| {
@@ -362,16 +291,6 @@ impl NavMeshDemo {
 
         self.ui = UiHandles {
             show_navmesh,
-            show_grass,
-            show_grass_interactors,
-            show_interactor_debug,
-            wind_strength,
-            wind_frequency,
-            interaction_strength,
-            wind_dir_x,
-            wind_dir_z,
-            interactor_radius,
-            interactor_strength,
             wander_mode,
             follow_mode,
             algorithm,
@@ -426,30 +345,6 @@ impl NavMeshDemo {
             set_navmesh_debug_draw(world, value);
         }
 
-        if let Some(value) = ui_checkbox_value(world, self.ui.show_grass)
-            && value != self.show_grass
-        {
-            self.show_grass = value;
-            if let Some(grass_region) = self.grass_region {
-                enable_grass(world, grass_region, value);
-            }
-        }
-
-        if let Some(value) = ui_checkbox_value(world, self.ui.show_grass_interactors)
-            && value != self.show_grass_interactors
-        {
-            self.show_grass_interactors = value;
-            if let Some(grass_region) = self.grass_region {
-                enable_grass_interactors(world, grass_region, value);
-            }
-        }
-
-        if let Some(value) = ui_checkbox_value(world, self.ui.show_interactor_debug)
-            && value != self.show_interactor_debug
-        {
-            self.show_interactor_debug = value;
-        }
-
         if let Some(value) = wander_change {
             self.wander_mode = value;
         }
@@ -471,53 +366,6 @@ impl NavMeshDemo {
             self.agent_speed = value;
             for fox in &self.foxes {
                 set_agent_speed(world, fox.agent_entity, value);
-            }
-        }
-
-        if let Some(value) = ui_slider_value(world, self.ui.interactor_radius)
-            && (value - self.interactor_radius).abs() > f32::EPSILON
-        {
-            self.interactor_radius = value;
-            for fox in &self.foxes {
-                if let Some(interactor) = world.core.get_grass_interactor_mut(fox.agent_entity) {
-                    interactor.radius = value;
-                }
-            }
-        }
-
-        if let Some(value) = ui_slider_value(world, self.ui.interactor_strength)
-            && (value - self.interactor_strength).abs() > f32::EPSILON
-        {
-            self.interactor_strength = value;
-            for fox in &self.foxes {
-                if let Some(interactor) = world.core.get_grass_interactor_mut(fox.agent_entity) {
-                    interactor.strength = value;
-                }
-            }
-        }
-
-        if let Some(grass_region) = self.grass_region {
-            let wind_strength = ui_slider_value(world, self.ui.wind_strength);
-            let wind_frequency = ui_slider_value(world, self.ui.wind_frequency);
-            let interaction_strength = ui_slider_value(world, self.ui.interaction_strength);
-            let wind_dir_x = ui_slider_value(world, self.ui.wind_dir_x);
-            let wind_dir_z = ui_slider_value(world, self.ui.wind_dir_z);
-            if let Some(region) = world.core.get_grass_region_mut(grass_region) {
-                if let Some(value) = wind_strength {
-                    region.config.wind_strength = value;
-                }
-                if let Some(value) = wind_frequency {
-                    region.config.wind_frequency = value;
-                }
-                if let Some(value) = interaction_strength {
-                    region.config.interaction_strength = value;
-                }
-                if let (Some(x), Some(z)) = (wind_dir_x, wind_dir_z) {
-                    let length = (x * x + z * z).sqrt();
-                    if length > 0.001 {
-                        region.config.wind_direction = [x / length, z / length];
-                    }
-                }
             }
         }
 
@@ -610,53 +458,7 @@ impl NavMeshDemo {
         };
 
         let config = self.terrain_config.to_terrain_config();
-        let (_, heights) = terrain::spawn_terrain_with_heights(
-            world,
-            config.clone(),
-            Vec3::zeros(),
-            terrain_material,
-        );
-        self.terrain_heights = Some((config, heights));
-    }
-
-    fn spawn_grass(&mut self, world: &mut World) {
-        let mut config = GrassConfig::default()
-            .with_density(256)
-            .with_wind(0.6, 1.0)
-            .with_wind_direction(1.0, 0.3)
-            .with_stream_radius(150.0);
-
-        config.lod_distances = [15.0, 40.0, 80.0, 150.0];
-        config.lod_density_scales = [1.0, 0.5, 0.2, 0.05];
-
-        let grass_region = spawn_grass_region(world, config);
-        self.grass_region = Some(grass_region);
-
-        if let Some((terrain_config, heights)) = &self.terrain_heights {
-            let heightmap = terrain::build_terrain_heightmap(terrain_config, heights.clone());
-            set_grass_heightmap(world, grass_region, heightmap);
-        }
-
-        add_grass_species(world, grass_region, GrassSpecies::meadow(), 4.0);
-        add_grass_species(world, grass_region, GrassSpecies::short(), 3.0);
-        add_grass_species(world, grass_region, GrassSpecies::tall(), 1.0);
-    }
-
-    fn update_grass(&self, world: &mut World) {
-        let Some(grass_region) = self.grass_region else {
-            return;
-        };
-
-        let Some(camera) = self.camera_entity else {
-            return;
-        };
-
-        if let Some(pan_orbit) = world.core.get_pan_orbit_camera(camera) {
-            let focus = pan_orbit.focus;
-            let terrain_y = self.sample_height(focus.x, focus.z);
-            let grass_position = Vec3::new(focus.x, terrain_y, focus.z);
-            update_grass_player_position(world, grass_region, grass_position);
-        }
+        terrain::spawn_terrain(world, config, Vec3::zeros(), terrain_material);
     }
 
     fn spawn_trees(&mut self, world: &mut World) {
@@ -1007,13 +809,6 @@ impl NavMeshDemo {
         }
         mark_local_transform_dirty(world, fox_entity);
 
-        attach_grass_interactor(
-            world,
-            agent_entity,
-            self.interactor_radius,
-            self.interactor_strength,
-        );
-
         let initial_animation = self.animation_indices.survey;
         if let Some(player) = world.core.get_animation_player_mut(fox_entity) {
             if let Some(survey_index) = initial_animation {
@@ -1321,75 +1116,6 @@ impl NavMeshDemo {
                 self.last_following_index = None;
             }
         }
-    }
-
-    fn update_interactor_debug(&mut self, world: &mut World) {
-        if self.interactor_debug_entity.is_none() {
-            let entity = spawn_entities(
-                world,
-                nightshade::ecs::LINES
-                    | nightshade::ecs::VISIBILITY
-                    | nightshade::ecs::GLOBAL_TRANSFORM,
-                1,
-            )[0];
-            world.core.set_lines(entity, Lines::default());
-            world
-                .core
-                .set_visibility(entity, Visibility { visible: true });
-            world
-                .core
-                .set_global_transform(entity, GlobalTransform::default());
-            self.interactor_debug_entity = Some(entity);
-        }
-
-        let Some(debug_entity) = self.interactor_debug_entity else {
-            return;
-        };
-
-        if !self.show_interactor_debug {
-            world.core.set_lines(debug_entity, Lines::new(vec![]));
-            return;
-        }
-
-        let mut lines = Vec::new();
-        let segments = 24;
-        let color = vec4(1.0, 0.5, 0.0, 1.0);
-
-        for fox in &self.foxes {
-            let Some(interactor) = world.core.get_grass_interactor(fox.agent_entity) else {
-                continue;
-            };
-            let Some(transform) = world.core.get_local_transform(fox.agent_entity) else {
-                continue;
-            };
-
-            let center = transform.translation;
-            let radius = interactor.radius;
-
-            for segment_index in 0..segments {
-                let angle1 = (segment_index as f32 / segments as f32) * std::f32::consts::TAU;
-                let angle2 = ((segment_index + 1) as f32 / segments as f32) * std::f32::consts::TAU;
-
-                let x1 = center.x + angle1.cos() * radius;
-                let z1 = center.z + angle1.sin() * radius;
-                let x2 = center.x + angle2.cos() * radius;
-                let z2 = center.z + angle2.sin() * radius;
-
-                lines.push(Line {
-                    start: Vec3::new(x1, center.y + 0.05, z1),
-                    end: Vec3::new(x2, center.y + 0.05, z2),
-                    color,
-                });
-            }
-
-            lines.push(Line {
-                start: center + Vec3::new(0.0, 0.05, 0.0),
-                end: center + Vec3::new(0.0, 0.5, 0.0),
-                color: vec4(0.0, 1.0, 0.0, 1.0),
-            });
-        }
-
-        world.core.set_lines(debug_entity, Lines::new(lines));
     }
 }
 

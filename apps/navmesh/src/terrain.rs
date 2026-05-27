@@ -1,7 +1,6 @@
 use nalgebra_glm::{Quat, Vec3, vec3};
 use nightshade::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
 use nightshade::ecs::generational_registry::registry_add_reference;
-use nightshade::ecs::grass::components::TerrainHeightmap;
 use nightshade::ecs::material::components::{Material, MaterialRef};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::mesh::components::{Mesh, RenderMesh, Vertex};
@@ -152,25 +151,12 @@ pub fn generate_terrain_mesh(config: &TerrainConfig) -> TerrainGenerationResult 
     }
 }
 
-/// Build a [`TerrainHeightmap`] suitable for feeding into a `GrassRegion`.
-pub fn build_terrain_heightmap(config: &TerrainConfig, heights: Vec<f32>) -> TerrainHeightmap {
-    TerrainHeightmap {
-        width: config.width,
-        depth: config.depth,
-        resolution_x: config.resolution_x,
-        resolution_z: config.resolution_z,
-        heights,
-    }
-}
-
-/// Generates terrain and returns both the entity and the heights array so
-/// the caller can build a [`TerrainHeightmap`] for grass.
-pub fn spawn_terrain_with_heights(
+pub fn spawn_terrain(
     world: &mut World,
     config: TerrainConfig,
     position: Vec3,
     material: Material,
-) -> (Entity, Vec<f32>) {
+) -> Entity {
     let TerrainGenerationResult {
         mesh,
         heights,
@@ -293,7 +279,7 @@ pub fn spawn_terrain_with_heights(
         .core
         .set_material_ref(entity, MaterialRef::new(material_name));
 
-    (entity, heights)
+    entity
 }
 
 fn convert_heights_to_heightfield(

@@ -29,10 +29,6 @@ pub mod components {
     };
 
     pub use crate::ecs::decal::components::Decal;
-    #[cfg(feature = "grass")]
-    pub use crate::ecs::grass::components::{
-        GrassConfig, GrassInteractor, GrassRegion, GrassSpecies,
-    };
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
@@ -143,8 +139,6 @@ freecs::ecs! {
             culling_mask: crate::ecs::primitives::CullingMask => CULLING_MASK,
             decal: crate::ecs::decal::components::Decal => DECAL,
             global_transform: crate::ecs::transform::components::GlobalTransform => GLOBAL_TRANSFORM,
-            grass_interactor: crate::ecs::grass::components::GrassInteractor => GRASS_INTERACTOR,
-            grass_region: crate::ecs::grass::components::GrassRegion => GRASS_REGION,
             guid: crate::ecs::primitives::Guid => GUID,
             hovered: crate::ecs::input::components::Hovered => HOVERED,
             ignore_parent_scale: crate::ecs::transform::components::IgnoreParentScale => IGNORE_PARENT_SCALE,
