@@ -477,12 +477,6 @@ pub(crate) fn step(
                 }
             }
 
-            if world.resources.render_settings.render_world_to_swapchain
-                && let Some(handle) = world.resources.window.handle.as_ref()
-            {
-                handle.request_redraw();
-            }
-
             None
         }
         event => {
@@ -1594,7 +1588,14 @@ impl winit::application::ApplicationHandler for WindowContext {
             }
         }
 
-        request_redraw_system(&mut self.world);
+        if !self
+            .world
+            .resources
+            .render_settings
+            .render_world_to_swapchain
+        {
+            request_redraw_system(&mut self.world);
+        }
     }
 
     fn device_event(
@@ -1611,7 +1612,23 @@ impl winit::application::ApplicationHandler for WindowContext {
     }
 
     fn about_to_wait(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
-        request_redraw_system(&mut self.world);
+        if self
+            .world
+            .resources
+            .render_settings
+            .render_world_to_swapchain
+        {
+            if let Some(new_state) = step(
+                &mut self.world,
+                &mut self.state,
+                &mut self.renderer,
+                &WindowEvent::RedrawRequested,
+            ) {
+                self.state = new_state;
+            }
+        } else {
+            request_redraw_system(&mut self.world);
+        }
     }
 
     fn exiting(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {}
