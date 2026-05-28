@@ -105,6 +105,24 @@ pub fn update_global_transforms_system(world: &mut World) {
     dirty_entities.sort_unstable_by_key(|entity| (entity.id, entity.generation));
     dirty_entities.dedup();
 
+    {
+        let children_cache = &world.resources.transform_state.children_cache;
+        let mut seen: std::collections::HashSet<freecs::Entity> =
+            dirty_entities.iter().copied().collect();
+        let mut index = 0;
+        while index < dirty_entities.len() {
+            let entity = dirty_entities[index];
+            index += 1;
+            if let Some(children) = children_cache.get(&entity) {
+                for child in children {
+                    if seen.insert(*child) {
+                        dirty_entities.push(*child);
+                    }
+                }
+            }
+        }
+    }
+
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
     let mut visited = std::collections::HashSet::new();
