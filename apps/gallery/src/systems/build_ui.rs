@@ -307,12 +307,15 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
                 }
                 if !consumed && let Some(data) = widget::<UiButtonData>(world, *entity) {
                     let text_slot = data.text_slot;
-                    let label = world
-                        .resources
-                        .text
-                        .cache
-                        .get_text(text_slot)
-                        .map(|s| s.to_string())
+                    let label = text_slot
+                        .and_then(|slot| {
+                            world
+                                .resources
+                                .text
+                                .cache
+                                .get_text(slot)
+                                .map(|s| s.to_string())
+                        })
                         .unwrap_or_else(|| "Clicked".to_string());
                     let lower = label.to_lowercase();
                     let severity = if lower.contains("success") {
