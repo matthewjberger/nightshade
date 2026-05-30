@@ -148,10 +148,4 @@ jobs:
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.18.8/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
       - name: Build
-        run: |
-          for attempt in 1 2 3; do
-            ./trunk build --release --config apps/editor/Trunk.toml && exit 0
-            echo "::warning::trunk build attempt $attempt failed (often a transient wasm-opt download); retrying in 15s"
-            sleep 15
-          done
-          exit 1
+        run: ./trunk build --release --config apps/editor/Trunk.toml
