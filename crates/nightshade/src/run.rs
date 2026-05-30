@@ -287,6 +287,8 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
             renderer: None,
             snapshot_path: None,
             snapshot_queued: false,
+            #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+            accesskit: None,
             initialized: false,
         };
         event_loop.run_app(&mut context)?;
@@ -1256,6 +1258,8 @@ pub struct WindowContext {
     pub snapshot_path: Option<std::path::PathBuf>,
     #[cfg(not(target_arch = "wasm32"))]
     pub snapshot_queued: bool,
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+    pub accesskit: Option<crate::ecs::ui::accessibility::AccessKitHost>,
     pub initialized: bool,
 }
 
@@ -1268,6 +1272,10 @@ impl winit::application::ApplicationHandler for WindowContext {
             .push(crate::ecs::input::events::AppEvent::Suspended);
         self.renderer = None;
         self.world.resources.window.handle = None;
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+        {
+            self.accesskit = None;
+        }
     }
 
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
@@ -1344,6 +1352,14 @@ impl winit::application::ApplicationHandler for WindowContext {
         let window_handle = std::sync::Arc::new(window);
         self.world.resources.window.cached_scale_factor = window_handle.scale_factor() as f32;
         self.world.resources.window.handle = Some(window_handle.clone());
+
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+        {
+            self.accesskit = Some(crate::ecs::ui::accessibility::AccessKitHost::new(
+                event_loop,
+                &window_handle,
+            ));
+        }
 
         crate::ecs::window::resources::refresh_monitors_from_event_loop(
             &mut self.world.resources.monitors,
@@ -1485,6 +1501,13 @@ impl winit::application::ApplicationHandler for WindowContext {
             }
         }
 
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+        if let Some(host) = self.accesskit.as_mut()
+            && let Some(window) = self.world.resources.window.handle.as_ref()
+        {
+            host.process_event(window, &event);
+        }
+
         if self.world.resources.window.should_exit
             || matches!(event, winit::event::WindowEvent::CloseRequested)
         {
@@ -1572,6 +1595,11 @@ impl winit::application::ApplicationHandler for WindowContext {
             crate::run::step(&mut self.world, &mut self.state, &mut self.renderer, &event)
         {
             self.state = new_state;
+        }
+
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), feature = "core"))]
+        if let Some(host) = self.accesskit.as_mut() {
+            host.update(&mut self.world);
         }
 
         #[cfg(not(target_arch = "wasm32"))]
