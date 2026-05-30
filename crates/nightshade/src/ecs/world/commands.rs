@@ -6,6 +6,8 @@ use crate::ecs::mesh::components::{
     create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
     create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
+#[cfg(feature = "physics")]
+use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
 use crate::ecs::prefab::resources::mesh_cache_insert;
 use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{

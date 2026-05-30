@@ -660,15 +660,12 @@ pub mod prelude {
     pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::resources::{
-        physics_world_add_collider, physics_world_add_joint, physics_world_add_rigid_body,
         physics_world_angular_velocity, physics_world_apply_force, physics_world_apply_impulse,
         physics_world_apply_impulse_at_point, physics_world_apply_torque,
         physics_world_body_rotation, physics_world_body_translation, physics_world_cast_ray,
         physics_world_collision_events, physics_world_contact_force_events,
-        physics_world_get_interpolation_alpha, physics_world_get_rigid_body,
-        physics_world_get_rigid_body_mut, physics_world_linear_velocity,
-        physics_world_overlap_sphere, physics_world_query_pipeline,
-        physics_world_remove_rigid_body, physics_world_set_angular_velocity,
+        physics_world_get_interpolation_alpha, physics_world_linear_velocity,
+        physics_world_overlap_sphere, physics_world_set_angular_velocity,
         physics_world_set_linear_velocity, physics_world_step,
     };
     #[cfg(feature = "physics")]
@@ -841,8 +838,6 @@ pub mod prelude {
     pub use gilrs;
     pub use nalgebra_glm;
     pub use nalgebra_glm::{vec2, vec3, vec4};
-    #[cfg(feature = "physics")]
-    pub use rapier3d;
     pub use wgpu;
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
