@@ -168,7 +168,9 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
         }
 
         if let Some(rigid_body_mut) = world.core.get_rigid_body_mut(entity) {
-            rigid_body_mut.handle = Some(rapier_handle.into());
+            rigid_body_mut.handle = Some(
+                crate::ecs::physics::types::rigid_body_handle_from_rapier(rapier_handle),
+            );
         }
 
         world
