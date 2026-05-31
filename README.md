@@ -151,7 +151,7 @@ struct SpinCube {
 
 impl State for SpinCube {
     fn initialize(&mut self, world: &mut World) {
-        world.resources.graphics.atmosphere = Atmosphere::Nebula;
+        world.resources.render_settings.atmosphere = Atmosphere::Nebula;
         capture_procedural_atmosphere_ibl(world, Atmosphere::Nebula, 0.0);
         let camera = spawn_pan_orbit_camera(
             world,
@@ -236,7 +236,6 @@ Renderer & subsystems:
 ├── audio ────────────── audio playback (kira)
 ├── physics ──────────── 3D physics (rapier3d)
 ├── gamepad ──────────── controller input (gilrs)
-├── grass ─────────────── GPU-instanced grass regions
 ├── navmesh ──────────── runtime navmesh queries
 ├── navmesh-bake ─────── navmesh baking (rerecast)
 ├── debug_render ─────── line / shape debug overlays
