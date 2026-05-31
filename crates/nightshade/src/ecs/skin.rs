@@ -48,9 +48,9 @@
 //!
 //! ```ignore
 //! // Create joint entities
-//! let root = world.spawn_entities(JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! let spine = world.spawn_entities(JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
-//! let head = world.spawn_entities(JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
+//! let root = spawn_entities(world, JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let spine = spawn_entities(world, JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
+//! let head = spawn_entities(world, JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
 //!
 //! // Set up hierarchy
 //! world.core.set_parent(spine, Parent(root));

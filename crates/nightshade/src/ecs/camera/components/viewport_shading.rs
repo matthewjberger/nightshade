@@ -4,11 +4,11 @@
 //! [`ViewportShading`] is a component the editor (or any caller) attaches
 //! to a camera entity to choose the shading mode and overlay visibility
 //! for that camera's tile. The renderer reads it together with the global
-//! [`Graphics`](crate::ecs::graphics::resources::Graphics) defaults to
+//! [`RenderSettings`](crate::ecs::graphics::resources::RenderSettings) defaults to
 //! produce an [`EffectiveShading`] for the camera, then writes it into
 //! `world.resources.renderer_state.active_view` while the camera's render
-//! graph executes. Passes read from `graphics.active_view`, never from
-//! the user-set defaults on `Graphics` directly, so each camera renders
+//! graph executes. Passes read from `renderer_state.active_view`, never from
+//! the user-set defaults on `RenderSettings` directly, so each camera renders
 //! with its own view-local shading without the renderer having to
 //! mutate or restore unrelated global state between cameras.
 //!
