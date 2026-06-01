@@ -144,7 +144,7 @@ struct Stats {
 
 impl State for FireworksDemo {
     fn initialize(&mut self, world: &mut World) {
-        world.resources.window.title = "Fireworks Demo".to_string();
+        world.resources.window.title = "Fireworks".to_string();
         world.resources.user_interface.enabled = true;
         world.resources.render_settings.atmosphere = Atmosphere::Space;
         world.resources.debug_draw.show_grid = true;
@@ -225,7 +225,7 @@ impl State for FireworksDemo {
 
         spawn_ui_text_with_properties(
             world,
-            "GPU Particle System - Fireworks Demo\nMouse: Orbit | Scroll: Zoom | Space: Launch | 1-4: Salvo | ESC: Exit",
+            "GPU Particle System - Fireworks\nMouse: Orbit | Scroll: Zoom | Space: Launch | 1-4: Salvo | ESC: Exit",
             Vec2::zeros(),
             TextProperties {
                 font_size: 18.0,
