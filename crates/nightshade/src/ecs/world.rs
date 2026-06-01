@@ -30,7 +30,7 @@ pub mod components {
 
     pub use crate::ecs::decal::components::Decal;
     pub use crate::ecs::input::components::Hovered;
-    pub use crate::ecs::light::components::{Light, LightType};
+    pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{
         AlphaMode, Material, MaterialRef, MaterialVariantMapping, MaterialVariants,

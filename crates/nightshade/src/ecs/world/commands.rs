@@ -431,6 +431,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             shadow_resolution: 0,
             shadow_distance: 0.0,
             cookie_texture: None,
+            ..Default::default()
         },
     );
 
@@ -484,6 +485,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             shadow_resolution: 0,
             shadow_distance: 0.0,
             cookie_texture: None,
+            ..Default::default()
         },
     );
 
