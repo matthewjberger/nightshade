@@ -56,7 +56,23 @@ Example apps in [`apps/`](apps/). Each is buildable with `just run <name>`.
 <br><b><a href="apps/fireworks">fireworks</a></b>
 <br><sub>GPU particle system. Bursts, chrysanthemums, rings, glitter, and patterned shape emitters.</sub>
 </td>
-<td width="50%" valign="top"></td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/destructible.png" alt="destructible" width="100%" />
+<br><b><a href="apps/destructible">destructible</a></b>
+<br><sub>First-person destructible sandbox. Runtime convex mesh slicing, physics rubble, and multiple cutter tools.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/lights.png" alt="lights" width="100%" />
+<br><b><a href="apps/lights">lights</a></b>
+<br><sub>Clustered forward rendering with 1024 dynamic point lights culled per froxel.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="crates/nightshade/images/apps/tower_defense.png" alt="tower_defense" width="100%" />
+<br><b><a href="apps/tower_defense">tower_defense</a></b>
+<br><sub>Grid-based tower defense with multiple tower types, enemy waves, and pathfinding.</sub>
+</td>
 </tr>
 </table>
 
