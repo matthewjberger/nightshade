@@ -437,6 +437,9 @@ pub(crate) fn step(
                 }
             }
 
+            #[cfg(target_arch = "wasm32")]
+            crate::ecs::world::commands::sync_cursor_lock_state(world);
+
             crate::ecs::graphics::systems::day_night_cycle_system(world);
             state.run_systems(world);
             world.resources.input.events.clear();

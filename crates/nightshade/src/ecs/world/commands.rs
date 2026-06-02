@@ -111,6 +111,24 @@ pub fn set_cursor_locked(world: &mut World, locked: bool) {
             let _ = window_handle.set_cursor_grab(winit::window::CursorGrabMode::None);
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        world.resources.window.cursor_locked = locked;
+    }
+}
+
+/// Reconcile [`Window::cursor_locked`] with the browser's actual pointer-lock
+/// state. On the web the browser, not the app, owns the lock: pressing Escape
+/// exits it and the keydown is never delivered, so [`set_cursor_locked`] cannot
+/// be the source of truth. Run this once per frame before app systems so a
+/// user-initiated release is visible to game logic.
+#[cfg(target_arch = "wasm32")]
+pub fn sync_cursor_lock_state(world: &mut World) {
+    let locked = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.pointer_lock_element())
+        .is_some();
+    world.resources.window.cursor_locked = locked;
 }
 
 /// Show or hide the OS cursor.
