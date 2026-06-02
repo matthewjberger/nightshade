@@ -8,7 +8,7 @@ use crate::ecs::mesh::components::{
 };
 #[cfg(feature = "physics")]
 use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
-use crate::ecs::prefab::resources::mesh_cache_insert;
+use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_remove_unused};
 use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
@@ -750,7 +750,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
     if world.resources.cleanup.frame_counter >= CLEANUP_INTERVAL_FRAMES {
         world.resources.cleanup.frame_counter = 0;
-        registry_remove_unused(&mut world.resources.assets.mesh_cache.registry);
+        mesh_cache_remove_unused(&mut world.resources.assets.mesh_cache);
         material_registry_remove_unused(&mut world.resources.assets.material_registry);
         texture_cache_remove_unused(&mut world.resources.texture_cache);
     }

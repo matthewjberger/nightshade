@@ -690,7 +690,7 @@ pub mod prelude {
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
-    pub use crate::ecs::prefab::resources::mesh_cache_insert;
+    pub use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_remove_unused};
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
     #[cfg(feature = "scene_graph")]
