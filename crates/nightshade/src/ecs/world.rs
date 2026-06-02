@@ -72,8 +72,9 @@ pub mod resources {
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
-        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, IblViews,
-        MeshLodChain, MeshLodLevel, RenderSettings, RendererState, TonemapAlgorithm, VertexSnap,
+        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
+        GpuDeviceType, GpuProfile, IblViews, MeshLodChain, MeshLodLevel, RenderSettings,
+        RendererState, TonemapAlgorithm, VertexSnap,
     };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
