@@ -1504,12 +1504,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                 #[cfg(target_arch = "wasm32")]
                 crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
 
-                if self.world.resources.renderer_state.use_fullscreen
-                    && let Some(window_handle) = &self.world.resources.window.handle
-                {
-                    window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-                }
-
                 if let Some(window_handle) = &self.world.resources.window.handle {
                     window_handle
                         .set_cursor_visible(self.world.resources.renderer_state.show_cursor);
