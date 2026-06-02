@@ -614,6 +614,8 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
     #[cfg(not(target_arch = "wasm32"))]
     let cursor_scale = 1.0_f32;
 
+    let pointer_scale = world.resources.window.pointer_viewport_scale;
+
     let mouse = &mut world.resources.input.mouse;
     match window_event {
         winit::event::WindowEvent::MouseInput { button, state, .. } => {
@@ -654,7 +656,7 @@ fn input_event_system(world: &mut World, window_event: &WindowEvent) {
             }
         }
         winit::event::WindowEvent::CursorMoved { position, .. } => {
-            let current_position = Vec2::new(position.x as _, position.y as _);
+            let current_position = Vec2::new(position.x as f32, position.y as f32) * pointer_scale;
             if mouse.position_initialized {
                 mouse.position_delta += (current_position - mouse.position) * cursor_scale;
             } else {
@@ -687,9 +689,10 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
     use crate::ecs::world::Vec2;
 
     if let winit::event::WindowEvent::Touch(touch) = window_event {
+        let pointer_scale = world.resources.window.pointer_viewport_scale;
         let touch_input = &mut world.resources.input.touch;
         let id = touch.id;
-        let position = Vec2::new(touch.location.x as f32, touch.location.y as f32);
+        let position = Vec2::new(touch.location.x as f32, touch.location.y as f32) * pointer_scale;
 
         let was_primary = touch_input.primary_touch_id == Some(id);
 
@@ -1350,6 +1353,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(600.0);
             let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
+            self.world.resources.window.pointer_viewport_scale = (dpr / raw_dpr) as f32;
             let physical_width = (css_width * dpr).round() as u32;
             let physical_height = (css_height * dpr).round() as u32;
             canvas.set_width(physical_width);
@@ -1584,6 +1588,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                         .and_then(|v| v.as_f64())
                         .unwrap_or(height as f64);
                     let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
+                    self.world.resources.window.pointer_viewport_scale = (dpr / raw_dpr) as f32;
                     let physical_width = (css_width * dpr).round() as u32;
                     let physical_height = (css_height * dpr).round() as u32;
                     use winit::platform::web::WindowExtWebSys;
