@@ -260,6 +260,7 @@ freecs::ecs! {
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
         schedules: crate::schedule::Schedules,
         scratch: crate::ecs::world::scratch::Scratch,
+        shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
         text: crate::ecs::text::resources::TextState,
