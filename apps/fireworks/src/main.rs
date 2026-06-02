@@ -150,7 +150,7 @@ impl State for FireworksDemo {
         world.resources.debug_draw.show_grid = true;
         world.resources.render_settings.clear_color = [0.01, 0.01, 0.02, 1.0];
         world.resources.render_settings.bloom_enabled = true;
-        world.resources.render_settings.bloom_intensity = 0.5;
+        world.resources.render_settings.bloom_intensity = 0.05;
 
         let camera = spawn_entities(
             world,
