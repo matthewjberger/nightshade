@@ -337,8 +337,8 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_entity_removed(entity);
         }
 
-        if !is_runtime {
-            if let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) {
+        if let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) {
+            if !is_runtime {
                 let mesh_name = instanced_mesh.mesh_name.clone();
                 if let Some(&index) = world
                     .resources
@@ -354,31 +354,35 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                     );
                 }
             }
+            world
+                .resources
+                .mesh_render_state
+                .mark_instanced_meshes_changed();
+        }
 
-            if let Some(material_ref) = world.core.get_material_ref(entity) {
-                let material_name = material_ref.name.clone();
-                let texture_names: Vec<String> = registry_entry_by_name(
-                    &world.resources.assets.material_registry.registry,
-                    &material_name,
-                )
-                .map(|material| material.texture_names().map(str::to_string).collect())
-                .unwrap_or_default();
-                for texture in &texture_names {
-                    texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
-                }
-                if let Some(&index) = world
-                    .resources
-                    .assets
-                    .material_registry
-                    .registry
-                    .name_to_index
-                    .get(&material_name)
-                {
-                    registry_remove_reference(
-                        &mut world.resources.assets.material_registry.registry,
-                        index,
-                    );
-                }
+        if !is_runtime && let Some(material_ref) = world.core.get_material_ref(entity) {
+            let material_name = material_ref.name.clone();
+            let texture_names: Vec<String> = registry_entry_by_name(
+                &world.resources.assets.material_registry.registry,
+                &material_name,
+            )
+            .map(|material| material.texture_names().map(str::to_string).collect())
+            .unwrap_or_default();
+            for texture in &texture_names {
+                texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
+            }
+            if let Some(&index) = world
+                .resources
+                .assets
+                .material_registry
+                .registry
+                .name_to_index
+                .get(&material_name)
+            {
+                registry_remove_reference(
+                    &mut world.resources.assets.material_registry.registry,
+                    index,
+                );
             }
         }
     }
