@@ -724,7 +724,6 @@ pub mod prelude {
     };
     pub use crate::ecs::text::components::{TextAlignment, TextProperties, VerticalAlignment};
     pub use crate::ecs::text::resources::font_engine::FontKind;
-    pub use crate::ecs::text::systems::sync_text_meshes_system;
     #[cfg(feature = "assets")]
     pub use crate::ecs::texture_loader::{
         AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
