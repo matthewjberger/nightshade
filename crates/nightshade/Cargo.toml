@@ -187,6 +187,7 @@ web-sys = { workspace = true, features = [
     "DataTransfer",
     "DataTransferItem",
     "DataTransferItemList",
+    "DedicatedWorkerGlobalScope",
     "Document",
     "DragEvent",
     "Element",

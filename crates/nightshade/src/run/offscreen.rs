@@ -230,3 +230,39 @@ pub fn input_inject_keyboard(
     };
     publish_event(world, Message::Input { event });
 }
+
+/// Drives a `requestAnimationFrame` render loop on the worker's
+/// `DedicatedWorkerGlobalScope`, invoking `on_frame` once per frame.
+///
+/// Web workers that render an `OffscreenCanvas` otherwise hand-write the
+/// self-rescheduling closure that this owns. The caller's `on_frame` does the
+/// per-frame work, typically locking its shared app state and calling
+/// [`tick_offscreen`]. The page-side glue (canvas transfer and message
+/// decoding) stays app-specific and is not covered here.
+#[cfg(target_arch = "wasm32")]
+type AnimationFrame =
+    std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::prelude::Closure<dyn FnMut()>>>>;
+
+#[cfg(target_arch = "wasm32")]
+pub fn spawn_animation_frame_loop(mut on_frame: impl FnMut() + 'static) {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::prelude::Closure;
+
+    let scope: web_sys::DedicatedWorkerGlobalScope = js_sys::global().unchecked_into();
+    let frame: AnimationFrame = Rc::new(RefCell::new(None));
+    let frame_handle = frame.clone();
+    let loop_scope = scope.clone();
+
+    *frame.borrow_mut() = Some(Closure::<dyn FnMut()>::new(move || {
+        on_frame();
+        if let Some(callback) = frame_handle.borrow().as_ref() {
+            let _ = loop_scope.request_animation_frame(callback.as_ref().unchecked_ref());
+        }
+    }));
+
+    if let Some(callback) = frame.borrow().as_ref() {
+        let _ = scope.request_animation_frame(callback.as_ref().unchecked_ref());
+    }
+}
