@@ -1,0 +1,232 @@
+//! Headless and offscreen frame driver.
+//!
+//! The winit event loop in [`crate::run`] owns input, timing, and the render
+//! loop. That path assumes a real OS window. This module exposes the same frame
+//! pipeline without winit, so the engine can render into a surface that has no
+//! window behind it:
+//!
+//! - a `web_sys::OffscreenCanvas` transferred to a web worker, where the render
+//!   loop runs off the browser's main thread, or
+//! - any native offscreen target for golden-image tests, thumbnailing, or
+//!   server-side capture.
+//!
+//! # Lifecycle
+//!
+//! Build a renderer from the surface target with
+//! [`create_wgpu_renderer`](crate::render::wgpu::create_wgpu_renderer) (its only
+//! bound is `Into<wgpu::SurfaceTarget>`, which an `OffscreenCanvas` satisfies),
+//! then:
+//!
+//! ```ignore
+//! let mut renderer = create_wgpu_renderer(offscreen_canvas, width, height).await?;
+//! initialize_offscreen(&mut world, &mut state, &mut renderer, (width, height), 1.0);
+//!
+//! // once per requestAnimationFrame tick:
+//! if let Some(next_state) = tick_offscreen(&mut world, &mut state, &mut renderer) {
+//!     state = next_state;
+//! }
+//!
+//! // on a surface resize:
+//! resize_offscreen(&mut world, &mut renderer, new_width, new_height);
+//! ```
+//!
+//! Forwarded pointer, wheel, and keyboard events are fed in with the
+//! `input_inject_*` functions, which write the same input state the winit loop
+//! produces.
+
+use crate::ecs::world::Vec2;
+use crate::ecs::world::World;
+use crate::ecs::world::resources::MouseState;
+use crate::render::wgpu::WgpuRenderer;
+use crate::state::State;
+use winit::event::{ElementState, MouseButton};
+use winit::keyboard::KeyCode;
+
+/// Prepares the world for offscreen rendering and runs [`State::initialize`].
+///
+/// Sets the cached viewport size and scale factor the render passes and UI
+/// layout read each frame, installs the default frame and retained-UI
+/// schedules, configures the render graph from the state, then initializes the
+/// scene. Call once after the renderer is created.
+pub fn initialize_offscreen(
+    world: &mut World,
+    state: &mut dyn State,
+    renderer: &mut WgpuRenderer,
+    viewport: (u32, u32),
+    scale_factor: f32,
+) {
+    world.resources.window.cached_viewport_size = Some(viewport);
+    world.resources.window.cached_scale_factor = scale_factor;
+
+    if let Err(error) = renderer.configure_with_state(state) {
+        tracing::error!("Failed to configure renderer with state: {error}");
+    }
+
+    world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
+    world.resources.schedules.retained_ui = crate::schedule::build_default_retained_ui_schedule();
+
+    state.initialize(world);
+}
+
+/// Resizes the surface and updates the cached viewport size used by the render
+/// passes and UI layout.
+pub fn resize_offscreen(world: &mut World, renderer: &mut WgpuRenderer, width: u32, height: u32) {
+    if let Err(error) = renderer.resize_surface(width, height) {
+        tracing::error!("Failed to resize surface: {error}");
+    }
+    world.resources.window.cached_viewport_size = Some((width, height));
+}
+
+/// Advances and renders one offscreen frame.
+///
+/// Advances timing, then runs the shared frame body
+/// ([`run_frame_body`](crate::run::run_frame_body)): per-frame engine systems,
+/// [`State::run_systems`], the frame schedule, and the render graph. Returns the
+/// next [`State`] when one was requested through
+/// `world.resources.window.next_state`.
+pub fn tick_offscreen(
+    world: &mut World,
+    state: &mut dyn State,
+    renderer: &mut WgpuRenderer,
+) -> Option<Box<dyn State>> {
+    super::advance_timing(world);
+    super::run_frame_body(world, state, renderer)
+}
+
+/// Injects an absolute cursor position (in physical pixels), updating the
+/// per-frame position delta the same way the winit loop does.
+pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
+    let mouse = &mut world.resources.input.mouse;
+    if mouse.position_initialized {
+        mouse.position_delta += position - mouse.position;
+    } else {
+        mouse.position_initialized = true;
+    }
+    mouse.position = position;
+    mouse.state.set(MouseState::MOVED, true);
+}
+
+/// Accumulates raw mouse motion for first-person look, matching the winit
+/// device-event path.
+pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
+    world.resources.input.mouse.raw_mouse_delta += delta;
+}
+
+/// Injects a mouse button press or release, maintaining the just-pressed and
+/// just-released edge flags.
+pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: ElementState) {
+    let pressed = state == ElementState::Pressed;
+    let released = state == ElementState::Released;
+    let mouse = &mut world.resources.input.mouse;
+    match button {
+        MouseButton::Left => {
+            let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
+            mouse.state.set(MouseState::LEFT_CLICKED, pressed);
+            if pressed && !was_clicked {
+                mouse.state.set(MouseState::LEFT_JUST_PRESSED, true);
+            }
+            if released && was_clicked {
+                mouse.state.set(MouseState::LEFT_JUST_RELEASED, true);
+            }
+        }
+        MouseButton::Middle => {
+            let was_clicked = mouse.state.contains(MouseState::MIDDLE_CLICKED);
+            mouse.state.set(MouseState::MIDDLE_CLICKED, pressed);
+            if pressed && !was_clicked {
+                mouse.state.set(MouseState::MIDDLE_JUST_PRESSED, true);
+            }
+            if released && was_clicked {
+                mouse.state.set(MouseState::MIDDLE_JUST_RELEASED, true);
+            }
+        }
+        MouseButton::Right => {
+            let was_clicked = mouse.state.contains(MouseState::RIGHT_CLICKED);
+            mouse.state.set(MouseState::RIGHT_CLICKED, pressed);
+            if pressed && !was_clicked {
+                mouse.state.set(MouseState::RIGHT_JUST_PRESSED, true);
+            }
+            if released && was_clicked {
+                mouse.state.set(MouseState::RIGHT_JUST_RELEASED, true);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Injects a mouse wheel delta in lines.
+pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
+    let mouse = &mut world.resources.input.mouse;
+    mouse.wheel_delta = delta;
+    mouse.state.set(MouseState::SCROLLED, true);
+}
+
+/// Injects a keyboard key state change with optional typed text, updating the
+/// per-key state map, the just-pressed and just-released sets, the per-frame key
+/// and character buffers, and the input event bus.
+pub fn input_inject_keyboard(
+    world: &mut World,
+    key_code: KeyCode,
+    state: ElementState,
+    text: Option<&str>,
+) {
+    use crate::ecs::event_bus::commands::publish_event;
+    use crate::ecs::world::events::{InputEvent, KeyState, Message};
+
+    let was_pressed = world
+        .resources
+        .input
+        .keyboard
+        .keystates
+        .get(&key_code)
+        .is_some_and(|previous| *previous == ElementState::Pressed);
+
+    *world
+        .resources
+        .input
+        .keyboard
+        .keystates
+        .entry(key_code)
+        .or_insert(state) = state;
+
+    let pressed = state == ElementState::Pressed;
+    world
+        .resources
+        .input
+        .keyboard
+        .frame_keys
+        .push((key_code, pressed));
+
+    if pressed && !was_pressed {
+        world
+            .resources
+            .input
+            .keyboard
+            .just_pressed_keys
+            .insert(key_code);
+    } else if !pressed && was_pressed {
+        world
+            .resources
+            .input
+            .keyboard
+            .just_released_keys
+            .insert(key_code);
+    }
+
+    if pressed && let Some(text) = text {
+        for character in text.chars() {
+            world.resources.input.keyboard.frame_chars.push(character);
+        }
+    }
+
+    let event = match state {
+        ElementState::Pressed => InputEvent::KeyboardInput {
+            key_code: key_code as u32,
+            state: KeyState::Pressed,
+        },
+        ElementState::Released => InputEvent::KeyboardInput {
+            key_code: key_code as u32,
+            state: KeyState::Released,
+        },
+    };
+    publish_event(world, Message::Input { event });
+}

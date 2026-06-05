@@ -94,6 +94,9 @@ pub use crate::logging::log_file_name;
 pub use crate::logging::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
+pub mod offscreen;
+pub use offscreen::*;
+
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::ecs::input::resources::DroppedFile>> =
@@ -412,87 +415,112 @@ pub(crate) fn step(
 
     match event {
         WindowEvent::RedrawRequested => {
-            world.core.increment_tick();
-
-            #[cfg(feature = "gamepad")]
-            crate::ecs::input::systems::gamepad_input_system(world);
-            process_dropped_files(world);
-
-            if let Some(renderer) = renderer.as_mut() {
-                renderer.initialize_fonts(world);
-            }
-
-            #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-            crate::steam::steam_run_callbacks(&world.resources.steam);
-
-            #[cfg(feature = "gamepad")]
-            {
-                let gamepad_events = world.resources.input.gamepad.events.clone();
-                for event in gamepad_events {
-                    world
-                        .resources
-                        .input
-                        .events
-                        .push(crate::ecs::input::events::AppEvent::Gamepad(event));
-                }
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            crate::ecs::world::commands::sync_cursor_lock_state(world);
-
-            crate::ecs::graphics::systems::day_night_cycle_system(world);
-            state.run_systems(world);
-            world.resources.input.events.clear();
-
-            run_frame_systems(world);
-
-            if let Some(builder) = world.resources.window.next_state.take() {
-                return Some(builder(world));
-            }
-
-            let window_handle = world.resources.window.handle.as_ref()?;
-
-            if world.resources.retained_ui.enabled {
-                let requested = world.resources.retained_ui.interaction.requested_cursor;
-                let applied = world.resources.retained_ui.interaction.applied_cursor;
-                if requested.is_some() && requested != applied {
-                    if let Some(cursor) = requested {
-                        window_handle.set_cursor(cursor);
-                    }
-                    world.resources.retained_ui.interaction.applied_cursor = requested;
-                } else if requested.is_none()
-                    && applied.is_some()
-                    && applied != Some(winit::window::CursorIcon::Default)
-                {
-                    window_handle.set_cursor(winit::window::CursorIcon::Default);
-                    world.resources.retained_ui.interaction.applied_cursor =
-                        Some(winit::window::CursorIcon::Default);
-                }
-            }
-
             let renderer = renderer.as_mut()?;
-
-            let should_render =
-                window_handle.inner_size().width > 0 && window_handle.inner_size().height > 0;
-            if should_render {
-                if let Err(error) = renderer.update_with_state(state.as_mut(), world) {
-                    tracing::error!("Failed to update render graph: {error}");
-                }
-
-                state.pre_render(renderer, world);
-
-                if let Err(error) = renderer.render_frame(world) {
-                    tracing::error!("Failed to draw frame: {error}");
-                }
-            }
-
-            None
+            run_frame_body(world, state.as_mut(), renderer)
         }
         event => {
             forward_window_events(world, event);
             None
         }
     }
+}
+
+/// Runs a single rendered frame: the per-frame engine systems, the user
+/// [`State::run_systems`], the frame schedule, and the render graph.
+///
+/// This is the shared body behind both the winit event loop ([`step`]) and the
+/// offscreen driver ([`tick_offscreen`]). It renders whenever a viewport size is
+/// known, with or without a winit window handle, so it drives an
+/// `OffscreenCanvas` inside a web worker exactly as it drives a real window.
+///
+/// Returns the next [`State`] when [`State::run_systems`] requested a transition
+/// through `world.resources.window.next_state`.
+pub fn run_frame_body(
+    world: &mut World,
+    state: &mut dyn State,
+    renderer: &mut crate::render::wgpu::WgpuRenderer,
+) -> Option<Box<dyn State>> {
+    world.core.increment_tick();
+
+    #[cfg(feature = "gamepad")]
+    crate::ecs::input::systems::gamepad_input_system(world);
+    process_dropped_files(world);
+
+    renderer.initialize_fonts(world);
+
+    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+    crate::steam::steam_run_callbacks(&world.resources.steam);
+
+    #[cfg(feature = "gamepad")]
+    {
+        let gamepad_events = world.resources.input.gamepad.events.clone();
+        for event in gamepad_events {
+            world
+                .resources
+                .input
+                .events
+                .push(crate::ecs::input::events::AppEvent::Gamepad(event));
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    crate::ecs::world::commands::sync_cursor_lock_state(world);
+
+    crate::ecs::graphics::systems::day_night_cycle_system(world);
+    state.run_systems(world);
+    world.resources.input.events.clear();
+
+    run_frame_systems(world);
+
+    if let Some(builder) = world.resources.window.next_state.take() {
+        return Some(builder(world));
+    }
+
+    if world.resources.retained_ui.enabled
+        && let Some(window_handle) = world.resources.window.handle.as_ref()
+    {
+        let requested = world.resources.retained_ui.interaction.requested_cursor;
+        let applied = world.resources.retained_ui.interaction.applied_cursor;
+        if requested.is_some() && requested != applied {
+            if let Some(cursor) = requested {
+                window_handle.set_cursor(cursor);
+            }
+            world.resources.retained_ui.interaction.applied_cursor = requested;
+        } else if requested.is_none()
+            && applied.is_some()
+            && applied != Some(winit::window::CursorIcon::Default)
+        {
+            window_handle.set_cursor(winit::window::CursorIcon::Default);
+            world.resources.retained_ui.interaction.applied_cursor =
+                Some(winit::window::CursorIcon::Default);
+        }
+    }
+
+    let (viewport_width, viewport_height) =
+        if let Some(window_handle) = world.resources.window.handle.as_ref() {
+            let size = window_handle.inner_size();
+            (size.width, size.height)
+        } else {
+            world
+                .resources
+                .window
+                .cached_viewport_size
+                .unwrap_or((0, 0))
+        };
+    let should_render = viewport_width > 0 && viewport_height > 0;
+    if should_render {
+        if let Err(error) = renderer.update_with_state(state, world) {
+            tracing::error!("Failed to update render graph: {error}");
+        }
+
+        state.pre_render(renderer, world);
+
+        if let Err(error) = renderer.render_frame(world) {
+            tracing::error!("Failed to draw frame: {error}");
+        }
+    }
+
+    None
 }
 
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
@@ -905,43 +933,52 @@ fn current_monitor_frame_rate_target(
 
 fn timing_system(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("timing").entered();
+    if let WindowEvent::RedrawRequested = event {
+        advance_timing(world);
+    }
+}
+
+/// Advances frame timing by one frame: `delta_time`, the fps averaging window,
+/// and `uptime_milliseconds` on `world.resources.window.timing`.
+///
+/// The winit loop calls this on every `RedrawRequested`. Offscreen and headless
+/// callers invoke it once per frame through [`tick_offscreen`].
+pub fn advance_timing(world: &mut World) {
     use web_time::Instant;
 
-    if let WindowEvent::RedrawRequested = event {
-        let now = Instant::now();
+    let now = Instant::now();
 
-        let timing = &mut world.resources.window.timing;
+    let timing = &mut world.resources.window.timing;
 
-        if timing.initial_frame_start_instant.is_none() {
-            timing.initial_frame_start_instant = Some(now);
-        }
+    if timing.initial_frame_start_instant.is_none() {
+        timing.initial_frame_start_instant = Some(now);
+    }
 
-        timing.raw_delta_time = timing
-            .last_frame_start_instant
-            .map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
+    timing.raw_delta_time = timing
+        .last_frame_start_instant
+        .map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
 
-        timing.delta_time = timing.raw_delta_time * timing.time_speed;
+    timing.delta_time = timing.raw_delta_time * timing.time_speed;
 
-        timing.last_frame_start_instant = Some(now);
+    timing.last_frame_start_instant = Some(now);
 
-        if timing.current_frame_start_instant.is_none() {
+    if timing.current_frame_start_instant.is_none() {
+        timing.current_frame_start_instant = Some(now);
+    }
+
+    if let Some(app_start) = timing.initial_frame_start_instant.as_ref() {
+        timing.uptime_milliseconds = (now - *app_start).as_millis() as u64;
+    }
+
+    timing.frame_counter += 1;
+    if let Some(start) = timing.current_frame_start_instant.as_ref() {
+        if (now - *start).as_secs_f32() >= 1.0 {
+            timing.frames_per_second = timing.frame_counter as f32;
+            timing.frame_counter = 0;
             timing.current_frame_start_instant = Some(now);
         }
-
-        if let Some(app_start) = timing.initial_frame_start_instant.as_ref() {
-            timing.uptime_milliseconds = (now - *app_start).as_millis() as u64;
-        }
-
-        timing.frame_counter += 1;
-        if let Some(start) = timing.current_frame_start_instant.as_ref() {
-            if (now - *start).as_secs_f32() >= 1.0 {
-                timing.frames_per_second = timing.frame_counter as f32;
-                timing.frame_counter = 0;
-                timing.current_frame_start_instant = Some(now);
-            }
-        } else {
-            timing.current_frame_start_instant = Some(now);
-        }
+    } else {
+        timing.current_frame_start_instant = Some(now);
     }
 }
 
