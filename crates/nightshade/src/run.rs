@@ -80,6 +80,15 @@
 //!     }
 //! }
 //! ```
+//!
+//! # Headless and Offscreen Rendering
+//!
+//! [`launch`] owns a winit event loop. To run the same engine without a window,
+//! against an `OffscreenCanvas` in a web worker or a native headless target,
+//! drive it through the [`offscreen`] module: [`initialize_offscreen`],
+//! [`tick_offscreen`], and [`resize_offscreen`] share this loop's frame body, so
+//! there is one render path rather than two. See the `nightshade-worker-leptos`
+//! demo for a complete web worker port.
 
 use crate::prelude::*;
 
