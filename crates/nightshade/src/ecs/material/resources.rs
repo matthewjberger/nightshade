@@ -263,12 +263,6 @@ pub fn material_registry_resolve_uploaded_textures(
     }
 }
 
-/// Looks up a material ID by name.
-pub fn material_registry_lookup_id(registry: &MaterialRegistry, name: &str) -> Option<MaterialId> {
-    registry_lookup_index(&registry.registry, name)
-        .map(|(index, generation)| MaterialId::new(index, generation))
-}
-
 /// Removes materials with zero references (except protected materials).
 pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<String> {
     let mut removed = Vec::new();

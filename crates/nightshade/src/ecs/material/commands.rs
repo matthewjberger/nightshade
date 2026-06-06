@@ -1,6 +1,5 @@
 use crate::ecs::world::components::MaterialRef;
 use crate::ecs::world::{MATERIAL_REF, MATERIAL_VARIANTS, World};
-use std::collections::HashSet;
 
 /// Switches every entity with [`MaterialVariants`] to the material that
 /// covers the supplied variant name, or back to its default if
@@ -36,27 +35,4 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
         world.resources.mesh_render_state.request_full_rebuild();
     }
     count
-}
-
-/// Returns the deduplicated variant names referenced by any currently-spawned
-/// entity carrying a [`super::components::MaterialVariants`] component. Order
-/// follows first observation while iterating entities and their mappings.
-pub fn material_variant_names(world: &World) -> Vec<String> {
-    let mut seen_set: HashSet<String> = HashSet::new();
-    let mut seen: Vec<String> = Vec::new();
-    world
-        .core
-        .query()
-        .with(MATERIAL_VARIANTS)
-        .iter(|_, table, idx| {
-            let variants = &table.material_variants[idx];
-            for mapping in &variants.mappings {
-                for name in &mapping.variant_names {
-                    if seen_set.insert(name.clone()) {
-                        seen.push(name.clone());
-                    }
-                }
-            }
-        });
-    seen
 }

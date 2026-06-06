@@ -514,6 +514,38 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     entity
 }
 
+/// Spawn a positioned light entity carrying a default [`components::Light`] for the caller to configure.
+pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name: &str) -> Entity {
+    use crate::ecs::world::components;
+    use crate::ecs::world::{
+        GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
+    };
+
+    let entity = spawn_entities(
+        world,
+        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
+        1,
+    )[0];
+    world
+        .core
+        .set_name(entity, components::Name(name.to_string()));
+    world.core.set_local_transform(
+        entity,
+        components::LocalTransform {
+            translation: position,
+            rotation: nalgebra_glm::quat_identity(),
+            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+        },
+    );
+    world
+        .core
+        .set_local_transform_dirty(entity, components::LocalTransformDirty);
+    world
+        .core
+        .set_global_transform(entity, components::GlobalTransform::default());
+    entity
+}
+
 /// Spawn an entity that references `mesh_name` in the mesh cache, with default material, at `position` scaled by `scale`.
 pub fn spawn_mesh_at(
     world: &mut World,
