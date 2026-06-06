@@ -34,6 +34,7 @@
 //! `input_inject_*` functions, which write the same input state the winit loop
 //! produces.
 
+use crate::ecs::input::resources::{TouchPhase, TouchPoint};
 use crate::ecs::world::Vec2;
 use crate::ecs::world::World;
 use crate::ecs::world::resources::MouseState;
@@ -158,6 +159,54 @@ pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
     let mouse = &mut world.resources.input.mouse;
     mouse.wheel_delta = delta;
     mouse.state.set(MouseState::SCROLLED, true);
+}
+
+/// Injects a touch contact in window coordinates (physical pixels), updating
+/// the multi-touch state and recomputing the current gesture the same way the
+/// winit loop does. This drives the touch pan-orbit controller (single-finger
+/// orbit, two-finger pan, pinch zoom). Mouse emulation, if a caller also wants
+/// pointer-style picking from touch, is left to the caller.
+pub fn input_inject_touch(world: &mut World, id: u64, phase: TouchPhase, position: Vec2) {
+    let touch = &mut world.resources.input.touch;
+    match phase {
+        TouchPhase::Started => {
+            touch.touches.insert(
+                id,
+                TouchPoint {
+                    id,
+                    position,
+                    start_position: position,
+                    previous_position: position,
+                    phase: TouchPhase::Started,
+                },
+            );
+            if touch.primary_touch_id.is_none() {
+                touch.primary_touch_id = Some(id);
+            } else if touch.secondary_touch_id.is_none() {
+                touch.secondary_touch_id = Some(id);
+            }
+        }
+        TouchPhase::Moved => {
+            if let Some(touch_point) = touch.touches.get_mut(&id) {
+                touch_point.previous_position = touch_point.position;
+                touch_point.position = position;
+                touch_point.phase = TouchPhase::Moved;
+            }
+        }
+        TouchPhase::Ended => {
+            if let Some(touch_point) = touch.touches.get_mut(&id) {
+                touch_point.previous_position = touch_point.position;
+                touch_point.position = position;
+                touch_point.phase = TouchPhase::Ended;
+            }
+        }
+        TouchPhase::Cancelled => {
+            if let Some(touch_point) = touch.touches.get_mut(&id) {
+                touch_point.phase = TouchPhase::Cancelled;
+            }
+        }
+    }
+    touch.update_gesture();
 }
 
 /// Injects a keyboard key state change with optional typed text, updating the

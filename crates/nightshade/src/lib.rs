@@ -615,6 +615,7 @@ pub mod prelude {
     pub use crate::ecs::input::queries::query_active_gamepad;
     pub use crate::ecs::input::resources::input_mode::InputMode;
     pub use crate::ecs::input::resources::mouse::MouseState;
+    pub use crate::ecs::input::resources::touch::{TouchGesture, TouchPhase};
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::systems::detect_input_mode_system;
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
