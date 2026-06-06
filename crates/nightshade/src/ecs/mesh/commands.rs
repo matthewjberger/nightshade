@@ -3,8 +3,7 @@ use crate::ecs::world::{
     BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
     MATERIAL_REF, NAME, Quat, RENDER_MESH, Vec3, World,
     components::{
-        BoundingVolume, CastsShadow, GlobalTransform, LocalTransform, LocalTransformDirty,
-        Material, MaterialRef, Name, RenderMesh,
+        BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
     },
 };
 use freecs::Entity;
@@ -24,7 +23,8 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     )[0];
 
     world.core.set_name(entity, Name(mesh_name.to_string()));
-    world.core.set_local_transform(
+    crate::ecs::world::commands::setup_entity_transforms(
+        world,
         entity,
         LocalTransform {
             translation: position,
@@ -32,12 +32,6 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             rotation: Quat::identity(),
         },
     );
-    world
-        .core
-        .set_global_transform(entity, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(entity, LocalTransformDirty);
     world
         .core
         .set_render_mesh(entity, RenderMesh::new(mesh_name));

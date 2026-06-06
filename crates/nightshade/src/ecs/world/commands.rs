@@ -404,6 +404,23 @@ pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
 }
 
 /// Spawn a default directional light positioned above the origin, with shadows enabled.
+/// Sets an entity's local transform, a default global transform, and the
+/// dirty flag. These three writes are performed together by every spawn helper.
+pub(crate) fn setup_entity_transforms(
+    world: &mut World,
+    entity: Entity,
+    local_transform: crate::ecs::world::components::LocalTransform,
+) {
+    world.core.set_local_transform(entity, local_transform);
+    world.core.set_global_transform(
+        entity,
+        crate::ecs::world::components::GlobalTransform::default(),
+    );
+    world
+        .core
+        .set_local_transform_dirty(entity, crate::ecs::world::components::LocalTransformDirty);
+}
+
 pub fn spawn_sun(world: &mut World) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
@@ -419,7 +436,8 @@ pub fn spawn_sun(world: &mut World) -> Entity {
     world
         .core
         .set_name(entity, components::Name("Sun".to_string()));
-    world.core.set_local_transform(
+    setup_entity_transforms(
+        world,
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
@@ -433,12 +451,6 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
     world.core.set_light(
         entity,
         components::Light {
@@ -476,7 +488,8 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     world
         .core
         .set_name(entity, components::Name("Sun".to_string()));
-    world.core.set_local_transform(
+    setup_entity_transforms(
+        world,
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
@@ -487,12 +500,6 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
     world.core.set_light(
         entity,
         components::Light {
@@ -529,7 +536,8 @@ pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name:
     world
         .core
         .set_name(entity, components::Name(name.to_string()));
-    world.core.set_local_transform(
+    setup_entity_transforms(
+        world,
         entity,
         components::LocalTransform {
             translation: position,
@@ -537,12 +545,6 @@ pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name:
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
     entity
 }
 
@@ -575,7 +577,8 @@ pub fn spawn_mesh_at(
     world
         .core
         .set_name(entity, components::Name(mesh_name.to_string()));
-    world.core.set_local_transform(
+    setup_entity_transforms(
+        world,
         entity,
         components::LocalTransform {
             translation: position,
@@ -583,12 +586,6 @@ pub fn spawn_mesh_at(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
     let render_mesh = components::RenderMesh::new(mesh_name);
 
     if !world
