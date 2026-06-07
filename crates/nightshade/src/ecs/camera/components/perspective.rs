@@ -4,7 +4,9 @@ use nalgebra_glm::Mat4;
 ///
 /// Uses reverse-Z depth buffer for improved precision. Supports infinite
 /// far plane when `z_far` is `None`.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub struct PerspectiveCamera {
     /// Aspect ratio (width/height). If `None`, uses viewport aspect ratio.
     pub aspect_ratio: Option<f32>,

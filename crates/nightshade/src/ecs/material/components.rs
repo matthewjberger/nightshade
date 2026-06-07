@@ -6,12 +6,13 @@ use serde::{Deserialize, Serialize};
 /// Component referencing a material by name in the [`super::MaterialRegistry`].
 ///
 /// The `id` field is populated when the material is resolved from the registry.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, enum2schema::Schema)]
 pub struct MaterialRef {
     /// Name of the material in the registry.
     pub name: String,
     /// Resolved material identifier.
     #[serde(skip)]
+    #[schema(skip)]
     pub id: Option<MaterialId>,
 }
 

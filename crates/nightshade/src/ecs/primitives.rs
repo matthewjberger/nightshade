@@ -9,7 +9,13 @@ use std::f32::consts::PI;
 #[serde(default)]
 pub struct Name(pub String);
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+impl enum2schema::Schema for Name {
+    fn schema() -> serde_json::Value {
+        serde_json::json!({ "type": "string" })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, enum2schema::Schema)]
 #[serde(default)]
 pub struct Visibility {
     pub visible: bool,
@@ -24,6 +30,12 @@ impl Default for Visibility {
 #[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CastsShadow;
 
+impl enum2schema::Schema for CastsShadow {
+    fn schema() -> serde_json::Value {
+        serde_json::json!({ "type": "null" })
+    }
+}
+
 /// Stable engine-side identity for entities that round-trip through a
 /// save file or that other entities cross-reference. Opt-in: omit on
 /// transient entities (particles, projectiles, popups). Engine mints
@@ -35,6 +47,12 @@ pub struct Guid(pub u64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderLayer(pub u32);
+
+impl enum2schema::Schema for RenderLayer {
+    fn schema() -> serde_json::Value {
+        serde_json::json!({ "type": "integer" })
+    }
+}
 
 impl Default for RenderLayer {
     fn default() -> Self {

@@ -2,7 +2,9 @@
 ///
 /// Applies exponential smoothing to input devices for fluid camera control.
 /// Lower smoothness values = more responsive, higher values = smoother but laggier.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub struct Smoothing {
     /// Mouse look speed multiplier.
     pub mouse_sensitivity: f32,
@@ -19,10 +21,13 @@ pub struct Smoothing {
     /// Gamepad stick deadzone threshold.
     pub gamepad_deadzone: f32,
     /// Smoothed mouse delta (internal state).
+    #[schema(type = "array", items = "number", len = 2)]
     pub smoothed_mouse_delta: nalgebra_glm::Vec2,
     /// Smoothed movement direction (internal state).
+    #[schema(type = "array", items = "number", len = 3)]
     pub smoothed_movement: nalgebra_glm::Vec3,
     /// Smoothed gamepad input (internal state).
+    #[schema(type = "array", items = "number", len = 2)]
     pub smoothed_gamepad_input: nalgebra_glm::Vec2,
 }
 

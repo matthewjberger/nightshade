@@ -7,14 +7,17 @@ use serde::{Deserialize, Serialize};
 /// this component are propagated through the hierarchy to compute [`super::GlobalTransform`].
 ///
 /// The transformation is applied in TRS order: Translation × Rotation × Scale.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, enum2schema::Schema)]
 #[serde(default)]
 pub struct LocalTransform {
     /// Position offset from parent origin.
+    #[schema(type = "array", items = "number", len = 3)]
     pub translation: Vec3,
-    /// Orientation as a unit quaternion.
+    /// Orientation as a unit quaternion [x, y, z, w].
+    #[schema(type = "array", items = "number", len = 4)]
     pub rotation: Quat,
     /// Non-uniform scale factors along each axis.
+    #[schema(type = "array", items = "number", len = 3)]
     pub scale: Vec3,
 }
 

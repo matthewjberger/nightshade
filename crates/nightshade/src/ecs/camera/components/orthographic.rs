@@ -4,7 +4,9 @@ use nalgebra_glm::Mat4;
 ///
 /// Creates a parallel projection where objects appear the same size
 /// regardless of distance. Uses reverse-Z depth buffer.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub struct OrthographicCamera {
     /// Half-width of the view volume (horizontal extent is ±x_mag).
     pub x_mag: f32,

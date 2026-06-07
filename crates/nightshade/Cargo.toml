@@ -123,6 +123,7 @@ windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 [dependencies]
 serde = { workspace = true }
 base64 = "0.22"
+enum2schema = "0.1"
 
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true, optional = true }

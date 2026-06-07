@@ -20,7 +20,9 @@ use nalgebra_glm::Mat4;
 ///
 /// Attach to an entity with a transform to create a viewpoint. The active camera
 /// is determined by the rendering system (typically the first entity with this component).
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub struct Camera {
     /// The projection mode (perspective or orthographic).
     pub projection: Projection,
@@ -38,7 +40,9 @@ impl Default for Camera {
 }
 
 /// Projection mode for a camera.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub enum Projection {
     /// Perspective projection with foreshortening (3D games, realistic rendering).
     Perspective(PerspectiveCamera),
