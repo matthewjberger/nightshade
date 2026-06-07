@@ -10,8 +10,8 @@ use std::f32::consts::PI;
 pub struct Name(pub String);
 
 impl enum2schema::Schema for Name {
-    fn schema() -> serde_json::Value {
-        serde_json::json!({ "type": "string" })
+    fn schema() -> enum2schema::serde_json::Value {
+        enum2schema::serde_json::json!({ "type": "string" })
     }
 }
 
@@ -31,8 +31,8 @@ impl Default for Visibility {
 pub struct CastsShadow;
 
 impl enum2schema::Schema for CastsShadow {
-    fn schema() -> serde_json::Value {
-        serde_json::json!({ "type": "null" })
+    fn schema() -> enum2schema::serde_json::Value {
+        enum2schema::serde_json::json!({ "type": "null" })
     }
 }
 
@@ -49,8 +49,8 @@ pub struct Guid(pub u64);
 pub struct RenderLayer(pub u32);
 
 impl enum2schema::Schema for RenderLayer {
-    fn schema() -> serde_json::Value {
-        serde_json::json!({ "type": "integer" })
+    fn schema() -> enum2schema::serde_json::Value {
+        enum2schema::serde_json::json!({ "type": "integer" })
     }
 }
 
