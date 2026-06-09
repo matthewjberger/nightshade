@@ -28,7 +28,7 @@ pub mod components {
         ViewportShading, ViewportUpdateMode,
     };
 
-    pub use crate::ecs::cloth::components::{Cloth, ClothPinning, ClothTextureUpload};
+    pub use crate::ecs::cloth::components::{Cloth, ClothPinning};
     pub use crate::ecs::decal::components::Decal;
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
@@ -70,7 +70,7 @@ pub mod resources {
     pub use crate::ecs::asset_state::AssetState;
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::AudioEngine;
-    pub use crate::ecs::cloth::resources::Wind;
+    pub use crate::ecs::cloth::resources::{ClothMeshSync, Wind};
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
@@ -237,6 +237,7 @@ freecs::ecs! {
         #[cfg(feature = "audio")]
         audio: crate::ecs::audio::resources::AudioEngine,
         cleanup: crate::ecs::world::cleanup::CleanupState,
+        cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
         commands: crate::ecs::world::commands::CommandQueues,
         cutscene: crate::ecs::cutscene::resources::CutsceneDirector,
         component_types: crate::ecs::scene::typed::ComponentTypeRegistry,

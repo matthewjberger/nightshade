@@ -591,9 +591,8 @@ pub mod prelude {
         camera_controllers_system, first_person_camera_look_system, fly_camera_system,
         ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
     };
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::cloth::commands::load_cloth_texture_from_image_bytes;
     pub use crate::ecs::cloth::commands::{reset_cloth, spawn_cloth};
+    pub use crate::ecs::cloth::systems::sync_cloth_meshes_system;
     pub use crate::ecs::cutscene::{
         Cutscene, CutsceneAction, CutsceneDirector, CutsceneEvent, CutsceneShot,
         advance_cutscene_system, bind_cutscene_actor, camera_look_rotation, cutscene_finished,
