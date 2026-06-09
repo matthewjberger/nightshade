@@ -28,6 +28,7 @@ pub mod components {
         ViewportShading, ViewportUpdateMode,
     };
 
+    pub use crate::ecs::cloth::components::{Cloth, ClothPinning, ClothTextureUpload};
     pub use crate::ecs::decal::components::Decal;
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
@@ -69,6 +70,7 @@ pub mod resources {
     pub use crate::ecs::asset_state::AssetState;
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::AudioEngine;
+    pub use crate::ecs::cloth::resources::Wind;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::resources::{
@@ -134,6 +136,7 @@ freecs::ecs! {
             camera: crate::ecs::camera::components::Camera => CAMERA,
             casts_shadow: crate::ecs::primitives::CastsShadow => CASTS_SHADOW,
             character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
+            cloth: crate::ecs::cloth::components::Cloth => CLOTH,
             collider: crate::ecs::physics::components::ColliderComponent => COLLIDER,
             collision_listener: crate::ecs::physics::components::CollisionListener => COLLISION_LISTENER,
             constrained_aspect: crate::ecs::camera::components::ConstrainedAspect => CONSTRAINED_ASPECT,
@@ -269,6 +272,7 @@ freecs::ecs! {
         transform_state: crate::ecs::transform::resources::TransformState,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
         user_interface: crate::ecs::ui::UserInterface,
+        wind: crate::ecs::cloth::resources::Wind,
         window: crate::ecs::window::resources::Window,
         world_id: u64,
     }

@@ -25,6 +25,7 @@ pub mod asset_watcher;
 pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
+pub mod cloth;
 pub mod cutscene;
 pub mod entity_registry;
 #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
