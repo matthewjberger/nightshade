@@ -38,7 +38,7 @@
     </head>
 
     <body>
-        <link data-trunk rel="rust" href="Cargo.toml" data-target-name="gallery" />
+        <link data-trunk rel="rust" href="Cargo.toml" data-target-name="gallery" data-cargo-profile-release="wasm-release" data-wasm-opt="3" data-wasm-opt-params="--enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types --enable-sign-ext --enable-mutable-globals" />
         <div class="root">
             <canvas class="main-canvas" id="canvas"></canvas>
         </div>

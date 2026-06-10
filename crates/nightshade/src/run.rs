@@ -280,7 +280,13 @@ pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::e
     #[cfg(target_arch = "wasm32")]
     {
         console_error_panic_hook::set_once();
+        let max_level = if cfg!(debug_assertions) {
+            tracing::level_filters::LevelFilter::INFO
+        } else {
+            tracing::level_filters::LevelFilter::WARN
+        };
         tracing_subscriber::fmt()
+            .with_max_level(max_level)
             .with_writer(tracing_web::MakeConsoleWriter)
             .without_time()
             .init();

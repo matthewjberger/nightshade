@@ -24,6 +24,13 @@ default = ["tracing"]
 steam = ["nightshade/steam"]
 tracing = ["nightshade/tracing"]
 
+[profile.wasm-release]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
 # For very small final binary size,
 # uncomment the following release profile and build with it
 
