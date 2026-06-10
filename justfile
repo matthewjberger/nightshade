@@ -101,8 +101,8 @@ publish-crate-dry:
     cargo publish -p nightshade-editor --dry-run --no-verify
 
 # Runs the specified project
-run $project="nightshade-editor":
-    cargo run -r -p {{project}}
+run $project="nightshade-editor" *arguments="":
+    cargo run -r -p {{project}} -- {{arguments}}
 
 # Opens the UI test harness in preview mode (no automated tests, just the UI)
 [windows]
