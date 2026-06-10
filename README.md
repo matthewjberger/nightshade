@@ -24,7 +24,7 @@
 - Data-oriented ECS via [freecs](https://github.com/jessfraz/freecs) with archetype storage and bitflag components.
 - Retained-mode UI with Taffy layout, theming, icons, and a built-in test driver.
 - Physics ([rapier3d](https://rapier.rs)), audio ([kira](https://github.com/tesselode/kira)), gamepad ([gilrs](https://gitlab.com/gilrs-project/gilrs)), navmesh, particles, decals, picking.
-- Scene authoring editor that runs natively or in the browser, with multi-viewport docking, gizmos, undo, and a Khronos sample browser.
+- Scene authoring editor that runs in the browser or as a desktop webview app, with the engine in a web worker, a Leptos interface, gizmos, undo, and Khronos and Polyhaven asset browsers.
 - Same code path on native and web. Native uses DX12 / Metal / Vulkan, the browser uses WebGPU.
 
 ## Live Demo
@@ -35,7 +35,7 @@
 
 ## Apps
 
-Example apps in [`apps/`](apps/). Each is buildable with `just run <name>`.
+Example apps in [`apps/`](apps/). Each is buildable with `just run-app <name>`.
 
 <table>
 <tr>
@@ -198,20 +198,17 @@ To bootstrap a new project, use the [nightshade-template](https://github.com/mat
 
 ## Quickstart
 
-Install the tooling:
-
-- [just](https://github.com/casey/just) - task runner
-- [trunk](https://trunkrs.dev/) - only required for WASM builds
-
-Then:
+Install [just](https://github.com/casey/just), then:
 
 ```bash
-just run            # native (defaults to the editor)
-just run-wasm       # browser, WebGPU
+just init           # installs mise and the pinned editor toolchain (wasm-bindgen, wasm-opt, trunk)
+just run            # editor as a desktop app (webview hosting the web build)
+just web            # editor in the browser at http://127.0.0.1:8080
+just run-app <name> # native app from apps/ (sandbox, game, ...)
 cd site && just serve   # full local site with editor + book
 ```
 
-Run `just` with no arguments to list every recipe.
+The editor is a web app either way: `just web` serves it with trunk, and `just run` opens the same bundle in a native webview window. Run `just` with no arguments to list every recipe.
 
 ## Documentation
 
