@@ -38,20 +38,20 @@ pub fn apply_animations(world: &mut World) {
             let node_mapping = &player.node_index_to_entity;
             let bone_name_mapping = &player.bone_name_to_entity;
 
-            let mut final_values: HashMap<Entity, AnimationAccumulator> = HashMap::new();
-            if player.play_all {
+            let mut final_values: HashMap<Entity, AnimationAccumulator> = if player.play_all {
+                let mut merged = HashMap::new();
                 for clip in &player.clips {
                     merge_accumulators(
-                        &mut final_values,
+                        &mut merged,
                         sample_clip(clip, player.time, node_mapping, bone_name_mapping),
                     );
                 }
+                merged
             } else if let Some(clip) = player.get_current_clip() {
-                merge_accumulators(
-                    &mut final_values,
-                    sample_clip(clip, player.time, node_mapping, bone_name_mapping),
-                );
-            }
+                sample_clip(clip, player.time, node_mapping, bone_name_mapping)
+            } else {
+                HashMap::new()
+            };
 
             if let Some(from_clip) = player
                 .blend_from_clip
@@ -235,21 +235,16 @@ struct AnimationAccumulator {
 }
 
 fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity, weights: &[f32]) {
-    if world.core.entity_has_components(entity, MORPH_WEIGHTS)
-        && let Some(morph_weights) = world.core.get_morph_weights_mut(entity)
-    {
-        morph_weights.weights = weights.to_vec();
-    }
+    let mut pending = vec![entity];
+    while let Some(current) = pending.pop() {
+        if world.core.entity_has_components(current, MORPH_WEIGHTS)
+            && let Some(morph_weights) = world.core.get_morph_weights_mut(current)
+        {
+            morph_weights.weights = weights.to_vec();
+        }
 
-    let child_entities: Vec<Entity> = world
-        .resources
-        .transform_state
-        .children_cache
-        .get(&entity)
-        .cloned()
-        .unwrap_or_default();
-
-    for child in child_entities {
-        apply_morph_weights_to_entity_and_children(world, child, weights);
+        if let Some(children) = world.resources.transform_state.children_cache.get(&current) {
+            pending.extend_from_slice(children);
+        }
     }
 }

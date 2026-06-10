@@ -106,9 +106,10 @@ pub fn update_global_transforms_system(world: &mut World) {
     dirty_entities.dedup();
 
     {
+        let mut seen = std::mem::take(&mut world.resources.transform_state.expansion_seen);
+        seen.clear();
+        seen.extend(dirty_entities.iter().copied());
         let children_cache = &world.resources.transform_state.children_cache;
-        let mut seen: std::collections::HashSet<freecs::Entity> =
-            dirty_entities.iter().copied().collect();
         let mut index = 0;
         while index < dirty_entities.len() {
             let entity = dirty_entities[index];
@@ -121,12 +122,15 @@ pub fn update_global_transforms_system(world: &mut World) {
                 }
             }
         }
+        world.resources.transform_state.expansion_seen = seen;
     }
 
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
-    let mut visited = std::collections::HashSet::new();
-    let mut render_dirty_entities = Vec::with_capacity(dirty_entities.len());
+    let mut visited = std::mem::take(&mut world.resources.transform_state.ancestor_visited);
+    let mut render_dirty_entities =
+        std::mem::take(&mut world.resources.transform_state.render_dirty_scratch);
+    render_dirty_entities.clear();
 
     for entity in dirty_entities.iter().copied() {
         let new_global_transform = if world.core.entity_has_components(entity, PARENT) {
@@ -154,12 +158,15 @@ pub fn update_global_transforms_system(world: &mut World) {
         }
     }
 
-    for entity in render_dirty_entities {
+    for entity in render_dirty_entities.drain(..) {
         world
             .resources
             .mesh_render_state
             .mark_transform_dirty(entity);
     }
+
+    world.resources.transform_state.ancestor_visited = visited;
+    world.resources.transform_state.render_dirty_scratch = render_dirty_entities;
 
     dirty_entities.clear();
     world.resources.transform_state.dirty_entities = dirty_entities;
