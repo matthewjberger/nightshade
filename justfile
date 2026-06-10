@@ -34,10 +34,19 @@ format:
 install-debian-deps:
     sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
 
-# Install wasm tooling
-init-wasm:
-    rustup target add wasm32-unknown-unknown
-    cargo install --locked trunk
+# Installs mise and the editor's pinned wasm toolchain (Windows)
+[windows]
+init:
+    if (-not (Get-Command mise -ErrorAction SilentlyContinue)) { cargo install mise --locked }
+    just --justfile apps/editor/justfile --working-directory apps/editor init
+
+# Installs mise and the editor's pinned wasm toolchain (Unix)
+[unix]
+init:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v mise >/dev/null || cargo install mise --locked
+    just --justfile apps/editor/justfile --working-directory apps/editor init
 
 # Install development tools
 install-tools:
@@ -90,18 +99,20 @@ sync-template:
 pull-template:
     git subtree pull --prefix=template {{template_repo}} main --squash
 
-# Publishes the nightshade crates to crates.io
+# Publishes the nightshade crate to crates.io
 publish-crate:
     cargo publish -p nightshade
-    cargo publish -p nightshade-editor --no-verify
 
-# Dry run of publishing the nightshade crates
+# Dry run of publishing the nightshade crate
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
-    cargo publish -p nightshade-editor --dry-run --no-verify
 
-# Runs the specified project
-run $project="nightshade-editor" *arguments="":
+# Builds the editor worker and serves the editor at http://127.0.0.1:8080
+run:
+    just --justfile apps/editor/justfile --working-directory apps/editor run
+
+# Runs a native app by name
+run-app $project="sandbox" *arguments="":
     cargo run -r -p {{project}} -- {{arguments}}
 
 # Opens the UI test harness in preview mode (no automated tests, just the UI)
@@ -114,13 +125,9 @@ preview-ui-test-harness:
 preview-ui-test-harness:
     UI_HARNESS_PREVIEW=1 cargo run -r -p ui_test_harness
 
-# Build the app for WASM
-build-wasm $project="editor":
-    trunk build --config apps/{{project}}/Trunk.toml
-
-# Serve the app in browser
-run-wasm $project="editor":
-    trunk serve --release --open --config apps/{{project}}/Trunk.toml
+# Builds the browser editor (worker wasm plus Leptos bundle)
+build-editor:
+    just --justfile apps/editor/justfile --working-directory apps/editor build
 
 # Runs all tests
 test:
@@ -161,7 +168,7 @@ vendor:
     cargo clippy -- --version
 
 # Watches for changes and runs the specified project
-watch $project="nightshade-editor":
+watch $project="sandbox":
     cargo watch -x 'run -r -p {{project}}'
 
 # Generates changelog using git-cliff
@@ -405,16 +412,16 @@ publish-major:
     @echo "  just publish-release"
 
 # Builds the project for Steam Deck using cross
-build-steamdeck $project="nightshade-editor":
+build-steamdeck $project="sandbox":
     cross build --release --target x86_64-unknown-linux-gnu -p {{project}}
 
 # Builds and deploys the project to Steam Deck
-deploy-steamdeck $project="nightshade-editor":
+deploy-steamdeck $project="sandbox":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
 
 # Builds and deploys the project to Steam Deck as ~/Downloads/game
-deploy-steamdeck-quick $project="nightshade-editor":
+deploy-steamdeck-quick $project="sandbox":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads/game
     ssh deck@steamdeck.local "chmod +x ~/Downloads/game"

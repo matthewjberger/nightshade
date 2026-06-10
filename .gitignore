@@ -4,6 +4,8 @@ dist/
 **/dist/
 public/
 **/public/
+!apps/editor/public/
+apps/editor/runtime/engine*
 logs/
 **/logs/
 /Cargo.lock
