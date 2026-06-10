@@ -200,6 +200,10 @@
 //!
 //! - **`gamepad`** - Gamepad input using gilrs.
 //!
+//! - **`editor-protocol`** - Message types shared with the standalone editor
+//!   (page, worker, and desktop bridge). `editor-protocol-agent` adds the
+//!   external agent request and response types.
+//!
 //! ### Platform Features
 //!
 //! - **`steam`** - Steamworks integration.
@@ -502,6 +506,8 @@ pub mod filesystem;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
+#[cfg(feature = "editor-protocol")]
+pub mod editor;
 pub mod logging;
 #[cfg(feature = "runtime")]
 pub mod render;

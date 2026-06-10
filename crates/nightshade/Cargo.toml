@@ -102,6 +102,8 @@ screenshot = ["dep:image"]
 navmesh = []
 navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
+editor-protocol = ["runtime", "scene_graph", "gizmos"]
+editor-protocol-agent = ["editor-protocol", "dep:serde_json"]
 
 full = [
     "engine",

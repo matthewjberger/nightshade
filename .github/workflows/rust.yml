@@ -122,7 +122,7 @@ jobs:
       - run: just lint-wasm
       - name: Clippy editor wasm crates
         working-directory: apps/editor
-        run: cargo clippy -p protocol -p worker -p nightshade-editor --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy -p worker -p nightshade-editor --target wasm32-unknown-unknown -- -D warnings
 
   deny:
     name: cargo-deny

@@ -253,6 +253,7 @@ Renderer & subsystems:
 ├── navmesh ──────────── runtime navmesh queries
 ├── navmesh-bake ─────── navmesh baking (rerecast)
 ├── debug_render ─────── line / shape debug overlays
+├── editor-protocol ──── editor message types (editor-protocol-agent adds the agent surface)
 ├── steam ────────────── Steam integration (steamworks)
 └── windows-app-icon ── embed app icon on Windows
 
