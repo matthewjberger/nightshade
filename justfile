@@ -225,18 +225,29 @@ push-version:
     git push origin "v$VERSION"
     git push
 
-# Creates a GitHub release for the current version (Windows)
+# Creates a GitHub release for the current version with the editor web bundle
+# attached. Immutable releases only accept assets at creation, so the bundle
+# must be built and attached here, never uploaded afterward. (Windows)
 [windows]
 publish-release:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file -
+    just --justfile apps/editor/justfile --working-directory apps/editor bundle
+    $ErrorActionPreference = 'Stop'; $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; if (git status --porcelain apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock) { git add apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock; git commit -m "chore: update editor bundle for v$version"; git push }; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file - apps/editor/target/nightshade-editor-web.tar.gz; if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 
-# Creates a GitHub release for the current version (Unix)
+# Creates a GitHub release for the current version with the editor web bundle
+# attached. Immutable releases only accept assets at creation, so the bundle
+# must be built and attached here, never uploaded afterward. (Unix)
 [unix]
 publish-release:
     #!/usr/bin/env bash
     set -euo pipefail
+    just --justfile apps/editor/justfile --working-directory apps/editor bundle
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file -
+    if [ -n "$(git status --porcelain apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock)" ]; then
+        git add apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock
+        git commit -m "chore: update editor bundle for v$VERSION"
+        git push
+    fi
+    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file - apps/editor/target/nightshade-editor-web.tar.gz
 
 # Shows the GitHub release for the current version (Windows)
 [windows]
