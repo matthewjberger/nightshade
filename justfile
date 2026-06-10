@@ -112,8 +112,8 @@ run:
     just --justfile apps/editor/justfile --working-directory apps/editor run
 
 # Builds the editor and serves it in the browser at http://127.0.0.1:8080
-web:
-    just --justfile apps/editor/justfile --working-directory apps/editor web
+run-web:
+    just --justfile apps/editor/justfile --working-directory apps/editor run-web
 
 # Runs a native app by name
 run-app $project="sandbox" *arguments="":
