@@ -21,7 +21,7 @@
 - Full glTF 2.0 support including the KHR extensions: transmission, volume + attenuation, anisotropy, iridescence, dispersion, sheen, clearcoat, diffuse transmission, specular, emissive strength, variants, gpu instancing.
 - HDR environments (`.hdr`) and procedural atmospheres (day / night cycle, nebula, space) with prefiltered IBL.
 - Skeletal animation, morph targets, and a clip player driven by a frame schedule.
-- Data-oriented ECS via [freecs](https://github.com/jessfraz/freecs) with archetype storage and bitflag components.
+- Data-oriented ECS via [freecs](https://github.com/matthewjberger/freecs) with archetype storage and bitflag components.
 - Retained-mode UI with Taffy layout, theming, icons, and a built-in test driver.
 - Physics ([rapier3d](https://rapier.rs)), audio ([kira](https://github.com/tesselode/kira)), gamepad ([gilrs](https://gitlab.com/gilrs-project/gilrs)), navmesh, particles, decals, picking.
 - Scene authoring editor that runs in the browser or as a desktop webview app, with the engine in a web worker, a Leptos interface, gizmos, undo, and Khronos and Polyhaven asset browsers.
