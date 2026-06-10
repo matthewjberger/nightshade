@@ -142,6 +142,10 @@ build-editor:
 install-editor:
     just --justfile apps/editor/justfile --working-directory apps/editor install
 
+# Uploads the editor web bundle to the GitHub release and publishes the crate
+publish-editor:
+    just --justfile apps/editor/justfile --working-directory apps/editor publish-editor
+
 # Runs all tests
 test:
     cargo test --all -- --nocapture
