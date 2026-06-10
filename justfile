@@ -36,17 +36,17 @@ install-debian-deps:
 
 # Installs mise and the editor's pinned wasm toolchain (Windows)
 [windows]
-init:
+install-deps:
     if (-not (Get-Command mise -ErrorAction SilentlyContinue)) { cargo install mise --locked }
-    just --justfile apps/editor/justfile --working-directory apps/editor init
+    just --justfile apps/editor/justfile --working-directory apps/editor install-deps
 
 # Installs mise and the editor's pinned wasm toolchain (Unix)
 [unix]
-init:
+install-deps:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v mise >/dev/null || cargo install mise --locked
-    just --justfile apps/editor/justfile --working-directory apps/editor init
+    just --justfile apps/editor/justfile --working-directory apps/editor install-deps
 
 # Install development tools
 install-tools:
@@ -132,6 +132,10 @@ preview-ui-test-harness:
 # Builds the browser editor (worker wasm plus Leptos bundle)
 build-editor:
     just --justfile apps/editor/justfile --working-directory apps/editor build
+
+# Installs the standalone editor as the global nightshade-editor command
+install-editor:
+    just --justfile apps/editor/justfile --working-directory apps/editor install
 
 # Runs all tests
 test:

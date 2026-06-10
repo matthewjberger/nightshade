@@ -201,7 +201,7 @@ To bootstrap a new project, use the [nightshade-template](https://github.com/mat
 Install [just](https://github.com/casey/just), then:
 
 ```bash
-just init           # installs mise and the pinned editor toolchain (wasm-bindgen, wasm-opt, trunk)
+just install-deps   # installs mise and the pinned editor toolchain (wasm-bindgen, wasm-opt, trunk)
 just run            # editor as a desktop app (webview hosting the web build)
 just web            # editor in the browser at http://127.0.0.1:8080
 just run-app <name> # native app from apps/ (sandbox, game, ...)
