@@ -424,6 +424,7 @@ pub(crate) fn step(
     sync_window_title(world);
     sync_window_icon(world);
     if matches!(event, WindowEvent::RedrawRequested) {
+        sync_macos_auto_frame_rate_limit(world);
         throttle_to_frame_rate_limit(world);
     }
     handle_event_systems(world, event);
@@ -859,23 +860,43 @@ fn throttle_to_frame_rate_limit(world: &mut World) {
 #[cfg(target_arch = "wasm32")]
 fn throttle_to_frame_rate_limit(_world: &mut World) {}
 
-/// Apply the macOS auto-default `frame_rate_limit` at window creation.
-/// macOS uses `PresentMode::Immediate` (Mailbox degrades to FIFO on the
-/// Metal backend), so the loop tears unless rate-capped. Picks
-/// `refresh_rate - 1` from the window's current monitor when the app
-/// has not already set a cap. Other platforms leave the cap as `None`.
+/// Reconciles the macOS auto-default `frame_rate_limit` with the vsync
+/// state. With vsync enabled the FIFO swapchain paces the loop, and a
+/// spin-loop cap just below the refresh rate fights the vsync
+/// quantization, dropping whole intervals, so any engine-applied cap is
+/// removed. With vsync disabled macOS uses `PresentMode::Immediate`
+/// (Mailbox degrades to FIFO on the Metal backend) and the loop tears
+/// unless rate-capped, so `refresh_rate - 1` from the window's current
+/// monitor is applied when the app has not already set a cap. Other
+/// platforms never apply a cap.
 #[cfg(not(target_arch = "wasm32"))]
-fn apply_macos_default_frame_rate_limit(
-    world: &mut World,
-    window_handle: &std::sync::Arc<winit::window::Window>,
-) {
+fn sync_macos_auto_frame_rate_limit(world: &mut World) {
     if !cfg!(target_os = "macos") {
         return;
     }
-    if world.resources.render_settings.frame_rate_limit.is_some() {
+    let baseline = world
+        .resources
+        .renderer_state
+        .auto_frame_rate_limit_baseline;
+    if world.resources.render_settings.vsync_enabled {
+        if baseline.is_some() {
+            if world.resources.render_settings.frame_rate_limit == baseline {
+                world.resources.render_settings.frame_rate_limit = None;
+            }
+            world
+                .resources
+                .renderer_state
+                .auto_frame_rate_limit_baseline = None;
+        }
         return;
     }
-    let Some(target) = current_monitor_frame_rate_target(window_handle) else {
+    if baseline.is_some() || world.resources.render_settings.frame_rate_limit.is_some() {
+        return;
+    }
+    let Some(window_handle) = world.resources.window.handle.clone() else {
+        return;
+    };
+    let Some(target) = current_monitor_frame_rate_target(&window_handle) else {
         return;
     };
     world.resources.render_settings.frame_rate_limit = Some(target);
@@ -886,11 +907,7 @@ fn apply_macos_default_frame_rate_limit(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn apply_macos_default_frame_rate_limit(
-    _world: &mut World,
-    _window_handle: &std::sync::Arc<winit::window::Window>,
-) {
-}
+fn sync_macos_auto_frame_rate_limit(_world: &mut World) {}
 
 /// Re-apply the macOS auto-default when the window moves to a monitor
 /// with a different refresh rate. Only updates when
@@ -903,6 +920,9 @@ fn refresh_macos_frame_rate_limit(
     window_handle: &std::sync::Arc<winit::window::Window>,
 ) {
     if !cfg!(target_os = "macos") {
+        return;
+    }
+    if world.resources.render_settings.vsync_enabled {
         return;
     }
     let baseline = world
@@ -1442,7 +1462,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             event_loop,
         );
 
-        apply_macos_default_frame_rate_limit(&mut self.world, &window_handle);
+        sync_macos_auto_frame_rate_limit(&mut self.world);
 
         #[cfg(target_arch = "wasm32")]
         {
