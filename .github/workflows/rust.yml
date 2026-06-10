@@ -95,6 +95,9 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just install-debian-deps
       - run: cargo clippy -- -D warnings
+      - name: Clippy editor desktop crate
+        working-directory: apps/editor
+        run: cargo clippy -p desktop -- -D warnings
 
   clippy_wasm:
     name: Clippy wasm32
@@ -117,6 +120,9 @@ jobs:
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: extractions/setup-just@v2
       - run: just lint-wasm
+      - name: Clippy editor wasm crates
+        working-directory: apps/editor
+        run: cargo clippy -p protocol -p worker -p nightshade-editor --target wasm32-unknown-unknown -- -D warnings
 
   deny:
     name: cargo-deny
@@ -144,8 +150,18 @@ jobs:
           shared-key: wasm
           cache-targets: false
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          workspaces: |
+            . -> target
+            apps/editor -> target
       - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: extractions/setup-just@v2
       - name: Download and install Trunk binary
-        run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.18.8/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+        run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- && mv trunk ~/.cargo/bin/
+      - name: Download and install wasm-bindgen binary
+        run: wget -qO- https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.115/wasm-bindgen-0.2.115-x86_64-unknown-linux-musl.tar.gz | tar -xzf- && mv wasm-bindgen-0.2.115-x86_64-unknown-linux-musl/wasm-bindgen ~/.cargo/bin/
+      - name: Download and install wasm-opt binary
+        run: wget -qO- https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz | tar -xzf- && mv binaryen-version_123/bin/wasm-opt ~/.cargo/bin/
+      - name: Build editor worker
+        run: just --justfile apps/editor/justfile --working-directory apps/editor worker
       - name: Build
-        run: ./trunk build --release --config apps/editor/Trunk.toml
+        run: trunk build --release --config apps/editor/Trunk.toml
