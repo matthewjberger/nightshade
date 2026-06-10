@@ -107,9 +107,13 @@ publish-crate:
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
 
-# Builds the editor worker and serves the editor at http://127.0.0.1:8080
+# Builds the editor and opens it in a native webview window
 run:
     just --justfile apps/editor/justfile --working-directory apps/editor run
+
+# Builds the editor and serves it in the browser at http://127.0.0.1:8080
+web:
+    just --justfile apps/editor/justfile --working-directory apps/editor web
 
 # Runs a native app by name
 run-app $project="sandbox" *arguments="":
