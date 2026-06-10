@@ -900,6 +900,13 @@ pub fn load_procedural_textures(world: &mut World) {
         color,
         default_sampler,
     );
+
+    for name in ["checkerboard", "gradient", "uv_test"] {
+        crate::render::wgpu::texture_cache::texture_cache_protect(
+            &mut world.resources.texture_cache,
+            name.to_string(),
+        );
+    }
 }
 
 fn generate_checkerboard_texture() -> (Vec<u8>, u32, u32) {

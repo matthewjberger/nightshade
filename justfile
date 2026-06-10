@@ -111,6 +111,11 @@ publish-crate-dry:
 run:
     just --justfile apps/editor/justfile --working-directory apps/editor run
 
+# Builds and opens the MCP-driveable editor (agent feature on, endpoint at
+# http://127.0.0.1:8790/mcp)
+run-agent:
+    just --justfile apps/editor/justfile --working-directory apps/editor run-agent
+
 # Builds the editor and serves it in the browser at http://127.0.0.1:8080
 run-web:
     just --justfile apps/editor/justfile --working-directory apps/editor run-web
