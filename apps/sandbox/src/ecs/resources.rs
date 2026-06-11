@@ -11,6 +11,7 @@ pub struct RockObb {
 pub struct PropLod {
     pub center: nalgebra_glm::Vec3,
     pub detail_meshes: Vec<Entity>,
+    pub mid_meshes: Vec<Entity>,
     pub cube: Entity,
     pub zone: u8,
 }
@@ -20,6 +21,7 @@ pub struct RocksState {
     pub enabled: bool,
     pub lod_enabled: bool,
     pub models: Vec<nightshade::ecs::prefab::GltfLoadResult>,
+    pub mid_models: Vec<nightshade::ecs::prefab::GltfLoadResult>,
     pub tiles: HashMap<(i32, i32), Vec<Entity>>,
     pub obbs: HashMap<(i32, i32), Vec<RockObb>>,
     pub lods: HashMap<(i32, i32), Vec<PropLod>>,
