@@ -1,7 +1,7 @@
 use crate::ecs::{PauseHandles, SandboxWorld, Screen};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
-use crate::systems::world::{enemies, infinite, player};
+use crate::systems::world::{enemies, grass, infinite, player};
 use crate::theme::*;
 use nightshade::ecs::ui::components::AccessibleRole;
 use nightshade::prelude::*;
@@ -18,6 +18,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut main_menu_button = Entity::default();
     let mut quit_button = Entity::default();
     let mut infinite_world_checkbox = Entity::default();
+    let mut grass_checkbox = Entity::default();
 
     tree.in_parent(root, |tree| {
         tree.add_node()
@@ -28,7 +29,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 
         let panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 368.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 416.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
@@ -60,7 +61,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 232.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 280.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
@@ -69,7 +70,8 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 resume_button = menu_button::build(tree, "RESUME");
                 main_menu_button = menu_button::build(tree, "MAIN MENU");
                 quit_button = menu_button::build(tree, "QUIT TO DESKTOP");
-                infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD");
+                infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD", false);
+                grass_checkbox = build_checkbox(tree, "ENABLE GRASS", true);
             });
         });
     });
@@ -80,6 +82,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         main_menu_button,
         quit_button,
         infinite_world_checkbox,
+        grass_checkbox,
     }
 }
 
@@ -87,7 +90,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 /// is the click target, with a small bordered box on the left whose
 /// accent fill toggles with the value. Wiring [`UiCheckboxData`] onto
 /// the row lets the engine's checkbox handling drive the toggle.
-fn build_checkbox(tree: &mut UiTreeBuilder, label: &str) -> Entity {
+fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) -> Entity {
     let row = tree
         .add_node()
         .flow_child(Ab(vec2(MENU_BUTTON_SIZE.x, MENU_CHECKBOX_HEIGHT)))
@@ -122,7 +125,7 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str) -> Entity {
                 )
                 .with_rect(1.0, 0.0, TRANSPARENT)
                 .color_raw::<UiBase>(ACCENT)
-                .with_visible(false)
+                .with_visible(initial_value)
                 .entity()
         });
         tree.add_node()
@@ -141,7 +144,7 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str) -> Entity {
     tree.world_mut().ui.set_ui_checkbox(
         row,
         UiCheckboxData {
-            value: false,
+            value: initial_value,
             changed: false,
             inner_entity: inner,
         },
@@ -178,6 +181,11 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
         .infinite_world_checkbox;
     if let Some(value) = ui_checkbox_changed(world, checkbox) {
         infinite::set_enabled(sandbox_world, world, value);
+        grass::sync_domain(sandbox_world, world);
+    }
+    let grass_box = sandbox_world.resources.ui_handles.pause.grass_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, grass_box) {
+        grass::set_enabled(sandbox_world, world, value);
     }
     if clicked_resume {
         lifecycle::enter(sandbox_world, world, Screen::InGame);

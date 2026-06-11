@@ -33,6 +33,7 @@ pub struct PauseHandles {
     pub main_menu_button: Entity,
     pub quit_button: Entity,
     pub infinite_world_checkbox: Entity,
+    pub grass_checkbox: Entity,
 }
 
 #[derive(Default)]

@@ -620,6 +620,7 @@ pub mod prelude {
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
+    pub use crate::ecs::grass::{GrassDomain, GrassPusher, GrassSettings, GrassTypeParams};
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::queries::query_active_gamepad;
     pub use crate::ecs::input::resources::input_mode::InputMode;

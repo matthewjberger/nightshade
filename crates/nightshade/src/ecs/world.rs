@@ -246,6 +246,7 @@ freecs::ecs! {
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+        grass: crate::ecs::grass::GrassSettings,
         render_settings: crate::ecs::graphics::resources::RenderSettings,
         debug_draw: crate::ecs::graphics::resources::DebugDraw,
         editor_selection: crate::ecs::graphics::resources::EditorSelection,
