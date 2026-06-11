@@ -16,6 +16,7 @@ freecs::ecs! {
     Resources {
         screen: ScreenState,
         player: PlayerState,
+        character: CharacterState,
         ui_handles: UiHandles,
         infinite_world: InfiniteWorldState,
         rocks: RocksState,

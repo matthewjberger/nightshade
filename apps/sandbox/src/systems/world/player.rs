@@ -45,11 +45,13 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxWorld, world: &mut World) {
 
 pub fn set_fly(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: bool) {
     sandbox_world.resources.player.fly = enabled;
+    let gameplay_camera = if sandbox_world.resources.character.third_person {
+        sandbox_world.resources.character.camera
+    } else {
+        sandbox_world.resources.player.camera_entity
+    };
     if enabled {
-        let pose = sandbox_world
-            .resources
-            .player
-            .camera_entity
+        let pose = gameplay_camera
             .and_then(|camera| world.core.get_global_transform(camera))
             .map(|transform| {
                 (
@@ -71,7 +73,7 @@ pub fn set_fly(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: boo
         sandbox_world.resources.player.fly_camera = Some(fly_camera);
         world.resources.active_camera = Some(fly_camera);
     } else {
-        world.resources.active_camera = sandbox_world.resources.player.camera_entity;
+        world.resources.active_camera = gameplay_camera;
         if let Some(fly_camera) = sandbox_world.resources.player.fly_camera.take() {
             world.despawn_entities(&[fly_camera]);
         }
@@ -97,7 +99,7 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
 /// app's `combat::reset_level` verbatim: rewrite local translation,
 /// zero controller velocity, rewrite the physics-interpolation
 /// snapshots, mark dirty.
-pub fn reset(sandbox_world: &SandboxWorld, world: &mut World) {
+pub fn reset(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let Some(player_entity) = sandbox_world.resources.player.player_entity else {
         return;
     };
@@ -114,4 +116,6 @@ pub fn reset(sandbox_world: &SandboxWorld, world: &mut World) {
         interpolation.current_translation = spawn;
     }
     mark_local_transform_dirty(world, player_entity);
+
+    crate::systems::world::character::reset(sandbox_world, world);
 }

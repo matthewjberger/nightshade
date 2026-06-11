@@ -1,3 +1,4 @@
+pub mod character;
 pub mod enemies;
 pub mod grass;
 pub mod infinite;

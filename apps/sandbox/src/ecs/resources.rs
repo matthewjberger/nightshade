@@ -50,6 +50,17 @@ pub struct PlayerState {
 }
 
 #[derive(Default)]
+pub struct CharacterState {
+    pub third_person: bool,
+    pub body: Option<Entity>,
+    pub camera: Option<Entity>,
+    pub spheres: Option<Entity>,
+    pub velocity: nalgebra_glm::Vec3,
+    pub grounded: bool,
+    pub jump_suppress_timer: f32,
+}
+
+#[derive(Default)]
 pub struct TitleHandles {
     pub root: Entity,
     pub play_button: Entity,
@@ -65,6 +76,7 @@ pub struct PauseHandles {
     pub infinite_world_checkbox: Entity,
     pub grass_checkbox: Entity,
     pub terrain_checkbox: Entity,
+    pub third_person_checkbox: Entity,
     pub fly_checkbox: Entity,
     pub rocks_checkbox: Entity,
     pub prop_lod_checkbox: Entity,

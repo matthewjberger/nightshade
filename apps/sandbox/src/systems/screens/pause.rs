@@ -1,7 +1,7 @@
 use crate::ecs::{PauseHandles, SandboxWorld, Screen};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
-use crate::systems::world::{enemies, grass, infinite, player, rocks, terrain};
+use crate::systems::world::{character, enemies, grass, infinite, player, rocks, terrain};
 use crate::theme::*;
 use nightshade::ecs::ui::components::AccessibleRole;
 use nightshade::prelude::*;
@@ -20,6 +20,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut infinite_world_checkbox = Entity::default();
     let mut grass_checkbox = Entity::default();
     let mut terrain_checkbox = Entity::default();
+    let mut third_person_checkbox = Entity::default();
     let mut fly_checkbox = Entity::default();
     let mut rocks_checkbox = Entity::default();
     let mut prop_lod_checkbox = Entity::default();
@@ -86,7 +87,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 
         settings_panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 580.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 620.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
@@ -119,7 +120,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 428.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 476.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
@@ -128,6 +129,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD", true);
                 grass_checkbox = build_checkbox(tree, "ENABLE GRASS", true);
                 terrain_checkbox = build_checkbox(tree, "TERRAIN", true);
+                third_person_checkbox = build_checkbox(tree, "THIRD PERSON", true);
                 fly_checkbox = build_checkbox(tree, "FLY MODE", false);
                 rocks_checkbox = build_checkbox(tree, "ROCKS", true);
                 prop_lod_checkbox = build_checkbox(tree, "PROP LOD", true);
@@ -145,6 +147,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         infinite_world_checkbox,
         grass_checkbox,
         terrain_checkbox,
+        third_person_checkbox,
         fly_checkbox,
         rocks_checkbox,
         prop_lod_checkbox,
@@ -278,6 +281,14 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let terrain_box = sandbox_world.resources.ui_handles.pause.terrain_checkbox;
     if let Some(value) = ui_checkbox_changed(world, terrain_box) {
         terrain::set_enabled(sandbox_world, world, value);
+    }
+    let third_person_box = sandbox_world
+        .resources
+        .ui_handles
+        .pause
+        .third_person_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, third_person_box) {
+        character::set_third_person(sandbox_world, world, value);
     }
     let fly_box = sandbox_world.resources.ui_handles.pause.fly_checkbox;
     if let Some(value) = ui_checkbox_changed(world, fly_box) {

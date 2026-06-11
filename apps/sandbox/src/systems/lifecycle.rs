@@ -1,6 +1,8 @@
 use crate::ecs::{SandboxWorld, Screen};
 use crate::systems::screens::{hud, pause, title};
-use crate::systems::world::{enemies, grass, infinite, level, player, rocks, terrain, textures};
+use crate::systems::world::{
+    character, enemies, grass, infinite, level, player, rocks, terrain, textures,
+};
 use nightshade::prelude::*;
 
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
@@ -16,6 +18,8 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     textures::load_prototype_textures(world);
     level::load_or_build_level(world);
     player::spawn(sandbox_world, world);
+    character::spawn(sandbox_world, world);
+    character::set_third_person(sandbox_world, world, true);
     enemies::spawn(sandbox_world, world);
     infinite::set_enabled(sandbox_world, world, true);
     grass::set_enabled(sandbox_world, world, true);
@@ -101,6 +105,6 @@ pub fn apply_visibility(sandbox_world: &SandboxWorld, world: &mut World) {
     ui_set_visible(
         world,
         handles.hud.crosshair,
-        matches!(screen, Screen::InGame),
+        matches!(screen, Screen::InGame) && !sandbox_world.resources.character.third_person,
     );
 }

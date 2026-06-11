@@ -684,10 +684,10 @@ pub mod prelude {
         physics_world_collision_events, physics_world_contact_force_events,
         physics_world_get_interpolation_alpha, physics_world_linear_velocity,
         physics_world_overlap_sphere, physics_world_set_angular_velocity,
-        physics_world_set_linear_velocity, physics_world_step,
+        physics_world_set_linear_velocity, physics_world_sphere_contacts, physics_world_step,
     };
     #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::types::RaycastHit;
+    pub use crate::ecs::physics::types::{RaycastHit, SphereContact};
     pub use crate::ecs::physics::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
