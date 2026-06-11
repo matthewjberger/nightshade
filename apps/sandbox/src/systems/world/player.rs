@@ -5,6 +5,76 @@ use nightshade::prelude::*;
 
 pub const PLAYER_TAG: &str = "player";
 
+const FLY_GROUND_CLEARANCE: f32 = 1.0;
+const FLOOR_SURFACE_HEIGHT: f32 = 0.0;
+
+pub fn clamp_fly_camera(sandbox_world: &SandboxWorld, world: &mut World) {
+    if !sandbox_world.resources.player.fly {
+        return;
+    }
+    let Some(fly_camera) = sandbox_world.resources.player.fly_camera else {
+        return;
+    };
+    let Some(translation) = world
+        .core
+        .get_local_transform(fly_camera)
+        .map(|transform| transform.translation)
+    else {
+        return;
+    };
+    let ground = if world.resources.terrain.enabled {
+        world
+            .resources
+            .terrain_render
+            .sample_height(translation.x, translation.z)
+            .unwrap_or(translation.y - FLY_GROUND_CLEARANCE)
+    } else {
+        FLOOR_SURFACE_HEIGHT
+    };
+    let minimum_y = ground + FLY_GROUND_CLEARANCE;
+    if translation.y < minimum_y {
+        if let Some(transform) = world.core.get_local_transform_mut(fly_camera) {
+            transform.translation.y = minimum_y;
+        }
+        mark_local_transform_dirty(world, fly_camera);
+    }
+}
+
+pub fn set_fly(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: bool) {
+    sandbox_world.resources.player.fly = enabled;
+    if enabled {
+        let pose = sandbox_world
+            .resources
+            .player
+            .camera_entity
+            .and_then(|camera| world.core.get_global_transform(camera))
+            .map(|transform| {
+                (
+                    transform.translation(),
+                    nalgebra_glm::to_quat(&nalgebra_glm::mat3_to_mat4(
+                        &nalgebra_glm::mat4_to_mat3(&transform.0),
+                    )),
+                )
+            });
+        let Some((position, rotation)) = pose else {
+            return;
+        };
+        let fly_camera =
+            nightshade::ecs::camera::commands::spawn_camera(world, position, "Fly Camera".into());
+        if let Some(transform) = world.core.get_local_transform_mut(fly_camera) {
+            transform.rotation = rotation;
+        }
+        mark_local_transform_dirty(world, fly_camera);
+        sandbox_world.resources.player.fly_camera = Some(fly_camera);
+        world.resources.active_camera = Some(fly_camera);
+    } else {
+        world.resources.active_camera = sandbox_world.resources.player.camera_entity;
+        if let Some(fly_camera) = sandbox_world.resources.player.fly_camera.take() {
+            world.despawn_entities(&[fly_camera]);
+        }
+    }
+}
+
 pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let position = find_player_spawn(world).unwrap_or_else(default_spawn_position);
     let (player_entity, camera_entity) = spawn_first_person_player(world, position);

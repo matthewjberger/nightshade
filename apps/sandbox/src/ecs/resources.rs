@@ -17,6 +17,8 @@ pub struct ScreenState {
 pub struct PlayerState {
     pub player_entity: Option<Entity>,
     pub camera_entity: Option<Entity>,
+    pub fly_camera: Option<Entity>,
+    pub fly: bool,
 }
 
 #[derive(Default)]
@@ -35,6 +37,7 @@ pub struct PauseHandles {
     pub infinite_world_checkbox: Entity,
     pub grass_checkbox: Entity,
     pub terrain_checkbox: Entity,
+    pub fly_checkbox: Entity,
 }
 
 #[derive(Default)]
