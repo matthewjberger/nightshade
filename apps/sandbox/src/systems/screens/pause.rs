@@ -24,6 +24,12 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut rocks_checkbox = Entity::default();
     let mut prop_lod_checkbox = Entity::default();
 
+    let mut settings_button = Entity::default();
+    let mut back_button = Entity::default();
+    let mut show_fps_checkbox = Entity::default();
+    let mut main_panel = Entity::default();
+    let mut settings_panel = Entity::default();
+
     tree.in_parent(root, |tree| {
         tree.add_node()
             .boundary(Rl(vec2(0.0, 0.0)), Rl(vec2(100.0, 100.0)))
@@ -31,14 +37,14 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
             .color_raw::<UiBase>(BACKDROP)
             .entity();
 
-        let panel = tree
+        main_panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 608.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 400.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
             .entity();
-        tree.in_parent(panel, |tree| {
+        tree.in_parent(main_panel, |tree| {
             tree.add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 32.0)),
@@ -65,21 +71,68 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 472.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 244.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
                 .entity();
             tree.in_parent(column, |tree| {
                 resume_button = menu_button::build(tree, "RESUME");
+                settings_button = menu_button::build(tree, "SETTINGS");
                 main_menu_button = menu_button::build(tree, "MAIN MENU");
                 quit_button = menu_button::build(tree, "QUIT TO DESKTOP");
+            });
+        });
+
+        settings_panel = tree
+            .add_node()
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 580.0)), Anchor::Center)
+            .with_rect(8.0, 1.0, PANEL_BORDER)
+            .color_raw::<UiBase>(PANEL_BG_DEEP)
+            .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
+            .with_visible(false)
+            .entity();
+        tree.in_parent(settings_panel, |tree| {
+            tree.add_node()
+                .window(
+                    Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 32.0)),
+                    Ab(vec2(320.0, 36.0)),
+                    Anchor::TopCenter,
+                )
+                .with_text("SETTINGS", 28.0)
+                .text_center()
+                .with_text_outline(ACCENT, 1.5)
+                .color_raw::<UiBase>(WHITE)
+                .entity();
+
+            tree.add_node()
+                .window(
+                    Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 76.0)),
+                    Ab(vec2(80.0, 2.0)),
+                    Anchor::TopCenter,
+                )
+                .with_rect(0.0, 0.0, TRANSPARENT)
+                .color_raw::<UiBase>(ACCENT)
+                .entity();
+
+            let column = tree
+                .add_node()
+                .window(
+                    Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 428.0)),
+                    Anchor::TopCenter,
+                )
+                .flow(FlowDirection::Vertical, 0.0, 12.0)
+                .entity();
+            tree.in_parent(column, |tree| {
                 infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD", true);
                 grass_checkbox = build_checkbox(tree, "ENABLE GRASS", true);
                 terrain_checkbox = build_checkbox(tree, "TERRAIN", true);
                 fly_checkbox = build_checkbox(tree, "FLY MODE", false);
                 rocks_checkbox = build_checkbox(tree, "ROCKS", true);
                 prop_lod_checkbox = build_checkbox(tree, "PROP LOD", true);
+                show_fps_checkbox = build_checkbox(tree, "SHOW FPS", true);
+                back_button = menu_button::build(tree, "BACK");
             });
         });
     });
@@ -95,6 +148,11 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         fly_checkbox,
         rocks_checkbox,
         prop_lod_checkbox,
+        show_fps_checkbox,
+        main_panel,
+        settings_panel,
+        settings_button,
+        back_button,
     }
 }
 
@@ -174,9 +232,15 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let resume = sandbox_world.resources.ui_handles.pause.resume_button;
     let main_menu = sandbox_world.resources.ui_handles.pause.main_menu_button;
     let quit = sandbox_world.resources.ui_handles.pause.quit_button;
+    let settings = sandbox_world.resources.ui_handles.pause.settings_button;
+    let back = sandbox_world.resources.ui_handles.pause.back_button;
+    let main_panel = sandbox_world.resources.ui_handles.pause.main_panel;
+    let settings_panel = sandbox_world.resources.ui_handles.pause.settings_panel;
     let mut clicked_resume = false;
     let mut clicked_main_menu = false;
     let mut clicked_quit = false;
+    let mut clicked_settings = false;
+    let mut clicked_back = false;
     for entity in ui_button_clicks(world) {
         if entity == resume {
             clicked_resume = true;
@@ -184,7 +248,19 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
             clicked_main_menu = true;
         } else if entity == quit {
             clicked_quit = true;
+        } else if entity == settings {
+            clicked_settings = true;
+        } else if entity == back {
+            clicked_back = true;
         }
+    }
+    if clicked_settings {
+        ui_set_visible(world, main_panel, false);
+        ui_set_visible(world, settings_panel, true);
+    }
+    if clicked_back {
+        ui_set_visible(world, settings_panel, false);
+        ui_set_visible(world, main_panel, true);
     }
     let checkbox = sandbox_world
         .resources
@@ -215,7 +291,13 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     if let Some(value) = ui_checkbox_changed(world, prop_lod_box) {
         rocks::set_lod_enabled(sandbox_world, world, value);
     }
+    let fps_box = sandbox_world.resources.ui_handles.pause.show_fps_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, fps_box) {
+        sandbox_world.resources.screen.show_fps = value;
+    }
     if clicked_resume {
+        ui_set_visible(world, settings_panel, false);
+        ui_set_visible(world, main_panel, true);
         lifecycle::enter(sandbox_world, world, Screen::InGame);
     } else if clicked_main_menu {
         player::reset(sandbox_world, world);

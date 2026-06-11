@@ -21,6 +21,7 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     grass::set_enabled(sandbox_world, world, true);
     terrain::set_enabled(sandbox_world, world, true);
     rocks::initialize(sandbox_world, world);
+    sandbox_world.resources.screen.show_fps = true;
 
     let mut tree = UiTreeBuilder::new(world);
     let title_handles = title::build(&mut tree);

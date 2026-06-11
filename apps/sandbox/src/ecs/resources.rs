@@ -12,7 +12,7 @@ pub struct PropLod {
     pub center: nalgebra_glm::Vec3,
     pub detail_meshes: Vec<Entity>,
     pub cube: Entity,
-    pub coarse_active: bool,
+    pub zone: u8,
 }
 
 #[derive(Default)]
@@ -36,6 +36,7 @@ pub enum Screen {
 #[derive(Default)]
 pub struct ScreenState {
     pub current: Screen,
+    pub show_fps: bool,
 }
 
 #[derive(Default)]
@@ -65,6 +66,11 @@ pub struct PauseHandles {
     pub fly_checkbox: Entity,
     pub rocks_checkbox: Entity,
     pub prop_lod_checkbox: Entity,
+    pub show_fps_checkbox: Entity,
+    pub main_panel: Entity,
+    pub settings_panel: Entity,
+    pub settings_button: Entity,
+    pub back_button: Entity,
 }
 
 #[derive(Default)]
