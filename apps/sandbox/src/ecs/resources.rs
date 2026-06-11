@@ -8,12 +8,21 @@ pub struct RockObb {
     pub half_extents: [f32; 3],
 }
 
+pub struct PropLod {
+    pub center: nalgebra_glm::Vec3,
+    pub detail_meshes: Vec<Entity>,
+    pub cube: Entity,
+    pub coarse_active: bool,
+}
+
 #[derive(Default)]
 pub struct RocksState {
     pub enabled: bool,
+    pub lod_enabled: bool,
     pub models: Vec<nightshade::ecs::prefab::GltfLoadResult>,
     pub tiles: HashMap<(i32, i32), Vec<Entity>>,
     pub obbs: HashMap<(i32, i32), Vec<RockObb>>,
+    pub lods: HashMap<(i32, i32), Vec<PropLod>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -55,6 +64,7 @@ pub struct PauseHandles {
     pub terrain_checkbox: Entity,
     pub fly_checkbox: Entity,
     pub rocks_checkbox: Entity,
+    pub prop_lod_checkbox: Entity,
 }
 
 #[derive(Default)]

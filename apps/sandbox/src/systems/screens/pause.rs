@@ -22,6 +22,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut terrain_checkbox = Entity::default();
     let mut fly_checkbox = Entity::default();
     let mut rocks_checkbox = Entity::default();
+    let mut prop_lod_checkbox = Entity::default();
 
     tree.in_parent(root, |tree| {
         tree.add_node()
@@ -32,7 +33,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 
         let panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 560.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 608.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
@@ -64,7 +65,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 424.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 472.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
@@ -78,6 +79,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 terrain_checkbox = build_checkbox(tree, "TERRAIN", true);
                 fly_checkbox = build_checkbox(tree, "FLY MODE", false);
                 rocks_checkbox = build_checkbox(tree, "ROCKS", true);
+                prop_lod_checkbox = build_checkbox(tree, "PROP LOD", true);
             });
         });
     });
@@ -92,6 +94,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         terrain_checkbox,
         fly_checkbox,
         rocks_checkbox,
+        prop_lod_checkbox,
     }
 }
 
@@ -207,6 +210,10 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let rocks_box = sandbox_world.resources.ui_handles.pause.rocks_checkbox;
     if let Some(value) = ui_checkbox_changed(world, rocks_box) {
         rocks::set_enabled(sandbox_world, world, value);
+    }
+    let prop_lod_box = sandbox_world.resources.ui_handles.pause.prop_lod_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, prop_lod_box) {
+        rocks::set_lod_enabled(sandbox_world, world, value);
     }
     if clicked_resume {
         lifecycle::enter(sandbox_world, world, Screen::InGame);
