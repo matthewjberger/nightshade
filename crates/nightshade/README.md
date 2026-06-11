@@ -14,7 +14,7 @@ Use the [nightshade-template](https://github.com/matthewjberger/nightshade-templ
 
 ```toml
 [dependencies]
-nightshade = "0.36.1"
+nightshade = "0.37.0"
 ```
 
 ### Hello, Nightshade
