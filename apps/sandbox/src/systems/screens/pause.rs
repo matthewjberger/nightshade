@@ -70,7 +70,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 resume_button = menu_button::build(tree, "RESUME");
                 main_menu_button = menu_button::build(tree, "MAIN MENU");
                 quit_button = menu_button::build(tree, "QUIT TO DESKTOP");
-                infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD", false);
+                infinite_world_checkbox = build_checkbox(tree, "INFINITE WORLD", true);
                 grass_checkbox = build_checkbox(tree, "ENABLE GRASS", true);
             });
         });

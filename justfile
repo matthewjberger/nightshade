@@ -124,6 +124,10 @@ run-web:
 run-app $project="sandbox" *arguments="":
     cargo run -r -p {{project}} -- {{arguments}}
 
+# Serves an app in the browser by name (e.g. `just run-wasm sandbox`)
+run-wasm $project="sandbox":
+    trunk serve --release --open --config apps/{{project}}/Trunk.toml
+
 # Opens the UI test harness in preview mode (no automated tests, just the UI)
 [windows]
 preview-ui-test-harness:
