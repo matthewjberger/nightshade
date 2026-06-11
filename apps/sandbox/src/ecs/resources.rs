@@ -1,4 +1,20 @@
 use nightshade::prelude::Entity;
+use std::collections::HashMap;
+
+#[derive(Clone, Copy)]
+pub struct RockObb {
+    pub center: nalgebra_glm::Vec3,
+    pub yaw: f32,
+    pub half_extents: [f32; 3],
+}
+
+#[derive(Default)]
+pub struct RocksState {
+    pub enabled: bool,
+    pub models: Vec<nightshade::ecs::prefab::GltfLoadResult>,
+    pub tiles: HashMap<(i32, i32), Vec<Entity>>,
+    pub obbs: HashMap<(i32, i32), Vec<RockObb>>,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Screen {
@@ -38,6 +54,7 @@ pub struct PauseHandles {
     pub grass_checkbox: Entity,
     pub terrain_checkbox: Entity,
     pub fly_checkbox: Entity,
+    pub rocks_checkbox: Entity,
 }
 
 #[derive(Default)]

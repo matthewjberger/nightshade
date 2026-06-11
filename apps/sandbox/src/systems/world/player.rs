@@ -32,9 +32,12 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxWorld, world: &mut World) {
         FLOOR_SURFACE_HEIGHT
     };
     let minimum_y = ground + FLY_GROUND_CLEARANCE;
-    if translation.y < minimum_y {
+    let mut resolved = translation;
+    resolved.y = resolved.y.max(minimum_y);
+    resolved = crate::systems::world::rocks::push_out_sphere(sandbox_world, resolved, 0.45);
+    if (resolved - translation).norm_squared() > 0.0 {
         if let Some(transform) = world.core.get_local_transform_mut(fly_camera) {
-            transform.translation.y = minimum_y;
+            transform.translation = resolved;
         }
         mark_local_transform_dirty(world, fly_camera);
     }

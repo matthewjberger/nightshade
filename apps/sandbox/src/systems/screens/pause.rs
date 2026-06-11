@@ -1,7 +1,7 @@
 use crate::ecs::{PauseHandles, SandboxWorld, Screen};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
-use crate::systems::world::{enemies, grass, infinite, player, terrain};
+use crate::systems::world::{enemies, grass, infinite, player, rocks, terrain};
 use crate::theme::*;
 use nightshade::ecs::ui::components::AccessibleRole;
 use nightshade::prelude::*;
@@ -21,6 +21,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut grass_checkbox = Entity::default();
     let mut terrain_checkbox = Entity::default();
     let mut fly_checkbox = Entity::default();
+    let mut rocks_checkbox = Entity::default();
 
     tree.in_parent(root, |tree| {
         tree.add_node()
@@ -31,7 +32,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 
         let panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 512.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 560.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
@@ -63,7 +64,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 376.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 424.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
@@ -76,6 +77,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 grass_checkbox = build_checkbox(tree, "ENABLE GRASS", true);
                 terrain_checkbox = build_checkbox(tree, "TERRAIN", true);
                 fly_checkbox = build_checkbox(tree, "FLY MODE", false);
+                rocks_checkbox = build_checkbox(tree, "ROCKS", true);
             });
         });
     });
@@ -89,6 +91,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         grass_checkbox,
         terrain_checkbox,
         fly_checkbox,
+        rocks_checkbox,
     }
 }
 
@@ -200,6 +203,10 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let fly_box = sandbox_world.resources.ui_handles.pause.fly_checkbox;
     if let Some(value) = ui_checkbox_changed(world, fly_box) {
         player::set_fly(sandbox_world, world, value);
+    }
+    let rocks_box = sandbox_world.resources.ui_handles.pause.rocks_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, rocks_box) {
+        rocks::set_enabled(sandbox_world, world, value);
     }
     if clicked_resume {
         lifecycle::enter(sandbox_world, world, Screen::InGame);

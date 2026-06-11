@@ -18,5 +18,6 @@ freecs::ecs! {
         player: PlayerState,
         ui_handles: UiHandles,
         infinite_world: InfiniteWorldState,
+        rocks: RocksState,
     }
 }
