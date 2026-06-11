@@ -28,6 +28,8 @@ const GAMEPAD_DEADZONE: f32 = 0.15;
 const MAX_STEP_SECONDS: f32 = 1.0 / 30.0;
 const BUMPER_RESOLVE_ITERATIONS: usize = 3;
 const SPHERE_SEGMENTS: usize = 24;
+const SPHERE_LATITUDE_RINGS: usize = 8;
+const SPHERE_MERIDIAN_CIRCLES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
 
@@ -415,9 +417,18 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
 }
 
 fn push_wire_sphere(lines: &mut Vec<Line>, center: Vec3, radius: f32, color: Vec4) {
-    push_circle(lines, center, radius, Vec3::x(), Vec3::y(), color);
-    push_circle(lines, center, radius, Vec3::x(), Vec3::z(), color);
-    push_circle(lines, center, radius, Vec3::y(), Vec3::z(), color);
+    for ring_index in 1..SPHERE_LATITUDE_RINGS {
+        let polar_angle = (ring_index as f32 / SPHERE_LATITUDE_RINGS as f32) * std::f32::consts::PI;
+        let ring_center = center + Vec3::new(0.0, polar_angle.cos() * radius, 0.0);
+        let ring_radius = polar_angle.sin() * radius;
+        push_circle(lines, ring_center, ring_radius, Vec3::x(), Vec3::z(), color);
+    }
+    for meridian_index in 0..SPHERE_MERIDIAN_CIRCLES {
+        let meridian_angle =
+            (meridian_index as f32 / SPHERE_MERIDIAN_CIRCLES as f32) * std::f32::consts::PI;
+        let meridian_axis = Vec3::new(meridian_angle.cos(), 0.0, meridian_angle.sin());
+        push_circle(lines, center, radius, meridian_axis, Vec3::y(), color);
+    }
 }
 
 fn push_circle(
