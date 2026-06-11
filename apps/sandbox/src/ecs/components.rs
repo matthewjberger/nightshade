@@ -11,4 +11,6 @@ pub struct Enemy {
     pub target: Vec3,
     pub speed: f32,
     pub patrol_index: u32,
+    pub legs: [nightshade::prelude::Entity; 4],
+    pub gait_phase: f32,
 }
