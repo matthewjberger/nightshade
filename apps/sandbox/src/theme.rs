@@ -24,3 +24,4 @@ pub const CROSSHAIR: Vec4 = Vec4::new(0.92, 0.98, 1.0, 0.85);
 
 pub const MENU_BUTTON_HEIGHT: f32 = 48.0;
 pub const MENU_BUTTON_SIZE: Vec2 = Vec2::new(320.0, MENU_BUTTON_HEIGHT);
+pub const MENU_CHECKBOX_HEIGHT: f32 = 36.0;

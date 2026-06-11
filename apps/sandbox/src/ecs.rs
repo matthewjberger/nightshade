@@ -17,5 +17,6 @@ freecs::ecs! {
         screen: ScreenState,
         player: PlayerState,
         ui_handles: UiHandles,
+        infinite_world: InfiniteWorldState,
     }
 }

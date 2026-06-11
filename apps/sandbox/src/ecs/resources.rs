@@ -32,6 +32,13 @@ pub struct PauseHandles {
     pub resume_button: Entity,
     pub main_menu_button: Entity,
     pub quit_button: Entity,
+    pub infinite_world_checkbox: Entity,
+}
+
+#[derive(Default)]
+pub struct InfiniteWorldState {
+    pub enabled: bool,
+    pub ground: Option<Entity>,
 }
 
 #[derive(Default)]
