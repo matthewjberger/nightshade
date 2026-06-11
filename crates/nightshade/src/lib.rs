@@ -740,7 +740,7 @@ pub mod prelude {
     #[cfg(all(feature = "terrain", feature = "physics"))]
     pub use crate::ecs::terrain::terrain_collider_system;
     #[cfg(feature = "terrain")]
-    pub use crate::ecs::terrain::{TerrainRenderState, TerrainSettings};
+    pub use crate::ecs::terrain::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
