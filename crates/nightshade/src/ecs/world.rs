@@ -246,6 +246,7 @@ freecs::ecs! {
         #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+        #[cfg(feature = "grass")]
         grass: crate::ecs::grass::GrassSettings,
         render_settings: crate::ecs::graphics::resources::RenderSettings,
         debug_draw: crate::ecs::graphics::resources::DebugDraw,
@@ -269,6 +270,10 @@ freecs::ecs! {
         shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
+        #[cfg(feature = "terrain")]
+        terrain: crate::ecs::terrain::TerrainSettings,
+        #[cfg(feature = "terrain")]
+        terrain_render: crate::ecs::terrain::TerrainRenderState,
         text: crate::ecs::text::resources::TextState,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         transform_state: crate::ecs::transform::resources::TransformState,

@@ -1,6 +1,6 @@
 use crate::ecs::{SandboxWorld, Screen};
 use crate::systems::screens::{hud, pause, title};
-use crate::systems::world::{enemies, grass, infinite, level, player, textures};
+use crate::systems::world::{enemies, grass, infinite, level, player, terrain, textures};
 use nightshade::prelude::*;
 
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
@@ -19,6 +19,7 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     enemies::spawn(sandbox_world, world);
     infinite::set_enabled(sandbox_world, world, true);
     grass::set_enabled(sandbox_world, world, true);
+    terrain::set_enabled(sandbox_world, world, true);
 
     let mut tree = UiTreeBuilder::new(world);
     let title_handles = title::build(&mut tree);

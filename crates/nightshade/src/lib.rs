@@ -196,6 +196,10 @@
 //!
 //! - **`navmesh`** - Navigation mesh generation using Recast.
 //!
+//! - **`grass`** - GPU-driven procedural grass rendering.
+//!
+//! - **`terrain`** - GPU-driven clipmap terrain with procedural height generation. Implies `grass`.
+//!
 //! - **`picking`** - Ray-based entity picking. Trimesh picking requires `physics`.
 //!
 //! - **`gamepad`** - Gamepad input using gilrs.
@@ -620,7 +624,10 @@ pub mod prelude {
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
-    pub use crate::ecs::grass::{GrassDomain, GrassPusher, GrassSettings, GrassTypeParams};
+    #[cfg(feature = "grass")]
+    pub use crate::ecs::grass::{
+        GrassDomain, GrassHeightMap, GrassPusher, GrassSettings, GrassTypeParams,
+    };
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::queries::query_active_gamepad;
     pub use crate::ecs::input::resources::input_mode::InputMode;
@@ -730,6 +737,10 @@ pub mod prelude {
         load_scene, register_component_descriptor, save_scene, spawn_scene,
         spawn_scene_with_deserializer, world_to_scene, world_to_scene_with_serializer,
     };
+    #[cfg(all(feature = "terrain", feature = "physics"))]
+    pub use crate::ecs::terrain::terrain_collider_system;
+    #[cfg(feature = "terrain")]
+    pub use crate::ecs::terrain::{TerrainRenderState, TerrainSettings};
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };

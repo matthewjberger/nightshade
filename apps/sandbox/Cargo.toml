@@ -14,7 +14,7 @@ name = "sandbox"
 path = "src/main.rs"
 
 [dependencies]
-nightshade = { workspace = true, features = ["tracing", "physics", "gamepad"] }
+nightshade = { workspace = true, features = ["tracing", "physics", "gamepad", "grass", "terrain"] }
 freecs.workspace = true
 nalgebra-glm.workspace = true
 serde.workspace = true

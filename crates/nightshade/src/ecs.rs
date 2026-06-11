@@ -38,6 +38,7 @@ pub mod generational_registry;
 pub mod gizmos;
 pub mod gpu_picking;
 pub mod graphics;
+#[cfg(feature = "grass")]
 pub mod grass;
 pub mod input;
 pub mod light;
@@ -57,6 +58,8 @@ pub mod primitives;
 pub mod scene;
 pub mod skin;
 pub mod sync;
+#[cfg(feature = "terrain")]
+pub mod terrain;
 pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;

@@ -34,11 +34,13 @@ pub struct PauseHandles {
     pub quit_button: Entity,
     pub infinite_world_checkbox: Entity,
     pub grass_checkbox: Entity,
+    pub terrain_checkbox: Entity,
 }
 
 #[derive(Default)]
 pub struct InfiniteWorldState {
     pub enabled: bool,
+    pub suppressed: bool,
     pub ground: Option<Entity>,
 }
 

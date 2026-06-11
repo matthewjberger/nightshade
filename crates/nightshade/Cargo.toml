@@ -113,7 +113,12 @@ full = [
     "physics",
     "gamepad",
     "navmesh",
+    "grass",
+    "terrain",
 ]
+
+grass = []
+terrain = ["grass"]
 
 wgpu = ["dep:wgpu", "dep:naga_oil", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]

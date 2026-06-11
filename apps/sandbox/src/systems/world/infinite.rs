@@ -17,8 +17,22 @@ pub fn set_enabled(sandbox_world: &mut SandboxWorld, world: &mut World, enabled:
         return;
     }
     sandbox_world.resources.infinite_world.enabled = enabled;
+    apply_ground_height(sandbox_world, world);
+}
+
+pub fn set_suppressed(sandbox_world: &mut SandboxWorld, world: &mut World, suppressed: bool) {
+    if sandbox_world.resources.infinite_world.suppressed == suppressed {
+        return;
+    }
+    sandbox_world.resources.infinite_world.suppressed = suppressed;
+    apply_ground_height(sandbox_world, world);
+}
+
+fn apply_ground_height(sandbox_world: &mut SandboxWorld, world: &mut World) {
+    let active = sandbox_world.resources.infinite_world.enabled
+        && !sandbox_world.resources.infinite_world.suppressed;
     let ground = ensure_ground(sandbox_world, world);
-    let height = if enabled {
+    let height = if active {
         GROUND_CENTER_HEIGHT
     } else {
         PARKED_HEIGHT
@@ -27,13 +41,15 @@ pub fn set_enabled(sandbox_world: &mut SandboxWorld, world: &mut World, enabled:
         transform.translation.y = height;
     }
     mark_local_transform_dirty(world, ground);
-    if enabled {
+    if active {
         recenter(sandbox_world, world);
     }
 }
 
 pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
-    if !sandbox_world.resources.infinite_world.enabled {
+    if !sandbox_world.resources.infinite_world.enabled
+        || sandbox_world.resources.infinite_world.suppressed
+    {
         return;
     }
     recenter(sandbox_world, world);
