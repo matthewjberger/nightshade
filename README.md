@@ -229,6 +229,14 @@ cd site && just serve   # full local site with editor + book
 
 The editor is a web app either way: `just run-web` serves it with trunk, and `just run` opens the same bundle in a native webview window. `just run-agent` builds everything with the opt-in `agent` feature so an MCP client like Claude Code can drive the live editor (register once with `claude mcp add --transport http nightshade-editor http://127.0.0.1:8790/mcp`, see [EDITOR_AGENT.md](docs/EDITOR_AGENT.md)). Run `just` with no arguments to list every recipe.
 
+To install the editor as a standalone desktop app without cloning the repo:
+
+```bash
+cargo install --locked nightshade-editor
+```
+
+The `--locked` flag matters: it builds with the dependency versions the release was tested against instead of resolving fresh, which protects the install from breakage in newly published transitive dependencies.
+
 ## Documentation
 
 - 📖 [Book](https://matthewjberger.github.io/nightshade/book/) - architecture, systems, and tutorials
