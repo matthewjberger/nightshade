@@ -227,7 +227,7 @@ just run-app <name> # native app from apps/ (sandbox, game, ...)
 cd site && just serve   # full local site with editor + book
 ```
 
-The editor is a web app either way: `just run-web` serves it with trunk, and `just run` opens the same bundle in a native webview window. The desktop shell supports multiple windows: the first instance hosts a [hearsay](https://crates.io/crates/hearsay) broker and File > New window spawns additional editor processes that join it. `just run-agent` builds everything with the opt-in `agent` feature so an MCP client like Claude Code can drive the live editor (register once with `claude mcp add --transport http nightshade-editor http://127.0.0.1:8790/mcp`, see [EDITOR_AGENT.md](docs/EDITOR_AGENT.md)). Run `just` with no arguments to list every recipe.
+The editor is a web app either way: `just run-web` serves it with trunk, and `just run` opens the same bundle in a native webview window. The desktop shell supports multiple windows: the first instance hosts a [hearsay](https://crates.io/crates/hearsay) broker and File > New window spawns additional editor processes that join it. The Workspace menu saves every window's layout into a named workspace with recents and an optional startup workspace, and each window can save, load, and reset its own named layout from the View menu. `just run-agent` builds everything with the opt-in `agent` feature so an MCP client like Claude Code can drive the live editor (register once with `claude mcp add --transport http nightshade-editor http://127.0.0.1:8790/mcp`, see [EDITOR_AGENT.md](docs/EDITOR_AGENT.md)). Run `just` with no arguments to list every recipe.
 
 To install the editor as a standalone desktop app without cloning the repo:
 
