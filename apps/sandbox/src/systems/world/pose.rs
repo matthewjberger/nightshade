@@ -11,6 +11,29 @@ const GAIT_TRACKING_SHARPNESS_BOOST: f32 = 48.0;
 const REACH_ARM_DEGREES: f32 = 90.0;
 const IDLE_ARM_DROP_DEGREES: f32 = 65.0;
 const IDLE_ELBOW_BEND_DEGREES: f32 = 20.0;
+const CROUCH_HIPS_DROP: f32 = 0.22;
+const CROUCH_MAX_WEIGHT: f32 = 1.15;
+
+/// Model-space joint deltas for the crouch keyframe: hips sink while
+/// thighs pitch forward and shins fold back so the feet stay planted,
+/// with the spine leaning forward to keep the center of mass over
+/// the feet.
+const CROUCH: &[(&str, char, f32)] = &[
+    ("Spine", 'x', 15.0),
+    ("Spine1", 'x', 10.0),
+    ("LeftArm", 'z', -65.0),
+    ("RightArm", 'z', 65.0),
+    ("LeftArm", 'x', -20.0),
+    ("RightArm", 'x', -20.0),
+    ("LeftForeArm", 'x', -30.0),
+    ("RightForeArm", 'x', -30.0),
+    ("LeftUpLeg", 'x', -55.0),
+    ("RightUpLeg", 'x', -55.0),
+    ("LeftLeg", 'x', 75.0),
+    ("RightLeg", 'x', 75.0),
+    ("LeftFoot", 'x', -18.0),
+    ("RightFoot", 'x', -18.0),
+];
 
 /// Model-space joint deltas at the reach extreme of the stride: left
 /// leg planted forward, right leg trailing, arms counter-swinging.
@@ -154,10 +177,69 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         joints: reach_joints,
     });
 
+    let crouch_deltas: Vec<(&str, Vec3, f32)> = CROUCH
+        .iter()
+        .map(|(suffix, axis, degrees)| (*suffix, axis_vector(*axis), *degrees))
+        .collect();
+    let crouch_joints =
+        build_model_space_keyframe(world, model, &rest_rotations, &bones, &crouch_deltas);
+    let crouch_index = keyframes.len();
+    keyframes.push(PoseKeyframe {
+        name: "crouch".to_string(),
+        joints: crouch_joints,
+    });
+
+    let hips = find_bone(&bones, "Hips");
+    let (hips_rest_translation, hips_drop_local) = hips
+        .map(|hips_entity| {
+            let rest_translation = world
+                .core
+                .get_local_transform(hips_entity)
+                .map(|transform| transform.translation)
+                .unwrap_or_else(Vec3::zeros);
+            (
+                rest_translation,
+                hips_local_drop_vector(world, model, hips_entity),
+            )
+        })
+        .unwrap_or((Vec3::zeros(), Vec3::zeros()));
+
     let pose = &mut sandbox_world.resources.pose;
     pose.keyframes = keyframes;
     pose.rest_rotations = rest_rotations;
     pose.gait_tracks = build_gait_tracks(&bones);
+    pose.crouch_index = Some(crouch_index);
+    pose.hips = hips;
+    pose.hips_rest_translation = hips_rest_translation;
+    pose.hips_drop_local = hips_drop_local;
+}
+
+/// The hips-parent local vector corresponding to one meter of
+/// model-space downward translation, accounting for the rotations and
+/// scales between the model root and the hips joint.
+fn hips_local_drop_vector(world: &World, model: Entity, hips: Entity) -> Vec3 {
+    let mut stack = vec![(model, nalgebra_glm::Mat3::identity())];
+    while let Some((entity, parent_matrix)) = stack.pop() {
+        if entity == hips {
+            return parent_matrix
+                .try_inverse()
+                .map(|inverse| inverse * Vec3::new(0.0, -1.0, 0.0))
+                .unwrap_or_else(Vec3::zeros);
+        }
+        let local_matrix = world
+            .core
+            .get_local_transform(entity)
+            .map(|transform| {
+                nalgebra_glm::quat_to_mat3(&transform.rotation)
+                    * nalgebra_glm::diagonal3x3(&transform.scale)
+            })
+            .unwrap_or_else(nalgebra_glm::Mat3::identity);
+        let matrix = parent_matrix * local_matrix;
+        for child in query_children(world, entity) {
+            stack.push((child, matrix));
+        }
+    }
+    Vec3::zeros()
 }
 
 pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str) -> bool {
@@ -220,6 +302,17 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         None
     };
 
+    let crouch_weight = if pose.active == pose.crouch_index {
+        0.0
+    } else {
+        character.crouch_amount.clamp(0.0, CROUCH_MAX_WEIGHT)
+    };
+    let crouch_joints = pose
+        .crouch_index
+        .and_then(|index| pose.keyframes.get(index))
+        .filter(|_| crouch_weight > 1e-3)
+        .map(|keyframe| keyframe.joints.as_slice());
+
     let delta_time = world.resources.window.timing.delta_time;
     let sharpness = POSE_BLEND_SHARPNESS + GAIT_TRACKING_SHARPNESS_BOOST * gait_weight;
     let blend = 1.0 - (-sharpness * delta_time).exp();
@@ -230,12 +323,42 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         {
             target = blend_rotation(target, *gait_rotation, gait_weight);
         }
+        if let Some(crouch_joints) = crouch_joints
+            && let Some(crouch_rotation) = joint_rotation(crouch_joints, *entity)
+        {
+            target = blend_rotation(target, crouch_rotation, crouch_weight);
+        }
         let Some(transform) = world.core.get_local_transform_mut(*entity) else {
             continue;
         };
         transform.rotation = blend_rotation(transform.rotation, target, blend);
         mark_local_transform_dirty(world, *entity);
     }
+
+    if let Some(hips) = pose.hips {
+        let drop_weight = if pose.active == pose.crouch_index {
+            1.0
+        } else {
+            crouch_weight
+        };
+        let target_translation =
+            pose.hips_rest_translation + pose.hips_drop_local * (CROUCH_HIPS_DROP * drop_weight);
+        if let Some(transform) = world.core.get_local_transform_mut(hips) {
+            transform.translation =
+                transform.translation + (target_translation - transform.translation) * blend;
+        }
+        mark_local_transform_dirty(world, hips);
+    }
+}
+
+fn joint_rotation(
+    joints: &[(Entity, nalgebra_glm::Quat)],
+    entity: Entity,
+) -> Option<nalgebra_glm::Quat> {
+    joints
+        .binary_search_by_key(&entity.id, |(joint, _)| joint.id)
+        .ok()
+        .map(|index| joints[index].1)
 }
 
 fn blend_rotation(

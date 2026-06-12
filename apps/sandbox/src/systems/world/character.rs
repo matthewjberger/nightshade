@@ -48,6 +48,10 @@ const GAIT_BLEND_SHARPNESS: f32 = 6.0;
 const BOUNCE_GRAVITY_FACTOR: f32 = 0.43;
 const BOUNCE_MAX: f32 = 0.06;
 const BOUNCE_CONTACT_LAG: f32 = 0.3;
+const CROUCH_SPRING_STIFFNESS: f32 = 90.0;
+const CROUCH_SPRING_DAMPING: f32 = 13.0;
+const CROUCH_SPEED_PENALTY: f32 = 0.5;
+const LANDING_CROUCH_FACTOR: f32 = 0.18;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -407,13 +411,14 @@ fn spawn_feet_position(world: &World) -> Vec3 {
 struct CharacterInputs {
     direction: Vec3,
     jump_pressed: bool,
+    crouch_held: bool,
 }
 
 fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     let (forward, right) = horizontal_camera_basis(world, camera);
 
     let mut direction = Vec3::zeros();
-    let jump_key_pressed = {
+    let (jump_key_pressed, crouch_key_held) = {
         let keyboard = &world.resources.input.keyboard;
         if keyboard.is_key_pressed(KeyCode::KeyW) {
             direction += forward;
@@ -427,9 +432,13 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
         if keyboard.is_key_pressed(KeyCode::KeyA) {
             direction -= right;
         }
-        keyboard.just_pressed(KeyCode::Space)
+        (
+            keyboard.just_pressed(KeyCode::Space),
+            keyboard.is_key_pressed(KeyCode::ControlLeft) || keyboard.is_key_pressed(KeyCode::KeyC),
+        )
     };
 
+    let mut gamepad_crouch_held = false;
     if let Some(gamepad) = query_active_gamepad(world) {
         let stick_x = gamepad.value(gilrs::Axis::LeftStickX);
         let stick_y = gamepad.value(gilrs::Axis::LeftStickY);
@@ -439,6 +448,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
             direction += forward * (stick_y * normalized / magnitude)
                 + right * (stick_x * normalized / magnitude);
         }
+        gamepad_crouch_held = gamepad.is_pressed(gilrs::Button::East);
     }
 
     if direction.norm() > 1.0 {
@@ -455,6 +465,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     CharacterInputs {
         direction,
         jump_pressed: jump_key_pressed || gamepad_jump,
+        crouch_held: crouch_key_held || gamepad_crouch_held,
     }
 }
 
@@ -504,8 +515,22 @@ fn move_character(
 
     let state = &mut sandbox_world.resources.character;
     let mut velocity = state.velocity;
+    let was_grounded = state.grounded;
 
-    let target_velocity = inputs.direction * MAX_GROUND_SPEED;
+    let crouch_target = if inputs.crouch_held && state.grounded {
+        1.0
+    } else {
+        0.0
+    };
+    let crouch_spring = (crouch_target - state.crouch_amount) * CROUCH_SPRING_STIFFNESS
+        - state.crouch_velocity * CROUCH_SPRING_DAMPING;
+    state.crouch_velocity += crouch_spring * delta_time;
+    state.crouch_amount =
+        (state.crouch_amount + state.crouch_velocity * delta_time).clamp(-0.05, 1.2);
+
+    let crouch_factor = state.crouch_amount.clamp(0.0, 1.0);
+    let effective_max_speed = MAX_GROUND_SPEED * (1.0 - CROUCH_SPEED_PENALTY * crouch_factor);
+    let target_velocity = inputs.direction * effective_max_speed;
     let acceleration = if state.grounded {
         GROUND_ACCELERATION
     } else {
@@ -540,6 +565,7 @@ fn move_character(
         state.grounded = false;
     }
 
+    let impact_speed = (-velocity.y).max(0.0);
     let probe_origin = position + Vec3::new(0.0, RIDE_PROBE_HEIGHT, 0.0);
     let ground_distance = sample_ground_distance(world, probe_origin);
     if let Some(distance) = ground_distance
@@ -552,6 +578,9 @@ fn move_character(
         state.grounded = distance < RIDE_PROBE_HEIGHT + GROUNDED_MARGIN;
     } else {
         state.grounded = false;
+    }
+    if !was_grounded && state.grounded {
+        state.crouch_velocity += impact_speed * LANDING_CROUCH_FACTOR;
     }
 
     position += velocity * delta_time;

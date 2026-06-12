@@ -70,6 +70,10 @@ pub struct PoseState {
     pub active: Option<usize>,
     pub rest_rotations: HashMap<Entity, nalgebra_glm::Quat>,
     pub gait_tracks: Vec<GaitTrack>,
+    pub crouch_index: Option<usize>,
+    pub hips: Option<Entity>,
+    pub hips_rest_translation: nalgebra_glm::Vec3,
+    pub hips_drop_local: nalgebra_glm::Vec3,
 }
 
 #[derive(Default)]
@@ -92,6 +96,8 @@ pub struct CharacterState {
     pub skeleton_visible: bool,
     pub gait_weight: f32,
     pub gait_run_factor: f32,
+    pub crouch_amount: f32,
+    pub crouch_velocity: f32,
 }
 
 #[derive(Default)]
