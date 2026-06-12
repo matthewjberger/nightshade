@@ -109,6 +109,10 @@ pub struct CharacterState {
     pub flip_pivot: f32,
     pub flip_side: f32,
     pub tuck_weight: f32,
+    pub wall_running: bool,
+    pub wall_normal: nalgebra_glm::Vec3,
+    pub wall_run_timer: f32,
+    pub wall_run_cooldown: f32,
 }
 
 #[derive(Default)]

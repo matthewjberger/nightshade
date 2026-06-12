@@ -61,6 +61,16 @@ const ROLL_PIVOT_HEIGHT: f32 = 0.55;
 const FLIP_ANTICIPATION_RADIANS: f32 = 0.2;
 const FLIP_ANTICIPATION_FRACTION: f32 = 0.12;
 const ROLL_MINIMUM_SPEED: f32 = 2.0;
+const WALL_RUN_MAX_SECONDS: f32 = 1.2;
+const WALL_RUN_COOLDOWN_SECONDS: f32 = 0.4;
+const WALL_RUN_MINIMUM_SPEED: f32 = 3.0;
+const WALL_RUN_FALL_RATE: f32 = -1.6;
+const WALL_RUN_GRAVITY_SCALE: f32 = 0.3;
+const WALL_RUN_STICK: f32 = 2.5;
+const WALL_RUN_LEAN: f32 = 0.35;
+const WALL_NORMAL_MAX_Y: f32 = 0.35;
+const WALL_JUMP_AWAY: f32 = 4.5;
+const WALL_JUMP_UP: f32 = 4.5;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -584,8 +594,11 @@ fn move_character(
         target_velocity.z - velocity.z,
     );
     let mut lean_target = velocity_error * acceleration * LEAN_RADIANS_PER_ACCELERATION;
-    if lean_target.norm() > LEAN_MAX_RADIANS {
-        lean_target = lean_target.normalize() * LEAN_MAX_RADIANS;
+    if state.wall_running {
+        lean_target += -state.wall_normal * WALL_RUN_LEAN;
+    }
+    if lean_target.norm() > LEAN_MAX_RADIANS + WALL_RUN_LEAN {
+        lean_target = lean_target.normalize() * (LEAN_MAX_RADIANS + WALL_RUN_LEAN);
     }
     let lean_blend = 1.0 - (-LEAN_SHARPNESS * delta_time).exp();
     state.lean += (lean_target - state.lean) * lean_blend;
@@ -598,13 +611,26 @@ fn move_character(
         velocity.z *= friction;
     }
 
-    velocity.y += gravity_y * delta_time;
+    if state.wall_running {
+        velocity.y += gravity_y * WALL_RUN_GRAVITY_SCALE * delta_time;
+        velocity.y = velocity.y.max(WALL_RUN_FALL_RATE);
+        velocity -= state.wall_normal * WALL_RUN_STICK * delta_time;
+    } else {
+        velocity.y += gravity_y * delta_time;
+    }
 
     state.jump_suppress_timer = (state.jump_suppress_timer - delta_time).max(0.0);
     if inputs.jump_pressed && state.grounded {
         velocity.y = JUMP_IMPULSE;
         state.jump_suppress_timer = JUMP_SPRING_SUPPRESS_SECONDS;
         state.grounded = false;
+    } else if inputs.jump_pressed && state.wall_running {
+        velocity += state.wall_normal * WALL_JUMP_AWAY;
+        velocity.y = WALL_JUMP_UP;
+        state.wall_running = false;
+        state.wall_run_timer = 0.0;
+        state.wall_run_cooldown = WALL_RUN_COOLDOWN_SECONDS;
+        state.jump_suppress_timer = JUMP_SPRING_SUPPRESS_SECONDS;
     }
 
     let impact_speed = (-velocity.y).max(0.0);
@@ -625,7 +651,11 @@ fn move_character(
         state.crouch_velocity += impact_speed * LANDING_CROUCH_FACTOR;
     }
 
-    let air_target = if state.grounded { 0.0 } else { 1.0 };
+    let air_target = if state.grounded || state.wall_running {
+        0.0
+    } else {
+        1.0
+    };
     state.air_weight +=
         (air_target - state.air_weight) * (1.0 - (-AIR_POSE_SHARPNESS * delta_time).exp());
 
@@ -670,6 +700,7 @@ fn move_character(
 
     position += velocity * delta_time;
 
+    let mut wall_contact_normal: Option<Vec3> = None;
     for _ in 0..BUMPER_RESOLVE_ITERATIONS {
         let contacts = physics_world_capsule_contacts(
             &world.resources.physics,
@@ -687,7 +718,34 @@ fn move_character(
             if into_surface < 0.0 {
                 velocity -= contact.normal * into_surface;
             }
+            if contact.normal.y.abs() < WALL_NORMAL_MAX_Y {
+                wall_contact_normal = Some(contact.normal);
+            }
         }
+    }
+
+    state.wall_run_cooldown = (state.wall_run_cooldown - delta_time).max(0.0);
+    let wall_speed = Vec3::new(velocity.x, 0.0, velocity.z).norm();
+    let can_wall_run = !state.grounded
+        && wall_speed > WALL_RUN_MINIMUM_SPEED
+        && state.wall_run_cooldown <= 0.0
+        && state.wall_run_timer < WALL_RUN_MAX_SECONDS;
+    if let Some(normal) = wall_contact_normal
+        && can_wall_run
+    {
+        state.wall_running = true;
+        state.wall_normal = Vec3::new(normal.x, 0.0, normal.z).normalize();
+        state.wall_run_timer += delta_time;
+        if state.wall_run_timer >= WALL_RUN_MAX_SECONDS {
+            state.wall_running = false;
+            state.wall_run_cooldown = WALL_RUN_COOLDOWN_SECONDS;
+        }
+    } else if state.wall_running {
+        state.wall_running = false;
+        state.wall_run_timer = 0.0;
+        state.wall_run_cooldown = WALL_RUN_COOLDOWN_SECONDS;
+    } else if state.grounded {
+        state.wall_run_timer = 0.0;
     }
 
     let horizontal_velocity = Vec3::new(velocity.x, 0.0, velocity.z);
@@ -707,12 +765,12 @@ fn move_character(
         WALK_WHEEL_RADIUS + (RUN_WHEEL_RADIUS - WALK_WHEEL_RADIUS) * state.gait_run_factor;
     state.stride_radius = upright_radius
         + (CROUCH_WHEEL_RADIUS - upright_radius) * state.crouch_amount.clamp(0.0, 1.0);
-    if state.grounded {
+    if state.grounded || state.wall_running {
         state.stride_phase = (state.stride_phase
             + horizontal_speed * delta_time / state.stride_radius)
             .rem_euclid(std::f32::consts::TAU);
     }
-    let gait_target = if state.grounded {
+    let gait_target = if state.grounded || state.wall_running {
         ((horizontal_speed - GAIT_FADE_START_SPEED) / (GAIT_FULL_SPEED - GAIT_FADE_START_SPEED))
             .clamp(0.0, 1.0)
     } else {
