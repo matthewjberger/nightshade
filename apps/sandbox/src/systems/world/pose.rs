@@ -434,6 +434,12 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
 /// changes overshoot and settle instead of snapping. Hanging hands
 /// stiffen so the ledge grip stays planted.
 pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
+    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
+        for soft in &mut sandbox_world.resources.pose.soft_joints {
+            soft.initialized = false;
+        }
+        return;
+    }
     let delta_time = world
         .resources
         .window
@@ -480,7 +486,7 @@ pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
     }
 }
 
-fn quat_to_rotation_vector(rotation: &nalgebra_glm::Quat) -> Vec3 {
+pub fn quat_to_rotation_vector(rotation: &nalgebra_glm::Quat) -> Vec3 {
     let mut rotation = *rotation;
     if rotation.w < 0.0 {
         rotation = -rotation;
@@ -560,6 +566,9 @@ pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str)
 }
 
 pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
+    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
+        return;
+    }
     let pose = &sandbox_world.resources.pose;
     let Some(active) = pose.active else {
         return;
@@ -740,7 +749,7 @@ fn apply_model_space_deltas(
     }
 }
 
-fn joint_rotation(
+pub fn joint_rotation(
     joints: &[(Entity, nalgebra_glm::Quat)],
     entity: Entity,
 ) -> Option<nalgebra_glm::Quat> {
@@ -988,7 +997,7 @@ fn mirror_sign(axis: char) -> f32 {
     if axis == 'x' { 1.0 } else { -1.0 }
 }
 
-fn find_bone(bones: &HashMap<String, Entity>, suffix: &str) -> Option<Entity> {
+pub fn find_bone(bones: &HashMap<String, Entity>, suffix: &str) -> Option<Entity> {
     bones
         .iter()
         .find(|(name, _)| {

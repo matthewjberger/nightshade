@@ -58,6 +58,13 @@ pub const SKELETON: Command<SandboxShellContext> = Command {
     execute: skeleton,
 };
 
+pub const RAGDOLL: Command<SandboxShellContext> = Command {
+    name: "ragdoll",
+    description: "Set the ragdoll mode",
+    usage: "ragdoll <off|limp|match|active>",
+    execute: ragdoll,
+};
+
 pub const POSE: Command<SandboxShellContext> = Command {
     name: "pose",
     description: "List poses or set the active character pose",
@@ -127,6 +134,18 @@ fn skeleton(args: &[&str], _world: &mut World, context: &mut SandboxShellContext
     };
     context.queue.push(ShellAction::SetSkeleton(value));
     "OK".to_string()
+}
+
+fn ragdoll(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
+    match args {
+        [mode @ ("off" | "limp" | "match" | "active")] => {
+            context
+                .queue
+                .push(ShellAction::SetRagdoll(mode.to_string()));
+            format!("ragdoll {mode}")
+        }
+        _ => RAGDOLL.usage.to_string(),
+    }
 }
 
 fn pose(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {

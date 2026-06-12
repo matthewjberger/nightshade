@@ -9,6 +9,9 @@ const HAND_EDGE_SPREAD: f32 = 0.22;
 const HAND_EDGE_LIFT: f32 = 0.03;
 
 pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
+    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
+        return;
+    }
     let character = &sandbox_world.resources.character;
     if !character.third_person {
         return;
@@ -83,10 +86,10 @@ fn solve_hands_to_ledge(sandbox_world: &SandboxWorld, world: &mut World, body: E
     }
 }
 
-struct WorldPose {
-    rotation: nalgebra_glm::Quat,
-    position: Vec3,
-    scale: Vec3,
+pub struct WorldPose {
+    pub rotation: nalgebra_glm::Quat,
+    pub position: Vec3,
+    pub scale: Vec3,
 }
 
 fn compose(parent: &WorldPose, entity: Entity, world: &World) -> Option<WorldPose> {
@@ -116,7 +119,7 @@ fn ancestry(world: &World, body: Entity, entity: Entity) -> Vec<Entity> {
     chain
 }
 
-fn world_pose_of(world: &World, body: Entity, entity: Entity) -> Option<WorldPose> {
+pub fn world_pose_of(world: &World, body: Entity, entity: Entity) -> Option<WorldPose> {
     let path = ancestry(world, body, entity);
     if path.first() != Some(&body) {
         return None;
@@ -251,7 +254,7 @@ fn solve_two_bone(world: &mut World, body: Entity, chain: IkChain, target: Vec3)
     mark_local_transform_dirty(world, chain.end);
 }
 
-fn rotation_between(from: Vec3, to: Vec3) -> nalgebra_glm::Quat {
+pub fn rotation_between(from: Vec3, to: Vec3) -> nalgebra_glm::Quat {
     let from_length = from.norm();
     let to_length = to.norm();
     if from_length < 1e-5 || to_length < 1e-5 {

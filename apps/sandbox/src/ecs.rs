@@ -18,6 +18,7 @@ freecs::ecs! {
         player: PlayerState,
         character: CharacterState,
         pose: PoseState,
+        ragdoll: RagdollState,
         ui_handles: UiHandles,
         infinite_world: InfiniteWorldState,
         rocks: RocksState,

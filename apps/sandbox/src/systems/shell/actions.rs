@@ -85,6 +85,15 @@ pub fn apply_shell_actions(
             let checkbox = sandbox_world.resources.ui_handles.pause.skeleton_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
+        ShellAction::SetRagdoll(mode) => {
+            let mode = match mode.as_str() {
+                "limp" => crate::ecs::RagdollMode::Limp,
+                "match" => crate::ecs::RagdollMode::Match,
+                "active" => crate::ecs::RagdollMode::Active,
+                _ => crate::ecs::RagdollMode::Off,
+            };
+            crate::systems::world::ragdoll::set_mode(sandbox_world, world, mode);
+        }
         ShellAction::SetPose(name) => {
             if !crate::systems::world::pose::set_pose(sandbox_world, world, &name) {
                 ui_show_toast(world, "unknown pose", ToastSeverity::Warning, 1.2);

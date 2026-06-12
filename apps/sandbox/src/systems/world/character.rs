@@ -1,4 +1,4 @@
-use crate::ecs::{CharacterState, SandboxWorld};
+use crate::ecs::{CharacterState, RagdollMode, SandboxWorld};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::input::queries::query_active_gamepad;
 use nightshade::ecs::lines::components::{Line, Lines};
@@ -85,6 +85,7 @@ const CLIMB_FORWARD_SPEED: f32 = 2.0;
 const LOOK_YAW_LIMIT: f32 = 1.05;
 const LOOK_PITCH_LIMIT: f32 = 0.6;
 const LOOK_SHARPNESS: f32 = 8.0;
+const RAGDOLL_IMPACT_SPEED: f32 = 9.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -154,21 +155,29 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     state.stride_wheel_visible = true;
     state.stride_radius = WALK_WHEEL_RADIUS;
 
-    #[cfg(not(target_arch = "wasm32"))]
     spawn_model(sandbox_world, world, body);
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-const MODEL_PATH: &str = "apps/sandbox/assets/racer.glb";
-
-#[cfg(not(target_arch = "wasm32"))]
-fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
-    let bytes = match std::fs::read(MODEL_PATH) {
-        Ok(bytes) => bytes,
+fn load_model_bytes() -> Option<Vec<u8>> {
+    const MODEL_PATH: &str = "apps/sandbox/assets/racer.glb";
+    match std::fs::read(MODEL_PATH) {
+        Ok(bytes) => Some(bytes),
         Err(error) => {
             tracing::warn!("no character model at {MODEL_PATH}: {error}");
-            return;
+            None
         }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_model_bytes() -> Option<Vec<u8>> {
+    None
+}
+
+fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
+    let Some(bytes) = load_model_bytes() else {
+        return;
     };
     let mut result = match nightshade::ecs::prefab::import_gltf_from_bytes(&bytes) {
         Ok(result) => result,
@@ -315,7 +324,25 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
         return;
     };
 
+    if sandbox_world.resources.ragdoll.mode != RagdollMode::Off {
+        crate::systems::world::ragdoll::update(sandbox_world, world, body);
+        sync_first_person_player(sandbox_world, world, body);
+        third_person_camera_system(world);
+        draw_spheres(sandbox_world, world, body);
+        draw_skeleton(sandbox_world, world);
+        return;
+    }
+
     move_character(sandbox_world, world, body, camera);
+    if sandbox_world.resources.character.landing_impact_speed > RAGDOLL_IMPACT_SPEED {
+        sandbox_world.resources.character.landing_impact_speed = 0.0;
+        crate::systems::world::ragdoll::activate_from_impact(sandbox_world, world);
+        sync_first_person_player(sandbox_world, world, body);
+        third_person_camera_system(world);
+        draw_spheres(sandbox_world, world, body);
+        draw_skeleton(sandbox_world, world);
+        return;
+    }
     apply_model_motion(sandbox_world, world);
     sync_first_person_player(sandbox_world, world, body);
     third_person_camera_system(world);
@@ -676,6 +703,9 @@ fn move_character(
     }
     if !was_grounded && state.grounded {
         state.crouch_velocity += impact_speed * LANDING_CROUCH_FACTOR;
+        state.landing_impact_speed = impact_speed;
+    } else {
+        state.landing_impact_speed = 0.0;
     }
 
     let air_target = if state.grounded || state.wall_running {

@@ -105,6 +105,34 @@ pub struct PoseState {
     pub hips_drop_local: nalgebra_glm::Vec3,
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub enum RagdollMode {
+    #[default]
+    Off,
+    Limp,
+    Match,
+    Active,
+}
+
+/// One physics proxy body driving one skeleton joint while the
+/// ragdoll is active.
+pub struct RagdollLink {
+    pub body: Entity,
+    pub bone: Entity,
+    pub rotation_offset: nalgebra_glm::Quat,
+    pub target_world: nalgebra_glm::Quat,
+    pub mass: f32,
+}
+
+#[derive(Default)]
+pub struct RagdollState {
+    pub mode: RagdollMode,
+    pub links: Vec<RagdollLink>,
+    pub auto_recover: bool,
+    pub settle_timer: f32,
+    pub flail_clock: f32,
+}
+
 #[derive(Default)]
 pub struct CharacterState {
     pub third_person: bool,
@@ -145,6 +173,7 @@ pub struct CharacterState {
     pub hang_weight: f32,
     pub look_yaw: f32,
     pub look_pitch: f32,
+    pub landing_impact_speed: f32,
 }
 
 #[derive(Default)]

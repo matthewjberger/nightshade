@@ -6,6 +6,7 @@ pub mod infinite;
 pub mod level;
 pub mod player;
 pub mod pose;
+pub mod ragdoll;
 pub mod rocks;
 pub mod terrain;
 pub mod textures;

@@ -17,6 +17,7 @@ pub enum ShellAction {
     SetSpheres(Option<bool>),
     SetSkeleton(Option<bool>),
     SetPose(String),
+    SetRagdoll(String),
     SetTimeOfDay(f32),
     PauseTimeOfDay(bool),
     SetTimeSpeed(f32),
