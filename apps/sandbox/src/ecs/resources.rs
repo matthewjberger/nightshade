@@ -54,10 +54,21 @@ pub struct PoseKeyframe {
     pub joints: Vec<(Entity, nalgebra_glm::Quat)>,
 }
 
+/// One animated model-space rotation axis on one joint across the
+/// stride cycle. `values` holds degrees at the four cycle frames:
+/// reach, pass, mirrored reach, mirrored pass.
+pub struct GaitTrack {
+    pub entity: Entity,
+    pub axis: nalgebra_glm::Vec3,
+    pub values: [f32; 4],
+}
+
 #[derive(Default)]
 pub struct PoseState {
     pub keyframes: Vec<PoseKeyframe>,
     pub active: Option<usize>,
+    pub rest_rotations: HashMap<Entity, nalgebra_glm::Quat>,
+    pub gait_tracks: Vec<GaitTrack>,
 }
 
 #[derive(Default)]
@@ -75,6 +86,7 @@ pub struct CharacterState {
     pub stride_distance: f32,
     pub stride_wheel_visible: bool,
     pub spheres_visible: bool,
+    pub gait_weight: f32,
 }
 
 #[derive(Default)]

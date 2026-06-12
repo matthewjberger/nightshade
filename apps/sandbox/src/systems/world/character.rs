@@ -37,7 +37,10 @@ const BUMPER_RESOLVE_ITERATIONS: usize = 3;
 const SPHERE_SEGMENTS: usize = 24;
 const SPHERE_LATITUDE_RINGS: usize = 12;
 const SPHERE_MERIDIAN_CIRCLES: usize = 12;
-const STRIDE_WHEEL_RADIUS: f32 = 0.5;
+pub const STRIDE_WHEEL_RADIUS: f32 = 0.5;
+const GAIT_FADE_START_SPEED: f32 = 0.3;
+const GAIT_FULL_SPEED: f32 = 2.3;
+const GAIT_WEIGHT_SHARPNESS: f32 = 8.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -458,6 +461,15 @@ fn move_character(
     if state.grounded {
         state.stride_distance += horizontal_velocity.norm() * delta_time;
     }
+    let gait_target = if state.grounded {
+        ((horizontal_velocity.norm() - GAIT_FADE_START_SPEED)
+            / (GAIT_FULL_SPEED - GAIT_FADE_START_SPEED))
+            .clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    state.gait_weight +=
+        (gait_target - state.gait_weight) * (1.0 - (-GAIT_WEIGHT_SHARPNESS * delta_time).exp());
     let facing_yaw = state.facing_yaw;
     let lean = state.lean;
 
