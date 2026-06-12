@@ -21,12 +21,12 @@ const LOOK_JOINTS: &[(&str, f32)] = &[
     ("Head", 0.4),
 ];
 const SOFT_JOINTS: &[(&str, f32, f32)] = &[
-    ("LeftForeArm", 350.0, 22.0),
-    ("RightForeArm", 350.0, 22.0),
-    ("LeftArm", 450.0, 26.0),
-    ("RightArm", 450.0, 26.0),
-    ("Head", 300.0, 20.0),
-    ("Spine2", 600.0, 35.0),
+    ("LeftForeArm", 700.0, 34.0),
+    ("RightForeArm", 700.0, 34.0),
+    ("LeftArm", 900.0, 42.0),
+    ("RightArm", 900.0, 42.0),
+    ("Head", 600.0, 34.0),
+    ("Spine2", 1100.0, 55.0),
 ];
 const SOFTNESS_MAX_STEP: f32 = 1.0 / 30.0;
 
@@ -725,6 +725,9 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
     let delta_time = world.resources.window.timing.delta_time;
     let sharpness = POSE_BLEND_SHARPNESS + GAIT_TRACKING_SHARPNESS_BOOST * gait_weight;
     let blend = 1.0 - (-sharpness * delta_time).exp();
+
+    let mut targets: HashMap<Entity, nalgebra_glm::Quat> =
+        HashMap::with_capacity(keyframe.joints.len());
     for (entity, base_rotation) in &keyframe.joints {
         let mut target = *base_rotation;
         if let Some(gait_locals) = &gait_locals
@@ -754,6 +757,29 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             let tuck_rotation = blend_rotation(forward_rotation, side_rotation, flip_side);
             target = blend_rotation(target, tuck_rotation, tuck_weight);
         }
+        targets.insert(*entity, target);
+    }
+
+    let look_scale = (1.0 - tuck_weight) * (1.0 - hang_weight);
+    let look_yaw = character.look_yaw * look_scale;
+    let look_pitch = character.look_pitch * look_scale;
+    if (look_yaw.abs() > 1e-3 || look_pitch.abs() > 1e-3)
+        && let Some(model) = character.model
+        && !pose.look_joints.is_empty()
+    {
+        let mut deltas: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
+        for (entity, weight) in &pose.look_joints {
+            let rotation = nalgebra_glm::quat_angle_axis(look_yaw * weight, &Vec3::y())
+                * nalgebra_glm::quat_angle_axis(look_pitch * weight, &Vec3::x());
+            deltas.insert(*entity, rotation);
+        }
+        apply_deltas_to_targets(world, model, &mut targets, &deltas);
+    }
+
+    for (entity, _) in &keyframe.joints {
+        let Some(&target) = targets.get(entity) else {
+            continue;
+        };
         let Some(transform) = world.core.get_local_transform_mut(*entity) else {
             continue;
         };
@@ -775,60 +801,44 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         }
         mark_local_transform_dirty(world, hips);
     }
-
-    let look_scale = (1.0 - tuck_weight) * (1.0 - hang_weight);
-    let look_yaw = character.look_yaw * look_scale;
-    let look_pitch = character.look_pitch * look_scale;
-    if (look_yaw.abs() > 1e-3 || look_pitch.abs() > 1e-3)
-        && let Some(model) = character.model
-        && !pose.look_joints.is_empty()
-    {
-        let mut deltas: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
-        for (entity, weight) in &pose.look_joints {
-            let rotation = nalgebra_glm::quat_angle_axis(look_yaw * weight, &Vec3::y())
-                * nalgebra_glm::quat_angle_axis(look_pitch * weight, &Vec3::x());
-            deltas.insert(*entity, rotation);
-        }
-        apply_model_space_deltas(world, model, &deltas);
-    }
 }
 
-/// Apply model-space rotation deltas on top of the pose already
-/// written this frame, walking the skeleton so children of adjusted
-/// joints stay consistent.
-fn apply_model_space_deltas(
-    world: &mut World,
+/// Fold model-space rotation deltas into the target pose map, walking
+/// the skeleton with the target locals so children of adjusted joints
+/// stay consistent. Targets are modified in place and never read back
+/// from the written transforms, so deltas cannot accumulate across
+/// frames.
+fn apply_deltas_to_targets(
+    world: &World,
     model: Entity,
+    targets: &mut HashMap<Entity, nalgebra_glm::Quat>,
     deltas: &HashMap<Entity, nalgebra_glm::Quat>,
 ) {
-    let mut adjustments = Vec::new();
-    {
-        let mut stack = vec![(model, nalgebra_glm::quat_identity())];
-        while let Some((entity, posed_parent)) = stack.pop() {
-            let local = world
-                .core
-                .get_local_transform(entity)
-                .map(|transform| transform.rotation)
-                .unwrap_or_else(nalgebra_glm::quat_identity);
-            let new_local = if let Some(delta) = deltas.get(&entity) {
-                let adjusted =
-                    nalgebra_glm::quat_inverse(&posed_parent) * delta * posed_parent * local;
-                adjustments.push((entity, adjusted));
-                adjusted
-            } else {
-                local
-            };
-            let posed = posed_parent * new_local;
-            for child in query_children(world, entity) {
-                stack.push((child, posed));
-            }
+    let mut stack = vec![(model, nalgebra_glm::quat_identity())];
+    while let Some((entity, posed_parent)) = stack.pop() {
+        let local = targets
+            .get(&entity)
+            .copied()
+            .or_else(|| {
+                world
+                    .core
+                    .get_local_transform(entity)
+                    .map(|transform| transform.rotation)
+            })
+            .unwrap_or_else(nalgebra_glm::quat_identity);
+        let new_local = if let Some(delta) = deltas.get(&entity) {
+            let adjusted = nalgebra_glm::quat_normalize(
+                &(nalgebra_glm::quat_inverse(&posed_parent) * delta * posed_parent * local),
+            );
+            targets.insert(entity, adjusted);
+            adjusted
+        } else {
+            local
+        };
+        let posed = posed_parent * new_local;
+        for child in query_children(world, entity) {
+            stack.push((child, posed));
         }
-    }
-    for (entity, rotation) in adjustments {
-        if let Some(transform) = world.core.get_local_transform_mut(entity) {
-            transform.rotation = nalgebra_glm::quat_normalize(&rotation);
-        }
-        mark_local_transform_dirty(world, entity);
     }
 }
 
