@@ -228,6 +228,22 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
     row
 }
 
+/// Push a value into a checkbox built by [`build_checkbox`] without
+/// marking it changed, keeping the menu in sync when the same setting
+/// is driven from elsewhere, like the developer shell.
+pub fn set_checkbox_value(world: &mut World, checkbox: Entity, value: bool) {
+    let inner_entity = world
+        .ui
+        .get_ui_checkbox(checkbox)
+        .map(|data| data.inner_entity);
+    if let Some(data) = world.ui.get_ui_checkbox_mut(checkbox) {
+        data.value = value;
+    }
+    if let Some(inner_entity) = inner_entity {
+        ui_set_visible(world, inner_entity, value);
+    }
+}
+
 pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
     if !matches!(sandbox_world.resources.screen.current, Screen::Paused) {
         return;

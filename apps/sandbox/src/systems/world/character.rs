@@ -152,10 +152,15 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
 }
 
 pub fn reset(sandbox_world: &mut SandboxWorld, world: &mut World) {
+    let spawn = find_player_spawn(world).unwrap_or_else(default_spawn_position);
+    teleport(sandbox_world, world, spawn);
+}
+
+pub fn teleport(sandbox_world: &mut SandboxWorld, world: &mut World, capsule_center: Vec3) {
     let Some(body) = sandbox_world.resources.character.body else {
         return;
     };
-    let feet = spawn_feet_position(world);
+    let feet = capsule_center - Vec3::new(0.0, FIRST_PERSON_CAPSULE_HALF_HEIGHT, 0.0);
     if let Some(transform) = world.core.get_local_transform_mut(body) {
         transform.translation = feet;
     }
