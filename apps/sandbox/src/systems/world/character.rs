@@ -1,4 +1,4 @@
-use crate::ecs::SandboxWorld;
+use crate::ecs::{CharacterState, SandboxWorld};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::input::queries::query_active_gamepad;
 use nightshade::ecs::lines::components::{Line, Lines};
@@ -71,6 +71,17 @@ const WALL_RUN_LEAN: f32 = 0.35;
 const WALL_NORMAL_MAX_Y: f32 = 0.35;
 const WALL_JUMP_AWAY: f32 = 4.5;
 const WALL_JUMP_UP: f32 = 4.5;
+const HANG_REACH_MINIMUM: f32 = 1.25;
+const HANG_REACH_MAXIMUM: f32 = 2.05;
+const HANG_PROBE_RISE: f32 = 2.2;
+const HANG_PROBE_FORWARD: f32 = 0.55;
+const HANG_PROBE_DOWN: f32 = 1.2;
+const HANG_DEPTH: f32 = 1.7;
+const HANG_MAX_FALL_SPEED: f32 = 1.0;
+const SHIMMY_SPEED: f32 = 0.8;
+const HANG_POSE_SHARPNESS: f32 = 10.0;
+const CLIMB_UP_SPEED: f32 = 5.5;
+const CLIMB_FORWARD_SPEED: f32 = 2.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -569,6 +580,14 @@ fn move_character(
     let mut velocity = state.velocity;
     let was_grounded = state.grounded;
 
+    let hang_target = if state.hanging { 1.0 } else { 0.0 };
+    state.hang_weight +=
+        (hang_target - state.hang_weight) * (1.0 - (-HANG_POSE_SHARPNESS * delta_time).exp());
+    if state.hanging {
+        hang_update(state, world, body, position, &inputs, delta_time);
+        return;
+    }
+
     let crouch_target = if inputs.crouch_held && state.grounded {
         1.0
     } else {
@@ -748,6 +767,38 @@ fn move_character(
         state.wall_run_timer = 0.0;
     }
 
+    if !state.grounded
+        && !state.wall_running
+        && velocity.y < HANG_MAX_FALL_SPEED
+        && let Some(normal) = wall_contact_normal
+    {
+        let wall_normal = Vec3::new(normal.x, 0.0, normal.z);
+        if wall_normal.norm() > 0.5 {
+            let wall_normal = wall_normal.normalize();
+            let probe_origin = position
+                + Vec3::new(0.0, HANG_PROBE_RISE, 0.0)
+                + (-wall_normal) * HANG_PROBE_FORWARD;
+            if let Some(hit) = physics_world_cast_ray(
+                &world.resources.physics,
+                probe_origin,
+                Vec3::new(0.0, -1.0, 0.0),
+                HANG_PROBE_DOWN,
+                None,
+            ) {
+                let ledge_height = hit.point.y - position.y;
+                if (HANG_REACH_MINIMUM..=HANG_REACH_MAXIMUM).contains(&ledge_height) {
+                    state.hanging = true;
+                    state.hang_normal = wall_normal;
+                    state.hang_tangent = nalgebra_glm::cross(&Vec3::y(), &wall_normal).normalize();
+                    state.hang_edge_y = hit.point.y;
+                    position.y = hit.point.y - HANG_DEPTH;
+                    velocity = Vec3::zeros();
+                    state.facing_yaw = (-wall_normal.x).atan2(-wall_normal.z);
+                }
+            }
+        }
+    }
+
     let horizontal_velocity = Vec3::new(velocity.x, 0.0, velocity.z);
     if horizontal_velocity.norm() > FACING_SPEED_THRESHOLD {
         let target_yaw = horizontal_velocity.x.atan2(horizontal_velocity.z);
@@ -792,6 +843,67 @@ fn move_character(
         } else {
             yaw_rotation
         };
+    }
+    mark_local_transform_dirty(world, body);
+}
+
+/// Ledge hang: gravity is suspended while the hands own the edge.
+/// Lateral input shimmies along the edge as long as the ledge
+/// continues, jump climbs up and over, and crouch lets go.
+fn hang_update(
+    state: &mut CharacterState,
+    world: &mut World,
+    body: Entity,
+    mut position: Vec3,
+    inputs: &CharacterInputs,
+    delta_time: f32,
+) {
+    state.velocity = Vec3::zeros();
+    state.grounded = false;
+    let decay = 1.0 - (-8.0 * delta_time).exp();
+    state.gait_weight -= state.gait_weight * decay;
+    state.air_weight -= state.air_weight * decay;
+    state.tuck_weight = 0.0;
+    state.flip_duration = 0.0;
+
+    if inputs.jump_pressed {
+        state.hanging = false;
+        state.velocity =
+            -state.hang_normal * CLIMB_FORWARD_SPEED + Vec3::new(0.0, CLIMB_UP_SPEED, 0.0);
+        state.jump_suppress_timer = JUMP_SPRING_SUPPRESS_SECONDS;
+        return;
+    }
+    if inputs.crouch_held {
+        state.hanging = false;
+        return;
+    }
+
+    let shimmy = inputs.direction.dot(&state.hang_tangent);
+    if shimmy.abs() > 0.2 {
+        let movement = state.hang_tangent * shimmy.signum() * SHIMMY_SPEED * delta_time;
+        let candidate = position + movement;
+        let probe_origin = candidate
+            + Vec3::new(0.0, HANG_PROBE_RISE, 0.0)
+            + (-state.hang_normal) * HANG_PROBE_FORWARD;
+        if let Some(hit) = physics_world_cast_ray(
+            &world.resources.physics,
+            probe_origin,
+            Vec3::new(0.0, -1.0, 0.0),
+            HANG_PROBE_DOWN,
+            None,
+        ) {
+            let ledge_height = hit.point.y - candidate.y;
+            if (HANG_REACH_MINIMUM..=HANG_REACH_MAXIMUM).contains(&ledge_height) {
+                position = candidate;
+                state.hang_edge_y = hit.point.y;
+                position.y = hit.point.y - HANG_DEPTH;
+            }
+        }
+    }
+
+    if let Some(transform) = world.core.get_local_transform_mut(body) {
+        transform.translation = position;
+        transform.rotation = nalgebra_glm::quat_angle_axis(state.facing_yaw, &Vec3::y());
     }
     mark_local_transform_dirty(world, body);
 }

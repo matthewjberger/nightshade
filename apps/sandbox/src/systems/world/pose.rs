@@ -1,4 +1,4 @@
-use crate::ecs::{GaitTrack, PoseKeyframe, SandboxWorld};
+use crate::ecs::{GaitTrack, IkChain, PoseKeyframe, SandboxWorld};
 use nightshade::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationSamplerOutput,
 };
@@ -234,6 +234,35 @@ fn table_keyframe(
     build_model_space_keyframe(world, model, rest_rotations, bones, &deltas)
 }
 
+/// Hanging from a ledge: arms raised overhead, body extended, knees
+/// slightly gathered against the wall.
+const HANG: &[(&str, char, f32)] = &[
+    ("LeftArm", 'z', 55.0),
+    ("RightArm", 'z', -55.0),
+    ("LeftForeArm", 'x', -15.0),
+    ("RightForeArm", 'x', -15.0),
+    ("LeftUpLeg", 'x', -15.0),
+    ("RightUpLeg", 'x', -15.0),
+    ("LeftLeg", 'x', 25.0),
+    ("RightLeg", 'x', 25.0),
+    ("LeftFoot", 'x', -10.0),
+    ("RightFoot", 'x', -10.0),
+    ("Spine", 'x', 5.0),
+];
+
+fn bone_chain(
+    bones: &HashMap<String, Entity>,
+    root: &str,
+    middle: &str,
+    end: &str,
+) -> Option<IkChain> {
+    Some(IkChain {
+        root: find_bone(bones, root)?,
+        middle: find_bone(bones, middle)?,
+        end: find_bone(bones, end)?,
+    })
+}
+
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: Entity) {
     let Some(player) = world.core.get_animation_player(model) else {
         return;
@@ -319,6 +348,11 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         name: "tuck_side".to_string(),
         joints: table_keyframe(world, model, &rest_rotations, &bones, TUCK_SIDE),
     });
+    let hang_index = keyframes.len();
+    keyframes.push(PoseKeyframe {
+        name: "hang".to_string(),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, HANG),
+    });
 
     let hips = find_bone(&bones, "Hips");
     let (hips_rest_translation, hips_drop_local) = hips
@@ -343,6 +377,21 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
     pose.air_index = Some(air_index);
     pose.tuck_forward_index = Some(tuck_forward_index);
     pose.tuck_side_index = Some(tuck_side_index);
+    pose.hang_index = Some(hang_index);
+    pose.leg_chains = [
+        bone_chain(&bones, "LeftUpLeg", "LeftLeg", "LeftFoot"),
+        bone_chain(&bones, "RightUpLeg", "RightLeg", "RightFoot"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    pose.arm_chains = [
+        bone_chain(&bones, "LeftArm", "LeftForeArm", "LeftHand"),
+        bone_chain(&bones, "RightArm", "RightForeArm", "RightHand"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     pose.hips = hips;
     pose.hips_rest_translation = hips_rest_translation;
     pose.hips_drop_local = hips_drop_local;
@@ -455,6 +504,13 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         .filter(|_| air_weight > 1e-3 && pose.active != pose.air_index)
         .map(|keyframe| keyframe.joints.as_slice());
 
+    let hang_weight = character.hang_weight.clamp(0.0, 1.0);
+    let hang_joints = pose
+        .hang_index
+        .and_then(|index| pose.keyframes.get(index))
+        .filter(|_| hang_weight > 1e-3 && pose.active != pose.hang_index)
+        .map(|keyframe| keyframe.joints.as_slice());
+
     let tuck_weight = character.tuck_weight.clamp(0.0, 1.0);
     let flip_side = character.flip_side.clamp(0.0, 1.0);
     let tuck_pair = if tuck_weight > 1e-3 {
@@ -489,6 +545,11 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             && let Some(crouch_rotation) = joint_rotation(crouch_joints, *entity)
         {
             target = blend_rotation(target, crouch_rotation, crouch_weight);
+        }
+        if let Some(hang_joints) = hang_joints
+            && let Some(hang_rotation) = joint_rotation(hang_joints, *entity)
+        {
+            target = blend_rotation(target, hang_rotation, hang_weight);
         }
         if let Some((tuck_forward, tuck_side)) = tuck_pair
             && let Some(forward_rotation) = joint_rotation(tuck_forward, *entity)

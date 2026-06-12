@@ -65,6 +65,15 @@ pub struct GaitTrack {
     pub crouch_walk: [f32; 4],
 }
 
+/// A two-bone inverse kinematics chain: a root joint, a hinge joint,
+/// and the end effector whose world position is being solved for.
+#[derive(Clone, Copy)]
+pub struct IkChain {
+    pub root: Entity,
+    pub middle: Entity,
+    pub end: Entity,
+}
+
 #[derive(Default)]
 pub struct PoseState {
     pub keyframes: Vec<PoseKeyframe>,
@@ -75,6 +84,9 @@ pub struct PoseState {
     pub air_index: Option<usize>,
     pub tuck_forward_index: Option<usize>,
     pub tuck_side_index: Option<usize>,
+    pub hang_index: Option<usize>,
+    pub leg_chains: Vec<IkChain>,
+    pub arm_chains: Vec<IkChain>,
     pub hips: Option<Entity>,
     pub hips_rest_translation: nalgebra_glm::Vec3,
     pub hips_drop_local: nalgebra_glm::Vec3,
@@ -113,6 +125,11 @@ pub struct CharacterState {
     pub wall_normal: nalgebra_glm::Vec3,
     pub wall_run_timer: f32,
     pub wall_run_cooldown: f32,
+    pub hanging: bool,
+    pub hang_normal: nalgebra_glm::Vec3,
+    pub hang_tangent: nalgebra_glm::Vec3,
+    pub hang_edge_y: f32,
+    pub hang_weight: f32,
 }
 
 #[derive(Default)]

@@ -1,6 +1,7 @@
 pub mod character;
 pub mod enemies;
 pub mod grass;
+pub mod ik;
 pub mod infinite;
 pub mod level;
 pub mod player;
