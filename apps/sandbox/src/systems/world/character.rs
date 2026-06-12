@@ -7,10 +7,10 @@ use nightshade::ecs::world::{
 };
 use nightshade::prelude::*;
 
-const BUMPER_RADIUS: f32 = 0.5;
-const BUMPER_CENTER_HEIGHT: f32 = 1.1;
-const LIFTER_RADIUS: f32 = 0.35;
-const LIFTER_CENTER_HEIGHT: f32 = 0.35;
+const BUMPER_RADIUS: f32 = 0.55;
+const BUMPER_CENTER_HEIGHT: f32 = 1.0;
+const LIFTER_RADIUS: f32 = 0.45;
+const LIFTER_CENTER_HEIGHT: f32 = 0.45;
 const LIFTER_PROBE_DISTANCE: f32 = 0.4;
 const LIFTER_SPRING_STIFFNESS: f32 = 200.0;
 const LIFTER_SPRING_DAMPING: f32 = 22.0;
@@ -28,8 +28,8 @@ const GAMEPAD_DEADZONE: f32 = 0.15;
 const MAX_STEP_SECONDS: f32 = 1.0 / 30.0;
 const BUMPER_RESOLVE_ITERATIONS: usize = 3;
 const SPHERE_SEGMENTS: usize = 24;
-const SPHERE_LATITUDE_RINGS: usize = 8;
-const SPHERE_MERIDIAN_CIRCLES: usize = 8;
+const SPHERE_LATITUDE_RINGS: usize = 12;
+const SPHERE_MERIDIAN_CIRCLES: usize = 12;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
 
