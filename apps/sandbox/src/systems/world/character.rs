@@ -17,7 +17,7 @@ const LIFTER_PROBE_DISTANCE: f32 = 0.4;
 const LIFTER_SPRING_STIFFNESS: f32 = 200.0;
 const LIFTER_SPRING_DAMPING: f32 = 22.0;
 const GROUNDED_MARGIN: f32 = 0.15;
-const MAX_GROUND_SPEED: f32 = 7.0;
+const MAX_GROUND_SPEED: f32 = 5.5;
 const GROUND_ACCELERATION: f32 = 40.0;
 const AIR_ACCELERATION: f32 = 12.0;
 const GROUND_FRICTION: f32 = 8.0;
@@ -37,14 +37,24 @@ const BUMPER_RESOLVE_ITERATIONS: usize = 3;
 const SPHERE_SEGMENTS: usize = 24;
 const SPHERE_LATITUDE_RINGS: usize = 12;
 const SPHERE_MERIDIAN_CIRCLES: usize = 12;
-pub const STRIDE_WHEEL_RADIUS: f32 = 0.5;
-const GAIT_FADE_START_SPEED: f32 = 0.3;
-const GAIT_FULL_SPEED: f32 = 2.3;
+const RUN_WHEEL_RADIUS: f32 = 0.65;
+const WALK_WHEEL_RADIUS: f32 = 0.24;
+const WALK_FULL_SPEED: f32 = 1.6;
+const RUN_FULL_SPEED: f32 = 4.5;
+const GAIT_FADE_START_SPEED: f32 = 0.15;
+const GAIT_FULL_SPEED: f32 = 1.0;
 const GAIT_WEIGHT_SHARPNESS: f32 = 8.0;
+const GAIT_BLEND_SHARPNESS: f32 = 6.0;
+const BOUNCE_GRAVITY_FACTOR: f32 = 0.43;
+const BOUNCE_MAX: f32 = 0.06;
+const BOUNCE_CONTACT_LAG: f32 = 0.3;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
 const STRIDE_WHEEL_COLOR: Vec4 = Vec4::new(1.0, 0.85, 0.2, 1.0);
+const SKELETON_BONE_COLOR: Vec4 = Vec4::new(1.0, 0.4, 0.9, 1.0);
+const SKELETON_JOINT_COLOR: Vec4 = Vec4::new(0.3, 0.9, 1.0, 1.0);
+const SKELETON_JOINT_SIZE: f32 = 0.04;
 
 pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let feet = spawn_feet_position(world);
@@ -84,11 +94,28 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
         visibility.visible = false;
     }
 
+    let skeleton_lines = spawn_entities(
+        world,
+        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+        1,
+    )[0];
+    if let Some(name) = world.core.get_name_mut(skeleton_lines) {
+        name.0 = "Character Skeleton".to_string();
+    }
+    world
+        .core
+        .set_lines(skeleton_lines, Lines::new_always_on_top(Vec::new()));
+    if let Some(visibility) = world.core.get_visibility_mut(skeleton_lines) {
+        visibility.visible = false;
+    }
+
     let state = &mut sandbox_world.resources.character;
     state.body = Some(body);
     state.camera = Some(camera);
     state.spheres = Some(spheres);
+    state.skeleton_lines = Some(skeleton_lines);
     state.stride_wheel_visible = true;
+    state.stride_radius = WALK_WHEEL_RADIUS;
 
     #[cfg(not(target_arch = "wasm32"))]
     spawn_model(sandbox_world, world, body);
@@ -228,6 +255,11 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         {
             visibility.visible = false;
         }
+        if let Some(skeleton_lines) = sandbox_world.resources.character.skeleton_lines
+            && let Some(visibility) = world.core.get_visibility_mut(skeleton_lines)
+        {
+            visibility.visible = false;
+        }
         set_model_visible(sandbox_world, world, false);
         if !fly {
             world.resources.active_camera = sandbox_world.resources.player.camera_entity;
@@ -247,9 +279,103 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
     };
 
     move_character(sandbox_world, world, body, camera);
+    apply_bounce(sandbox_world, world);
     sync_first_person_player(sandbox_world, world, body);
     third_person_camera_system(world);
     draw_spheres(sandbox_world, world, body);
+    draw_skeleton(sandbox_world, world);
+}
+
+/// Vertical bob synced to the stride: lowest just after each foot
+/// contact, highest at the pass. The amplitude follows the ballistic
+/// fall over one step, so a jog bounces and a sprint flattens out.
+fn apply_bounce(sandbox_world: &SandboxWorld, world: &mut World) {
+    let state = &sandbox_world.resources.character;
+    let Some(model) = state.model else {
+        return;
+    };
+    let speed = Vec3::new(state.velocity.x, 0.0, state.velocity.z).norm();
+    let amplitude = if speed > 0.1 {
+        let step_time = (std::f32::consts::PI * state.stride_radius) / speed;
+        (BOUNCE_GRAVITY_FACTOR * step_time * step_time).min(BOUNCE_MAX)
+    } else {
+        0.0
+    };
+    let bounce = amplitude
+        * 0.5
+        * (1.0 - (2.0 * (state.stride_phase - BOUNCE_CONTACT_LAG)).cos())
+        * state.gait_weight;
+    if let Some(transform) = world.core.get_local_transform_mut(model) {
+        transform.translation.y = bounce;
+    }
+    mark_local_transform_dirty(world, model);
+}
+
+fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
+    let state = &sandbox_world.resources.character;
+    let Some(skeleton_lines) = state.skeleton_lines else {
+        return;
+    };
+    if let Some(visibility) = world.core.get_visibility_mut(skeleton_lines) {
+        visibility.visible = state.skeleton_visible;
+    }
+    if !state.skeleton_visible {
+        return;
+    }
+
+    let skin_owners: Vec<Entity> = world
+        .core
+        .query_entities(nightshade::ecs::world::SKIN)
+        .collect();
+    let mut bone_lines = Vec::new();
+    for owner in skin_owners {
+        let Some(skin) = world.core.get_skin(owner) else {
+            continue;
+        };
+        let joint_set: std::collections::HashSet<Entity> = skin.joints.iter().copied().collect();
+        for &joint_entity in &skin.joints {
+            let Some(joint_transform) = world.core.get_global_transform(joint_entity) else {
+                continue;
+            };
+            let joint_position = joint_transform.translation();
+            push_joint_cross(&mut bone_lines, joint_position);
+
+            let Some(parent) = world
+                .core
+                .get_parent(joint_entity)
+                .and_then(|parent| parent.0)
+            else {
+                continue;
+            };
+            if !joint_set.contains(&parent) {
+                continue;
+            }
+            let Some(parent_transform) = world.core.get_global_transform(parent) else {
+                continue;
+            };
+            bone_lines.push(Line {
+                start: parent_transform.translation(),
+                end: joint_position,
+                color: SKELETON_BONE_COLOR,
+            });
+        }
+    }
+
+    if let Some(lines) = world.core.get_lines_mut(skeleton_lines) {
+        lines.lines = bone_lines;
+        lines.mark_dirty();
+    }
+}
+
+fn push_joint_cross(lines: &mut Vec<Line>, position: Vec3) {
+    let half = SKELETON_JOINT_SIZE * 0.5;
+    for axis in [Vec3::x(), Vec3::y(), Vec3::z()] {
+        lines.push(Line {
+            start: position - axis * half,
+            end: position + axis * half,
+            color: SKELETON_JOINT_COLOR,
+        });
+    }
 }
 
 pub fn reset(sandbox_world: &mut SandboxWorld, world: &mut World) {
@@ -458,12 +584,20 @@ fn move_character(
             - std::f32::consts::PI;
         state.facing_yaw += difference * (1.0 - (-FACING_TURN_SHARPNESS * delta_time).exp());
     }
+    let horizontal_speed = horizontal_velocity.norm();
+    let run_factor_target =
+        ((horizontal_speed - WALK_FULL_SPEED) / (RUN_FULL_SPEED - WALK_FULL_SPEED)).clamp(0.0, 1.0);
+    state.gait_run_factor += (run_factor_target - state.gait_run_factor)
+        * (1.0 - (-GAIT_BLEND_SHARPNESS * delta_time).exp());
+    state.stride_radius =
+        WALK_WHEEL_RADIUS + (RUN_WHEEL_RADIUS - WALK_WHEEL_RADIUS) * state.gait_run_factor;
     if state.grounded {
-        state.stride_distance += horizontal_velocity.norm() * delta_time;
+        state.stride_phase = (state.stride_phase
+            + horizontal_speed * delta_time / state.stride_radius)
+            .rem_euclid(std::f32::consts::TAU);
     }
     let gait_target = if state.grounded {
-        ((horizontal_velocity.norm() - GAIT_FADE_START_SPEED)
-            / (GAIT_FULL_SPEED - GAIT_FADE_START_SPEED))
+        ((horizontal_speed - GAIT_FADE_START_SPEED) / (GAIT_FULL_SPEED - GAIT_FADE_START_SPEED))
             .clamp(0.0, 1.0)
     } else {
         0.0
@@ -571,30 +705,29 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
             &mut lines.lines,
             feet,
             state.facing_yaw,
-            state.stride_distance,
+            state.stride_phase,
+            state.stride_radius,
         );
     }
     lines.mark_dirty();
 }
 
-fn push_stride_wheel(lines: &mut Vec<Line>, feet: Vec3, facing_yaw: f32, stride_distance: f32) {
+fn push_stride_wheel(lines: &mut Vec<Line>, feet: Vec3, facing_yaw: f32, phase: f32, radius: f32) {
     let forward = Vec3::new(facing_yaw.sin(), 0.0, facing_yaw.cos());
-    let center = feet + Vec3::new(0.0, STRIDE_WHEEL_RADIUS, 0.0);
+    let center = feet + Vec3::new(0.0, radius, 0.0);
     push_circle(
         lines,
         center,
-        STRIDE_WHEEL_RADIUS,
+        radius,
         forward,
         Vec3::y(),
         STRIDE_WHEEL_COLOR,
     );
-    let phase = stride_distance / STRIDE_WHEEL_RADIUS;
     for spoke_index in 0..STRIDE_WHEEL_SPOKES {
         let angle =
             (spoke_index as f32 / STRIDE_WHEEL_SPOKES as f32) * std::f32::consts::TAU - phase;
-        let rim = center
-            + forward * angle.cos() * STRIDE_WHEEL_RADIUS
-            + Vec3::new(0.0, angle.sin() * STRIDE_WHEEL_RADIUS, 0.0);
+        let rim =
+            center + forward * angle.cos() * radius + Vec3::new(0.0, angle.sin() * radius, 0.0);
         lines.push(Line {
             start: center,
             end: rim,

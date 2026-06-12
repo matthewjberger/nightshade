@@ -55,12 +55,13 @@ pub struct PoseKeyframe {
 }
 
 /// One animated model-space rotation axis on one joint across the
-/// stride cycle. `values` holds degrees at the four cycle frames:
-/// reach, pass, mirrored reach, mirrored pass.
+/// stride cycle. `run` and `walk` hold degrees at the four cycle
+/// frames of each gait: reach, pass, mirrored reach, mirrored pass.
 pub struct GaitTrack {
     pub entity: Entity,
     pub axis: nalgebra_glm::Vec3,
-    pub values: [f32; 4],
+    pub run: [f32; 4],
+    pub walk: [f32; 4],
 }
 
 #[derive(Default)]
@@ -77,16 +78,20 @@ pub struct CharacterState {
     pub body: Option<Entity>,
     pub camera: Option<Entity>,
     pub spheres: Option<Entity>,
+    pub skeleton_lines: Option<Entity>,
     pub model: Option<Entity>,
     pub velocity: nalgebra_glm::Vec3,
     pub grounded: bool,
     pub jump_suppress_timer: f32,
     pub facing_yaw: f32,
     pub lean: nalgebra_glm::Vec3,
-    pub stride_distance: f32,
+    pub stride_phase: f32,
+    pub stride_radius: f32,
     pub stride_wheel_visible: bool,
     pub spheres_visible: bool,
+    pub skeleton_visible: bool,
     pub gait_weight: f32,
+    pub gait_run_factor: f32,
 }
 
 #[derive(Default)]
@@ -108,6 +113,7 @@ pub struct PauseHandles {
     pub third_person_checkbox: Entity,
     pub spheres_checkbox: Entity,
     pub stride_wheel_checkbox: Entity,
+    pub skeleton_checkbox: Entity,
     pub fly_checkbox: Entity,
     pub rocks_checkbox: Entity,
     pub prop_lod_checkbox: Entity,

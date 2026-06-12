@@ -78,6 +78,13 @@ pub fn apply_shell_actions(
             let checkbox = sandbox_world.resources.ui_handles.pause.spheres_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
+        ShellAction::SetSkeleton(value) => {
+            let state = &mut sandbox_world.resources.character;
+            let enabled = value.unwrap_or(!state.skeleton_visible);
+            state.skeleton_visible = enabled;
+            let checkbox = sandbox_world.resources.ui_handles.pause.skeleton_checkbox;
+            pause::set_checkbox_value(world, checkbox, enabled);
+        }
         ShellAction::SetPose(name) => {
             if !crate::systems::world::pose::set_pose(sandbox_world, world, &name) {
                 ui_show_toast(world, "unknown pose", ToastSeverity::Warning, 1.2);

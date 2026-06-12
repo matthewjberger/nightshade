@@ -51,6 +51,13 @@ pub const SPHERES: Command<SandboxShellContext> = Command {
     execute: spheres,
 };
 
+pub const SKELETON: Command<SandboxShellContext> = Command {
+    name: "skeleton",
+    description: "Toggle the skeleton visualization",
+    usage: "skeleton [on|off]",
+    execute: skeleton,
+};
+
 pub const POSE: Command<SandboxShellContext> = Command {
     name: "pose",
     description: "List poses or set the active character pose",
@@ -111,6 +118,14 @@ fn spheres(args: &[&str], _world: &mut World, context: &mut SandboxShellContext)
         return SPHERES.usage.to_string();
     };
     context.queue.push(ShellAction::SetSpheres(value));
+    "OK".to_string()
+}
+
+fn skeleton(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
+    let Some(value) = parse_toggle(args) else {
+        return SKELETON.usage.to_string();
+    };
+    context.queue.push(ShellAction::SetSkeleton(value));
     "OK".to_string()
 }
 

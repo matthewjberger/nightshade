@@ -15,6 +15,7 @@ pub enum ShellAction {
     SetThirdPerson(Option<bool>),
     SetStrideWheel(Option<bool>),
     SetSpheres(Option<bool>),
+    SetSkeleton(Option<bool>),
     SetPose(String),
     SetTimeOfDay(f32),
     PauseTimeOfDay(bool),

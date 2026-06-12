@@ -23,6 +23,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let mut third_person_checkbox = Entity::default();
     let mut spheres_checkbox = Entity::default();
     let mut stride_wheel_checkbox = Entity::default();
+    let mut skeleton_checkbox = Entity::default();
     let mut fly_checkbox = Entity::default();
     let mut rocks_checkbox = Entity::default();
     let mut prop_lod_checkbox = Entity::default();
@@ -89,7 +90,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
 
         settings_panel = tree
             .add_node()
-            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 700.0)), Anchor::Center)
+            .window(Rl(vec2(50.0, 50.0)), Ab(vec2(380.0, 740.0)), Anchor::Center)
             .with_rect(8.0, 1.0, PANEL_BORDER)
             .color_raw::<UiBase>(PANEL_BG_DEEP)
             .with_shadow(vec4(0.0, 0.0, 0.0, 0.7), vec2(0.0, 12.0), 36.0, 4.0)
@@ -122,7 +123,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 .add_node()
                 .window(
                     Rl(vec2(50.0, 0.0)) + Ab(vec2(0.0, 108.0)),
-                    Ab(vec2(MENU_BUTTON_SIZE.x, 528.0)),
+                    Ab(vec2(MENU_BUTTON_SIZE.x, 576.0)),
                     Anchor::TopCenter,
                 )
                 .flow(FlowDirection::Vertical, 0.0, 12.0)
@@ -134,6 +135,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
                 third_person_checkbox = build_checkbox(tree, "THIRD PERSON", true);
                 spheres_checkbox = build_checkbox(tree, "DEBUG SPHERES", false);
                 stride_wheel_checkbox = build_checkbox(tree, "STRIDE WHEEL", true);
+                skeleton_checkbox = build_checkbox(tree, "SKELETON", false);
                 fly_checkbox = build_checkbox(tree, "FLY MODE", false);
                 rocks_checkbox = build_checkbox(tree, "ROCKS", true);
                 prop_lod_checkbox = build_checkbox(tree, "PROP LOD", true);
@@ -154,6 +156,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
         third_person_checkbox,
         spheres_checkbox,
         stride_wheel_checkbox,
+        skeleton_checkbox,
         fly_checkbox,
         rocks_checkbox,
         prop_lod_checkbox,
@@ -323,6 +326,10 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
         .stride_wheel_checkbox;
     if let Some(value) = ui_checkbox_changed(world, stride_wheel_box) {
         sandbox_world.resources.character.stride_wheel_visible = value;
+    }
+    let skeleton_box = sandbox_world.resources.ui_handles.pause.skeleton_checkbox;
+    if let Some(value) = ui_checkbox_changed(world, skeleton_box) {
+        sandbox_world.resources.character.skeleton_visible = value;
     }
     let fly_box = sandbox_world.resources.ui_handles.pause.fly_checkbox;
     if let Some(value) = ui_checkbox_changed(world, fly_box) {
