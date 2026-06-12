@@ -8,6 +8,8 @@ use std::collections::HashMap;
 
 const POSE_BLEND_SHARPNESS: f32 = 12.0;
 const REACH_ARM_DEGREES: f32 = 90.0;
+const IDLE_ARM_DROP_DEGREES: f32 = 65.0;
+const IDLE_ELBOW_BEND_DEGREES: f32 = 20.0;
 
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: Entity) {
     let Some(player) = world.core.get_animation_player(model) else {
@@ -39,11 +41,28 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         keyframes.push(PoseKeyframe { name, joints });
     }
 
-    let parent_rotations = compute_parent_bind_rotations(world, model);
-    let reach_joints = build_world_delta_keyframe(
+    let idle_joints = build_model_space_keyframe(
+        world,
+        model,
         &rest,
         &bones,
-        &parent_rotations,
+        &[
+            ("LeftArm", Vec3::z(), -IDLE_ARM_DROP_DEGREES),
+            ("RightArm", Vec3::z(), IDLE_ARM_DROP_DEGREES),
+            ("LeftForeArm", Vec3::x(), -IDLE_ELBOW_BEND_DEGREES),
+            ("RightForeArm", Vec3::x(), -IDLE_ELBOW_BEND_DEGREES),
+        ],
+    );
+    keyframes.push(PoseKeyframe {
+        name: "idle".to_string(),
+        joints: idle_joints,
+    });
+
+    let reach_joints = build_model_space_keyframe(
+        world,
+        model,
+        &rest,
+        &bones,
         &[
             ("LeftArm", Vec3::y(), -REACH_ARM_DEGREES),
             ("RightArm", Vec3::y(), REACH_ARM_DEGREES),
@@ -141,49 +160,54 @@ fn keyframe_from_clip(
     joints
 }
 
-fn compute_parent_bind_rotations(
+/// Build a keyframe by applying model-space rotation deltas to named
+/// joints. Children follow re-posed parents, so a delta on a forearm
+/// composes correctly with a delta on the arm above it.
+fn build_model_space_keyframe(
     world: &World,
     model: Entity,
-) -> HashMap<Entity, nalgebra_glm::Quat> {
-    let mut parent_rotations = HashMap::new();
-    let mut stack = vec![(model, nalgebra_glm::quat_identity())];
-    while let Some((entity, parent_rotation)) = stack.pop() {
-        parent_rotations.insert(entity, parent_rotation);
-        let local_rotation = world
-            .core
-            .get_local_transform(entity)
-            .map(|transform| transform.rotation)
-            .unwrap_or_else(nalgebra_glm::quat_identity);
-        let bind_rotation = parent_rotation * local_rotation;
-        for child in query_children(world, entity) {
-            stack.push((child, bind_rotation));
-        }
-    }
-    parent_rotations
-}
-
-fn build_world_delta_keyframe(
     rest: &[(Entity, nalgebra_glm::Quat)],
     bones: &HashMap<String, Entity>,
-    parent_rotations: &HashMap<Entity, nalgebra_glm::Quat>,
     deltas: &[(&str, Vec3, f32)],
 ) -> Vec<(Entity, nalgebra_glm::Quat)> {
-    let mut joints = rest.to_vec();
+    let mut delta_by_entity: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
     for (bone_suffix, axis, degrees) in deltas {
         let Some(entity) = find_bone(bones, bone_suffix) else {
             continue;
         };
-        let Some(&parent_rotation) = parent_rotations.get(&entity) else {
-            continue;
+        let rotation = nalgebra_glm::quat_angle_axis(degrees.to_radians(), axis);
+        delta_by_entity
+            .entry(entity)
+            .and_modify(|existing| *existing = rotation * *existing)
+            .or_insert(rotation);
+    }
+
+    let rest_by_entity: HashMap<Entity, nalgebra_glm::Quat> = rest.iter().copied().collect();
+    let mut joints = Vec::new();
+    let mut stack = vec![(model, nalgebra_glm::quat_identity())];
+    while let Some((entity, posed_parent)) = stack.pop() {
+        let rest_local = rest_by_entity
+            .get(&entity)
+            .copied()
+            .or_else(|| {
+                world
+                    .core
+                    .get_local_transform(entity)
+                    .map(|transform| transform.rotation)
+            })
+            .unwrap_or_else(nalgebra_glm::quat_identity);
+        let local = if let Some(delta) = delta_by_entity.get(&entity) {
+            nalgebra_glm::quat_inverse(&posed_parent) * delta * posed_parent * rest_local
+        } else {
+            rest_local
         };
-        let Some(joint) = joints.iter_mut().find(|(joint, _)| *joint == entity) else {
-            continue;
-        };
-        let model_space_delta = nalgebra_glm::quat_angle_axis(degrees.to_radians(), axis);
-        joint.1 = nalgebra_glm::quat_inverse(&parent_rotation)
-            * model_space_delta
-            * parent_rotation
-            * joint.1;
+        if rest_by_entity.contains_key(&entity) {
+            joints.push((entity, local));
+        }
+        let posed_rotation = posed_parent * local;
+        for child in query_children(world, entity) {
+            stack.push((child, posed_rotation));
+        }
     }
     joints
 }

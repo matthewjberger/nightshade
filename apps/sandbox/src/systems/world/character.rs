@@ -155,6 +155,7 @@ fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity
 
     sandbox_world.resources.character.model = Some(model);
     crate::systems::world::pose::initialize(sandbox_world, world, model);
+    crate::systems::world::pose::set_pose(sandbox_world, world, "idle");
 }
 
 fn set_model_visible(sandbox_world: &SandboxWorld, world: &mut World, visible: bool) {
@@ -244,7 +245,6 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
 
     move_character(sandbox_world, world, body, camera);
     sync_first_person_player(sandbox_world, world, body);
-    crate::systems::world::pose::update(sandbox_world, world);
     third_person_camera_system(world);
     draw_spheres(sandbox_world, world, body);
 }
