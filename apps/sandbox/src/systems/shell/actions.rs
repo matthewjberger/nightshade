@@ -78,6 +78,11 @@ pub fn apply_shell_actions(
             let checkbox = sandbox_world.resources.ui_handles.pause.spheres_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
+        ShellAction::SetPose(name) => {
+            if !crate::systems::world::pose::set_pose(sandbox_world, world, &name) {
+                ui_show_toast(world, "unknown pose", ToastSeverity::Warning, 1.2);
+            }
+        }
         ShellAction::SetTimeOfDay(hour) => {
             world.resources.renderer_state.day_night.hour = hour.clamp(0.0, 24.0);
         }

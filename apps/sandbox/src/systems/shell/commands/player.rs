@@ -51,6 +51,13 @@ pub const SPHERES: Command<SandboxShellContext> = Command {
     execute: spheres,
 };
 
+pub const POSE: Command<SandboxShellContext> = Command {
+    name: "pose",
+    description: "List poses or set the active character pose",
+    usage: "pose [name]",
+    execute: pose,
+};
+
 fn player_pos(_args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
     context.queue.push(ShellAction::PrintPlayerPosition);
     "see log".to_string()
@@ -105,6 +112,23 @@ fn spheres(args: &[&str], _world: &mut World, context: &mut SandboxShellContext)
     };
     context.queue.push(ShellAction::SetSpheres(value));
     "OK".to_string()
+}
+
+fn pose(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
+    match args {
+        [] => format!("poses: clip, {}", context.pose_names.join(", ")),
+        [name] => {
+            if *name != "clip" && !context.pose_names.iter().any(|pose| pose == name) {
+                return format!(
+                    "unknown pose, available: clip, {}",
+                    context.pose_names.join(", ")
+                );
+            }
+            context.queue.push(ShellAction::SetPose(name.to_string()));
+            format!("pose {name}")
+        }
+        _ => POSE.usage.to_string(),
+    }
 }
 
 fn parse_toggle(args: &[&str]) -> Option<Option<bool>> {

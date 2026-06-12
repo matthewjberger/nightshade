@@ -49,6 +49,17 @@ pub struct PlayerState {
     pub fly: bool,
 }
 
+pub struct PoseKeyframe {
+    pub name: String,
+    pub joints: Vec<(Entity, nalgebra_glm::Quat)>,
+}
+
+#[derive(Default)]
+pub struct PoseState {
+    pub keyframes: Vec<PoseKeyframe>,
+    pub active: Option<usize>,
+}
+
 #[derive(Default)]
 pub struct CharacterState {
     pub third_person: bool,
