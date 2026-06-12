@@ -753,6 +753,7 @@ pub mod prelude {
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
     pub use crate::ecs::transform::commands::mark_local_transform_dirty;
+    pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
     pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{

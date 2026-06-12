@@ -277,6 +277,7 @@ freecs::ecs! {
         text: crate::ecs::text::resources::TextState,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         transform_state: crate::ecs::transform::resources::TransformState,
+        tweens: crate::ecs::tween::Tweens,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
         user_interface: crate::ecs::ui::UserInterface,
         wind: crate::ecs::cloth::resources::Wind,
