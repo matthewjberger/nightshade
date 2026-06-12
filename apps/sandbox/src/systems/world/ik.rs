@@ -4,7 +4,7 @@ use nightshade::prelude::*;
 const ANKLE_CLEARANCE: f32 = 0.09;
 const FOOT_PROBE_RISE: f32 = 0.6;
 const FOOT_PROBE_DISTANCE: f32 = 1.4;
-const HAND_EDGE_FORWARD: f32 = 0.4;
+const HAND_EDGE_FORWARD: f32 = 0.5;
 const HAND_EDGE_SPREAD: f32 = 0.22;
 const HAND_EDGE_LIFT: f32 = 0.03;
 

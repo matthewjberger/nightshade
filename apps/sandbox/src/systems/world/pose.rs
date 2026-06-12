@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 const POSE_BLEND_SHARPNESS: f32 = 12.0;
 const GAIT_TRACKING_SHARPNESS_BOOST: f32 = 64.0;
+const GAIT_PHASE_LEAD: f32 = 0.35;
 const REACH_ARM_DEGREES: f32 = 90.0;
 const IDLE_ARM_DROP_DEGREES: f32 = 65.0;
 const IDLE_ELBOW_BEND_DEGREES: f32 = 20.0;
@@ -58,20 +59,22 @@ const CROUCH: &[(&str, char, f32)] = &[
 const GAIT_REACH: &[(&str, char, f32)] = &[
     ("Hips", 'y', -12.0),
     ("LeftUpLeg", 'x', -50.0),
+    ("LeftUpLeg", 'z', -4.0),
     ("RightUpLeg", 'x', 45.0),
+    ("RightUpLeg", 'z', 4.0),
     ("LeftLeg", 'x', 25.0),
     ("RightLeg", 'x', 18.0),
-    ("LeftFoot", 'x', 10.0),
-    ("RightFoot", 'x', -10.0),
+    ("LeftFoot", 'x', 13.0),
+    ("RightFoot", 'x', -13.0),
     ("LeftArm", 'z', -78.0),
     ("RightArm", 'z', 78.0),
-    ("LeftArm", 'x', 35.0),
-    ("RightArm", 'x', -50.0),
-    ("LeftForeArm", 'x', -70.0),
-    ("RightForeArm", 'x', -60.0),
-    ("Spine", 'x', 0.0),
+    ("LeftArm", 'x', 30.0),
+    ("RightArm", 'x', -45.0),
+    ("LeftForeArm", 'x', -75.0),
+    ("RightForeArm", 'x', -85.0),
+    ("Spine", 'x', 8.0),
     ("Spine", 'y', 10.0),
-    ("Neck", 'x', -8.0),
+    ("Neck", 'x', -10.0),
 ];
 
 /// Model-space joint deltas at the pass between reaches: the right leg
@@ -79,20 +82,22 @@ const GAIT_REACH: &[(&str, char, f32)] = &[
 const GAIT_PASS: &[(&str, char, f32)] = &[
     ("Hips", 'z', 4.0),
     ("LeftUpLeg", 'x', 2.0),
-    ("RightUpLeg", 'x', -30.0),
+    ("LeftUpLeg", 'z', -4.0),
+    ("RightUpLeg", 'x', -38.0),
+    ("RightUpLeg", 'z', 4.0),
     ("LeftLeg", 'x', 25.0),
-    ("RightLeg", 'x', 110.0),
-    ("LeftFoot", 'x', -17.0),
-    ("RightFoot", 'x', -45.0),
+    ("RightLeg", 'x', 115.0),
+    ("LeftFoot", 'x', -22.0),
+    ("RightFoot", 'x', -52.0),
     ("LeftArm", 'z', -78.0),
     ("RightArm", 'z', 78.0),
     ("LeftArm", 'x', 0.0),
     ("RightArm", 'x', 0.0),
-    ("LeftForeArm", 'x', -60.0),
-    ("RightForeArm", 'x', -60.0),
-    ("Spine", 'x', 0.0),
+    ("LeftForeArm", 'x', -80.0),
+    ("RightForeArm", 'x', -80.0),
+    ("Spine", 'x', 8.0),
     ("Spine", 'y', 0.0),
-    ("Neck", 'x', -8.0),
+    ("Neck", 'x', -10.0),
 ];
 
 /// Walk variant of the reach extreme: shorter stride, upright torso,
@@ -100,7 +105,9 @@ const GAIT_PASS: &[(&str, char, f32)] = &[
 const WALK_REACH: &[(&str, char, f32)] = &[
     ("Hips", 'y', -8.0),
     ("LeftUpLeg", 'x', -25.0),
+    ("LeftUpLeg", 'z', -3.0),
     ("RightUpLeg", 'x', 20.0),
+    ("RightUpLeg", 'z', 3.0),
     ("LeftLeg", 'x', 3.0),
     ("RightLeg", 'x', 8.0),
     ("LeftFoot", 'x', 7.0),
@@ -111,8 +118,9 @@ const WALK_REACH: &[(&str, char, f32)] = &[
     ("RightArm", 'x', -20.0),
     ("LeftForeArm", 'x', -20.0),
     ("RightForeArm", 'x', -30.0),
-    ("Spine", 'x', 1.0),
+    ("Spine", 'x', 2.0),
     ("Spine", 'y', 6.0),
+    ("Neck", 'x', -3.0),
 ];
 
 /// Walk variant of the pass: the swing leg folds just enough for the
@@ -120,7 +128,9 @@ const WALK_REACH: &[(&str, char, f32)] = &[
 const WALK_PASS: &[(&str, char, f32)] = &[
     ("Hips", 'z', 5.0),
     ("LeftUpLeg", 'x', 0.0),
+    ("LeftUpLeg", 'z', -3.0),
     ("RightUpLeg", 'x', -5.0),
+    ("RightUpLeg", 'z', 3.0),
     ("LeftLeg", 'x', 0.0),
     ("RightLeg", 'x', 55.0),
     ("LeftFoot", 'x', 0.0),
@@ -131,8 +141,9 @@ const WALK_PASS: &[(&str, char, f32)] = &[
     ("RightArm", 'x', 0.0),
     ("LeftForeArm", 'x', -25.0),
     ("RightForeArm", 'x', -25.0),
-    ("Spine", 'x', 1.0),
+    ("Spine", 'x', 2.0),
     ("Spine", 'y', 0.0),
+    ("Neck", 'x', -3.0),
 ];
 
 /// Crouched locomotion reach: the stride cycles around the crouch
@@ -235,27 +246,77 @@ const TUCK_SIDE: &[(&str, char, f32)] = &[
     ("Neck", 'x', 15.0),
 ];
 
+const RELAXED_FINGER_CURL: f32 = 18.0;
+const GRIP_FINGER_CURL: f32 = 35.0;
+const FINGERS: &[&str] = &["Thumb", "Index", "Middle", "Ring", "Pinky"];
+
+/// A relaxed curl folds the splayed bind-pose fingers toward the palm
+/// of a hanging arm: model-space Z, opposite signs per side.
+fn relaxed_finger_curl() -> Vec<(String, Vec3, f32)> {
+    let mut deltas = Vec::new();
+    for (side, sign) in [("Left", -1.0), ("Right", 1.0)] {
+        for finger in FINGERS {
+            let strength = if *finger == "Thumb" { 0.5 } else { 1.0 };
+            for segment in 1..=3 {
+                deltas.push((
+                    format!("{side}Hand{finger}{segment}"),
+                    Vec3::z(),
+                    RELAXED_FINGER_CURL * sign * strength,
+                ));
+            }
+        }
+    }
+    deltas
+}
+
+/// A grip curl folds the fingers of overhead hands forward over a
+/// ledge edge: model-space X on every segment.
+fn grip_finger_curl() -> Vec<(String, Vec3, f32)> {
+    let mut deltas = Vec::new();
+    for side in ["Left", "Right"] {
+        for finger in FINGERS {
+            let strength = if *finger == "Thumb" { 0.5 } else { 1.0 };
+            for segment in 1..=3 {
+                deltas.push((
+                    format!("{side}Hand{finger}{segment}"),
+                    Vec3::x(),
+                    GRIP_FINGER_CURL * strength,
+                ));
+            }
+        }
+    }
+    deltas
+}
+
 fn table_keyframe(
     world: &World,
     model: Entity,
     rest_rotations: &HashMap<Entity, nalgebra_glm::Quat>,
     bones: &HashMap<String, Entity>,
     table: &[(&str, char, f32)],
+    finger_deltas: &[(String, Vec3, f32)],
 ) -> Vec<(Entity, nalgebra_glm::Quat)> {
-    let deltas: Vec<(&str, Vec3, f32)> = table
+    let mut deltas: Vec<(&str, Vec3, f32)> = table
         .iter()
         .map(|(suffix, axis, degrees)| (*suffix, axis_vector(*axis), *degrees))
         .collect();
+    deltas.extend(
+        finger_deltas
+            .iter()
+            .map(|(suffix, axis, degrees)| (suffix.as_str(), *axis, *degrees)),
+    );
     build_model_space_keyframe(world, model, rest_rotations, bones, &deltas)
 }
 
 /// Hanging from a ledge: arms raised overhead, body extended, knees
 /// slightly gathered against the wall.
 const HANG: &[(&str, char, f32)] = &[
-    ("LeftArm", 'z', 55.0),
-    ("RightArm", 'z', -55.0),
-    ("LeftForeArm", 'x', -15.0),
-    ("RightForeArm", 'x', -15.0),
+    ("LeftArm", 'z', 75.0),
+    ("RightArm", 'z', -75.0),
+    ("LeftForeArm", 'x', -20.0),
+    ("RightForeArm", 'x', -20.0),
+    ("LeftHand", 'x', 55.0),
+    ("RightHand", 'x', 55.0),
     ("LeftUpLeg", 'x', -15.0),
     ("RightUpLeg", 'x', -15.0),
     ("LeftLeg", 'x', 25.0),
@@ -309,39 +370,45 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         keyframes.push(PoseKeyframe { name, joints });
     }
 
-    let idle_joints = build_model_space_keyframe(
-        world,
-        model,
-        &rest_rotations,
-        &bones,
-        &[
-            ("LeftArm", Vec3::z(), -IDLE_ARM_DROP_DEGREES),
-            ("RightArm", Vec3::z(), IDLE_ARM_DROP_DEGREES),
-            ("LeftForeArm", Vec3::x(), -IDLE_ELBOW_BEND_DEGREES),
-            ("RightForeArm", Vec3::x(), -IDLE_ELBOW_BEND_DEGREES),
-        ],
-    );
+    let relaxed_curl = relaxed_finger_curl();
+    let grip_curl = grip_finger_curl();
+
+    const IDLE_TABLE: &[(&str, char, f32)] = &[
+        ("LeftArm", 'z', -IDLE_ARM_DROP_DEGREES),
+        ("RightArm", 'z', IDLE_ARM_DROP_DEGREES),
+        ("LeftForeArm", 'x', -IDLE_ELBOW_BEND_DEGREES),
+        ("RightForeArm", 'x', -IDLE_ELBOW_BEND_DEGREES),
+    ];
     keyframes.push(PoseKeyframe {
         name: "idle".to_string(),
-        joints: idle_joints,
+        joints: table_keyframe(
+            world,
+            model,
+            &rest_rotations,
+            &bones,
+            IDLE_TABLE,
+            &relaxed_curl,
+        ),
     });
 
-    let reach_joints = build_model_space_keyframe(
-        world,
-        model,
-        &rest_rotations,
-        &bones,
-        &[
-            ("LeftArm", Vec3::y(), -REACH_ARM_DEGREES),
-            ("RightArm", Vec3::y(), REACH_ARM_DEGREES),
-        ],
-    );
+    const REACH_TABLE: &[(&str, char, f32)] = &[
+        ("LeftArm", 'y', -REACH_ARM_DEGREES),
+        ("RightArm", 'y', REACH_ARM_DEGREES),
+    ];
     keyframes.push(PoseKeyframe {
         name: "reach".to_string(),
-        joints: reach_joints,
+        joints: table_keyframe(
+            world,
+            model,
+            &rest_rotations,
+            &bones,
+            REACH_TABLE,
+            &relaxed_curl,
+        ),
     });
 
-    let crouch_joints = table_keyframe(world, model, &rest_rotations, &bones, CROUCH);
+    let crouch_joints =
+        table_keyframe(world, model, &rest_rotations, &bones, CROUCH, &relaxed_curl);
     let crouch_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "crouch".to_string(),
@@ -351,22 +418,36 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
     let air_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "air".to_string(),
-        joints: table_keyframe(world, model, &rest_rotations, &bones, AIR),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, AIR, &relaxed_curl),
     });
     let tuck_forward_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "tuck".to_string(),
-        joints: table_keyframe(world, model, &rest_rotations, &bones, TUCK_FORWARD),
+        joints: table_keyframe(
+            world,
+            model,
+            &rest_rotations,
+            &bones,
+            TUCK_FORWARD,
+            &relaxed_curl,
+        ),
     });
     let tuck_side_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "tuck_side".to_string(),
-        joints: table_keyframe(world, model, &rest_rotations, &bones, TUCK_SIDE),
+        joints: table_keyframe(
+            world,
+            model,
+            &rest_rotations,
+            &bones,
+            TUCK_SIDE,
+            &relaxed_curl,
+        ),
     });
     let hang_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "hang".to_string(),
-        joints: table_keyframe(world, model, &rest_rotations, &bones, HANG),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, HANG, &grip_curl),
     });
 
     let hips = find_bone(&bones, "Hips");
@@ -591,7 +672,7 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             model,
             &pose.rest_rotations,
             &pose.gait_tracks,
-            character.stride_phase,
+            character.stride_phase + GAIT_PHASE_LEAD,
             character.gait_run_factor.clamp(0.0, 1.0),
             character.crouch_amount.clamp(0.0, 1.0),
         ))
