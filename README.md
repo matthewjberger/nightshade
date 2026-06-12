@@ -227,7 +227,7 @@ just run-app <name> # native app from apps/ (sandbox, game, ...)
 cd site && just serve   # full local site with editor + book
 ```
 
-The editor is a web app either way: `just run-web` serves it with trunk, and `just run` opens the same bundle in a native webview window. `just run-agent` builds everything with the opt-in `agent` feature so an MCP client like Claude Code can drive the live editor (register once with `claude mcp add --transport http nightshade-editor http://127.0.0.1:8790/mcp`, see [EDITOR_AGENT.md](docs/EDITOR_AGENT.md)). Run `just` with no arguments to list every recipe.
+The editor is a web app either way: `just run-web` serves it with trunk, and `just run` opens the same bundle in a native webview window. The desktop shell supports multiple windows: the first instance hosts a [hearsay](https://crates.io/crates/hearsay) broker and File > New window spawns additional editor processes that join it. `just run-agent` builds everything with the opt-in `agent` feature so an MCP client like Claude Code can drive the live editor (register once with `claude mcp add --transport http nightshade-editor http://127.0.0.1:8790/mcp`, see [EDITOR_AGENT.md](docs/EDITOR_AGENT.md)). Run `just` with no arguments to list every recipe.
 
 To install the editor as a standalone desktop app without cloning the repo:
 
@@ -260,7 +260,7 @@ Composite:
 ├── core ─────────────── ECS, math, windowing, time
 ├── runtime ──────────── core + cosmic-text
 ├── engine (default) ── runtime + assets + scene_graph + picking + file_dialog + screenshot
-└── full ─────────────── engine + wgpu + shell + audio + physics + gamepad + navmesh
+└── full ─────────────── engine + wgpu + shell + audio + physics + gamepad + navmesh + networking + grass + terrain
 
 Building blocks:
 ├── assets ───────────── glTF / image / bincode / lz4 asset loading
@@ -279,6 +279,7 @@ Renderer & subsystems:
 ├── gamepad ──────────── controller input (gilrs)
 ├── navmesh ──────────── runtime navmesh queries
 ├── navmesh-bake ─────── navmesh baking (rerecast)
+├── networking ───────── topic-based pub/sub messaging (hearsay)
 ├── debug_render ─────── line / shape debug overlays
 ├── editor-protocol ──── editor message types (editor-protocol-agent adds the agent surface)
 ├── steam ────────────── Steam integration (steamworks)

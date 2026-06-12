@@ -524,6 +524,9 @@ pub mod state;
 #[cfg(feature = "runtime")]
 mod systems;
 
+#[cfg(feature = "networking")]
+pub use hearsay as networking;
+
 #[cfg(feature = "shell")]
 pub mod shell;
 
