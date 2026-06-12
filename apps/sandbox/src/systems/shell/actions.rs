@@ -62,11 +62,21 @@ pub fn apply_shell_actions(
         }
         ShellAction::SetStrideWheel(value) => {
             let state = &mut sandbox_world.resources.character;
-            state.stride_wheel_visible = value.unwrap_or(!state.stride_wheel_visible);
+            let enabled = value.unwrap_or(!state.stride_wheel_visible);
+            state.stride_wheel_visible = enabled;
+            let checkbox = sandbox_world
+                .resources
+                .ui_handles
+                .pause
+                .stride_wheel_checkbox;
+            pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetSpheres(value) => {
             let state = &mut sandbox_world.resources.character;
-            state.spheres_visible = value.unwrap_or(!state.spheres_visible);
+            let enabled = value.unwrap_or(!state.spheres_visible);
+            state.spheres_visible = enabled;
+            let checkbox = sandbox_world.resources.ui_handles.pause.spheres_checkbox;
+            pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetTimeOfDay(hour) => {
             world.resources.renderer_state.day_night.hour = hour.clamp(0.0, 24.0);

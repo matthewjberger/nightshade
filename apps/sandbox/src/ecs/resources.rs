@@ -83,6 +83,8 @@ pub struct PauseHandles {
     pub grass_checkbox: Entity,
     pub terrain_checkbox: Entity,
     pub third_person_checkbox: Entity,
+    pub spheres_checkbox: Entity,
+    pub stride_wheel_checkbox: Entity,
     pub fly_checkbox: Entity,
     pub rocks_checkbox: Entity,
     pub prop_lod_checkbox: Entity,
