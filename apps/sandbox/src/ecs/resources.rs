@@ -74,6 +74,17 @@ pub struct IkChain {
     pub end: Entity,
 }
 
+/// A rotational spring-damper that lags behind the posed rotation of
+/// one bone, giving secondary motion and follow-through.
+pub struct SoftJoint {
+    pub entity: Entity,
+    pub stiffness: f32,
+    pub damping: f32,
+    pub rotation: nalgebra_glm::Quat,
+    pub angular_velocity: nalgebra_glm::Vec3,
+    pub initialized: bool,
+}
+
 #[derive(Default)]
 pub struct PoseState {
     pub keyframes: Vec<PoseKeyframe>,
@@ -88,6 +99,7 @@ pub struct PoseState {
     pub leg_chains: Vec<IkChain>,
     pub arm_chains: Vec<IkChain>,
     pub look_joints: Vec<(Entity, f32)>,
+    pub soft_joints: Vec<SoftJoint>,
     pub hips: Option<Entity>,
     pub hips_rest_translation: nalgebra_glm::Vec3,
     pub hips_drop_local: nalgebra_glm::Vec3,

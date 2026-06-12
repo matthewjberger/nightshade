@@ -1,4 +1,4 @@
-use crate::ecs::{GaitTrack, IkChain, PoseKeyframe, SandboxWorld};
+use crate::ecs::{GaitTrack, IkChain, PoseKeyframe, SandboxWorld, SoftJoint};
 use nightshade::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationSamplerOutput,
 };
@@ -19,6 +19,15 @@ const LOOK_JOINTS: &[(&str, f32)] = &[
     ("Neck", 0.3),
     ("Head", 0.4),
 ];
+const SOFT_JOINTS: &[(&str, f32, f32)] = &[
+    ("LeftForeArm", 350.0, 22.0),
+    ("RightForeArm", 350.0, 22.0),
+    ("LeftArm", 450.0, 26.0),
+    ("RightArm", 450.0, 26.0),
+    ("Head", 300.0, 20.0),
+    ("Spine2", 600.0, 35.0),
+];
+const SOFTNESS_MAX_STEP: f32 = 1.0 / 30.0;
 
 /// Model-space joint deltas for the crouch keyframe: hips sink while
 /// thighs pitch forward and shins fold back so the feet stay planted,
@@ -405,6 +414,91 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         .iter()
         .filter_map(|(suffix, weight)| Some((find_bone(&bones, suffix)?, *weight)))
         .collect();
+    pose.soft_joints = SOFT_JOINTS
+        .iter()
+        .filter_map(|(suffix, stiffness, damping)| {
+            Some(SoftJoint {
+                entity: find_bone(&bones, suffix)?,
+                stiffness: *stiffness,
+                damping: *damping,
+                rotation: nalgebra_glm::quat_identity(),
+                angular_velocity: Vec3::zeros(),
+                initialized: false,
+            })
+        })
+        .collect();
+}
+
+/// Per-bone softness: each soft joint chases the rotation the pose
+/// layer wrote through a rotational spring-damper, so fast pose
+/// changes overshoot and settle instead of snapping. Hanging hands
+/// stiffen so the ledge grip stays planted.
+pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
+    let delta_time = world
+        .resources
+        .window
+        .timing
+        .delta_time
+        .min(SOFTNESS_MAX_STEP);
+    let rigid_blend = sandbox_world
+        .resources
+        .character
+        .hang_weight
+        .clamp(0.0, 1.0);
+    for soft in &mut sandbox_world.resources.pose.soft_joints {
+        let Some(target) = world
+            .core
+            .get_local_transform(soft.entity)
+            .map(|transform| transform.rotation)
+        else {
+            continue;
+        };
+        if !soft.initialized {
+            soft.rotation = target;
+            soft.angular_velocity = Vec3::zeros();
+            soft.initialized = true;
+            continue;
+        }
+        let mut target = target;
+        if nalgebra_glm::quat_dot(&soft.rotation, &target) < 0.0 {
+            target = -target;
+        }
+        let error = quat_to_rotation_vector(&(target * nalgebra_glm::quat_inverse(&soft.rotation)));
+        soft.angular_velocity +=
+            (error * soft.stiffness - soft.angular_velocity * soft.damping) * delta_time;
+        let step = rotation_vector_to_quat(&(soft.angular_velocity * delta_time));
+        soft.rotation = nalgebra_glm::quat_normalize(&(step * soft.rotation));
+        if rigid_blend > 1e-3 {
+            soft.rotation = nalgebra_glm::quat_normalize(
+                &(soft.rotation * (1.0 - rigid_blend) + target * rigid_blend),
+            );
+        }
+        if let Some(transform) = world.core.get_local_transform_mut(soft.entity) {
+            transform.rotation = soft.rotation;
+        }
+        mark_local_transform_dirty(world, soft.entity);
+    }
+}
+
+fn quat_to_rotation_vector(rotation: &nalgebra_glm::Quat) -> Vec3 {
+    let mut rotation = *rotation;
+    if rotation.w < 0.0 {
+        rotation = -rotation;
+    }
+    let half_angle = rotation.w.clamp(-1.0, 1.0).acos();
+    let sine = (1.0 - rotation.w * rotation.w).max(0.0).sqrt();
+    if sine < 1e-5 {
+        return Vec3::new(rotation.i, rotation.j, rotation.k) * 2.0;
+    }
+    Vec3::new(rotation.i, rotation.j, rotation.k) * (2.0 * half_angle / sine)
+}
+
+fn rotation_vector_to_quat(rotation_vector: &Vec3) -> nalgebra_glm::Quat {
+    let angle = rotation_vector.norm();
+    if angle < 1e-6 {
+        return nalgebra_glm::quat_identity();
+    }
+    nalgebra_glm::quat_angle_axis(angle, &(rotation_vector / angle))
 }
 
 /// The hips-parent local vector corresponding to one meter of
