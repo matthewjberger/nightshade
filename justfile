@@ -114,9 +114,10 @@ sync-template-leptos:
 pull-template-leptos:
     git subtree pull --prefix=template_leptos {{template_leptos_repo}} main --squash
 
-# Publishes the nightshade crate to crates.io
+# Publishes the nightshade and nightshade-api crates to crates.io
 publish-crate:
     cargo publish -p nightshade
+    cargo publish -p nightshade-api
 
 # Dry run of publishing the nightshade crate
 publish-crate-dry:
