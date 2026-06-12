@@ -114,12 +114,11 @@ sync-template-leptos:
 pull-template-leptos:
     git subtree pull --prefix=template_leptos {{template_leptos_repo}} main --squash
 
-# Publishes the nightshade crate to crates.io. nightshade-api stays
-# unpublished (publish = false) until it is ready for a release.
+# Publishes the nightshade crate to crates.io
 publish-crate:
     cargo publish -p nightshade
 
-# Dry run of publishing the nightshade crate (the api dry run needs the engine on the index first)
+# Dry run of publishing the nightshade crate
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
 
@@ -439,7 +438,7 @@ bump-patch-version:
     echo "Version bumped and tagged! To push, run:"
     echo "  just push-version"
 
-# Bumps patch version, pushes, and publishes to crates.io (Windows)
+# Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
 publish-patch:
     just bump-patch-version
@@ -447,11 +446,10 @@ publish-patch:
     just publish-crate
     just push-template
     just push-template-leptos
-    Write-Host ""
-    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    just publish-release
+    just publish-editor
 
-# Bumps patch version, pushes, and publishes to crates.io (Unix)
+# Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
 publish-patch:
     just bump-patch-version
@@ -459,11 +457,10 @@ publish-patch:
     just publish-crate
     just push-template
     just push-template-leptos
-    @echo ""
-    @echo "To create a GitHub release, run:"
-    @echo "  just publish-release"
+    just publish-release
+    just publish-editor
 
-# Bumps minor version, pushes, and publishes to crates.io (Windows)
+# Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
 publish-minor:
     just bump-minor-version
@@ -471,11 +468,10 @@ publish-minor:
     just publish-crate
     just push-template
     just push-template-leptos
-    Write-Host ""
-    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    just publish-release
+    just publish-editor
 
-# Bumps minor version, pushes, and publishes to crates.io (Unix)
+# Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
 publish-minor:
     just bump-minor-version
@@ -483,11 +479,10 @@ publish-minor:
     just publish-crate
     just push-template
     just push-template-leptos
-    @echo ""
-    @echo "To create a GitHub release, run:"
-    @echo "  just publish-release"
+    just publish-release
+    just publish-editor
 
-# Bumps major version, pushes, and publishes to crates.io (Windows)
+# Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
 publish-major:
     just bump-major-version
@@ -495,11 +490,10 @@ publish-major:
     just publish-crate
     just push-template
     just push-template-leptos
-    Write-Host ""
-    Write-Host "To create a GitHub release, run:" -ForegroundColor Green
-    Write-Host "  just publish-release" -ForegroundColor Green
+    just publish-release
+    just publish-editor
 
-# Bumps major version, pushes, and publishes to crates.io (Unix)
+# Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
 publish-major:
     just bump-major-version
@@ -507,9 +501,8 @@ publish-major:
     just publish-crate
     just push-template
     just push-template-leptos
-    @echo ""
-    @echo "To create a GitHub release, run:"
-    @echo "  just publish-release"
+    just publish-release
+    just publish-editor
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="sandbox":
