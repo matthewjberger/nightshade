@@ -449,10 +449,10 @@ publish-patch:
     just bump-patch-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -460,10 +460,10 @@ publish-patch:
     just bump-patch-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
@@ -471,10 +471,10 @@ publish-minor:
     just bump-minor-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -482,10 +482,10 @@ publish-minor:
     just bump-minor-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
@@ -493,10 +493,10 @@ publish-major:
     just bump-major-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -504,10 +504,10 @@ publish-major:
     just bump-major-version
     just push-version
     just publish-crate
-    just push-template
-    just push-template-leptos
     just publish-release
     just publish-editor
+    just push-template
+    just push-template-leptos
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="sandbox":
