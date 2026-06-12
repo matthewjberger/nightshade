@@ -22,6 +22,7 @@
 - HDR environments (`.hdr`) and procedural atmospheres (day / night cycle, nebula, space) with prefiltered IBL.
 - Skeletal animation, morph targets, and a clip player driven by a frame schedule.
 - Data-oriented ECS via [freecs](https://github.com/matthewjberger/freecs) with archetype storage and bitflag components.
+- High level procedural API ([nightshade-api](https://crates.io/crates/nightshade-api)): full 3d scenes and small games as straight-line code, free functions over plain data, with the whole engine one import away.
 - Retained-mode UI with Taffy layout, theming, icons, and a built-in test driver.
 - Physics ([rapier3d](https://rapier.rs)), audio ([kira](https://github.com/tesselode/kira)), gamepad ([gilrs](https://gitlab.com/gilrs-project/gilrs)), navmesh, particles, decals, picking.
 - Scene authoring editor that runs in the browser or as a desktop webview app, with the engine in a web worker, a Leptos interface, gizmos, undo, and Khronos and Polyhaven asset browsers.
@@ -194,6 +195,23 @@ impl State for SpinCube {
 
 The full annotated version with three objects, materials, and animation lives in the [book's interactive demo](https://matthewjberger.github.io/nightshade/book/interactive-demo.html).
 
+The same cube through [nightshade-api](https://crates.io/crates/nightshade-api), the procedural high level layer over the engine:
+
+```rust
+use nightshade_api::prelude::*;
+
+fn main() {
+    let mut app = open();
+    let cube = spawn_cube(&mut app.world, vec3(0.0, 0.5, 0.0));
+    while frame(&mut app) {
+        let step = delta_time(&app.world);
+        rotate(&mut app.world, cube, Vec3::y(), step);
+    }
+}
+```
+
+`open()` gives you a sky, a sun with shadows, a grid, an orbit camera, and physics before your first line runs, and `app.world` is the real engine world, so the full engine stays one call away. The [book's high level API section](https://matthewjberger.github.io/nightshade/book/api-overview.html) covers the whole surface: scenes, materials, animation, cameras, input, picking, physics, immediate drawing, text, and audio.
+
 To bootstrap a new project, use the [nightshade-template](https://github.com/matthewjberger/nightshade-template), which scaffolds the dependencies, justfile, and trunk config.
 
 ## Quickstart
@@ -215,6 +233,7 @@ The editor is a web app either way: `just run-web` serves it with trunk, and `ju
 
 - 📖 [Book](https://matthewjberger.github.io/nightshade/book/) - architecture, systems, and tutorials
 - 🦀 [docs.rs](https://docs.rs/nightshade) - generated API reference
+- 🎯 [nightshade-api](https://crates.io/crates/nightshade-api) - the procedural high level layer ([book section](https://matthewjberger.github.io/nightshade/book/api-overview.html))
 - 📚 [USAGE.md](docs/USAGE.md) - engine usage, conventions, gotchas
 - 🧪 [UI_TESTING.md](docs/UI_TESTING.md) - retained UI test driver
 - 📊 [PROFILING.md](docs/PROFILING.md) - tracing, tracy, chrome-trace
