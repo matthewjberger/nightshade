@@ -1,0 +1,30 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    name: Check and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs rust, wasm-bindgen, wasm-opt, and trunk as pinned in mise.toml.
+      - uses: jdx/mise-action@v2
+
+      # mise delegates rust to rustup, which does not pick up the target or
+      # the components on a machine that already has rust, so add them
+      # explicitly.
+      - run: rustup target add wasm32-unknown-unknown
+      - run: rustup component add rustfmt clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install webview build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev
+
+      - run: cargo check -p protocol -p worker -p page --target wasm32-unknown-unknown
+      - run: cargo check -p desktop
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy -p protocol -p worker -p page --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo clippy -p desktop -- -D warnings

@@ -1,0 +1,7 @@
+[tools]
+rust = { version = "1.95.0", targets = "wasm32-unknown-unknown" }
+# ubi backend (not github): mise's github backend strips the leading "v" from
+# binaryen's "version_123" tag, which breaks wasm-opt resolution.
+"ubi:rustwasm/wasm-bindgen" = { version = "0.2.115", extract_all = "true" }
+"ubi:WebAssembly/binaryen" = { version = "version_123", extract_all = "true", bin_path = "bin" }
+"ubi:trunk-rs/trunk" = "0.21.14"
