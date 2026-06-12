@@ -120,6 +120,46 @@ const WALK_PASS: &[(&str, char, f32)] = &[
     ("Spine", 'y', 0.0),
 ];
 
+/// Crouched locomotion reach: the stride cycles around the crouch
+/// stance with both knees deep so the hips stay sunken.
+const CROUCH_WALK_REACH: &[(&str, char, f32)] = &[
+    ("Hips", 'y', -6.0),
+    ("LeftUpLeg", 'x', -68.0),
+    ("RightUpLeg", 'x', -38.0),
+    ("LeftLeg", 'x', 60.0),
+    ("RightLeg", 'x', 85.0),
+    ("LeftFoot", 'x', 0.0),
+    ("RightFoot", 'x', -17.0),
+    ("LeftArm", 'z', -78.0),
+    ("RightArm", 'z', 78.0),
+    ("LeftArm", 'x', 12.0),
+    ("RightArm", 'x', -15.0),
+    ("LeftForeArm", 'x', -35.0),
+    ("RightForeArm", 'x', -40.0),
+    ("Spine", 'x', 16.0),
+    ("Spine", 'y', 5.0),
+];
+
+/// Crouched locomotion pass: the swing leg folds through under the
+/// sunken hips.
+const CROUCH_WALK_PASS: &[(&str, char, f32)] = &[
+    ("Hips", 'z', 4.0),
+    ("LeftUpLeg", 'x', -55.0),
+    ("RightUpLeg", 'x', -60.0),
+    ("LeftLeg", 'x', 70.0),
+    ("RightLeg", 'x', 95.0),
+    ("LeftFoot", 'x', -15.0),
+    ("RightFoot", 'x', -25.0),
+    ("LeftArm", 'z', -78.0),
+    ("RightArm", 'z', 78.0),
+    ("LeftArm", 'x', 0.0),
+    ("RightArm", 'x', 0.0),
+    ("LeftForeArm", 'x', -38.0),
+    ("RightForeArm", 'x', -38.0),
+    ("Spine", 'x', 16.0),
+    ("Spine", 'y', 0.0),
+];
+
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: Entity) {
     let Some(player) = world.core.get_animation_player(model) else {
         return;
@@ -303,6 +343,7 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             &pose.gait_tracks,
             character.stride_phase,
             character.gait_run_factor.clamp(0.0, 1.0),
+            character.crouch_amount.clamp(0.0, 1.0),
         ))
     } else {
         None
@@ -311,7 +352,7 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
     let crouch_weight = if pose.active == pose.crouch_index {
         0.0
     } else {
-        character.crouch_amount.clamp(0.0, CROUCH_MAX_WEIGHT)
+        character.crouch_amount.clamp(0.0, CROUCH_MAX_WEIGHT) * (1.0 - gait_weight)
     };
     let crouch_joints = pose
         .crouch_index
@@ -345,7 +386,7 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         let drop_weight = if pose.active == pose.crouch_index {
             1.0
         } else {
-            crouch_weight
+            character.crouch_amount.clamp(0.0, CROUCH_MAX_WEIGHT)
         };
         let target_translation =
             pose.hips_rest_translation + pose.hips_drop_local * (CROUCH_HIPS_DROP * drop_weight);
@@ -479,6 +520,8 @@ fn build_gait_tracks(bones: &HashMap<String, Entity>) -> Vec<GaitTrack> {
         .chain(GAIT_PASS.iter())
         .chain(WALK_REACH.iter())
         .chain(WALK_PASS.iter())
+        .chain(CROUCH_WALK_REACH.iter())
+        .chain(CROUCH_WALK_PASS.iter())
     {
         let key = (suffix.to_string(), *axis);
         if !track_keys.contains(&key) {
@@ -505,11 +548,18 @@ fn build_gait_tracks(bones: &HashMap<String, Entity>) -> Vec<GaitTrack> {
             table_value(WALK_REACH, &partner, axis) * sign,
             table_value(WALK_PASS, &partner, axis) * sign,
         ];
+        let crouch_walk = [
+            table_value(CROUCH_WALK_REACH, &suffix, axis),
+            table_value(CROUCH_WALK_PASS, &suffix, axis),
+            table_value(CROUCH_WALK_REACH, &partner, axis) * sign,
+            table_value(CROUCH_WALK_PASS, &partner, axis) * sign,
+        ];
         tracks.push(GaitTrack {
             entity,
             axis: axis_vector(axis),
             run,
             walk,
+            crouch_walk,
         });
     }
     tracks
@@ -522,12 +572,15 @@ fn build_gait_locals(
     tracks: &[GaitTrack],
     phase: f32,
     run_factor: f32,
+    crouch_factor: f32,
 ) -> HashMap<Entity, nalgebra_glm::Quat> {
     let mut delta_by_entity: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
     for track in tracks {
         let walk_degrees = sample_cycle(&track.walk, phase);
         let run_degrees = sample_cycle(&track.run, phase);
-        let degrees = walk_degrees + (run_degrees - walk_degrees) * run_factor;
+        let upright_degrees = walk_degrees + (run_degrees - walk_degrees) * run_factor;
+        let crouch_degrees = sample_cycle(&track.crouch_walk, phase);
+        let degrees = upright_degrees + (crouch_degrees - upright_degrees) * crouch_factor;
         if degrees.abs() < 1e-3 {
             continue;
         }

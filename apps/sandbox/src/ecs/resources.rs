@@ -62,6 +62,7 @@ pub struct GaitTrack {
     pub axis: nalgebra_glm::Vec3,
     pub run: [f32; 4],
     pub walk: [f32; 4],
+    pub crouch_walk: [f32; 4],
 }
 
 #[derive(Default)]

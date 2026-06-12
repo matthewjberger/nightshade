@@ -39,6 +39,7 @@ const SPHERE_LATITUDE_RINGS: usize = 12;
 const SPHERE_MERIDIAN_CIRCLES: usize = 12;
 const RUN_WHEEL_RADIUS: f32 = 0.55;
 const WALK_WHEEL_RADIUS: f32 = 0.24;
+const CROUCH_WHEEL_RADIUS: f32 = 0.22;
 const WALK_FULL_SPEED: f32 = 1.6;
 const RUN_FULL_SPEED: f32 = 4.5;
 const GAIT_FADE_START_SPEED: f32 = 0.15;
@@ -50,7 +51,7 @@ const BOUNCE_MAX: f32 = 0.06;
 const BOUNCE_CONTACT_LAG: f32 = 0.3;
 const CROUCH_SPRING_STIFFNESS: f32 = 90.0;
 const CROUCH_SPRING_DAMPING: f32 = 13.0;
-const CROUCH_SPEED_PENALTY: f32 = 0.5;
+const CROUCH_SPEED_PENALTY: f32 = 0.65;
 const LANDING_CROUCH_FACTOR: f32 = 0.18;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
@@ -618,8 +619,10 @@ fn move_character(
         ((horizontal_speed - WALK_FULL_SPEED) / (RUN_FULL_SPEED - WALK_FULL_SPEED)).clamp(0.0, 1.0);
     state.gait_run_factor += (run_factor_target - state.gait_run_factor)
         * (1.0 - (-GAIT_BLEND_SHARPNESS * delta_time).exp());
-    state.stride_radius =
+    let upright_radius =
         WALK_WHEEL_RADIUS + (RUN_WHEEL_RADIUS - WALK_WHEEL_RADIUS) * state.gait_run_factor;
+    state.stride_radius = upright_radius
+        + (CROUCH_WHEEL_RADIUS - upright_radius) * state.crouch_amount.clamp(0.0, 1.0);
     if state.grounded {
         state.stride_phase = (state.stride_phase
             + horizontal_speed * delta_time / state.stride_radius)
