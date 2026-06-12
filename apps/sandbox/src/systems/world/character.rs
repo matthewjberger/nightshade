@@ -8,9 +8,11 @@ use nightshade::ecs::world::{
 use nightshade::prelude::*;
 
 const BUMPER_RADIUS: f32 = 0.55;
-const BUMPER_CENTER_HEIGHT: f32 = 1.0;
+const BUMPER_HALF_HEIGHT: f32 = 0.55;
+const BUMPER_CENTER_HEIGHT: f32 = 1.55;
 const LIFTER_RADIUS: f32 = 0.45;
 const LIFTER_CENTER_HEIGHT: f32 = 0.45;
+const RIDE_PROBE_HEIGHT: f32 = 1.0;
 const LIFTER_PROBE_DISTANCE: f32 = 0.4;
 const LIFTER_SPRING_STIFFNESS: f32 = 200.0;
 const LIFTER_SPRING_DAMPING: f32 = 22.0;
@@ -302,16 +304,16 @@ fn move_character(
         state.grounded = false;
     }
 
-    let bumper_center = position + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0);
-    let ground_distance = sample_ground_distance(world, bumper_center);
+    let probe_origin = position + Vec3::new(0.0, RIDE_PROBE_HEIGHT, 0.0);
+    let ground_distance = sample_ground_distance(world, probe_origin);
     if let Some(distance) = ground_distance
         && state.jump_suppress_timer <= 0.0
     {
-        let displacement = BUMPER_CENTER_HEIGHT - distance;
+        let displacement = RIDE_PROBE_HEIGHT - distance;
         let spring_acceleration =
             displacement * LIFTER_SPRING_STIFFNESS - velocity.y * LIFTER_SPRING_DAMPING;
         velocity.y += spring_acceleration * delta_time;
-        state.grounded = distance < BUMPER_CENTER_HEIGHT + GROUNDED_MARGIN;
+        state.grounded = distance < RIDE_PROBE_HEIGHT + GROUNDED_MARGIN;
     } else {
         state.grounded = false;
     }
@@ -319,9 +321,10 @@ fn move_character(
     position += velocity * delta_time;
 
     for _ in 0..BUMPER_RESOLVE_ITERATIONS {
-        let contacts = physics_world_sphere_contacts(
+        let contacts = physics_world_capsule_contacts(
             &world.resources.physics,
             position + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0),
+            BUMPER_HALF_HEIGHT,
             BUMPER_RADIUS,
             None,
         );
@@ -344,7 +347,7 @@ fn move_character(
     mark_local_transform_dirty(world, body);
 }
 
-fn sample_ground_distance(world: &World, bumper_center: Vec3) -> Option<f32> {
+fn sample_ground_distance(world: &World, probe_origin: Vec3) -> Option<f32> {
     let probe_radius = LIFTER_RADIUS * 0.6;
     let offsets = [
         Vec3::zeros(),
@@ -353,12 +356,12 @@ fn sample_ground_distance(world: &World, bumper_center: Vec3) -> Option<f32> {
         Vec3::new(0.0, 0.0, probe_radius),
         Vec3::new(0.0, 0.0, -probe_radius),
     ];
-    let max_distance = BUMPER_CENTER_HEIGHT + LIFTER_PROBE_DISTANCE;
+    let max_distance = RIDE_PROBE_HEIGHT + LIFTER_PROBE_DISTANCE;
     let mut nearest: Option<f32> = None;
     for offset in offsets {
         if let Some(hit) = physics_world_cast_ray(
             &world.resources.physics,
-            bumper_center + offset,
+            probe_origin + offset,
             Vec3::new(0.0, -1.0, 0.0),
             max_distance,
             None,
@@ -406,9 +409,10 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
         return;
     };
     lines.lines.clear();
-    push_wire_sphere(
+    push_wire_capsule(
         &mut lines.lines,
         feet + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0),
+        BUMPER_HALF_HEIGHT,
         BUMPER_RADIUS,
         BUMPER_COLOR,
     );
@@ -433,6 +437,69 @@ fn push_wire_sphere(lines: &mut Vec<Line>, center: Vec3, radius: f32, color: Vec
             (meridian_index as f32 / SPHERE_MERIDIAN_CIRCLES as f32) * std::f32::consts::PI;
         let meridian_axis = Vec3::new(meridian_angle.cos(), 0.0, meridian_angle.sin());
         push_circle(lines, center, radius, meridian_axis, Vec3::y(), color);
+    }
+}
+
+fn push_wire_capsule(
+    lines: &mut Vec<Line>,
+    center: Vec3,
+    half_height: f32,
+    radius: f32,
+    color: Vec4,
+) {
+    let top_center = center + Vec3::new(0.0, half_height, 0.0);
+    let bottom_center = center - Vec3::new(0.0, half_height, 0.0);
+    for ring_index in 1..SPHERE_LATITUDE_RINGS {
+        if ring_index * 2 == SPHERE_LATITUDE_RINGS {
+            continue;
+        }
+        let polar_angle = (ring_index as f32 / SPHERE_LATITUDE_RINGS as f32) * std::f32::consts::PI;
+        let hemisphere_center = if polar_angle < std::f32::consts::FRAC_PI_2 {
+            top_center
+        } else {
+            bottom_center
+        };
+        let ring_center = hemisphere_center + Vec3::new(0.0, polar_angle.cos() * radius, 0.0);
+        let ring_radius = polar_angle.sin() * radius;
+        push_circle(lines, ring_center, ring_radius, Vec3::x(), Vec3::z(), color);
+    }
+    push_circle(lines, top_center, radius, Vec3::x(), Vec3::z(), color);
+    push_circle(lines, bottom_center, radius, Vec3::x(), Vec3::z(), color);
+    for meridian_index in 0..SPHERE_MERIDIAN_CIRCLES {
+        let meridian_angle =
+            (meridian_index as f32 / SPHERE_MERIDIAN_CIRCLES as f32) * std::f32::consts::PI;
+        let meridian_axis = Vec3::new(meridian_angle.cos(), 0.0, meridian_angle.sin());
+        push_semicircle(lines, top_center, radius, meridian_axis, 1.0, color);
+        push_semicircle(lines, bottom_center, radius, meridian_axis, -1.0, color);
+        for side in [meridian_axis, -meridian_axis] {
+            lines.push(Line {
+                start: top_center + side * radius,
+                end: bottom_center + side * radius,
+                color,
+            });
+        }
+    }
+}
+
+fn push_semicircle(
+    lines: &mut Vec<Line>,
+    center: Vec3,
+    radius: f32,
+    axis: Vec3,
+    vertical_sign: f32,
+    color: Vec4,
+) {
+    let segment_count = SPHERE_SEGMENTS / 2;
+    for segment_index in 0..segment_count {
+        let angle_start = (segment_index as f32 / segment_count as f32) * std::f32::consts::PI;
+        let angle_end = ((segment_index + 1) as f32 / segment_count as f32) * std::f32::consts::PI;
+        let start = center
+            + axis * angle_start.cos() * radius
+            + Vec3::new(0.0, angle_start.sin() * radius * vertical_sign, 0.0);
+        let end = center
+            + axis * angle_end.cos() * radius
+            + Vec3::new(0.0, angle_end.sin() * radius * vertical_sign, 0.0);
+        lines.push(Line { start, end, color });
     }
 }
 
