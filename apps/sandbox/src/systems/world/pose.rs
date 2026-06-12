@@ -160,6 +160,80 @@ const CROUCH_WALK_PASS: &[(&str, char, f32)] = &[
     ("Spine", 'y', 0.0),
 ];
 
+/// Airborne pose: legs slightly gathered, arms out and forward for
+/// balance.
+const AIR: &[(&str, char, f32)] = &[
+    ("LeftUpLeg", 'x', -25.0),
+    ("RightUpLeg", 'x', -10.0),
+    ("LeftLeg", 'x', 40.0),
+    ("RightLeg", 'x', 55.0),
+    ("LeftFoot", 'x', -15.0),
+    ("RightFoot", 'x', -20.0),
+    ("LeftArm", 'z', -60.0),
+    ("RightArm", 'z', 60.0),
+    ("LeftArm", 'x', -20.0),
+    ("RightArm", 'x', -20.0),
+    ("LeftForeArm", 'x', -45.0),
+    ("RightForeArm", 'x', -45.0),
+    ("Spine", 'x', 5.0),
+];
+
+/// Tuck for forward flips and rolls: balled up around the center of
+/// mass with knees to the chest and the head down.
+const TUCK_FORWARD: &[(&str, char, f32)] = &[
+    ("LeftUpLeg", 'x', -95.0),
+    ("RightUpLeg", 'x', -90.0),
+    ("LeftLeg", 'x', 120.0),
+    ("RightLeg", 'x', 115.0),
+    ("LeftFoot", 'x', -20.0),
+    ("RightFoot", 'x', -20.0),
+    ("LeftArm", 'z', -45.0),
+    ("RightArm", 'z', 45.0),
+    ("LeftArm", 'x', -60.0),
+    ("RightArm", 'x', -60.0),
+    ("LeftForeArm", 'x', -110.0),
+    ("RightForeArm", 'x', -110.0),
+    ("Spine", 'x', 30.0),
+    ("Spine1", 'x', 15.0),
+    ("Neck", 'x', 20.0),
+];
+
+/// Tuck variant for sideways rolls: the same ball with a lateral spine
+/// curl so the roll travels over the shoulders.
+const TUCK_SIDE: &[(&str, char, f32)] = &[
+    ("LeftUpLeg", 'x', -95.0),
+    ("RightUpLeg", 'x', -90.0),
+    ("LeftLeg", 'x', 120.0),
+    ("RightLeg", 'x', 115.0),
+    ("LeftFoot", 'x', -20.0),
+    ("RightFoot", 'x', -20.0),
+    ("LeftArm", 'z', -45.0),
+    ("RightArm", 'z', 45.0),
+    ("LeftArm", 'x', -60.0),
+    ("RightArm", 'x', -60.0),
+    ("LeftForeArm", 'x', -110.0),
+    ("RightForeArm", 'x', -110.0),
+    ("Spine", 'x', 22.0),
+    ("Spine", 'z', 15.0),
+    ("Spine1", 'x', 10.0),
+    ("Spine1", 'z', 10.0),
+    ("Neck", 'x', 15.0),
+];
+
+fn table_keyframe(
+    world: &World,
+    model: Entity,
+    rest_rotations: &HashMap<Entity, nalgebra_glm::Quat>,
+    bones: &HashMap<String, Entity>,
+    table: &[(&str, char, f32)],
+) -> Vec<(Entity, nalgebra_glm::Quat)> {
+    let deltas: Vec<(&str, Vec3, f32)> = table
+        .iter()
+        .map(|(suffix, axis, degrees)| (*suffix, axis_vector(*axis), *degrees))
+        .collect();
+    build_model_space_keyframe(world, model, rest_rotations, bones, &deltas)
+}
+
 pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: Entity) {
     let Some(player) = world.core.get_animation_player(model) else {
         return;
@@ -223,16 +297,27 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         joints: reach_joints,
     });
 
-    let crouch_deltas: Vec<(&str, Vec3, f32)> = CROUCH
-        .iter()
-        .map(|(suffix, axis, degrees)| (*suffix, axis_vector(*axis), *degrees))
-        .collect();
-    let crouch_joints =
-        build_model_space_keyframe(world, model, &rest_rotations, &bones, &crouch_deltas);
+    let crouch_joints = table_keyframe(world, model, &rest_rotations, &bones, CROUCH);
     let crouch_index = keyframes.len();
     keyframes.push(PoseKeyframe {
         name: "crouch".to_string(),
         joints: crouch_joints,
+    });
+
+    let air_index = keyframes.len();
+    keyframes.push(PoseKeyframe {
+        name: "air".to_string(),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, AIR),
+    });
+    let tuck_forward_index = keyframes.len();
+    keyframes.push(PoseKeyframe {
+        name: "tuck".to_string(),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, TUCK_FORWARD),
+    });
+    let tuck_side_index = keyframes.len();
+    keyframes.push(PoseKeyframe {
+        name: "tuck_side".to_string(),
+        joints: table_keyframe(world, model, &rest_rotations, &bones, TUCK_SIDE),
     });
 
     let hips = find_bone(&bones, "Hips");
@@ -255,6 +340,9 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
     pose.rest_rotations = rest_rotations;
     pose.gait_tracks = build_gait_tracks(&bones);
     pose.crouch_index = Some(crouch_index);
+    pose.air_index = Some(air_index);
+    pose.tuck_forward_index = Some(tuck_forward_index);
+    pose.tuck_side_index = Some(tuck_side_index);
     pose.hips = hips;
     pose.hips_rest_translation = hips_rest_translation;
     pose.hips_drop_local = hips_drop_local;
@@ -360,6 +448,28 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         .filter(|_| crouch_weight > 1e-3)
         .map(|keyframe| keyframe.joints.as_slice());
 
+    let air_weight = character.air_weight.clamp(0.0, 1.0);
+    let air_joints = pose
+        .air_index
+        .and_then(|index| pose.keyframes.get(index))
+        .filter(|_| air_weight > 1e-3 && pose.active != pose.air_index)
+        .map(|keyframe| keyframe.joints.as_slice());
+
+    let tuck_weight = character.tuck_weight.clamp(0.0, 1.0);
+    let flip_side = character.flip_side.clamp(0.0, 1.0);
+    let tuck_pair = if tuck_weight > 1e-3 {
+        pose.tuck_forward_index
+            .zip(pose.tuck_side_index)
+            .and_then(|(forward_index, side_index)| {
+                Some((
+                    pose.keyframes.get(forward_index)?.joints.as_slice(),
+                    pose.keyframes.get(side_index)?.joints.as_slice(),
+                ))
+            })
+    } else {
+        None
+    };
+
     let delta_time = world.resources.window.timing.delta_time;
     let sharpness = POSE_BLEND_SHARPNESS + GAIT_TRACKING_SHARPNESS_BOOST * gait_weight;
     let blend = 1.0 - (-sharpness * delta_time).exp();
@@ -370,10 +480,22 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
         {
             target = blend_rotation(target, *gait_rotation, gait_weight);
         }
+        if let Some(air_joints) = air_joints
+            && let Some(air_rotation) = joint_rotation(air_joints, *entity)
+        {
+            target = blend_rotation(target, air_rotation, air_weight);
+        }
         if let Some(crouch_joints) = crouch_joints
             && let Some(crouch_rotation) = joint_rotation(crouch_joints, *entity)
         {
             target = blend_rotation(target, crouch_rotation, crouch_weight);
+        }
+        if let Some((tuck_forward, tuck_side)) = tuck_pair
+            && let Some(forward_rotation) = joint_rotation(tuck_forward, *entity)
+            && let Some(side_rotation) = joint_rotation(tuck_side, *entity)
+        {
+            let tuck_rotation = blend_rotation(forward_rotation, side_rotation, flip_side);
+            target = blend_rotation(target, tuck_rotation, tuck_weight);
         }
         let Some(transform) = world.core.get_local_transform_mut(*entity) else {
             continue;

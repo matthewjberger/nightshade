@@ -72,6 +72,9 @@ pub struct PoseState {
     pub rest_rotations: HashMap<Entity, nalgebra_glm::Quat>,
     pub gait_tracks: Vec<GaitTrack>,
     pub crouch_index: Option<usize>,
+    pub air_index: Option<usize>,
+    pub tuck_forward_index: Option<usize>,
+    pub tuck_side_index: Option<usize>,
     pub hips: Option<Entity>,
     pub hips_rest_translation: nalgebra_glm::Vec3,
     pub hips_drop_local: nalgebra_glm::Vec3,
@@ -99,6 +102,13 @@ pub struct CharacterState {
     pub gait_run_factor: f32,
     pub crouch_amount: f32,
     pub crouch_velocity: f32,
+    pub air_weight: f32,
+    pub flip_time: f32,
+    pub flip_duration: f32,
+    pub flip_axis: nalgebra_glm::Vec3,
+    pub flip_pivot: f32,
+    pub flip_side: f32,
+    pub tuck_weight: f32,
 }
 
 #[derive(Default)]

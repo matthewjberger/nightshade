@@ -53,6 +53,14 @@ const CROUCH_SPRING_STIFFNESS: f32 = 90.0;
 const CROUCH_SPRING_DAMPING: f32 = 13.0;
 const CROUCH_SPEED_PENALTY: f32 = 0.65;
 const LANDING_CROUCH_FACTOR: f32 = 0.18;
+const AIR_POSE_SHARPNESS: f32 = 6.0;
+const FLIP_DURATION: f32 = 0.75;
+const ROLL_DURATION: f32 = 0.7;
+const FLIP_PIVOT_HEIGHT: f32 = 1.0;
+const ROLL_PIVOT_HEIGHT: f32 = 0.55;
+const FLIP_ANTICIPATION_RADIANS: f32 = 0.2;
+const FLIP_ANTICIPATION_FRACTION: f32 = 0.12;
+const ROLL_MINIMUM_SPEED: f32 = 2.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -284,17 +292,19 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
     };
 
     move_character(sandbox_world, world, body, camera);
-    apply_bounce(sandbox_world, world);
+    apply_model_motion(sandbox_world, world);
     sync_first_person_player(sandbox_world, world, body);
     third_person_camera_system(world);
     draw_spheres(sandbox_world, world, body);
     draw_skeleton(sandbox_world, world);
 }
 
-/// Vertical bob synced to the stride: lowest just after each foot
-/// contact, highest at the pass. The amplitude follows the ballistic
-/// fall over one step, so a jog bounces and a sprint flattens out.
-fn apply_bounce(sandbox_world: &SandboxWorld, world: &mut World) {
+/// Vertical bob synced to the stride plus the flip and roll rotation
+/// of the whole model around its center of mass. The bob is lowest
+/// just after each foot contact and follows the ballistic fall over
+/// one step, so a jog bounces and a sprint flattens out. Flips rotate
+/// with a small anticipation wind up and ease out into the air pose.
+fn apply_model_motion(sandbox_world: &SandboxWorld, world: &mut World) {
     let state = &sandbox_world.resources.character;
     let Some(model) = state.model else {
         return;
@@ -310,10 +320,32 @@ fn apply_bounce(sandbox_world: &SandboxWorld, world: &mut World) {
         * 0.5
         * (1.0 - (2.0 * (state.stride_phase - BOUNCE_CONTACT_LAG)).cos())
         * state.gait_weight;
+
+    let mut rotation = nalgebra_glm::quat_identity();
+    let mut translation = Vec3::new(0.0, bounce, 0.0);
+    if state.flip_duration > 0.0 && state.flip_axis.norm() > 0.5 {
+        let progress = (state.flip_time / state.flip_duration).clamp(0.0, 1.0);
+        let angle = flip_angle(progress);
+        rotation = nalgebra_glm::quat_angle_axis(angle, &state.flip_axis);
+        let pivot = Vec3::new(0.0, state.flip_pivot, 0.0);
+        translation += pivot - nalgebra_glm::quat_rotate_vec3(&rotation, &pivot);
+    }
+
     if let Some(transform) = world.core.get_local_transform_mut(model) {
-        transform.translation.y = bounce;
+        transform.translation = translation;
+        transform.rotation = rotation;
     }
     mark_local_transform_dirty(world, model);
+}
+
+fn flip_angle(progress: f32) -> f32 {
+    let anticipation = -FLIP_ANTICIPATION_RADIANS
+        * (std::f32::consts::PI * (progress / FLIP_ANTICIPATION_FRACTION).min(1.0)).sin();
+    let main_progress = ((progress - FLIP_ANTICIPATION_FRACTION)
+        / (1.0 - FLIP_ANTICIPATION_FRACTION))
+        .clamp(0.0, 1.0);
+    let eased = main_progress * main_progress * (3.0 - 2.0 * main_progress);
+    anticipation + std::f32::consts::TAU * eased
 }
 
 fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
@@ -413,6 +445,7 @@ struct CharacterInputs {
     direction: Vec3,
     jump_pressed: bool,
     crouch_held: bool,
+    flip_pressed: bool,
 }
 
 fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
@@ -462,11 +495,19 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
         .gamepad
         .just_pressed_buttons
         .contains(&gilrs::Button::South);
+    let gamepad_flip = world
+        .resources
+        .input
+        .gamepad
+        .just_pressed_buttons
+        .contains(&gilrs::Button::West);
+    let flip_key_pressed = world.resources.input.keyboard.just_pressed(KeyCode::KeyF);
 
     CharacterInputs {
         direction,
         jump_pressed: jump_key_pressed || gamepad_jump,
         crouch_held: crouch_key_held || gamepad_crouch_held,
+        flip_pressed: flip_key_pressed || gamepad_flip,
     }
 }
 
@@ -582,6 +623,49 @@ fn move_character(
     }
     if !was_grounded && state.grounded {
         state.crouch_velocity += impact_speed * LANDING_CROUCH_FACTOR;
+    }
+
+    let air_target = if state.grounded { 0.0 } else { 1.0 };
+    state.air_weight +=
+        (air_target - state.air_weight) * (1.0 - (-AIR_POSE_SHARPNESS * delta_time).exp());
+
+    let flip_active = state.flip_duration > 0.0 && state.flip_time < state.flip_duration;
+    if inputs.flip_pressed && !flip_active {
+        let horizontal = Vec3::new(velocity.x, 0.0, velocity.z);
+        let flip_direction = if inputs.direction.norm() > 0.3 {
+            inputs.direction.normalize()
+        } else if horizontal.norm() > 0.5 {
+            horizontal.normalize()
+        } else {
+            Vec3::new(state.facing_yaw.sin(), 0.0, state.facing_yaw.cos())
+        };
+        let start = if !state.grounded {
+            Some((FLIP_DURATION, FLIP_PIVOT_HEIGHT))
+        } else if horizontal.norm() > ROLL_MINIMUM_SPEED {
+            Some((ROLL_DURATION, ROLL_PIVOT_HEIGHT))
+        } else {
+            None
+        };
+        if let Some((duration, pivot)) = start {
+            let axis_world = nalgebra_glm::cross(&Vec3::y(), &flip_direction).normalize();
+            let inverse_yaw = nalgebra_glm::quat_angle_axis(-state.facing_yaw, &Vec3::y());
+            state.flip_axis = nalgebra_glm::quat_rotate_vec3(&inverse_yaw, &axis_world);
+            let facing_right = Vec3::new(state.facing_yaw.cos(), 0.0, -state.facing_yaw.sin());
+            state.flip_side = flip_direction.dot(&facing_right).abs();
+            state.flip_time = 0.0;
+            state.flip_duration = duration;
+            state.flip_pivot = pivot;
+        }
+    }
+    if state.flip_duration > 0.0 {
+        state.flip_time += delta_time;
+        if state.flip_time >= state.flip_duration {
+            state.flip_duration = 0.0;
+            state.tuck_weight = 0.0;
+        } else {
+            let progress = state.flip_time / state.flip_duration;
+            state.tuck_weight = (std::f32::consts::PI * progress).sin();
+        }
     }
 
     position += velocity * delta_time;
