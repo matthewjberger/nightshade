@@ -76,7 +76,7 @@ fn solve_hands_to_ledge(sandbox_world: &SandboxWorld, world: &mut World, body: E
     let hand_center = feet + wall_direction * HAND_EDGE_FORWARD;
     let arm_chains = sandbox_world.resources.pose.arm_chains.clone();
     for (chain_index, chain) in arm_chains.into_iter().enumerate() {
-        let side = if chain_index == 0 { 1.0 } else { -1.0 };
+        let side = if chain_index == 0 { -1.0 } else { 1.0 };
         let target = Vec3::new(
             hand_center.x + character.hang_tangent.x * HAND_EDGE_SPREAD * side,
             hand_height,

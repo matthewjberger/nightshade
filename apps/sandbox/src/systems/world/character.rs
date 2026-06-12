@@ -85,6 +85,7 @@ const CLIMB_FORWARD_SPEED: f32 = 2.0;
 const LOOK_YAW_LIMIT: f32 = 1.05;
 const LOOK_PITCH_LIMIT: f32 = 0.6;
 const LOOK_SHARPNESS: f32 = 8.0;
+const LOOK_FADE_FORWARDNESS: f32 = 0.3;
 const RAGDOLL_IMPACT_SPEED: f32 = 9.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
@@ -869,12 +870,15 @@ fn move_character(
         (gait_target - state.gait_weight) * (1.0 - (-GAIT_WEIGHT_SHARPNESS * delta_time).exp());
     let inverse_facing = nalgebra_glm::quat_angle_axis(-state.facing_yaw, &Vec3::y());
     let aim_in_body = nalgebra_glm::quat_rotate_vec3(&inverse_facing, &camera_aim);
+    let forwardness = (aim_in_body.z / LOOK_FADE_FORWARDNESS).clamp(0.0, 1.0);
     let look_yaw_target = aim_in_body
         .x
         .atan2(aim_in_body.z)
-        .clamp(-LOOK_YAW_LIMIT, LOOK_YAW_LIMIT);
-    let look_pitch_target =
-        (-aim_in_body.y.clamp(-1.0, 1.0).asin()).clamp(-LOOK_PITCH_LIMIT, LOOK_PITCH_LIMIT);
+        .clamp(-LOOK_YAW_LIMIT, LOOK_YAW_LIMIT)
+        * forwardness;
+    let look_pitch_target = (-aim_in_body.y.clamp(-1.0, 1.0).asin())
+        .clamp(-LOOK_PITCH_LIMIT, LOOK_PITCH_LIMIT)
+        * forwardness;
     let look_blend = 1.0 - (-LOOK_SHARPNESS * delta_time).exp();
     state.look_yaw += (look_yaw_target - state.look_yaw) * look_blend;
     state.look_pitch += (look_pitch_target - state.look_pitch) * look_blend;
