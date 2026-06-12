@@ -28,11 +28,32 @@ pub fn assign_local_transform(
     mark_local_transform_dirty(world, entity);
 }
 
+/// Returns the entity's local transform for mutation, queueing the entity and
+/// its descendants for global transform recomputation at the end of the
+/// frame. The deferred queue is what makes this safe to call before the
+/// mutation: the propagation system reads the local transform after the
+/// caller has written it, where an immediate recompute here would publish the
+/// value from before the mutation.
 pub fn mutate_local_transform(
     world: &mut World,
     entity: freecs::Entity,
 ) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
-    mark_local_transform_dirty(world, entity);
+    if world.resources.transform_state.children_cache.is_empty()
+        && world.core.query_entities(PARENT).count() > 0
+    {
+        validate_and_rebuild_children_cache(world);
+    }
+
+    let mut stack = vec![entity];
+    while let Some(current) = stack.pop() {
+        world.resources.transform_state.dirty_entities.push(current);
+        if let Some(children) = world.resources.transform_state.children_cache.get(&current) {
+            for &child in children {
+                stack.push(child);
+            }
+        }
+    }
+
     world.core.get_local_transform_mut(entity)
 }
 

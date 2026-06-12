@@ -1387,6 +1387,11 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .with_visible(false)
                 .with_min_inner_size(winit::dpi::LogicalSize::new(400.0, 300.0));
 
+            if let Some((width, height)) = self.world.resources.window.initial_size {
+                attributes =
+                    attributes.with_inner_size(winit::dpi::PhysicalSize::new(width, height));
+            }
+
             #[cfg(feature = "assets")]
             if let Some(icon_bytes) = self.world.resources.window.icon_bytes
                 && let Ok(icon_image) = image::load_from_memory(icon_bytes)
@@ -1553,7 +1558,9 @@ impl winit::application::ApplicationHandler for WindowContext {
 
             if let Some(window_handle) = &self.world.resources.window.handle {
                 window_handle.set_cursor_visible(self.world.resources.renderer_state.show_cursor);
-                window_handle.set_visible(true);
+                if !self.world.resources.window.start_hidden {
+                    window_handle.set_visible(true);
+                }
             }
         }
     }
