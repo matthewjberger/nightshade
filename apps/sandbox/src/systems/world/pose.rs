@@ -315,6 +315,8 @@ fn table_keyframe(
 const HANG: &[(&str, char, f32)] = &[
     ("LeftArm", 'z', 75.0),
     ("RightArm", 'z', -75.0),
+    ("LeftForeArm", 'y', -90.0),
+    ("RightForeArm", 'y', 90.0),
     ("LeftForeArm", 'x', -20.0),
     ("RightForeArm", 'x', -20.0),
     ("LeftHand", 'x', 55.0),
