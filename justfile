@@ -51,11 +51,11 @@ install-deps:
 
 # Install development tools
 install-tools:
-    cargo install cargo-license
-    cargo install cargo-about
-    cargo install cargo-deny
-    cargo install cargo-machete
-    cargo install git-cliff
+    cargo install --locked cargo-license
+    cargo install --locked cargo-about
+    cargo install --locked cargo-deny
+    cargo install --locked cargo-machete
+    cargo install --locked git-cliff
 
 # Install git hooks (Windows)
 [windows]
