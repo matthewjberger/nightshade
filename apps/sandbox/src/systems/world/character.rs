@@ -536,20 +536,22 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
         return;
     };
     lines.lines.clear();
-    push_wire_capsule(
-        &mut lines.lines,
-        feet + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0),
-        BUMPER_HALF_HEIGHT,
-        BUMPER_RADIUS,
-        BUMPER_COLOR,
-    );
-    push_wire_sphere(
-        &mut lines.lines,
-        feet + Vec3::new(0.0, LIFTER_CENTER_HEIGHT, 0.0),
-        LIFTER_RADIUS,
-        LIFTER_COLOR,
-    );
     let state = &sandbox_world.resources.character;
+    if state.spheres_visible {
+        push_wire_capsule(
+            &mut lines.lines,
+            feet + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0),
+            BUMPER_HALF_HEIGHT,
+            BUMPER_RADIUS,
+            BUMPER_COLOR,
+        );
+        push_wire_sphere(
+            &mut lines.lines,
+            feet + Vec3::new(0.0, LIFTER_CENTER_HEIGHT, 0.0),
+            LIFTER_RADIUS,
+            LIFTER_COLOR,
+        );
+    }
     if state.stride_wheel_visible {
         push_stride_wheel(
             &mut lines.lines,

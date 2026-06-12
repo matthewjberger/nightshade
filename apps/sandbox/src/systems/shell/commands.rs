@@ -12,6 +12,7 @@ pub const ALL: &[Command<SandboxShellContext>] = &[
     player::FLY,
     player::THIRD_PERSON,
     player::STRIDE_WHEEL,
+    player::SPHERES,
     time::TIME,
     time::TIME_PAUSE,
     time::TIME_SPEED,

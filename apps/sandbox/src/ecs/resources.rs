@@ -63,6 +63,7 @@ pub struct CharacterState {
     pub lean: nalgebra_glm::Vec3,
     pub stride_distance: f32,
     pub stride_wheel_visible: bool,
+    pub spheres_visible: bool,
 }
 
 #[derive(Default)]

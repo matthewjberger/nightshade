@@ -44,6 +44,13 @@ pub const STRIDE_WHEEL: Command<SandboxShellContext> = Command {
     execute: stride_wheel,
 };
 
+pub const SPHERES: Command<SandboxShellContext> = Command {
+    name: "spheres",
+    description: "Toggle the bumper and lifter visualization",
+    usage: "spheres [on|off]",
+    execute: spheres,
+};
+
 fn player_pos(_args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
     context.queue.push(ShellAction::PrintPlayerPosition);
     "see log".to_string()
@@ -89,6 +96,14 @@ fn stride_wheel(args: &[&str], _world: &mut World, context: &mut SandboxShellCon
         return STRIDE_WHEEL.usage.to_string();
     };
     context.queue.push(ShellAction::SetStrideWheel(value));
+    "OK".to_string()
+}
+
+fn spheres(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
+    let Some(value) = parse_toggle(args) else {
+        return SPHERES.usage.to_string();
+    };
+    context.queue.push(ShellAction::SetSpheres(value));
     "OK".to_string()
 }
 

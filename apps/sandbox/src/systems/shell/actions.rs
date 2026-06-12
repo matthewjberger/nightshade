@@ -64,6 +64,10 @@ pub fn apply_shell_actions(
             let state = &mut sandbox_world.resources.character;
             state.stride_wheel_visible = value.unwrap_or(!state.stride_wheel_visible);
         }
+        ShellAction::SetSpheres(value) => {
+            let state = &mut sandbox_world.resources.character;
+            state.spheres_visible = value.unwrap_or(!state.spheres_visible);
+        }
         ShellAction::SetTimeOfDay(hour) => {
             world.resources.renderer_state.day_night.hour = hour.clamp(0.0, 24.0);
         }
