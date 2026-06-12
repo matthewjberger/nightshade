@@ -82,6 +82,9 @@ const SHIMMY_SPEED: f32 = 0.8;
 const HANG_POSE_SHARPNESS: f32 = 10.0;
 const CLIMB_UP_SPEED: f32 = 5.5;
 const CLIMB_FORWARD_SPEED: f32 = 2.0;
+const LOOK_YAW_LIMIT: f32 = 1.05;
+const LOOK_PITCH_LIMIT: f32 = 0.6;
+const LOOK_SHARPNESS: f32 = 8.0;
 const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
@@ -575,6 +578,11 @@ fn move_character(
 
     let inputs = read_inputs(world, camera);
     let gravity_y = world.resources.physics.gravity.y;
+    let camera_aim = world
+        .core
+        .get_local_transform(camera)
+        .map(|transform| transform.forward_vector())
+        .unwrap_or_else(|| Vec3::new(0.0, 0.0, -1.0));
 
     let state = &mut sandbox_world.resources.character;
     let mut velocity = state.velocity;
@@ -829,6 +837,18 @@ fn move_character(
     };
     state.gait_weight +=
         (gait_target - state.gait_weight) * (1.0 - (-GAIT_WEIGHT_SHARPNESS * delta_time).exp());
+    let inverse_facing = nalgebra_glm::quat_angle_axis(-state.facing_yaw, &Vec3::y());
+    let aim_in_body = nalgebra_glm::quat_rotate_vec3(&inverse_facing, &camera_aim);
+    let look_yaw_target = aim_in_body
+        .x
+        .atan2(aim_in_body.z)
+        .clamp(-LOOK_YAW_LIMIT, LOOK_YAW_LIMIT);
+    let look_pitch_target =
+        (-aim_in_body.y.clamp(-1.0, 1.0).asin()).clamp(-LOOK_PITCH_LIMIT, LOOK_PITCH_LIMIT);
+    let look_blend = 1.0 - (-LOOK_SHARPNESS * delta_time).exp();
+    state.look_yaw += (look_yaw_target - state.look_yaw) * look_blend;
+    state.look_pitch += (look_pitch_target - state.look_pitch) * look_blend;
+
     let facing_yaw = state.facing_yaw;
     let lean = state.lean;
 

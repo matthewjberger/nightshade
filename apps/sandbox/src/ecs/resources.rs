@@ -87,6 +87,7 @@ pub struct PoseState {
     pub hang_index: Option<usize>,
     pub leg_chains: Vec<IkChain>,
     pub arm_chains: Vec<IkChain>,
+    pub look_joints: Vec<(Entity, f32)>,
     pub hips: Option<Entity>,
     pub hips_rest_translation: nalgebra_glm::Vec3,
     pub hips_drop_local: nalgebra_glm::Vec3,
@@ -130,6 +131,8 @@ pub struct CharacterState {
     pub hang_tangent: nalgebra_glm::Vec3,
     pub hang_edge_y: f32,
     pub hang_weight: f32,
+    pub look_yaw: f32,
+    pub look_pitch: f32,
 }
 
 #[derive(Default)]

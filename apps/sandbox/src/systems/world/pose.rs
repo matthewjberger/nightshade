@@ -13,6 +13,12 @@ const IDLE_ARM_DROP_DEGREES: f32 = 65.0;
 const IDLE_ELBOW_BEND_DEGREES: f32 = 20.0;
 const CROUCH_HIPS_DROP: f32 = 0.22;
 const CROUCH_MAX_WEIGHT: f32 = 1.15;
+const LOOK_JOINTS: &[(&str, f32)] = &[
+    ("Spine1", 0.12),
+    ("Spine2", 0.18),
+    ("Neck", 0.3),
+    ("Head", 0.4),
+];
 
 /// Model-space joint deltas for the crouch keyframe: hips sink while
 /// thighs pitch forward and shins fold back so the feet stay planted,
@@ -395,6 +401,10 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
     pose.hips = hips;
     pose.hips_rest_translation = hips_rest_translation;
     pose.hips_drop_local = hips_drop_local;
+    pose.look_joints = LOOK_JOINTS
+        .iter()
+        .filter_map(|(suffix, weight)| Some((find_bone(&bones, suffix)?, *weight)))
+        .collect();
 }
 
 /// The hips-parent local vector corresponding to one meter of
@@ -578,6 +588,61 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
                 transform.translation + (target_translation - transform.translation) * blend;
         }
         mark_local_transform_dirty(world, hips);
+    }
+
+    let look_scale = (1.0 - tuck_weight) * (1.0 - hang_weight);
+    let look_yaw = character.look_yaw * look_scale;
+    let look_pitch = character.look_pitch * look_scale;
+    if (look_yaw.abs() > 1e-3 || look_pitch.abs() > 1e-3)
+        && let Some(model) = character.model
+        && !pose.look_joints.is_empty()
+    {
+        let mut deltas: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
+        for (entity, weight) in &pose.look_joints {
+            let rotation = nalgebra_glm::quat_angle_axis(look_yaw * weight, &Vec3::y())
+                * nalgebra_glm::quat_angle_axis(look_pitch * weight, &Vec3::x());
+            deltas.insert(*entity, rotation);
+        }
+        apply_model_space_deltas(world, model, &deltas);
+    }
+}
+
+/// Apply model-space rotation deltas on top of the pose already
+/// written this frame, walking the skeleton so children of adjusted
+/// joints stay consistent.
+fn apply_model_space_deltas(
+    world: &mut World,
+    model: Entity,
+    deltas: &HashMap<Entity, nalgebra_glm::Quat>,
+) {
+    let mut adjustments = Vec::new();
+    {
+        let mut stack = vec![(model, nalgebra_glm::quat_identity())];
+        while let Some((entity, posed_parent)) = stack.pop() {
+            let local = world
+                .core
+                .get_local_transform(entity)
+                .map(|transform| transform.rotation)
+                .unwrap_or_else(nalgebra_glm::quat_identity);
+            let new_local = if let Some(delta) = deltas.get(&entity) {
+                let adjusted =
+                    nalgebra_glm::quat_inverse(&posed_parent) * delta * posed_parent * local;
+                adjustments.push((entity, adjusted));
+                adjusted
+            } else {
+                local
+            };
+            let posed = posed_parent * new_local;
+            for child in query_children(world, entity) {
+                stack.push((child, posed));
+            }
+        }
+    }
+    for (entity, rotation) in adjustments {
+        if let Some(transform) = world.core.get_local_transform_mut(entity) {
+            transform.rotation = nalgebra_glm::quat_normalize(&rotation);
+        }
+        mark_local_transform_dirty(world, entity);
     }
 }
 
