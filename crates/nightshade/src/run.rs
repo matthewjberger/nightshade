@@ -106,6 +106,9 @@ pub use crate::state::{NextStateBuilder, RenderResources, State};
 pub mod offscreen;
 pub use offscreen::*;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pump;
+
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::ecs::input::resources::DroppedFile>> =

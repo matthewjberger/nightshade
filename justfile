@@ -15,7 +15,7 @@ build:
 
 # Runs cargo check and format check
 check:
-    cargo check --all --tests
+    cargo check --all --all-targets
     cargo fmt --all -- --check
 
 # Generates and opens documentation for a specific project
@@ -80,7 +80,7 @@ uninstall-hooks:
 
 # Runs linter and displays warnings
 lint: lint-wasm
-    cargo clippy --all --tests -- -D warnings
+    cargo clippy --all --all-targets -- -D warnings
 
 # Runs linter for wasm32 target
 lint-wasm:
@@ -114,11 +114,12 @@ sync-template-leptos:
 pull-template-leptos:
     git subtree pull --prefix=template_leptos {{template_leptos_repo}} main --squash
 
-# Publishes the nightshade crate to crates.io
+# Publishes the nightshade crate to crates.io. nightshade-api stays
+# unpublished (publish = false) until it is ready for a release.
 publish-crate:
     cargo publish -p nightshade
 
-# Dry run of publishing the nightshade crate
+# Dry run of publishing the nightshade crate (the api dry run needs the engine on the index first)
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
 
@@ -138,6 +139,36 @@ run-web:
 # Runs a native app by name
 run-app $project="sandbox" *arguments="":
     cargo run -r -p {{project}} -- {{arguments}}
+
+# Runs a nightshade-api example by name (e.g. `just run-example solar_system`)
+run-example $name="spinning_cube":
+    cargo run -r -p nightshade-api --example {{name}}
+
+# Lists the nightshade-api examples
+[windows]
+list-examples:
+    Get-ChildItem crates/nightshade-api/examples -Filter *.rs | ForEach-Object { $_.BaseName }
+
+# Lists the nightshade-api examples
+[unix]
+list-examples:
+    @ls crates/nightshade-api/examples | sed 's/\.rs$//'
+
+# Runs every nightshade-api example for 120 frames as a local smoke gate
+[windows]
+test-examples:
+    $ErrorActionPreference = 'Stop'; Get-ChildItem crates/nightshade-api/examples -Filter *.rs | ForEach-Object { $env:NIGHTSHADE_API_FRAMES = "120"; Write-Host "Running example $($_.BaseName)"; cargo run -r -p nightshade-api --example $_.BaseName; if ($LASTEXITCODE -ne 0) { throw "example $($_.BaseName) failed" } }; Remove-Item Env:\NIGHTSHADE_API_FRAMES
+
+# Runs every nightshade-api example for 120 frames as a local smoke gate
+[unix]
+test-examples:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for example in crates/nightshade-api/examples/*.rs; do
+        name=$(basename "$example" .rs)
+        echo "Running example $name"
+        NIGHTSHADE_API_FRAMES=120 cargo run -r -p nightshade-api --example "$name"
+    done
 
 # Serves an app in the browser by name (e.g. `just run-wasm sandbox`)
 run-wasm $project="sandbox":
@@ -300,7 +331,7 @@ strip-release tag:
 # Bumps the minor version, updates changelog, and creates a git tag (Windows)
 [windows]
 bump-minor-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMinor = [int]$parts[1] + 1; $newVersion = "$($parts[0]).$newMinor.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$($parts[0]).$newMinor"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
+    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMinor = [int]$parts[1] + 1; $newVersion = "$($parts[0]).$newMinor.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$($parts[0]).$newMinor"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md'; (Get-Content 'crates/nightshade-api/src/lib.rs') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'crates/nightshade-api/src/lib.rs';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-api/src/lib.rs template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
 
 # Bumps the minor version, updates changelog, and creates a git tag (Unix)
 [unix]
@@ -319,11 +350,14 @@ bump-minor-version:
     sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
+    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" Cargo.toml
+    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
+    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" crates/nightshade-api/src/lib.rs
     sed -i "s/nightshade = \"$CURRENT_MM\"/nightshade = \"$NEW_MM\"/" crates/nightshade/src/lib.rs
     sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" template/README.md
     sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/desktop/Cargo.toml
     sed -i "s/nightshade = { version = \"[0-9.]*\"/nightshade = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml
+    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-api/src/lib.rs template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml
     git commit -m "chore: bump version to v$NEW_VERSION"
     git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
     git add CHANGELOG.md
@@ -336,7 +370,7 @@ bump-minor-version:
 # Bumps the major version, updates changelog, and creates a git tag (Windows)
 [windows]
 bump-major-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMajor = [int]$parts[0] + 1; $newVersion = "$newMajor.0.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$newMajor.0"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
+    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMajor = [int]$parts[0] + 1; $newVersion = "$newMajor.0.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$newMajor.0"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md'; (Get-Content 'crates/nightshade-api/src/lib.rs') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'crates/nightshade-api/src/lib.rs';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-api/src/lib.rs template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
 
 # Bumps the major version, updates changelog, and creates a git tag (Unix)
 [unix]
@@ -355,11 +389,14 @@ bump-major-version:
     sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
+    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" Cargo.toml
+    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
+    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" crates/nightshade-api/src/lib.rs
     sed -i "s/nightshade = \"$CURRENT_MM\"/nightshade = \"$NEW_MM\"/" crates/nightshade/src/lib.rs
     sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" template/README.md
     sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/desktop/Cargo.toml
     sed -i "s/nightshade = { version = \"[0-9.]*\"/nightshade = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml
+    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-api/src/lib.rs template/Cargo.toml template_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/desktop/Cargo.toml
     git commit -m "chore: bump version to v$NEW_VERSION"
     git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
     git add CHANGELOG.md
@@ -372,7 +409,7 @@ bump-major-version:
 # Bumps the patch version, updates changelog, and creates a git tag (Windows)
 [windows]
 bump-patch-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newPatch = [int]$parts[2] + 1; $newVersion = "$($parts[0]).$($parts[1]).$newPatch"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml';(Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
+    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newPatch = [int]$parts[2] + 1; $newVersion = "$($parts[0]).$($parts[1]).$newPatch"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md';(Get-Content 'apps/editor/desktop/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md template/Cargo.toml template_leptos/worker/Cargo.toml apps/editor/desktop/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
 
 # Bumps the patch version, updates changelog, and creates a git tag (Unix)
 [unix]
@@ -389,8 +426,10 @@ bump-patch-version:
     sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
     sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
+    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" Cargo.toml
+    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
     sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/desktop/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md template/Cargo.toml template_leptos/worker/Cargo.toml apps/editor/desktop/Cargo.toml
+    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md template/Cargo.toml template_leptos/worker/Cargo.toml apps/editor/desktop/Cargo.toml
     git commit -m "chore: bump version to v$NEW_VERSION"
     git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
     git add CHANGELOG.md
