@@ -21,6 +21,7 @@ logs/
 apps/game/game.json
 apps/game/game.nsmap
 apps/sandbox/sandbox.nsmap
+apps/sandbox/assets/
 apps/tower_defense/tower_defense.nsmap
 *.tmp
 *.report.json

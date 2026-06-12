@@ -27,13 +27,21 @@ const FIRST_PERSON_CAPSULE_HALF_HEIGHT: f32 = 1.0;
 const CAMERA_DISTANCE: f32 = 6.0;
 const CAMERA_PITCH: f32 = 0.3;
 const GAMEPAD_DEADZONE: f32 = 0.15;
+const FACING_SPEED_THRESHOLD: f32 = 0.5;
+const FACING_TURN_SHARPNESS: f32 = 12.0;
+const LEAN_RADIANS_PER_ACCELERATION: f32 = 0.001;
+const LEAN_MAX_RADIANS: f32 = 0.3;
+const LEAN_SHARPNESS: f32 = 10.0;
 const MAX_STEP_SECONDS: f32 = 1.0 / 30.0;
 const BUMPER_RESOLVE_ITERATIONS: usize = 3;
 const SPHERE_SEGMENTS: usize = 24;
 const SPHERE_LATITUDE_RINGS: usize = 12;
 const SPHERE_MERIDIAN_CIRCLES: usize = 12;
+const STRIDE_WHEEL_RADIUS: f32 = 0.5;
+const STRIDE_WHEEL_SPOKES: usize = 8;
 const BUMPER_COLOR: Vec4 = Vec4::new(0.2, 1.0, 0.3, 1.0);
 const LIFTER_COLOR: Vec4 = Vec4::new(1.0, 1.0, 1.0, 1.0);
+const STRIDE_WHEEL_COLOR: Vec4 = Vec4::new(1.0, 0.85, 0.2, 1.0);
 
 pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let feet = spawn_feet_position(world);
@@ -77,6 +85,90 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     state.body = Some(body);
     state.camera = Some(camera);
     state.spheres = Some(spheres);
+    state.stride_wheel_visible = true;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    spawn_model(sandbox_world, world, body);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+const MODEL_PATH: &str = "apps/sandbox/assets/racer.glb";
+
+#[cfg(not(target_arch = "wasm32"))]
+fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
+    let bytes = match std::fs::read(MODEL_PATH) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            tracing::warn!("no character model at {MODEL_PATH}: {error}");
+            return;
+        }
+    };
+    let mut result = match nightshade::ecs::prefab::import_gltf_from_bytes(&bytes) {
+        Ok(result) => result,
+        Err(error) => {
+            tracing::error!("failed to import character model: {error}");
+            return;
+        }
+    };
+    nightshade::ecs::loading::queue_gltf_load(world, &mut result);
+    let Some(prefab) = result.prefabs.first().cloned() else {
+        return;
+    };
+    let model = nightshade::ecs::prefab::spawn_prefab_with_skins(
+        world,
+        &prefab,
+        &result.animations,
+        &result.skins,
+        Vec3::zeros(),
+    );
+    if let Some(name) = world.core.get_name_mut(model) {
+        name.0 = "Character Model".to_string();
+    }
+    world
+        .core
+        .add_components(model, nightshade::ecs::world::PARENT);
+    world.core.set_parent(
+        model,
+        nightshade::ecs::transform::components::Parent(Some(body)),
+    );
+    world.resources.transform_state.children_cache_valid = false;
+    if let Some(transform) = world.core.get_local_transform_mut(model) {
+        transform.translation = Vec3::zeros();
+    }
+    mark_local_transform_dirty(world, model);
+
+    if let Some(player) = world.core.get_animation_player_mut(model) {
+        let idle_clip = player
+            .clips
+            .iter()
+            .position(|clip| clip.name.to_lowercase().contains("idle"));
+        let clip = idle_clip.or(if player.clips.is_empty() {
+            None
+        } else {
+            Some(0)
+        });
+        if let Some(index) = clip {
+            player.play(index);
+            player.looping = true;
+        }
+    }
+
+    sandbox_world.resources.character.model = Some(model);
+}
+
+fn set_model_visible(sandbox_world: &SandboxWorld, world: &mut World, visible: bool) {
+    let Some(model) = sandbox_world.resources.character.model else {
+        return;
+    };
+    let mut stack = vec![model];
+    while let Some(entity) = stack.pop() {
+        if let Some(visibility) = world.core.get_visibility_mut(entity) {
+            visibility.visible = visible;
+        }
+        stack.extend(nightshade::ecs::transform::queries::query_children(
+            world, entity,
+        ));
+    }
 }
 
 pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: bool) {
@@ -116,6 +208,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         {
             visibility.visible = true;
         }
+        set_model_visible(sandbox_world, world, true);
         if !fly {
             world.resources.active_camera = sandbox_world.resources.character.camera;
         }
@@ -130,6 +223,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         {
             visibility.visible = false;
         }
+        set_model_visible(sandbox_world, world, false);
         if !fly {
             world.resources.active_camera = sandbox_world.resources.player.camera_entity;
         }
@@ -286,6 +380,17 @@ fn move_character(
     } else {
         AIR_ACCELERATION
     };
+    let velocity_error = Vec3::new(
+        target_velocity.x - velocity.x,
+        0.0,
+        target_velocity.z - velocity.z,
+    );
+    let mut lean_target = velocity_error * acceleration * LEAN_RADIANS_PER_ACCELERATION;
+    if lean_target.norm() > LEAN_MAX_RADIANS {
+        lean_target = lean_target.normalize() * LEAN_MAX_RADIANS;
+    }
+    let lean_blend = 1.0 - (-LEAN_SHARPNESS * delta_time).exp();
+    state.lean += (lean_target - state.lean) * lean_blend;
     let blend = (acceleration * delta_time).min(1.0);
     velocity.x += (target_velocity.x - velocity.x) * blend;
     velocity.z += (target_velocity.z - velocity.z) * blend;
@@ -340,9 +445,31 @@ fn move_character(
         }
     }
 
+    let horizontal_velocity = Vec3::new(velocity.x, 0.0, velocity.z);
+    if horizontal_velocity.norm() > FACING_SPEED_THRESHOLD {
+        let target_yaw = horizontal_velocity.x.atan2(horizontal_velocity.z);
+        let difference = (target_yaw - state.facing_yaw + std::f32::consts::PI)
+            .rem_euclid(std::f32::consts::TAU)
+            - std::f32::consts::PI;
+        state.facing_yaw += difference * (1.0 - (-FACING_TURN_SHARPNESS * delta_time).exp());
+    }
+    if state.grounded {
+        state.stride_distance += horizontal_velocity.norm() * delta_time;
+    }
+    let facing_yaw = state.facing_yaw;
+    let lean = state.lean;
+
     state.velocity = velocity;
     if let Some(transform) = world.core.get_local_transform_mut(body) {
         transform.translation = position;
+        let yaw_rotation = nalgebra_glm::quat_angle_axis(facing_yaw, &Vec3::y());
+        let lean_angle = lean.norm();
+        transform.rotation = if lean_angle > 1e-4 {
+            let lean_axis = nalgebra_glm::cross(&Vec3::y(), &(lean / lean_angle));
+            nalgebra_glm::quat_angle_axis(lean_angle, &lean_axis) * yaw_rotation
+        } else {
+            yaw_rotation
+        };
     }
     mark_local_transform_dirty(world, body);
 }
@@ -422,7 +549,42 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
         LIFTER_RADIUS,
         LIFTER_COLOR,
     );
+    let state = &sandbox_world.resources.character;
+    if state.stride_wheel_visible {
+        push_stride_wheel(
+            &mut lines.lines,
+            feet,
+            state.facing_yaw,
+            state.stride_distance,
+        );
+    }
     lines.mark_dirty();
+}
+
+fn push_stride_wheel(lines: &mut Vec<Line>, feet: Vec3, facing_yaw: f32, stride_distance: f32) {
+    let forward = Vec3::new(facing_yaw.sin(), 0.0, facing_yaw.cos());
+    let center = feet + Vec3::new(0.0, STRIDE_WHEEL_RADIUS, 0.0);
+    push_circle(
+        lines,
+        center,
+        STRIDE_WHEEL_RADIUS,
+        forward,
+        Vec3::y(),
+        STRIDE_WHEEL_COLOR,
+    );
+    let phase = stride_distance / STRIDE_WHEEL_RADIUS;
+    for spoke_index in 0..STRIDE_WHEEL_SPOKES {
+        let angle =
+            (spoke_index as f32 / STRIDE_WHEEL_SPOKES as f32) * std::f32::consts::TAU - phase;
+        let rim = center
+            + forward * angle.cos() * STRIDE_WHEEL_RADIUS
+            + Vec3::new(0.0, angle.sin() * STRIDE_WHEEL_RADIUS, 0.0);
+        lines.push(Line {
+            start: center,
+            end: rim,
+            color: STRIDE_WHEEL_COLOR,
+        });
+    }
 }
 
 fn push_wire_sphere(lines: &mut Vec<Line>, center: Vec3, radius: f32, color: Vec4) {

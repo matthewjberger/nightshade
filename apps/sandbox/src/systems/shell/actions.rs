@@ -60,6 +60,10 @@ pub fn apply_shell_actions(
                 .third_person_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
+        ShellAction::SetStrideWheel(value) => {
+            let state = &mut sandbox_world.resources.character;
+            state.stride_wheel_visible = value.unwrap_or(!state.stride_wheel_visible);
+        }
         ShellAction::SetTimeOfDay(hour) => {
             world.resources.renderer_state.day_night.hour = hour.clamp(0.0, 24.0);
         }

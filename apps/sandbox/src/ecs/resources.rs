@@ -55,9 +55,14 @@ pub struct CharacterState {
     pub body: Option<Entity>,
     pub camera: Option<Entity>,
     pub spheres: Option<Entity>,
+    pub model: Option<Entity>,
     pub velocity: nalgebra_glm::Vec3,
     pub grounded: bool,
     pub jump_suppress_timer: f32,
+    pub facing_yaw: f32,
+    pub lean: nalgebra_glm::Vec3,
+    pub stride_distance: f32,
+    pub stride_wheel_visible: bool,
 }
 
 #[derive(Default)]

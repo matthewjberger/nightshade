@@ -37,6 +37,13 @@ pub const THIRD_PERSON: Command<SandboxShellContext> = Command {
     execute: third_person,
 };
 
+pub const STRIDE_WHEEL: Command<SandboxShellContext> = Command {
+    name: "stride_wheel",
+    description: "Toggle the stride wheel visualization",
+    usage: "stride_wheel [on|off]",
+    execute: stride_wheel,
+};
+
 fn player_pos(_args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
     context.queue.push(ShellAction::PrintPlayerPosition);
     "see log".to_string()
@@ -74,6 +81,14 @@ fn third_person(args: &[&str], _world: &mut World, context: &mut SandboxShellCon
         return THIRD_PERSON.usage.to_string();
     };
     context.queue.push(ShellAction::SetThirdPerson(value));
+    "OK".to_string()
+}
+
+fn stride_wheel(args: &[&str], _world: &mut World, context: &mut SandboxShellContext) -> String {
+    let Some(value) = parse_toggle(args) else {
+        return STRIDE_WHEEL.usage.to_string();
+    };
+    context.queue.push(ShellAction::SetStrideWheel(value));
     "OK".to_string()
 }
 
