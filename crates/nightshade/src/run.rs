@@ -486,6 +486,8 @@ pub fn run_frame_body(
     crate::ecs::world::commands::sync_cursor_lock_state(world);
 
     crate::ecs::graphics::systems::day_night_cycle_system(world);
+    #[cfg(not(target_arch = "wasm32"))]
+    recenter_locked_cursor(world);
     state.run_systems(world);
     world.resources.input.events.clear();
 
@@ -552,6 +554,39 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     let schedule = std::mem::take(&mut world.resources.schedules.frame);
     crate::schedule::schedule_run(&schedule, world);
     world.resources.schedules.frame = schedule;
+}
+
+/// Pins the OS cursor to the window center each frame while the cursor is
+/// locked. Windows does not support `CursorGrabMode::Locked`, so
+/// [`set_cursor_locked`](crate::ecs::world::commands::set_cursor_locked) falls
+/// back to `Confined`, which keeps the cursor in the window but lets it drift to
+/// an edge. Warping it back keeps first-person look stable and keeps the
+/// crosshair pick at screen center. Mouse look reads raw device deltas, which
+/// the warp does not perturb.
+#[cfg(not(target_arch = "wasm32"))]
+fn recenter_locked_cursor(world: &mut World) {
+    if !world.resources.window.cursor_locked {
+        return;
+    }
+    let Some(window_handle) = world.resources.window.handle.as_ref() else {
+        return;
+    };
+    let size = window_handle.inner_size();
+    if size.width == 0 || size.height == 0 {
+        return;
+    }
+    let center_x = size.width as f32 / 2.0;
+    let center_y = size.height as f32 / 2.0;
+    if window_handle
+        .set_cursor_position(winit::dpi::PhysicalPosition::new(
+            center_x as f64,
+            center_y as f64,
+        ))
+        .is_ok()
+    {
+        world.resources.input.mouse.position = nalgebra_glm::vec2(center_x, center_y);
+        world.resources.input.mouse.position_delta = nalgebra_glm::vec2(0.0, 0.0);
+    }
 }
 
 fn input_event_system(world: &mut World, window_event: &WindowEvent) {
