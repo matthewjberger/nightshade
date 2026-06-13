@@ -4,6 +4,7 @@ export RUST_BACKTRACE := "1"
 
 template_repo := "https://github.com/matthewjberger/nightshade-template.git"
 template_leptos_repo := "https://github.com/matthewjberger/nightshade-template-leptos.git"
+template_api_repo := "https://github.com/matthewjberger/nightshade-api-template.git"
 
 # Displays the list of available commands
 @just:
@@ -113,6 +114,20 @@ sync-template-leptos:
 # Pulls updates from nightshade-template-leptos repo
 pull-template-leptos:
     git subtree pull --prefix=template_leptos {{template_leptos_repo}} main --squash
+
+# Pushes template_api changes to nightshade-api-template repo
+push-template-api:
+    git subtree push --prefix=template_api {{template_api_repo}} main
+
+# Force syncs template_api to nightshade-api-template repo (overwrites remote)
+sync-template-api:
+    git subtree split --prefix=template_api -b template-api-branch
+    git push --force {{template_api_repo}} template-api-branch:main
+    git branch -D template-api-branch
+
+# Pulls updates from nightshade-api-template repo
+pull-template-api:
+    git subtree pull --prefix=template_api {{template_api_repo}} main --squash
 
 # Publishes the nightshade and nightshade-api crates to crates.io
 publish-crate:
@@ -468,6 +483,7 @@ publish-patch:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -479,6 +495,7 @@ publish-patch:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
@@ -490,6 +507,7 @@ publish-minor:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -501,6 +519,7 @@ publish-minor:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
 [windows]
@@ -512,6 +531,7 @@ publish-major:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
 [unix]
@@ -523,6 +543,7 @@ publish-major:
     just publish-editor
     just push-template
     just push-template-leptos
+    just push-template-api
 
 # Builds the project for Steam Deck using cross
 build-steamdeck $project="sandbox":
