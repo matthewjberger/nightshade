@@ -267,6 +267,7 @@ freecs::ecs! {
         picking_world: crate::ecs::picking::resources::PickingWorld,
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
         schedules: crate::schedule::Schedules,
+        global_scripts: crate::ecs::script::components::GlobalScripts,
         #[cfg(feature = "scripting")]
         script_runtime: crate::ecs::script::resources::ScriptRuntime,
         scratch: crate::ecs::world::scratch::Scratch,
