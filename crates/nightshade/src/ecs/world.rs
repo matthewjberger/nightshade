@@ -167,6 +167,7 @@ freecs::ecs! {
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
             rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
             rotation: crate::ecs::transform::components::Rotation => ROTATION,
+            script: crate::ecs::script::components::Script => SCRIPT,
             skin: crate::ecs::skin::components::Skin => SKIN,
             text_character_background_colors: crate::ecs::text::components::TextCharacterBackgroundColors => TEXT_CHARACTER_BACKGROUND_COLORS,
             text_character_colors: crate::ecs::text::components::TextCharacterColors => TEXT_CHARACTER_COLORS,
@@ -266,6 +267,8 @@ freecs::ecs! {
         picking_world: crate::ecs::picking::resources::PickingWorld,
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
         schedules: crate::schedule::Schedules,
+        #[cfg(feature = "scripting")]
+        script_runtime: crate::ecs::script::resources::ScriptRuntime,
         scratch: crate::ecs::world::scratch::Scratch,
         shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]

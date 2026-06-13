@@ -56,6 +56,7 @@ pub mod prefab;
 pub mod primitives;
 #[cfg(feature = "scene_graph")]
 pub mod scene;
+pub mod script;
 pub mod skin;
 pub mod sync;
 #[cfg(feature = "terrain")]

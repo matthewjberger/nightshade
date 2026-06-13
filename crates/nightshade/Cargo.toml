@@ -105,6 +105,7 @@ navmesh = []
 navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
 networking = ["dep:hearsay"]
+scripting = ["dep:rhai", "physics"]
 editor-protocol = ["engine", "wgpu", "gizmos"]
 editor-protocol-agent = ["editor-protocol", "dep:serde_json"]
 
@@ -172,6 +173,7 @@ wgpu = { workspace = true, optional = true }
 naga_oil = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rhai = { version = "1.23", optional = true, features = ["sync"] }
 dirs = { version = "6.0", optional = true }
 hearsay = { version = "0.1", features = ["spawn", "websockets"], optional = true }
 ufbx = { version = "0.10", optional = true }
@@ -186,6 +188,7 @@ steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+rhai = { version = "1.23", optional = true, features = ["sync", "wasm-bindgen"] }
 uuid = { version = "1.0", features = ["v4", "js", "serde"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 tracing-subscriber = { workspace = true, optional = true }
