@@ -556,8 +556,8 @@ pub(crate) fn run_frame_systems(world: &mut World) {
     world.resources.schedules.frame = schedule;
 }
 
-/// Pins the OS cursor to the window center each frame while the cursor is
-/// locked. Windows does not support `CursorGrabMode::Locked`, so
+/// Hides the OS cursor and pins it to the window center each frame while the
+/// cursor is locked. Windows does not support `CursorGrabMode::Locked`, so
 /// [`set_cursor_locked`](crate::ecs::world::commands::set_cursor_locked) falls
 /// back to `Confined`, which keeps the cursor in the window but lets it drift to
 /// an edge. Warping it back keeps first-person look stable and keeps the
@@ -575,6 +575,7 @@ fn recenter_locked_cursor(world: &mut World) {
     if size.width == 0 || size.height == 0 {
         return;
     }
+    window_handle.set_cursor_visible(false);
     let center_x = size.width as f32 / 2.0;
     let center_y = size.height as f32 / 2.0;
     if window_handle
