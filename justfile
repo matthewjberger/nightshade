@@ -144,6 +144,22 @@ run-app $project="sandbox" *arguments="":
 run-example $name="spinning_cube":
     cargo run -r -p nightshade-api --example {{name}}
 
+# Serves a nightshade-api example as wasm in the browser via trunk, the same
+# pipeline the apps use (crates/nightshade-api/index.html + Trunk.toml). Only the
+# portable run() examples build for wasm; the open()/frame() examples are native
+# only. (Windows)
+[windows]
+run-example-wasm $name="collector":
+    $env:TRUNK_BUILD_EXAMPLE = "{{name}}"; trunk serve --release --open --config crates/nightshade-api/Trunk.toml
+
+# Serves a nightshade-api example as wasm in the browser via trunk, the same
+# pipeline the apps use (crates/nightshade-api/index.html + Trunk.toml). Only the
+# portable run() examples build for wasm; the open()/frame() examples are native
+# only. (Unix)
+[unix]
+run-example-wasm $name="collector":
+    TRUNK_BUILD_EXAMPLE={{name}} trunk serve --release --open --config crates/nightshade-api/Trunk.toml
+
 # Lists the nightshade-api examples
 [windows]
 list-examples:
