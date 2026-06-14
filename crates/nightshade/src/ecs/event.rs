@@ -1,22 +1,28 @@
-//! The participant cycle: a curated, typed event stream and a deferred command
-//! buffer that game logic reads and writes without ever touching the world.
+//! The participant cycle's engine half: a curated, typed event stream and a
+//! deferred command queue that game logic reads and writes without ever
+//! touching the world.
 //!
 //! A participant is anything that reacts to the simulation and asks it to
 //! change: a script, a plugin, native game code. Each cycle it reads
-//! [`events`] and pushes [`Command`]s, never mutating the world directly.
+//! [`events`] and queues commands, never mutating the world directly.
 //!
-//! Two invariants hold across a cycle, which is what lets several participants
-//! coexist without seeing each other mid-step:
+//! There is exactly one command type, and it lives one layer up in
+//! `nightshade-api`: the [`Command`](../../../nightshade_api/enum.Command.html)
+//! enum whose every variant is an API call, dispatched by `submit_command`.
+//! The engine cannot name that type, so it carries queued commands as opaque
+//! values and `nightshade-api` gives them meaning when it drains the queue.
+//! That keeps a single command layer rather than a parallel engine copy.
 //!
-//! 1. Every participant reads the same [`events`] set. The set is frozen for
-//!    the whole cycle by [`swap_events_system`] at frame start.
+//! Two invariants hold across a cycle:
+//!
+//! 1. Every participant reads the same [`events`] set, frozen for the whole
+//!    cycle by [`swap_events_system`] at frame start.
 //! 2. No participant observes another's commands. Commands apply only after
-//!    every participant has run, in [`dispatch_commands_system`]. A command's
-//!    own effects surface as events one cycle later, never the same one.
-//!
-//! This is distinct from [`event_bus`](crate::ecs::event_bus), which is a
-//! type erased queue for arbitrary app messages. [`Event`] is a closed,
-//! schema described set of facts the engine itself publishes.
+//!    every participant has run, when `nightshade-api` drains the queue. A
+//!    command's own effects surface as events one cycle later, never the same
+//!    one.
+
+use enum2schema::serde_json::Value;
 
 use crate::ecs::world::{Entity, World};
 
@@ -41,7 +47,7 @@ pub enum Event {
         sensor: bool,
         started: bool,
     },
-    /// An entity was despawned this cycle, including by a [`Command::Despawn`].
+    /// An entity was despawned this cycle.
     Despawned {
         #[schema(with = crate::ecs::event::entity_schema)]
         entity: Entity,
@@ -58,33 +64,21 @@ pub enum Event {
     },
 }
 
-/// A mutation a participant requests. Participants append these and the engine
-/// applies them in [`dispatch_commands_system`] once the cycle's participants
-/// have all run.
-#[derive(Debug, Clone)]
-pub enum Command {
-    /// Set a body's linear velocity.
-    SetVelocity {
-        entity: Entity,
-        velocity: nalgebra_glm::Vec3,
-    },
-    /// Set an entity's local translation.
-    SetTranslation {
-        entity: Entity,
-        position: nalgebra_glm::Vec3,
-    },
-    /// Despawn an entity and its descendants.
-    Despawn { entity: Entity },
-    /// Replace a text entity's string.
-    SetText { entity: Entity, text: String },
-}
-
-/// One record in the participant cycle's journal: a command that was applied
-/// or an event that was published, tagged with the cycle it happened in.
+/// One record in the participant cycle's journal: a command that was applied or
+/// an event that was published, tagged with the cycle it happened in. Commands
+/// are kept as their already formatted label and detail, because the engine
+/// does not know the command type that produced them.
 #[derive(Debug, Clone)]
 pub enum JournalEntry {
-    Event { cycle: u64, event: Event },
-    Command { cycle: u64, command: Command },
+    Event {
+        cycle: u64,
+        event: Event,
+    },
+    Command {
+        cycle: u64,
+        label: String,
+        detail: String,
+    },
 }
 
 /// How many journal records to retain when a consumer is slow to drain, so the
@@ -92,14 +86,14 @@ pub enum JournalEntry {
 const JOURNAL_CAPACITY: usize = 4096;
 
 /// The participant cycle's shared state: the frozen `current` events, the
-/// `pending` events accumulating for next cycle, the `commands` buffer
-/// participants fill this cycle, and an optional journal a tool can drain to
-/// watch the traffic.
+/// `pending` events accumulating for next cycle, the queued commands awaiting
+/// dispatch as opaque values, and an optional journal a tool can drain to watch
+/// the traffic.
 #[derive(Default)]
 pub struct Events {
     current: Vec<Event>,
     pending: Vec<Event>,
-    commands: Vec<Command>,
+    pending_commands: Vec<Value>,
     journal: Vec<JournalEntry>,
     journal_enabled: bool,
     cycle: u64,
@@ -120,14 +114,32 @@ pub fn emit_event(world: &mut World, event: Event) {
     }
 }
 
-/// Queues a command to apply after this cycle's participants have run.
-pub fn push_command(world: &mut World, command: Command) {
-    world.resources.events.commands.push(command);
+/// Queues an opaque command value for `nightshade-api` to dispatch after this
+/// cycle's participants have run. The value is the serde form of a
+/// `nightshade_api::Command`.
+pub fn queue_command(world: &mut World, command: Value) {
+    world.resources.events.pending_commands.push(command);
+}
+
+/// Takes the queued command values, for the api dispatch to deserialize and
+/// submit.
+pub fn take_commands(world: &mut World) -> Vec<Value> {
+    std::mem::take(&mut world.resources.events.pending_commands)
 }
 
 /// The events visible to participants this cycle.
 pub fn events(world: &World) -> &[Event] {
     &world.resources.events.current
+}
+
+/// The current cycle counter, for stamping a journal entry.
+pub fn cycle(world: &World) -> u64 {
+    world.resources.events.cycle
+}
+
+/// Whether the journal is recording.
+pub fn journal_enabled(world: &World) -> bool {
+    world.resources.events.journal_enabled
 }
 
 /// Turns the journal on or off. A tool that watches command and event traffic
@@ -145,6 +157,22 @@ pub fn drain_journal(world: &mut World) -> Vec<JournalEntry> {
     std::mem::take(&mut world.resources.events.journal)
 }
 
+/// Records a dispatched command in the journal, by its already formatted label
+/// and detail. Called by the api dispatch, which knows the command type.
+pub fn journal_record_command(world: &mut World, label: String, detail: String) {
+    let events = &mut world.resources.events;
+    if events.journal_enabled {
+        record(
+            events,
+            JournalEntry::Command {
+                cycle: events.cycle,
+                label,
+                detail,
+            },
+        );
+    }
+}
+
 fn record(events: &mut Events, entry: JournalEntry) {
     if events.journal.len() >= JOURNAL_CAPACITY {
         events.journal.remove(0);
@@ -159,53 +187,6 @@ pub fn swap_events_system(world: &mut World) {
     events.cycle = events.cycle.wrapping_add(1);
     events.current.clear();
     std::mem::swap(&mut events.current, &mut events.pending);
-}
-
-/// After participants run: drain and apply their commands. A despawn publishes
-/// a [`Event::Despawned`] into the pending buffer, so the effect is observed
-/// next cycle rather than the current one.
-pub fn dispatch_commands_system(world: &mut World) {
-    let commands = std::mem::take(&mut world.resources.events.commands);
-    for command in commands {
-        if world.resources.events.journal_enabled {
-            let cycle = world.resources.events.cycle;
-            record(
-                &mut world.resources.events,
-                JournalEntry::Command {
-                    cycle,
-                    command: command.clone(),
-                },
-            );
-        }
-        apply_command(world, command);
-    }
-}
-
-fn apply_command(world: &mut World, command: Command) {
-    use crate::prelude::{despawn_recursive_immediate, mark_local_transform_dirty};
-    match command {
-        #[cfg(feature = "physics")]
-        Command::SetVelocity { entity, velocity } => {
-            crate::ecs::physics::resources::physics_world_set_linear_velocity(
-                &mut world.resources.physics,
-                entity,
-                velocity,
-            );
-        }
-        #[cfg(not(feature = "physics"))]
-        Command::SetVelocity { .. } => {}
-        Command::SetTranslation { entity, position } => {
-            if let Some(transform) = world.core.get_local_transform_mut(entity) {
-                transform.translation = position;
-            }
-            mark_local_transform_dirty(world, entity);
-        }
-        Command::Despawn { entity } => {
-            despawn_recursive_immediate(world, entity);
-            emit_event(world, Event::Despawned { entity });
-        }
-        Command::SetText { .. } => {}
-    }
 }
 
 /// Reads the physics collision events produced by the last physics step and
