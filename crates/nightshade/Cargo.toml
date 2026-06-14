@@ -106,8 +106,6 @@ navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
 networking = ["dep:hearsay"]
 scripting = ["dep:rhai", "physics"]
-editor-protocol = ["engine", "wgpu", "gizmos"]
-editor-protocol-agent = ["editor-protocol", "dep:serde_json"]
 
 full = [
     "engine",

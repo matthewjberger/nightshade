@@ -76,8 +76,6 @@ impl State for SpinCube {
 | `shell` | In-game shell commands |
 | `gizmos` | Translate / rotate / scale gizmos |
 | `debug_render` | Line / shape debug overlays |
-| `editor-protocol` | Message types shared with the standalone editor |
-| `editor-protocol-agent` | The editor's external agent request / response types |
 | `file_watcher` | Live asset reload (notify) |
 | `screenshot` | Capture viewport to PNG |
 | `steam` | Steam integration (steamworks) |
