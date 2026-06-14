@@ -269,8 +269,6 @@ freecs::ecs! {
         events: crate::ecs::event::Events,
         schedules: crate::schedule::Schedules,
         global_scripts: crate::ecs::script::components::GlobalScripts,
-        #[cfg(feature = "scripting")]
-        script_runtime: crate::ecs::script::resources::ScriptRuntime,
         scratch: crate::ecs::world::scratch::Scratch,
         shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]

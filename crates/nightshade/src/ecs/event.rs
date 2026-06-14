@@ -22,8 +22,6 @@
 //!    command's own effects surface as events one cycle later, never the same
 //!    one.
 
-use enum2schema::serde_json::Value;
-
 use crate::ecs::world::{Entity, World};
 
 /// Schema for an [`Entity`] field. The engine entity is a foreign type that
@@ -78,36 +76,25 @@ pub enum Event {
     },
 }
 
-/// One record in the participant cycle's journal: a command that was applied or
-/// an event that was published, tagged with the cycle it happened in. Commands
-/// are kept as their already formatted label and detail, because the engine
-/// does not know the command type that produced them.
-#[derive(Debug, Clone)]
-pub enum JournalEntry {
-    Event {
-        cycle: u64,
-        event: Event,
-    },
-    Command {
-        cycle: u64,
-        label: String,
-        detail: String,
-    },
+/// One record in the engine's event journal: an event that was published,
+/// tagged with the cycle it happened in.
+#[derive(Debug, Clone, Copy)]
+pub struct JournalEntry {
+    pub cycle: u64,
+    pub event: Event,
 }
 
 /// How many journal records to retain when a consumer is slow to drain, so the
 /// journal never grows without bound on a long running session.
 const JOURNAL_CAPACITY: usize = 4096;
 
-/// The participant cycle's shared state: the frozen `current` events, the
-/// `pending` events accumulating for next cycle, the queued commands awaiting
-/// dispatch as opaque values, and an optional journal a tool can drain to watch
-/// the traffic.
+/// The event cycle's shared state: the frozen `current` events, the `pending`
+/// events accumulating for next cycle, and an optional journal a tool drains to
+/// watch what was published.
 #[derive(Default)]
 pub struct Events {
     current: Vec<Event>,
     pending: Vec<Event>,
-    pending_commands: Vec<Value>,
     journal: Vec<JournalEntry>,
     journal_enabled: bool,
     cycle: u64,
@@ -120,25 +107,12 @@ pub fn emit_event(world: &mut World, event: Event) {
     if events.journal_enabled {
         record(
             events,
-            JournalEntry::Event {
+            JournalEntry {
                 cycle: events.cycle,
                 event,
             },
         );
     }
-}
-
-/// Queues an opaque command value for `nightshade-api` to dispatch after this
-/// cycle's participants have run. The value is the serde form of a
-/// `nightshade_api::Command`.
-pub fn queue_command(world: &mut World, command: Value) {
-    world.resources.events.pending_commands.push(command);
-}
-
-/// Takes the queued command values, for the api dispatch to deserialize and
-/// submit.
-pub fn take_commands(world: &mut World) -> Vec<Value> {
-    std::mem::take(&mut world.resources.events.pending_commands)
 }
 
 /// The events visible to participants this cycle.
@@ -169,22 +143,6 @@ pub fn set_journal_enabled(world: &mut World, enabled: bool) {
 /// Takes the journal entries recorded since the last drain.
 pub fn drain_journal(world: &mut World) -> Vec<JournalEntry> {
     std::mem::take(&mut world.resources.events.journal)
-}
-
-/// Records a dispatched command in the journal, by its already formatted label
-/// and detail. Called by the api dispatch, which knows the command type.
-pub fn journal_record_command(world: &mut World, label: String, detail: String) {
-    let events = &mut world.resources.events;
-    if events.journal_enabled {
-        record(
-            events,
-            JournalEntry::Command {
-                cycle: events.cycle,
-                label,
-                detail,
-            },
-        );
-    }
 }
 
 fn record(events: &mut Events, entry: JournalEntry) {

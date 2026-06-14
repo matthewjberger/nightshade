@@ -611,7 +611,7 @@ pub mod prelude {
     pub use crate::ecs::entity_registry::{assign_guid, ensure_guid, find_entity_by_guid};
     pub use crate::ecs::event::{
         Event, JournalEntry, cycle, drain_journal, emit_event, events, journal_enabled,
-        journal_record_command, queue_command, set_journal_enabled, take_commands,
+        set_journal_enabled,
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
