@@ -609,7 +609,9 @@ pub mod prelude {
     };
     #[cfg(feature = "scene_graph")]
     pub use crate::ecs::entity_registry::{assign_guid, ensure_guid, find_entity_by_guid};
-    pub use crate::ecs::event::{Event, emit_event, events, push_command};
+    pub use crate::ecs::event::{
+        Event, JournalEntry, drain_journal, emit_event, events, push_command, set_journal_enabled,
+    };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
     pub use crate::ecs::generational_registry::{

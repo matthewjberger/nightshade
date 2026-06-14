@@ -79,19 +79,45 @@ pub enum Command {
     SetText { entity: Entity, text: String },
 }
 
+/// One record in the participant cycle's journal: a command that was applied
+/// or an event that was published, tagged with the cycle it happened in.
+#[derive(Debug, Clone)]
+pub enum JournalEntry {
+    Event { cycle: u64, event: Event },
+    Command { cycle: u64, command: Command },
+}
+
+/// How many journal records to retain when a consumer is slow to drain, so the
+/// journal never grows without bound on a long running session.
+const JOURNAL_CAPACITY: usize = 4096;
+
 /// The participant cycle's shared state: the frozen `current` events, the
-/// `pending` events accumulating for next cycle, and the `commands` buffer
-/// participants fill this cycle.
+/// `pending` events accumulating for next cycle, the `commands` buffer
+/// participants fill this cycle, and an optional journal a tool can drain to
+/// watch the traffic.
 #[derive(Default)]
 pub struct Events {
     current: Vec<Event>,
     pending: Vec<Event>,
     commands: Vec<Command>,
+    journal: Vec<JournalEntry>,
+    journal_enabled: bool,
+    cycle: u64,
 }
 
 /// Publishes an event for participants to read next cycle.
 pub fn emit_event(world: &mut World, event: Event) {
-    world.resources.events.pending.push(event);
+    let events = &mut world.resources.events;
+    events.pending.push(event);
+    if events.journal_enabled {
+        record(
+            events,
+            JournalEntry::Event {
+                cycle: events.cycle,
+                event,
+            },
+        );
+    }
 }
 
 /// Queues a command to apply after this cycle's participants have run.
@@ -104,10 +130,33 @@ pub fn events(world: &World) -> &[Event] {
     &world.resources.events.current
 }
 
+/// Turns the journal on or off. A tool that watches command and event traffic
+/// turns it on, a shipping build leaves it off so there is no record keeping
+/// cost on the hot path.
+pub fn set_journal_enabled(world: &mut World, enabled: bool) {
+    world.resources.events.journal_enabled = enabled;
+    if !enabled {
+        world.resources.events.journal.clear();
+    }
+}
+
+/// Takes the journal entries recorded since the last drain.
+pub fn drain_journal(world: &mut World) -> Vec<JournalEntry> {
+    std::mem::take(&mut world.resources.events.journal)
+}
+
+fn record(events: &mut Events, entry: JournalEntry) {
+    if events.journal.len() >= JOURNAL_CAPACITY {
+        events.journal.remove(0);
+    }
+    events.journal.push(entry);
+}
+
 /// Frame start: last cycle's emitted events become this cycle's readable set
 /// and the emit buffer is cleared, freezing the set for every participant.
 pub fn swap_events_system(world: &mut World) {
     let events = &mut world.resources.events;
+    events.cycle = events.cycle.wrapping_add(1);
     events.current.clear();
     std::mem::swap(&mut events.current, &mut events.pending);
 }
@@ -118,6 +167,16 @@ pub fn swap_events_system(world: &mut World) {
 pub fn dispatch_commands_system(world: &mut World) {
     let commands = std::mem::take(&mut world.resources.events.commands);
     for command in commands {
+        if world.resources.events.journal_enabled {
+            let cycle = world.resources.events.cycle;
+            record(
+                &mut world.resources.events,
+                JournalEntry::Command {
+                    cycle,
+                    command: command.clone(),
+                },
+            );
+        }
         apply_command(world, command);
     }
 }
