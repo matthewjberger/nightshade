@@ -11,6 +11,7 @@ pub fn update_animation_players(world: &mut World) {
     let _span = tracing::info_span!("animation").entered();
     let delta_time = world.resources.window.timing.delta_time;
     let mut finished: Vec<Entity> = Vec::new();
+    let mut markers: Vec<(Entity, String)> = Vec::new();
     world
         .core
         .query_mut()
@@ -18,15 +19,44 @@ pub fn update_animation_players(world: &mut World) {
         .iter(|entity, table, idx| {
             let player = &mut table.animation_player[idx];
             let was_playing = player.playing;
+            let old_time = player.time;
+            let looping = player.looping;
+            let current_clip = player.current_clip;
             player.update(delta_time);
             if was_playing && !player.playing {
                 finished.push(entity);
+            }
+            if !was_playing {
+                return;
+            }
+            let new_time = player.time;
+            if let Some(index) = current_clip
+                && let Some(clip) = player.clips.get(index)
+                && !clip.events.is_empty()
+            {
+                let wrapped = new_time < old_time && looping && clip.duration > 0.0;
+                for marker in &clip.events {
+                    let crossed = if wrapped {
+                        marker.time > old_time || marker.time <= new_time
+                    } else {
+                        marker.time > old_time && marker.time <= new_time
+                    };
+                    if crossed {
+                        markers.push((entity, marker.name.clone()));
+                    }
+                }
             }
         });
     for entity in finished {
         crate::ecs::event::emit_event(
             world,
             crate::ecs::event::Event::AnimationFinished { entity },
+        );
+    }
+    for (entity, name) in markers {
+        crate::ecs::event::emit_event(
+            world,
+            crate::ecs::event::Event::AnimationEvent { entity, name },
         );
     }
 }

@@ -14,6 +14,19 @@ pub struct AnimationClip {
     pub duration: f32,
     /// Channels targeting different properties on nodes.
     pub channels: Vec<AnimationChannel>,
+    /// Named markers along the timeline. When playback crosses one, the player
+    /// emits an `AnimationEvent`, the cue for footsteps, hit frames, and effects.
+    #[serde(default)]
+    pub events: Vec<AnimationEvent>,
+}
+
+/// A named marker at a point on a clip's timeline.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnimationEvent {
+    /// Time in seconds from the clip's start.
+    pub time: f32,
+    /// Label published with the emitted event.
+    pub name: String,
 }
 
 /// Targets a specific property on a node for animation.

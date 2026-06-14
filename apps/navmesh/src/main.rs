@@ -747,6 +747,7 @@ impl NavMeshDemo {
                             })
                             .cloned()
                             .collect(),
+                        events: clip.events.clone(),
                     })
                     .collect();
 

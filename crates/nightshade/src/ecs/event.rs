@@ -45,9 +45,7 @@ pub fn entity_schema() -> enum2schema::serde_json::Value {
 /// purpose: only facts game logic can act on, never raw engine internals.
 /// Serializable so it crosses the same boundary commands do: an out of process
 /// or language-bound consumer drains events as json and reacts.
-#[derive(
-    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
-)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema)]
 pub enum Event {
     /// Two colliders began or ended touching. `started` distinguishes the
     /// two, `sensor` marks an intersection with a sensor collider.
@@ -69,6 +67,14 @@ pub enum Event {
         #[schema(with = crate::ecs::event::entity_schema)]
         entity: Entity,
     },
+    /// Playback of a clip passed a named marker on its notify track this cycle.
+    /// `name` is the marker's label, the cue for a footstep, a hit frame, or a
+    /// particle spawn.
+    AnimationEvent {
+        #[schema(with = crate::ecs::event::entity_schema)]
+        entity: Entity,
+        name: String,
+    },
     /// A navmesh agent reached its destination.
     NavigationArrived {
         #[schema(with = crate::ecs::event::entity_schema)]
@@ -78,7 +84,7 @@ pub enum Event {
 
 /// One record in the engine's event journal: an event that was published,
 /// tagged with the cycle it happened in.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct JournalEntry {
     pub cycle: u64,
     pub event: Event,
@@ -103,16 +109,16 @@ pub struct Events {
 /// Publishes an event for participants to read next cycle.
 pub fn emit_event(world: &mut World, event: Event) {
     let events = &mut world.resources.events;
-    events.pending.push(event);
     if events.journal_enabled {
         record(
             events,
             JournalEntry {
                 cycle: events.cycle,
-                event,
+                event: event.clone(),
             },
         );
     }
+    events.pending.push(event);
 }
 
 /// The events visible to participants this cycle.
