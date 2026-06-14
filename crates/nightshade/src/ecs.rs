@@ -32,6 +32,7 @@ pub mod entity_registry;
 pub mod file_watcher;
 
 pub mod decal;
+pub mod event;
 pub mod event_bus;
 pub mod generational_registry;
 #[cfg(feature = "gizmos")]

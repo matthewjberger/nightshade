@@ -10,13 +10,25 @@ use crate::prelude::*;
 pub fn update_animation_players(world: &mut World) {
     let _span = tracing::info_span!("animation").entered();
     let delta_time = world.resources.window.timing.delta_time;
+    let mut finished: Vec<Entity> = Vec::new();
     world
         .core
         .query_mut()
         .with(ANIMATION_PLAYER)
-        .iter(|_, table, idx| {
-            table.animation_player[idx].update(delta_time);
+        .iter(|entity, table, idx| {
+            let player = &mut table.animation_player[idx];
+            let was_playing = player.playing;
+            player.update(delta_time);
+            if was_playing && !player.playing {
+                finished.push(entity);
+            }
         });
+    for entity in finished {
+        crate::ecs::event::emit_event(
+            world,
+            crate::ecs::event::Event::AnimationFinished { entity },
+        );
+    }
 }
 
 pub fn apply_animations(world: &mut World) {
