@@ -113,6 +113,12 @@ impl CullingMask {
     }
 }
 
+impl enum2schema::Schema for CullingMask {
+    fn schema() -> enum2schema::serde_json::Value {
+        enum2schema::serde_json::json!({ "type": "integer" })
+    }
+}
+
 /// Camera-side counterpart to [`CullingMask`]. The renderer
 /// resolves this into `EffectiveShading::culling_mask` per frame
 /// and the mesh / skinned-mesh prepare passes skip any entity whose
@@ -134,6 +140,12 @@ impl CameraCullingMask {
 
     pub fn intersects(self, layer: CullingMask) -> bool {
         (self.0 & layer.0) != 0
+    }
+}
+
+impl enum2schema::Schema for CameraCullingMask {
+    fn schema() -> enum2schema::serde_json::Value {
+        enum2schema::serde_json::json!({ "type": "integer" })
     }
 }
 

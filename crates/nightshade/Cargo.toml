@@ -133,7 +133,7 @@ windows-app-icon = ["dep:winresource", "dep:ico", "dep:image"]
 [dependencies]
 serde = { workspace = true }
 base64 = "0.22"
-enum2schema = "0.1"
+enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
 
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true, optional = true }
