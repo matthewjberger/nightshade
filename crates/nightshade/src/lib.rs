@@ -580,8 +580,9 @@ pub mod prelude {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::{
-        audio_engine_cleanup_entity, audio_engine_get_sound, audio_engine_has_handle,
-        audio_engine_initialize, audio_engine_is_initialized, audio_engine_load_sound,
+        audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
+        audio_engine_has_handle, audio_engine_initialize, audio_engine_is_initialized,
+        audio_engine_load_sound, audio_engine_pause_sound, audio_engine_resume_sound,
         audio_engine_stop_sound,
     };
     #[cfg(feature = "audio")]
@@ -685,7 +686,10 @@ pub mod prelude {
         physics_world_capsule_contacts, physics_world_cast_ray, physics_world_collision_events,
         physics_world_contact_force_events, physics_world_get_interpolation_alpha,
         physics_world_linear_velocity, physics_world_overlap_sphere,
-        physics_world_set_angular_velocity, physics_world_set_linear_velocity, physics_world_step,
+        physics_world_set_additional_mass, physics_world_set_angular_damping,
+        physics_world_set_angular_velocity, physics_world_set_friction,
+        physics_world_set_gravity_scale, physics_world_set_linear_damping,
+        physics_world_set_linear_velocity, physics_world_set_restitution, physics_world_step,
     };
     #[cfg(feature = "physics")]
     pub use crate::ecs::physics::types::{RaycastHit, ShapeContact};
