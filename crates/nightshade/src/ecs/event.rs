@@ -27,15 +27,29 @@ use enum2schema::serde_json::Value;
 use crate::ecs::world::{Entity, World};
 
 /// Schema for an [`Entity`] field. The engine entity is a foreign type that
-/// cannot derive `Schema`, and participants hold it as the packed integer the
-/// scripting API hands them, so that is how the event schema describes it.
+/// cannot derive `Schema`, so this matches its serde form, the same `{ id,
+/// generation }` object a command reference uses, so the published event schema
+/// is honest about what a serialized event carries. The scripting layer packs
+/// an entity into an integer for a script's convenience, but that is a binding
+/// detail, not the wire form.
 pub fn entity_schema() -> enum2schema::serde_json::Value {
-    enum2schema::serde_json::json!({ "type": "integer" })
+    enum2schema::serde_json::json!({
+        "type": "object",
+        "properties": {
+            "id": { "type": "integer" },
+            "generation": { "type": "integer" }
+        },
+        "required": ["id", "generation"]
+    })
 }
 
 /// A fact the engine publishes for participants to react to. Curated on
 /// purpose: only facts game logic can act on, never raw engine internals.
-#[derive(Debug, Clone, Copy, PartialEq, enum2schema::Schema)]
+/// Serializable so it crosses the same boundary commands do: an out of process
+/// or language-bound consumer drains events as json and reacts.
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
 pub enum Event {
     /// Two colliders began or ended touching. `started` distinguishes the
     /// two, `sensor` marks an intersection with a sensor collider.
