@@ -59,7 +59,9 @@
 //! [`spawn_prefab_with_animations`]: crate::ecs::prefab::commands::spawn_prefab_with_animations
 
 pub mod components;
+pub mod ik;
 pub mod systems;
 
 pub use components::*;
+pub use ik::{look_at_bone, solve_two_bone_ik};
 pub use systems::*;

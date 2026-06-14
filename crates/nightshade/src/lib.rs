@@ -577,6 +577,7 @@ pub mod prelude {
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
+    pub use crate::ecs::animation::ik::{look_at_bone, solve_two_bone_ik};
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::{

@@ -109,6 +109,37 @@ pub fn apply_animations(world: &mut World) {
                     blend_animation_values(&from_values, &final_values, player.blend_factor);
             }
 
+            for layer in &player.layers {
+                if !layer.playing || layer.weight <= 0.0 {
+                    continue;
+                }
+                let Some(clip) = player.clips.get(layer.clip_index) else {
+                    continue;
+                };
+                let layer_values = sample_clip(clip, layer.time, node_mapping, bone_name_mapping);
+                let masked: Option<std::collections::HashSet<Entity>> = if layer.mask.is_empty() {
+                    None
+                } else {
+                    Some(
+                        layer
+                            .mask
+                            .iter()
+                            .filter_map(|bone| bone_name_mapping.get(bone).copied())
+                            .collect(),
+                    )
+                };
+                for (entity, layer_value) in layer_values {
+                    if let Some(allowed) = &masked
+                        && !allowed.contains(&entity)
+                    {
+                        continue;
+                    }
+                    let blended =
+                        blend_accumulators(final_values.get(&entity), &layer_value, layer.weight);
+                    final_values.insert(entity, blended);
+                }
+            }
+
             if !final_values.is_empty() {
                 per_player_values.push(final_values);
             }

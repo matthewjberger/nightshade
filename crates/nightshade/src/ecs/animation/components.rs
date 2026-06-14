@@ -29,6 +29,56 @@ pub struct AnimationEvent {
     pub name: String,
 }
 
+/// An additional clip blended on top of the base animation, optionally limited
+/// to a subset of bones. Layers drive composites like a wave played on the upper
+/// body while the legs keep walking.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnimationLayer {
+    /// Index of the clip this layer plays.
+    pub clip_index: usize,
+    /// Blend weight toward this layer's pose, 0.0 ignores it, 1.0 fully
+    /// overrides the bones it touches.
+    pub weight: f32,
+    /// Playback time in seconds.
+    pub time: f32,
+    /// Playback speed multiplier.
+    pub speed: f32,
+    /// Whether the layer is advancing.
+    pub playing: bool,
+    /// Whether the layer loops at the end of its clip.
+    pub looping: bool,
+    /// Bone names this layer affects. Empty means every bone the clip targets.
+    #[serde(default)]
+    pub mask: Vec<String>,
+}
+
+impl AnimationLayer {
+    /// A new looping layer at full weight on the given clip.
+    pub fn new(clip_index: usize) -> Self {
+        Self {
+            clip_index,
+            weight: 1.0,
+            time: 0.0,
+            speed: 1.0,
+            playing: true,
+            looping: true,
+            mask: Vec::new(),
+        }
+    }
+
+    /// Sets the blend weight.
+    pub fn with_weight(mut self, weight: f32) -> Self {
+        self.weight = weight;
+        self
+    }
+
+    /// Restricts the layer to the named bones.
+    pub fn with_mask(mut self, mask: Vec<String>) -> Self {
+        self.mask = mask;
+        self
+    }
+}
+
 /// Targets a specific property on a node for animation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnimationChannel {
@@ -138,6 +188,10 @@ pub struct AnimationPlayer {
     pub blend_factor: f32,
     /// Duration of the cross-fade transition.
     pub blend_duration: f32,
+    /// Extra clips composited on top of the base animation, each optionally
+    /// masked to a subset of bones.
+    #[serde(default)]
+    pub layers: Vec<AnimationLayer>,
 }
 
 impl Default for AnimationPlayer {
@@ -156,6 +210,7 @@ impl Default for AnimationPlayer {
             blend_from_time: 0.0,
             blend_factor: 1.0,
             blend_duration: 0.0,
+            layers: Vec::new(),
         }
     }
 }
@@ -281,6 +336,31 @@ impl AnimationPlayer {
                 self.blend_from_time += delta_time * self.speed;
                 if self.blend_from_time >= from_clip.duration && self.looping {
                     self.blend_from_time %= from_clip.duration;
+                }
+            }
+        }
+
+        for layer_index in 0..self.layers.len() {
+            let layer = &self.layers[layer_index];
+            if !layer.playing {
+                continue;
+            }
+            let Some(duration) = self
+                .clips
+                .get(layer.clip_index)
+                .map(|clip| clip.duration)
+                .filter(|duration| *duration > 0.0)
+            else {
+                continue;
+            };
+            let layer = &mut self.layers[layer_index];
+            layer.time += delta_time * layer.speed;
+            if layer.time >= duration {
+                if layer.looping {
+                    layer.time %= duration;
+                } else {
+                    layer.time = duration;
+                    layer.playing = false;
                 }
             }
         }
