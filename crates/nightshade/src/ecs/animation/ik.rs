@@ -9,16 +9,13 @@ use crate::ecs::transform::systems::mutate_local_transform;
 use crate::ecs::world::{Entity, World};
 
 fn world_position(world: &World, entity: Entity) -> Option<Vec3> {
-    world
-        .core
-        .get_global_transform(entity)
-        .map(|transform| {
-            Vec3::new(
-                transform.0[(0, 3)],
-                transform.0[(1, 3)],
-                transform.0[(2, 3)],
-            )
-        })
+    world.core.get_global_transform(entity).map(|transform| {
+        Vec3::new(
+            transform.0[(0, 3)],
+            transform.0[(1, 3)],
+            transform.0[(2, 3)],
+        )
+    })
 }
 
 fn world_rotation(world: &World, entity: Entity) -> Option<Quat> {
