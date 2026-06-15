@@ -13,7 +13,7 @@ name = "template"
 path = "src/main.rs"
 
 [dependencies]
-nightshade = { version = "0.44.0" }
+nightshade = { version = "0.44.1" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
