@@ -4,7 +4,7 @@ exclude = ["site", "template", "template_api", "template_leptos", "template_api_
 resolver = "2"
 
 [workspace.package]
-version = "0.44.1"
+version = "0.45.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
@@ -54,8 +54,8 @@ kira = "0.11.0"
 mint = "0.5"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
-nightshade = { version = "0.44.1", path = "crates/nightshade" }
-nightshade-api = { version = "0.44.1", path = "crates/nightshade-api" }
+nightshade = { version = "0.45.0", path = "crates/nightshade" }
+nightshade-api = { version = "0.45.0", path = "crates/nightshade-api" }
 petgraph = { version = "0.8", features = ["serde-1"] }
 rapier3d = { version = "0.30", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"
