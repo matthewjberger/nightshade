@@ -123,9 +123,10 @@ publish-crate:
 publish-crate-dry:
     cargo publish -p nightshade --dry-run
 
-# Opens the editor, or runs a native app by name (e.g. `just run sandbox`)
+# Opens the editor, the scripting playground (`just run playground`), or runs a
+# native app by name (e.g. `just run sandbox`)
 run *project:
-    {{ if project == "" { "just --justfile apps/editor/justfile --working-directory apps/editor run" } else { "cargo run -r -p " + project } }}
+    {{ if project == "" { "just --justfile apps/editor/justfile --working-directory apps/editor run" } else { if project == "playground" { "just --justfile apps/playground/justfile --working-directory apps/playground run" } else { "cargo run -r -p " + project } } }}
 
 # Builds and opens the MCP-driveable editor (agent feature on, endpoint at
 # http://127.0.0.1:8790/mcp)
