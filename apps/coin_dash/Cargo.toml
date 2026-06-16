@@ -1,0 +1,11 @@
+[package]
+name = "coin_dash"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "coin_dash"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-api = { path = "../../crates/nightshade-api" }
