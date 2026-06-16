@@ -52,6 +52,7 @@ struct Game {
     time: f32,
     seed: u32,
     hud: Entity,
+    hud_label: Entity,
     title: Entity,
     play_button: Entity,
     quit_button: Entity,
@@ -215,7 +216,9 @@ fn setup(world: &mut World) -> Game {
     let coins = (0..COIN_COUNT)
         .map(|_| (spawn_coin(world), vec3(0.0, COIN_HEIGHT, 0.0)))
         .collect();
-    let hud = spawn_text(world, "", ScreenAnchor::TopCenter);
+    let hud = spawn_panel(world, ScreenAnchor::TopCenter, 340.0, 56.0);
+    let hud_label = panel_label(world, hud, "");
+    set_text_size(world, hud_label, 22.0);
 
     let title = spawn_panel(world, ScreenAnchor::Center, 540.0, 240.0);
     let title_heading = panel_heading(world, title, "Coin Dash");
@@ -259,6 +262,7 @@ fn setup(world: &mut World) -> Game {
         time: ROUND_SECONDS,
         seed: 0x9E37_79B9,
         hud,
+        hud_label,
         title,
         play_button,
         quit_button,
@@ -355,7 +359,7 @@ fn play(world: &mut World, game: &mut Game) {
     game.time = (game.time - dt).max(0.0);
     set_text(
         world,
-        game.hud,
+        game.hud_label,
         &format!(
             "World {}   {}/{}   {:.0}s",
             game.round,
