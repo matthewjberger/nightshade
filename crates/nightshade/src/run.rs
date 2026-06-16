@@ -103,6 +103,9 @@ pub use crate::logging::log_file_name;
 pub use crate::logging::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
+#[cfg(feature = "egui")]
+mod egui_support;
+
 pub mod offscreen;
 pub use offscreen::*;
 
@@ -488,10 +491,15 @@ pub fn run_frame_body(
     crate::ecs::graphics::systems::day_night_cycle_system(world);
     #[cfg(not(target_arch = "wasm32"))]
     recenter_locked_cursor(world);
+    #[cfg(feature = "egui")]
+    egui_support::begin_frame(world);
     state.run_systems(world);
     world.resources.input.events.clear();
 
     run_frame_systems(world);
+
+    #[cfg(feature = "egui")]
+    egui_support::finish_frame(world);
 
     if let Some(builder) = world.resources.window.next_state.take() {
         return Some(builder(world));
@@ -546,6 +554,8 @@ pub fn run_frame_body(
 
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("event_handling").entered();
+    #[cfg(feature = "egui")]
+    egui_support::handle_window_event(world, event);
     input_event_system(world, event);
     timing_system(world, event);
 }
@@ -1488,6 +1498,9 @@ impl winit::application::ApplicationHandler for WindowContext {
         let window_handle = std::sync::Arc::new(window);
         self.world.resources.window.cached_scale_factor = window_handle.scale_factor() as f32;
         self.world.resources.window.handle = Some(window_handle.clone());
+
+        #[cfg(feature = "egui")]
+        egui_support::initialize(&mut self.world);
 
         #[cfg(all(
             not(target_arch = "wasm32"),

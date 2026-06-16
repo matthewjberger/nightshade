@@ -188,6 +188,9 @@
 //!
 //! ### Optional Features
 //!
+//! - **`egui`** - Opt-in immediate-mode UI. Set `world.resources.egui.enabled`, then draw from
+//!   any system with `egui_context(world)`. Composites over the scene and retained UI.
+//!
 //! - **`shell`** - Developer console with command registration, rendered via the retained UI.
 //!
 //! - **`audio`** - Audio playback using Kira.
@@ -317,6 +320,30 @@
 //!     });
 //! }
 //! // Press Alt+C to open console, type "spawn 10"
+//! ```
+//!
+//! ### Immediate Mode UI (`egui` feature)
+//!
+//! Opt in with the `egui` feature and set `world.resources.egui.enabled`. The pass opens
+//! before `run_systems` each frame, so draw from any system by pulling the frame's context
+//! with `egui_context`. The tessellated output composites over the scene and the retained UI.
+//!
+//! ```ignore
+//! impl State for Game {
+//!     fn initialize(&mut self, world: &mut World) {
+//!         world.resources.egui.enabled = true;
+//!     }
+//!     fn run_systems(&mut self, world: &mut World) {
+//!         if let Some(ctx) = egui_context(world) {
+//!             egui::Window::new("Debug").show(&ctx, |ui| {
+//!                 ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
+//!                 if ui.button("Spawn Cube").clicked() {
+//!                     spawn_cube_at(world, Vec3::zeros());
+//!                 }
+//!             });
+//!         }
+//!     }
+//! }
 //! ```
 //!
 //! ### Gamepad Input (`gamepad` feature)
@@ -760,6 +787,8 @@ pub mod prelude {
     };
     pub use crate::ecs::transform::commands::mark_local_transform_dirty;
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
+    #[cfg(feature = "egui")]
+    pub use crate::ecs::ui::egui_state::egui_context;
     pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
@@ -809,6 +838,8 @@ pub mod prelude {
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
     #[cfg(feature = "assets")]
     pub use bincode;
+    #[cfg(feature = "egui")]
+    pub use egui;
     #[cfg(feature = "engine")]
     pub use ehttp;
     pub use freecs;

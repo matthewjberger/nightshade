@@ -68,6 +68,10 @@ winit = { version = "0.30.13", features = ["serde"] }
 accesskit = "0.24"
 accesskit_winit = "0.33"
 naga_oil = { version = "0.22", default-features = false }
+egui = { version = "0.34", default-features = false, features = ["bytemuck", "default_fonts"] }
+egui_extras = { version = "0.34", default-features = false, features = ["all_loaders"] }
+egui-wgpu = { version = "0.34", default-features = false, features = ["winit"] }
+egui-winit = { version = "0.34", default-features = false, features = ["links"] }
 
 clap = { version = "4", features = ["derive"] }
 steamworks = "0.13"

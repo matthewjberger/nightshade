@@ -266,6 +266,8 @@ freecs::ecs! {
         #[cfg(feature = "physics")]
         picking_world: crate::ecs::picking::resources::PickingWorld,
         retained_ui: crate::ecs::ui::resources::RetainedUiState,
+        #[cfg(feature = "egui")]
+        egui: crate::ecs::ui::egui_state::EguiState,
         events: crate::ecs::event::Events,
         schedules: crate::schedule::Schedules,
         global_scripts: crate::ecs::script::components::GlobalScripts,
