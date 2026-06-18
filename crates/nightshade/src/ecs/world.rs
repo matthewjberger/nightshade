@@ -161,7 +161,6 @@ freecs::ecs! {
             parent: crate::ecs::transform::components::Parent => PARENT,
             particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
             physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
-            prefab_instance: crate::ecs::prefab::components::PrefabInstance => PREFAB_INSTANCE,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
             render_layer: crate::ecs::primitives::RenderLayer => RENDER_LAYER,
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
