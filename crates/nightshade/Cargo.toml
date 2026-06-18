@@ -161,7 +161,7 @@ serde_json = { workspace = true, optional = true }
 lz4_flex = { version = "0.11", optional = true }
 thiserror = { workspace = true, optional = true }
 pollster = { version = "0.4", optional = true }
-uuid = { version = "1.0", features = ["v4", "serde"], optional = true }
+uuid = { version = "1.0", features = ["v4", "v5", "serde"], optional = true }
 web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
 ehttp = { workspace = true, optional = true }
@@ -190,7 +190,7 @@ steamworks = { workspace = true, optional = true }
 steamworks-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-uuid = { version = "1.0", features = ["v4", "js", "serde"], optional = true }
+uuid = { version = "1.0", features = ["v4", "v5", "js", "serde"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-web = { workspace = true, optional = true }
