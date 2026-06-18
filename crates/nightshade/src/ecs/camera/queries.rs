@@ -9,7 +9,11 @@ pub struct CameraMatrices {
 
 pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
     let active_camera = world.resources.active_camera?;
-    query_camera_matrices(world, active_camera)
+    let mut matrices = query_camera_matrices(world, active_camera)?;
+    let jitter = world.resources.renderer_state.taa_jitter;
+    matrices.projection[(0, 2)] += jitter[0];
+    matrices.projection[(1, 2)] += jitter[1];
+    Some(matrices)
 }
 
 pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatrices> {
