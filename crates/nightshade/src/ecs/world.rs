@@ -30,6 +30,7 @@ pub mod components {
 
     pub use crate::ecs::cloth::components::{Cloth, ClothPinning};
     pub use crate::ecs::decal::components::Decal;
+    pub use crate::ecs::water::components::Water;
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
@@ -175,6 +176,7 @@ freecs::ecs! {
             viewport_shading: crate::ecs::camera::components::ViewportShading => VIEWPORT_SHADING,
             viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
             visibility: crate::ecs::primitives::Visibility => VISIBILITY,
+            water: crate::ecs::water::components::Water => WATER,
         }
         Ui {
             ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,
