@@ -31,3 +31,6 @@ screenshots/
 THIRD_PARTY_LICENSES.html
 *.tracy
 trace.csv
+
+water_capture.png
+water_fixed.png
