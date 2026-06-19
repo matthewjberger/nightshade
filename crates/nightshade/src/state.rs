@@ -19,6 +19,8 @@ pub struct RenderResources {
     pub swapchain: crate::render::wgpu::rendergraph::ResourceId,
     /// View-space normals for SSAO.
     pub view_normals: crate::render::wgpu::rendergraph::ResourceId,
+    /// Screen-space motion vectors for temporal antialiasing.
+    pub velocity: crate::render::wgpu::rendergraph::ResourceId,
     /// Raw SSAO output before blur.
     pub ssao_raw: crate::render::wgpu::rendergraph::ResourceId,
     /// Blurred SSAO output.
