@@ -30,7 +30,6 @@ pub mod components {
 
     pub use crate::ecs::cloth::components::{Cloth, ClothPinning};
     pub use crate::ecs::decal::components::Decal;
-    pub use crate::ecs::water::components::Water;
     pub use crate::ecs::input::components::Hovered;
     pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
@@ -65,6 +64,7 @@ pub mod components {
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
         UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
     };
+    pub use crate::ecs::water::components::Water;
 }
 
 pub mod resources {

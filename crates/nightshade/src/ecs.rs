@@ -66,9 +66,9 @@ pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;
 pub mod transform;
-pub mod water;
 pub mod tween;
 pub mod ui;
+pub mod water;
 pub mod window;
 pub mod world;
 
