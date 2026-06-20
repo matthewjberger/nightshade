@@ -64,6 +64,7 @@ pub mod components {
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
         UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
     };
+    pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::water::components::Water;
 }
 
@@ -177,6 +178,10 @@ freecs::ecs! {
             viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
             visibility: crate::ecs::primitives::Visibility => VISIBILITY,
             water: crate::ecs::water::components::Water => WATER,
+            beam: crate::ecs::vfx::components::Beam => BEAM,
+            lightning_bolt: crate::ecs::vfx::components::LightningBolt => LIGHTNING_BOLT,
+            trail: crate::ecs::vfx::components::Trail => TRAIL,
+            vfx_animator: crate::ecs::vfx::components::VfxAnimator => VFX_ANIMATOR,
         }
         Ui {
             ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,

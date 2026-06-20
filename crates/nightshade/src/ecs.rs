@@ -68,6 +68,7 @@ pub mod texture_loader;
 pub mod transform;
 pub mod tween;
 pub mod ui;
+pub mod vfx;
 pub mod water;
 pub mod window;
 pub mod world;
