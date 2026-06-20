@@ -1,0 +1,47 @@
+[workspace]
+members = ["desktop", "protocol", "worker"]
+resolver = "2"
+
+[package]
+name = "template_api_leptos"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[dependencies]
+leptos = { version = "0.7", features = ["csr"] }
+protocol = { path = "protocol" }
+wasm-bindgen = "=0.2.115"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlCanvasElement",
+    "OffscreenCanvas",
+    "CssStyleDeclaration",
+    "DomRect",
+    "DomRectReadOnly",
+    "Worker",
+    "WorkerOptions",
+    "WorkerType",
+    "MessageEvent",
+    "Event",
+    "EventTarget",
+    "AddEventListenerOptions",
+    "PointerEvent",
+    "MouseEvent",
+    "WheelEvent",
+    "KeyboardEvent",
+    "ResizeObserver",
+    "ResizeObserverEntry",
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
