@@ -828,6 +828,7 @@ pub mod prelude {
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::vfx::presets::{VfxFamily, VfxPreset, despawn_vfx, spawn_vfx};
     pub use crate::ecs::vfx::systems::update_vfx_system;
+    pub use crate::ecs::vfx::textures::{FLARE_SLOT, GLOW_SLOT, SMOKE_SLOT, upload_vfx_textures};
     pub use crate::ecs::world::commands::{
         EcsCommand, RenderCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
         despawn_entities_with_cache_cleanup, despawn_recursive_immediate, load_hdr_skybox,
