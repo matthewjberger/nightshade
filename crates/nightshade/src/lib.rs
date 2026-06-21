@@ -8,7 +8,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! nightshade = "0.47"
+//! nightshade = "0.48"
 //! ```
 //!
 //! ### 2. Create Your Game
