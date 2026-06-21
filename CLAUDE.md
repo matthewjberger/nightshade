@@ -1,6 +1,8 @@
 # Nightshade Engine
 
-Read `docs/USAGE.md` before writing or modifying engine code.
+For games, start with the high-level `nightshade-api` facade. Read `docs/SPEC_RUST_API.md` (the full signature catalog) and the "Start Here" section of `docs/USAGE.md`. The api games `apps/coin_dash` and `apps/coin_rush` and the `template_api/` template are the working references. Reach for the engine layer only when the facade stops covering what you need.
+
+Read `docs/USAGE.md` before writing or modifying engine code (the `nightshade` crate layer).
 
 ## Architecture
 
@@ -9,7 +11,7 @@ Read `docs/USAGE.md` before writing or modifying engine code.
 - Most systems run automatically via the frame schedule (`world.resources.schedules.frame`): physics, animation, navmesh, text sync, transforms, plus a single `RETAINED_UI` entry that runs the UI sub-schedule (`world.resources.schedules.retained_ui`). Don't call these manually.
 - Camera controllers are opt-in: call `fly_camera_system(world)` or `pan_orbit_camera_system(world)` in `run_systems`. `fly_camera_system` skips if the active camera has `PAN_ORBIT_CAMERA`.
 - Scenes load from glTF. Find entities by name after spawning (`world.core.find_entity_by_name`).
-- `apps/sandbox` is the go-to reference for idiomatic 3D games. Read it before writing a new app: state shell forwarding to system functions, own `freecs::ecs!` world, screen lifecycle in `systems/lifecycle.rs`, retained UI handles stored in resources, `theme.rs` for UI constants, prototype textures, level load/save. The `template/` crate is the same architecture in skeleton form.
+- `apps/sandbox` is the go-to reference for an idiomatic engine-level 3D game (when you have dropped below the `nightshade-api` facade). Read it before writing a new engine-layer app: state shell forwarding to system functions, own `freecs::ecs!` world, screen lifecycle in `systems/lifecycle.rs`, retained UI handles stored in resources, `theme.rs` for UI constants, prototype textures, level load/save. The `template/` crate is the same architecture in skeleton form.
 
 ## Querying
 
