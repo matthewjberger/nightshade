@@ -231,7 +231,7 @@ preview-ui-test-harness:
 build-editor:
     just --justfile apps/editor/justfile --working-directory apps/editor build
 
-# Installs the standalone editor as the global nightshade-editor command
+# Installs the standalone editor as the global nightshade command
 install-editor:
     just --justfile apps/editor/justfile --working-directory apps/editor install
 
