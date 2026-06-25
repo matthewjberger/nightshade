@@ -23,8 +23,16 @@
 //!     ..Default::default()
 //! };
 //!
-//! world.material_registry_insert("red_metal", material.clone());
-//! world.material_add_reference("red_metal");
+//! material_registry_insert(
+//!     &mut world.resources.assets.material_registry,
+//!     "red_metal".to_string(),
+//!     material,
+//! );
+//! if let Some(&index) =
+//!     world.resources.assets.material_registry.registry.name_to_index.get("red_metal")
+//! {
+//!     registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+//! }
 //!
 //! // Apply to an entity
 //! world.core.set_material_ref(entity, MaterialRef::new("red_metal"));
@@ -32,13 +40,21 @@
 //!
 //! # Material Registration Pattern
 //!
-//! Materials use reference counting. Always call `material_add_reference()` after
-//! inserting, and the material will be cleaned up when no entities reference it:
+//! Materials use reference counting. After inserting, add a reference so the
+//! material survives, and it is cleaned up when no entities reference it:
 //!
 //! ```ignore
 //! // Full registration pattern
-//! world.material_registry_insert("my_material", material);
-//! world.material_add_reference("my_material");
+//! material_registry_insert(
+//!     &mut world.resources.assets.material_registry,
+//!     "my_material".to_string(),
+//!     material,
+//! );
+//! if let Some(&index) =
+//!     world.resources.assets.material_registry.registry.name_to_index.get("my_material")
+//! {
+//!     registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+//! }
 //! ```
 //!
 //! # Textured Materials
@@ -47,8 +63,8 @@
 //!
 //! ```ignore
 //! // Load textures into the cache
-//! world.texture_cache_add_reference("assets/brick_albedo.png");
-//! world.texture_cache_add_reference("assets/brick_normal.png");
+//! texture_cache_add_reference(&mut world.resources.texture_cache, "assets/brick_albedo.png");
+//! texture_cache_add_reference(&mut world.resources.texture_cache, "assets/brick_normal.png");
 //!
 //! // Create material with texture paths
 //! let material = Material {
@@ -60,8 +76,16 @@
 //!     ..Default::default()
 //! };
 //!
-//! world.material_registry_insert("brick", material);
-//! world.material_add_reference("brick");
+//! material_registry_insert(
+//!     &mut world.resources.assets.material_registry,
+//!     "brick".to_string(),
+//!     material,
+//! );
+//! if let Some(&index) =
+//!     world.resources.assets.material_registry.registry.name_to_index.get("brick")
+//! {
+//!     registry_add_reference(&mut world.resources.assets.material_registry.registry, index);
+//! }
 //! ```
 //!
 //! # Emissive Materials (for Bloom)

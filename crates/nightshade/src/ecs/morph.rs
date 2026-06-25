@@ -71,8 +71,8 @@
 //!
 //! ```ignore
 //! // Load model with morph animations
-//! let prefab = import_gltf_from_bytes(world, data, "face")?;
-//! let entity = spawn_prefab_with_animations(world, &prefab, Vec3::zeros());
+//! let result = import_gltf_from_bytes(data)?;
+//! let entity = spawn_prefab_with_animations(world, &result.prefabs[0], &result.animations, Vec3::zeros());
 //!
 //! // Play facial animation
 //! if let Some(player) = world.core.get_animation_player_mut(entity) {

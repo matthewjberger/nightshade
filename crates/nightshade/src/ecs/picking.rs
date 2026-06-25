@@ -1,28 +1,24 @@
-//! Entity picking via ray casting.
+//! Entity picking from a screen position.
 //!
-//! Pick entities under the mouse cursor or from arbitrary rays:
+//! Pick entities under the mouse cursor (a ray is cast from the camera through
+//! the screen point internally):
 //!
-//! - [`pick_entities`]: Find all entities intersecting a ray (bounding box)
-//! - [`pick_closest_entity`]: Find the nearest entity
-//! - `pick_entities_trimesh`: Precise mesh intersection (requires `physics`)
-//! - [`PickingRay`]: Ray definition for custom picking
-//! - [`PickingResult`]: Hit information (entity, distance, position)
+//! - [`pick_entities`]: All entities under a screen position (bounding box), nearest first
+//! - [`pick_closest_entity`]: The nearest entity under a screen position
+//! - `pick_closest_entity_trimesh`: Precise mesh intersection (requires `physics`)
+//! - [`pick_entities_in_frustum`]: Filter a list of entities to those in the camera frustum
+//! - [`PickingResult`]: Hit information (entity, distance, world_position)
 //!
 //! # Basic Picking (Bounding Boxes)
 //!
 //! Fast picking using axis-aligned bounding boxes:
 //!
 //! ```ignore
-//! fn on_mouse_input(&mut self, world: &mut World, button: MouseButton, state: KeyState) {
-//!     if button == MouseButton::Left && state == KeyState::Pressed {
-//!         let mouse_pos = world.resources.input.mouse.position;
-//!         let ray = PickingRay::from_screen_position(world, mouse_pos);
-//!
-//!         if let Some(result) = pick_closest_entity(world, &ray, &PickingOptions::default()) {
-//!             println!("Hit entity {:?} at distance {}", result.entity, result.distance);
-//!             self.selected = Some(result.entity);
-//!         }
-//!     }
+//! // Each frame, pick the entity under the cursor:
+//! let mouse_pos = world.resources.input.mouse.position;
+//! if let Some(result) = pick_closest_entity(world, mouse_pos) {
+//!     println!("Hit entity {:?} at distance {}", result.entity, result.distance);
+//!     self.selected = Some(result.entity);
 //! }
 //! ```
 //!
@@ -38,23 +34,18 @@
 //! register_entity_hierarchy_for_trimesh_picking(world, root_entity);
 //!
 //! // Pick with mesh precision
-//! if let Some(result) = pick_closest_entity_trimesh(world, &ray) {
-//!     let hit_position = result.position;  // Exact world position
-//!     let hit_normal = result.normal;      // Surface normal at hit
+//! if let Some(result) = pick_closest_entity_trimesh(world, mouse_pos) {
+//!     let hit_position = result.world_position;  // exact world-space hit point
 //! }
 //! ```
 //!
-//! # Frustum Picking (Selection Box)
+//! # Frustum Filtering
 //!
-//! Select multiple entities within a screen rectangle:
+//! Keep only the entities from a list that fall inside the camera frustum:
 //!
 //! ```ignore
-//! let entities = pick_entities_in_frustum(
-//!     world,
-//!     start_screen_pos,
-//!     end_screen_pos,
-//!     &PickingOptions::default(),
-//! );
+//! // Filter a candidate list down to those inside the camera frustum:
+//! let visible = pick_entities_in_frustum(world, &candidate_entities);
 //! ```
 //!
 //! # Ground Position from Screen
@@ -71,10 +62,10 @@
 //!
 //! ```ignore
 //! let options = PickingOptions {
-//!     max_distance: 1000.0,           // Maximum ray distance
-//!     include_transparent: false,     // Skip transparent materials
-//!     layer_mask: u32::MAX,           // Filter by render layers
+//!     max_distance: 1000.0,   // maximum ray distance
+//!     ignore_invisible: true, // skip hidden entities
 //! };
+//! let results = pick_entities(world, mouse_pos, options);
 //! ```
 //!
 //! # PickingResult Fields
@@ -82,13 +73,12 @@
 //! | Field | Description |
 //! |-------|-------------|
 //! | `entity` | Hit entity handle |
-//! | `distance` | Distance from ray origin |
-//! | `position` | World-space hit point |
-//! | `normal` | Surface normal (trimesh only) |
+//! | `distance` | Distance from the camera |
+//! | `world_position` | World-space hit point |
 //!
 //! [`pick_entities`]: queries::pick_entities
 //! [`pick_closest_entity`]: queries::pick_closest_entity
-//! [`PickingRay`]: queries::PickingRay
+//! [`pick_entities_in_frustum`]: queries::pick_entities_in_frustum
 //! [`PickingResult`]: queries::PickingResult
 
 #[cfg(feature = "physics")]

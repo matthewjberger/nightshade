@@ -32,8 +32,8 @@
 //!
 //! ```ignore
 //! // Load skinned model
-//! let prefab = import_gltf_from_bytes(world, character_bytes, "character")?;
-//! let entity = spawn_prefab_with_animations(world, &prefab, Vec3::zeros());
+//! let result = import_gltf_from_bytes(character_bytes)?;
+//! let entity = spawn_prefab_with_animations(world, &result.prefabs[0], &result.animations, Vec3::zeros());
 //!
 //! // Skin component is already attached and configured
 //! // Just play animations - skinning happens automatically

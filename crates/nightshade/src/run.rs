@@ -17,7 +17,7 @@
 //! }
 //!
 //! fn main() {
-//!     nightshade::launch(MyGame).unwrap();
+//!     nightshade::run::launch(MyGame).unwrap();
 //! }
 //! ```
 //!

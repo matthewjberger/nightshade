@@ -96,7 +96,7 @@
 //! | `RENDER_MESH` | Visible 3D geometry |
 //! | `MATERIAL_REF` | Material reference |
 //! | `CAMERA` | Camera component |
-//! | `PARENT` / `CHILDREN` | Hierarchy relationships |
+//! | `PARENT` | Hierarchy parent link |
 //! | `RIGID_BODY` | Physics body |
 //! | `COLLIDER` | Collision shape |
 //! | `ANIMATION_PLAYER` | Animation controller |
@@ -150,7 +150,7 @@
 //! - Call `player.play(index)` to start
 //!
 //! **Textures Missing**
-//! - Call `world.texture_cache_add_reference(path)` before material creation
+//! - Call `texture_cache_add_reference(&mut world.resources.texture_cache, path)` before material creation
 //! - Paths are case-sensitive
 //!
 //! **Entity Invisible**
@@ -224,13 +224,13 @@
 //! ### Audio (`audio` feature)
 //!
 //! ```ignore
-//! // Load and play a sound
-//! let sound = audio_engine_load_sound(&mut world.resources.audio, include_bytes!("sound.ogg"));
-//! world.resources.audio.play(sound);
+//! // Decode and register a sound by name
+//! let data = load_sound_from_bytes(include_bytes!("sound.ogg")).unwrap();
+//! audio_engine_load_sound(&mut world.resources.audio, "shot", data);
 //!
-//! // 3D spatial audio
+//! // 3D spatial audio: play it through an AudioSource component
 //! let source = spawn_entities(world, AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.core.set_audio_source(source, AudioSource::new(sound).with_spatial(true));
+//! world.core.set_audio_source(source, AudioSource::new("shot").with_spatial(true).playing());
 //! world.core.set_local_transform(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
 //! ```
 //!
@@ -281,10 +281,9 @@
 //! ### Entity Picking (`picking` feature)
 //!
 //! ```ignore
-//! // Ray picking (bounding box)
+//! // Bounding-box picking under the cursor
 //! let mouse_pos = world.resources.input.mouse.position;
-//! let ray = PickingRay::from_screen_position(world, mouse_pos);
-//! if let Some(hit) = pick_closest_entity(world, &ray, &PickingOptions::default()) {
+//! if let Some(hit) = pick_closest_entity(world, mouse_pos) {
 //!     println!("Hit {:?} at distance {}", hit.entity, hit.distance);
 //! }
 //!
@@ -372,21 +371,21 @@
 //!
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
-//!     world.resources.steam.initialize().ok();
-//!     world.resources.steam.request_stats();
+//!     steam_initialize(&mut world.resources.steam).ok();
+//!     steam_request_stats(&mut world.resources.steam);
 //! }
 //!
 //! fn run_systems(&mut self, world: &mut World) {
-//!     world.resources.steam.run_callbacks();
+//!     steam_run_callbacks(&world.resources.steam);
 //!
 //!     // Unlock achievement
 //!     if self.score >= 1000 {
-//!         world.resources.steam.unlock_achievement("ACH_HIGH_SCORE").ok();
-//!         world.resources.steam.store_stats().ok();
+//!         steam_unlock_achievement(&world.resources.steam, "ACH_HIGH_SCORE").ok();
+//!         steam_store_stats(&world.resources.steam).ok();
 //!     }
 //!
 //!     // Update stat
-//!     world.resources.steam.set_stat_int("total_score", self.score).ok();
+//!     steam_set_stat_int(&world.resources.steam, "total_score", self.score).ok();
 //! }
 //! ```
 //!
@@ -424,16 +423,12 @@
 //! )[0];
 //!
 //! world.core.set_particle_emitter(emitter, ParticleEmitter {
-//!     max_particles: 1000,
-//!     emission_rate: 100.0,
-//!     lifetime: 2.0,
-//!     initial_velocity: Vec3::new(0.0, 5.0, 0.0),
-//!     velocity_randomness: 1.0,
-//!     size: 0.1,
-//!     color: ColorGradient::new(
-//!         Vec4::new(1.0, 0.5, 0.0, 1.0),  // Start: orange
-//!         Vec4::new(1.0, 0.0, 0.0, 0.0),  // End: red, faded
-//!     ),
+//!     spawn_rate: 100.0,
+//!     particle_lifetime_min: 1.5,
+//!     particle_lifetime_max: 2.0,
+//!     size_start: 0.2,
+//!     size_end: 0.0,
+//!     color_gradient: ColorGradient::fire(),
 //!     shape: EmitterShape::Sphere { radius: 0.5 },
 //!     ..Default::default()
 //! });
@@ -452,10 +447,10 @@
 //! )[0];
 //!
 //! world.core.set_decal(decal, Decal {
-//!     texture_index: world.texture_cache_lookup("decal_texture"),
+//!     texture: Some("decal_texture".to_string()),
 //!     size: Vec2::new(2.0, 2.0),
-//!     depth: 1.0,  // Projection depth
-//!     opacity: 1.0,
+//!     depth: 1.0,  // projection depth
+//!     ..Default::default()
 //! });
 //!
 //! // Position and orient decal (projects along -Y)
@@ -620,7 +615,7 @@ pub mod prelude {
     pub use crate::ecs::bounding_volume::components::BoundingVolume;
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{
-        spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
+        spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
     };
     pub use crate::ecs::camera::components::ThirdPersonCamera;
     pub use crate::ecs::camera::systems::{

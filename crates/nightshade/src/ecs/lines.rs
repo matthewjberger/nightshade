@@ -109,7 +109,7 @@
 //!                 if let Some(rb) = world.core.get_rigid_body(entity) {
 //!                     lines.push(Line {
 //!                         start: transform.translation,
-//!                         end: transform.translation + rb.linear_velocity,
+//!                         end: transform.translation + Vec3::from(rb.linvel),
 //!                         color: Vec4::new(1.0, 1.0, 0.0, 1.0),
 //!                     });
 //!                 }

@@ -10,8 +10,8 @@
 //! Components use struct-of-arrays storage accessed via:
 //! - `world.core.get_<component>(entity)` - Immutable reference
 //! - `world.core.get_<component>_mut(entity)` - Mutable reference
-//! - `world.insert_<component>(entity, value)` - Add component
-//! - `world.core.remove_<component>(entity)` - Remove component
+//! - `world.core.add_components(entity, MASK)` then `world.core.set_<component>(entity, value)` - Add and set a component
+//! - `world.core.remove_components(entity, MASK)` - Remove a component
 
 pub mod animation;
 pub mod asset_id;

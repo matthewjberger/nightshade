@@ -19,9 +19,9 @@
 //! world.core.set_camera(entity, Camera {
 //!     projection: Projection::Perspective(PerspectiveCamera {
 //!         y_fov_rad: 60.0_f32.to_radians(),
-//!         aspect_ratio: 16.0 / 9.0,
+//!         aspect_ratio: Some(16.0 / 9.0),
 //!         z_near: 0.1,
-//!         z_far: 1000.0,
+//!         z_far: Some(1000.0),
 //!     }),
 //!     smoothing: None,
 //! });
@@ -72,13 +72,13 @@
 //!
 //! ```ignore
 //! let mut pan_orbit = PanOrbitCamera::default();
-//! pan_orbit.orbit_sensitivity = 0.5;   // Mouse orbit speed
-//! pan_orbit.pan_sensitivity = 1.0;     // Mouse pan speed
-//! pan_orbit.zoom_sensitivity = 0.8;    // Scroll zoom speed
-//! pan_orbit.gamepad_deadzone = 0.15;   // Stick deadzone
-//! pan_orbit.orbit_smoothness = 0.1;    // Orbit interpolation (0=instant)
-//! pan_orbit.pan_smoothness = 0.02;     // Pan interpolation (0=instant)
-//! pan_orbit.zoom_smoothness = 0.1;     // Zoom interpolation (0=instant)
+//! pan_orbit.sensitivity.orbit = 0.5;     // Mouse orbit speed
+//! pan_orbit.sensitivity.pan = 1.0;       // Mouse pan speed
+//! pan_orbit.sensitivity.zoom = 0.8;      // Scroll zoom speed
+//! pan_orbit.limits.gamepad_deadzone = 0.15;  // Stick deadzone
+//! pan_orbit.smoothness.orbit = 0.1;      // Orbit interpolation (0=instant)
+//! pan_orbit.smoothness.pan = 0.02;       // Pan interpolation (0=instant)
+//! pan_orbit.smoothness.zoom = 0.1;       // Zoom interpolation (0=instant)
 //! ```
 //!
 //! # Customizing Button Bindings
@@ -120,10 +120,8 @@
 //!
 //! world.core.set_camera(entity, Camera {
 //!     projection: Projection::Orthographic(OrthographicCamera {
-//!         left: -10.0,
-//!         right: 10.0,
-//!         bottom: -10.0,
-//!         top: 10.0,
+//!         x_mag: 10.0,
+//!         y_mag: 10.0,
 //!         z_near: 0.1,
 //!         z_far: 100.0,
 //!     }),
