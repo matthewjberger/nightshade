@@ -49,7 +49,7 @@
 //! }
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     nightshade::launch(Game::default())
+//!     launch(Game::default())
 //! }
 //! ```
 //!

@@ -264,6 +264,7 @@ Composite:
 
 Building blocks:
 ├── assets ───────────── glTF / image / bincode / lz4 asset loading
+├── fbx ──────────────── FBX model import (ufbx)
 ├── scene_graph ──────── ECS scene round-trip
 ├── picking ──────────── entity picking
 ├── file_dialog ──────── native open/save dialogs (rfd)
@@ -281,7 +282,7 @@ Renderer & subsystems:
 ├── navmesh-bake ─────── navmesh baking (rerecast)
 ├── networking ───────── topic-based pub/sub messaging (hearsay)
 ├── debug_render ─────── line / shape debug overlays
-├── editor-protocol ──── editor message types (editor-protocol-agent adds the agent surface)
+├── egui ─────────────── immediate-mode egui UI overlay
 ├── steam ────────────── Steam integration (steamworks)
 └── windows-app-icon ── embed app icon on Windows
 
