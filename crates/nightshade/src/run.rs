@@ -1042,7 +1042,11 @@ pub fn advance_timing(world: &mut World) {
         .last_frame_start_instant
         .map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
 
-    timing.delta_time = timing.raw_delta_time * timing.time_speed;
+    timing.delta_time = if timing.paused {
+        0.0
+    } else {
+        timing.raw_delta_time * timing.time_speed
+    };
 
     timing.last_frame_start_instant = Some(now);
 

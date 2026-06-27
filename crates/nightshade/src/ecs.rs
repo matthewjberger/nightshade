@@ -65,6 +65,7 @@ pub mod terrain;
 pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;
+pub mod timer;
 pub mod transform;
 pub mod tween;
 pub mod ui;

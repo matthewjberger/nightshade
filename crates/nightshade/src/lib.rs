@@ -780,6 +780,7 @@ pub mod prelude {
         TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
+    pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
     pub use crate::ecs::transform::commands::mark_local_transform_dirty;
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
     #[cfg(feature = "egui")]
@@ -826,12 +827,13 @@ pub mod prelude {
     pub use crate::ecs::vfx::textures::{FLARE_SLOT, GLOW_SLOT, SMOKE_SLOT, upload_vfx_textures};
     pub use crate::ecs::world::commands::{
         EcsCommand, RenderCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
-        despawn_entities_with_cache_cleanup, despawn_recursive_immediate, load_hdr_skybox,
-        load_hdr_skybox_from_path, load_procedural_textures, set_material_with_textures,
+        despawn_entities_with_cache_cleanup, despawn_recursive_immediate, is_paused,
+        load_hdr_skybox, load_hdr_skybox_from_path, load_procedural_textures, pause,
+        set_material_with_textures, set_paused, set_time_scale,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
-        spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
+        spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
     };
     pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
