@@ -168,7 +168,7 @@ fn start_game(world: &mut World, game: &mut Game) {
     game.time = ROUND_SECONDS;
     generate_world(world, game);
     let player = first_person(world, vec3(0.0, 2.0, 0.0));
-    set_player_speed(world, player, PLAYER_SPEED);
+    set_controller_speed(world, player, PLAYER_SPEED);
     game.player = Some(player);
     game.screen = Screen::Playing;
     refresh_panels(world, game);
@@ -185,7 +185,7 @@ fn leave_run(world: &mut World, game: &mut Game, screen: Screen) {
 }
 
 fn setup(world: &mut World) -> Game {
-    set_title(world, "Coin Dash");
+    set_window_title(world, "Coin Dash");
     set_background(world, Background::Sky);
     set_fog(
         world,

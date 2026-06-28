@@ -74,7 +74,7 @@ fn start_round(world: &mut World, game: &mut Game) {
 }
 
 fn setup(world: &mut World) -> Game {
-    set_title(world, "Coin Rush");
+    set_window_title(world, "Coin Rush");
     let floor = spawn_floor(world, ARENA + 2.0);
     load_texture(
         world,
