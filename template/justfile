@@ -89,7 +89,11 @@ install-tools:
 watch:
     cargo watch -x 'run -r'
 
-# Builds the project for Steam Deck using cross
+# Install Steam Deck cross-compilation tooling (cross from git for rustup 1.28+ support; needs Docker running)
+init-steamdeck:
+    cargo install cross --git https://github.com/cross-rs/cross --rev 29d00c7 --locked
+
+# Builds the project for Steam Deck using cross (run `just init-steamdeck` first)
 build-steamdeck:
     cross build --release --target x86_64-unknown-linux-gnu
 
