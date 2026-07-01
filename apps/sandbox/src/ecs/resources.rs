@@ -55,14 +55,14 @@ pub struct PoseKeyframe {
 }
 
 /// One animated model-space rotation axis on one joint across the
-/// stride cycle. `run` and `walk` hold degrees at the four cycle
-/// frames of each gait: reach, pass, mirrored reach, mirrored pass.
+/// stride cycle. `run` and `walk` hold degrees at the six cycle frames
+/// of each gait: reach, pass, push, then mirrored reach, pass, push.
 pub struct GaitTrack {
     pub entity: Entity,
     pub axis: nalgebra_glm::Vec3,
-    pub run: [f32; 4],
-    pub walk: [f32; 4],
-    pub crouch_walk: [f32; 4],
+    pub run: [f32; 6],
+    pub walk: [f32; 6],
+    pub crouch_walk: [f32; 6],
 }
 
 /// A two-bone inverse kinematics chain: a root joint, a hinge joint,

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 const POSE_BLEND_SHARPNESS: f32 = 12.0;
 const GAIT_TRACKING_SHARPNESS_BOOST: f32 = 64.0;
 const GAIT_PHASE_LEAD: f32 = 0.35;
+const STRIDE_STANCE_WARP: f32 = 0.18;
 const REACH_ARM_DEGREES: f32 = 90.0;
 const IDLE_ARM_DROP_DEGREES: f32 = 65.0;
 const IDLE_ELBOW_BEND_DEGREES: f32 = 20.0;
@@ -21,10 +22,10 @@ const LOOK_JOINTS: &[(&str, f32)] = &[
     ("Head", 0.4),
 ];
 const SOFT_JOINTS: &[(&str, f32, f32)] = &[
-    ("LeftForeArm", 700.0, 34.0),
-    ("RightForeArm", 700.0, 34.0),
-    ("LeftArm", 900.0, 42.0),
-    ("RightArm", 900.0, 42.0),
+    ("LeftForeArm", 700.0, 26.0),
+    ("RightForeArm", 700.0, 26.0),
+    ("LeftArm", 900.0, 34.0),
+    ("RightArm", 900.0, 34.0),
     ("Head", 600.0, 34.0),
     ("Spine2", 1100.0, 55.0),
 ];
@@ -58,48 +59,94 @@ const CROUCH: &[(&str, char, f32)] = &[
 /// joints and negating rotations about Y and Z.
 const GAIT_REACH: &[(&str, char, f32)] = &[
     ("Hips", 'y', -12.0),
-    ("LeftUpLeg", 'x', -50.0),
+    ("LeftUpLeg", 'x', -52.0),
     ("LeftUpLeg", 'z', -4.0),
-    ("RightUpLeg", 'x', 45.0),
+    ("RightUpLeg", 'x', 42.0),
     ("RightUpLeg", 'z', 4.0),
-    ("LeftLeg", 'x', 35.0),
-    ("RightLeg", 'x', 20.0),
+    ("LeftLeg", 'x', 32.0),
+    ("RightLeg", 'x', 24.0),
     ("LeftFoot", 'x', 3.0),
-    ("RightFoot", 'x', -10.0),
-    ("LeftArm", 'z', -78.0),
-    ("RightArm", 'z', 78.0),
-    ("LeftArm", 'x', 30.0),
-    ("RightArm", 'x', -55.0),
-    ("LeftForeArm", 'x', -75.0),
-    ("RightForeArm", 'x', -95.0),
+    ("RightFoot", 'x', -12.0),
+    ("LeftArm", 'z', -74.0),
+    ("RightArm", 'z', 74.0),
+    ("LeftArm", 'x', 40.0),
+    ("RightArm", 'x', -64.0),
+    ("LeftForeArm", 'x', -78.0),
+    ("RightForeArm", 'x', -100.0),
+    ("LeftShoulder", 'y', -8.0),
+    ("RightShoulder", 'y', 10.0),
     ("Spine", 'x', 16.0),
     ("Spine1", 'x', 4.0),
-    ("Spine", 'y', 10.0),
+    ("Spine", 'y', 11.0),
+    ("Spine1", 'y', 5.0),
+    ("Spine2", 'y', 3.0),
     ("Neck", 'x', -14.0),
+    ("Neck", 'y', -6.0),
+    ("Head", 'y', -2.0),
 ];
 
 /// Model-space joint deltas at the pass between reaches: the right leg
 /// swings through with a folded knee while the left leg supports.
 const GAIT_PASS: &[(&str, char, f32)] = &[
+    ("Hips", 'y', -6.0),
     ("Hips", 'z', 4.0),
     ("LeftUpLeg", 'x', 2.0),
     ("LeftUpLeg", 'z', -4.0),
-    ("RightUpLeg", 'x', -38.0),
+    ("RightUpLeg", 'x', -40.0),
     ("RightUpLeg", 'z', 4.0),
     ("LeftLeg", 'x', 30.0),
-    ("RightLeg", 'x', 115.0),
+    ("RightLeg", 'x', 118.0),
     ("LeftFoot", 'x', -24.0),
     ("RightFoot", 'x', -52.0),
-    ("LeftArm", 'z', -78.0),
-    ("RightArm", 'z', 78.0),
-    ("LeftArm", 'x', 0.0),
-    ("RightArm", 'x', 0.0),
-    ("LeftForeArm", 'x', -80.0),
-    ("RightForeArm", 'x', -80.0),
+    ("LeftArm", 'z', -76.0),
+    ("RightArm", 'z', 76.0),
+    ("LeftArm", 'x', 4.0),
+    ("RightArm", 'x', -6.0),
+    ("LeftForeArm", 'x', -84.0),
+    ("RightForeArm", 'x', -84.0),
+    ("LeftShoulder", 'y', -4.0),
+    ("RightShoulder", 'y', 5.0),
     ("Spine", 'x', 16.0),
     ("Spine1", 'x', 4.0),
-    ("Spine", 'y', 0.0),
+    ("Spine", 'y', 6.0),
+    ("Spine1", 'y', 3.0),
+    ("Spine2", 'y', 1.0),
     ("Neck", 'x', -14.0),
+    ("Neck", 'y', -3.0),
+    ("Head", 'y', -1.0),
+];
+
+/// Model-space joint deltas at the drive extreme of the run: the left
+/// leg extends behind at toe-off while the right knee drives high in
+/// front, the torso reaches its deepest forward pitch, and the pelvis
+/// and chest counter-rotate hardest to throw the opposite arm forward.
+const GAIT_PUSH: &[(&str, char, f32)] = &[
+    ("Hips", 'y', 6.0),
+    ("Hips", 'z', 2.0),
+    ("LeftUpLeg", 'x', 16.0),
+    ("LeftUpLeg", 'z', -4.0),
+    ("RightUpLeg", 'x', -58.0),
+    ("RightUpLeg", 'z', 4.0),
+    ("LeftLeg", 'x', 10.0),
+    ("RightLeg", 'x', 96.0),
+    ("LeftFoot", 'x', 22.0),
+    ("RightFoot", 'x', -30.0),
+    ("LeftArm", 'z', -74.0),
+    ("RightArm", 'z', 74.0),
+    ("LeftArm", 'x', -34.0),
+    ("RightArm", 'x', 26.0),
+    ("LeftForeArm", 'x', -100.0),
+    ("RightForeArm", 'x', -80.0),
+    ("LeftShoulder", 'y', 6.0),
+    ("RightShoulder", 'y', -6.0),
+    ("Spine", 'x', 20.0),
+    ("Spine1", 'x', 6.0),
+    ("Spine", 'y', -6.0),
+    ("Spine1", 'y', -3.0),
+    ("Spine2", 'y', -2.0),
+    ("Neck", 'x', -16.0),
+    ("Neck", 'y', 3.0),
+    ("Head", 'y', 1.0),
 ];
 
 /// Walk variant of the reach extreme: shorter stride, upright torso,
@@ -148,6 +195,31 @@ const WALK_PASS: &[(&str, char, f32)] = &[
     ("Neck", 'x', -3.0),
 ];
 
+/// Walk variant of the push: a gentle toe-off with the trailing leg
+/// straightening and the swing knee lifting just enough to clear.
+const WALK_PUSH: &[(&str, char, f32)] = &[
+    ("Hips", 'y', 4.0),
+    ("Hips", 'z', 3.0),
+    ("LeftUpLeg", 'x', 10.0),
+    ("LeftUpLeg", 'z', -3.0),
+    ("RightUpLeg", 'x', -28.0),
+    ("RightUpLeg", 'z', 3.0),
+    ("LeftLeg", 'x', 4.0),
+    ("RightLeg", 'x', 48.0),
+    ("LeftFoot", 'x', 12.0),
+    ("RightFoot", 'x', -22.0),
+    ("LeftArm", 'z', -78.0),
+    ("RightArm", 'z', 78.0),
+    ("LeftArm", 'x', -18.0),
+    ("RightArm", 'x', 14.0),
+    ("LeftForeArm", 'x', -30.0),
+    ("RightForeArm", 'x', -22.0),
+    ("Spine", 'x', 3.0),
+    ("Spine", 'y', -6.0),
+    ("Neck", 'x', -3.0),
+    ("Neck", 'y', 3.0),
+];
+
 /// Crouched locomotion reach: the stride cycles around the crouch
 /// stance with both knees deep so the hips stay sunken.
 const CROUCH_WALK_REACH: &[(&str, char, f32)] = &[
@@ -186,6 +258,27 @@ const CROUCH_WALK_PASS: &[(&str, char, f32)] = &[
     ("RightForeArm", 'x', -38.0),
     ("Spine", 'x', 16.0),
     ("Spine", 'y', 0.0),
+];
+
+/// Crouched locomotion push: the trailing leg drives the sunken hips
+/// forward while both knees stay deep.
+const CROUCH_WALK_PUSH: &[(&str, char, f32)] = &[
+    ("Hips", 'y', 3.0),
+    ("Hips", 'z', 2.0),
+    ("LeftUpLeg", 'x', -50.0),
+    ("RightUpLeg", 'x', -62.0),
+    ("LeftLeg", 'x', 72.0),
+    ("RightLeg", 'x', 100.0),
+    ("LeftFoot", 'x', -10.0),
+    ("RightFoot", 'x', -22.0),
+    ("LeftArm", 'z', -78.0),
+    ("RightArm", 'z', 78.0),
+    ("LeftArm", 'x', -10.0),
+    ("RightArm", 'x', 8.0),
+    ("LeftForeArm", 'x', -38.0),
+    ("RightForeArm", 'x', -34.0),
+    ("Spine", 'x', 16.0),
+    ("Spine", 'y', -5.0),
 ];
 
 /// Airborne pose: legs slightly gathered, arms out and forward for
@@ -964,10 +1057,13 @@ fn build_gait_tracks(bones: &HashMap<String, Entity>) -> Vec<GaitTrack> {
     for (suffix, axis, _) in GAIT_REACH
         .iter()
         .chain(GAIT_PASS.iter())
+        .chain(GAIT_PUSH.iter())
         .chain(WALK_REACH.iter())
         .chain(WALK_PASS.iter())
+        .chain(WALK_PUSH.iter())
         .chain(CROUCH_WALK_REACH.iter())
         .chain(CROUCH_WALK_PASS.iter())
+        .chain(CROUCH_WALK_PUSH.iter())
     {
         let key = (suffix.to_string(), *axis);
         if !track_keys.contains(&key) {
@@ -985,20 +1081,26 @@ fn build_gait_tracks(bones: &HashMap<String, Entity>) -> Vec<GaitTrack> {
         let run = [
             table_value(GAIT_REACH, &suffix, axis),
             table_value(GAIT_PASS, &suffix, axis),
+            table_value(GAIT_PUSH, &suffix, axis),
             table_value(GAIT_REACH, &partner, axis) * sign,
             table_value(GAIT_PASS, &partner, axis) * sign,
+            table_value(GAIT_PUSH, &partner, axis) * sign,
         ];
         let walk = [
             table_value(WALK_REACH, &suffix, axis),
             table_value(WALK_PASS, &suffix, axis),
+            table_value(WALK_PUSH, &suffix, axis),
             table_value(WALK_REACH, &partner, axis) * sign,
             table_value(WALK_PASS, &partner, axis) * sign,
+            table_value(WALK_PUSH, &partner, axis) * sign,
         ];
         let crouch_walk = [
             table_value(CROUCH_WALK_REACH, &suffix, axis),
             table_value(CROUCH_WALK_PASS, &suffix, axis),
+            table_value(CROUCH_WALK_PUSH, &suffix, axis),
             table_value(CROUCH_WALK_REACH, &partner, axis) * sign,
             table_value(CROUCH_WALK_PASS, &partner, axis) * sign,
+            table_value(CROUCH_WALK_PUSH, &partner, axis) * sign,
         ];
         tracks.push(GaitTrack {
             entity,
@@ -1020,12 +1122,13 @@ fn build_gait_locals(
     run_factor: f32,
     crouch_factor: f32,
 ) -> HashMap<Entity, nalgebra_glm::Quat> {
+    let warped_phase = phase + STRIDE_STANCE_WARP * run_factor * (2.0 * phase).sin();
     let mut delta_by_entity: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
     for track in tracks {
-        let walk_degrees = sample_cycle(&track.walk, phase);
-        let run_degrees = sample_cycle(&track.run, phase);
+        let walk_degrees = sample_cycle(&track.walk, warped_phase);
+        let run_degrees = sample_cycle(&track.run, warped_phase);
         let upright_degrees = walk_degrees + (run_degrees - walk_degrees) * run_factor;
-        let crouch_degrees = sample_cycle(&track.crouch_walk, phase);
+        let crouch_degrees = sample_cycle(&track.crouch_walk, warped_phase);
         let degrees = upright_degrees + (crouch_degrees - upright_degrees) * crouch_factor;
         if degrees.abs() < 1e-3 {
             continue;
@@ -1039,17 +1142,17 @@ fn build_gait_locals(
     build_locals_from_model_deltas(world, model, rest_rotations, &delta_by_entity)
 }
 
-/// Periodic Catmull-Rom over the four stride cycle frames, giving the
+/// Periodic Catmull-Rom over the six stride cycle frames, giving the
 /// spatial and velocity continuity the talk reaches for with cubic
 /// interpolation.
-fn sample_cycle(values: &[f32; 4], phase: f32) -> f32 {
-    let normalized = phase.rem_euclid(std::f32::consts::TAU) / (std::f32::consts::TAU / 4.0);
-    let segment = (normalized.floor() as usize) % 4;
+fn sample_cycle(values: &[f32; 6], phase: f32) -> f32 {
+    let normalized = phase.rem_euclid(std::f32::consts::TAU) / (std::f32::consts::TAU / 6.0);
+    let segment = (normalized.floor() as usize) % 6;
     let local = normalized - normalized.floor();
-    let point_0 = values[(segment + 3) % 4];
+    let point_0 = values[(segment + 5) % 6];
     let point_1 = values[segment];
-    let point_2 = values[(segment + 1) % 4];
-    let point_3 = values[(segment + 2) % 4];
+    let point_2 = values[(segment + 1) % 6];
+    let point_3 = values[(segment + 2) % 6];
     catmull_rom(point_0, point_1, point_2, point_3, local)
 }
 

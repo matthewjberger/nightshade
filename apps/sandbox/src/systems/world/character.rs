@@ -46,8 +46,9 @@ const GAIT_FADE_START_SPEED: f32 = 0.15;
 const GAIT_FULL_SPEED: f32 = 1.0;
 const GAIT_WEIGHT_SHARPNESS: f32 = 8.0;
 const GAIT_BLEND_SHARPNESS: f32 = 6.0;
-const BOUNCE_GRAVITY_FACTOR: f32 = 0.43;
-const BOUNCE_MAX: f32 = 0.06;
+const BOUNCE_WALK_MAX: f32 = 0.045;
+const BOUNCE_RUN_MAX: f32 = 0.16;
+const BOUNCE_ABSORB: f32 = 0.05;
 const BOUNCE_CONTACT_LAG: f32 = 0.3;
 const CROUCH_SPRING_STIFFNESS: f32 = 90.0;
 const CROUCH_SPRING_DAMPING: f32 = 13.0;
@@ -336,26 +337,24 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
 }
 
 /// Vertical bob synced to the stride plus the flip and roll rotation
-/// of the whole model around its center of mass. The bob is lowest
-/// just after each foot contact and follows the ballistic fall over
-/// one step, so a jog bounces and a sprint flattens out. Flips rotate
-/// with a small anticipation wind up and ease out into the air pose.
+/// of the whole model around its center of mass. Each step is a
+/// ballistic arc that floats to an apex at mid-flight and dips into a
+/// short absorb at contact, and its height grows from a gentle walk to
+/// a weighty run. Flips rotate with a small anticipation wind up and
+/// ease out into the air pose.
 fn apply_model_motion(sandbox_world: &SandboxWorld, world: &mut World) {
     let state = &sandbox_world.resources.character;
     let Some(model) = state.model else {
         return;
     };
-    let speed = Vec3::new(state.velocity.x, 0.0, state.velocity.z).norm();
-    let amplitude = if speed > 0.1 {
-        let step_time = (std::f32::consts::PI * state.stride_radius) / speed;
-        (BOUNCE_GRAVITY_FACTOR * step_time * step_time).min(BOUNCE_MAX)
-    } else {
-        0.0
-    };
-    let bounce = amplitude
-        * 0.5
-        * (1.0 - (2.0 * (state.stride_phase - BOUNCE_CONTACT_LAG)).cos())
-        * state.gait_weight;
+    let run_factor = state.gait_run_factor.clamp(0.0, 1.0);
+    let apex =
+        (BOUNCE_WALK_MAX + (BOUNCE_RUN_MAX - BOUNCE_WALK_MAX) * run_factor) * state.gait_weight;
+    let step_phase = (state.stride_phase - BOUNCE_CONTACT_LAG).rem_euclid(std::f32::consts::PI)
+        / std::f32::consts::PI;
+    let arc = 4.0 * step_phase * (1.0 - step_phase);
+    let absorb = BOUNCE_ABSORB * run_factor * state.gait_weight * (1.0 - arc).powi(3);
+    let bounce = apex * arc - absorb;
 
     let mut rotation = nalgebra_glm::quat_identity();
     let mut translation = Vec3::new(0.0, bounce, 0.0);
