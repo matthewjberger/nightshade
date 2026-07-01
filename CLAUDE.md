@@ -1,5 +1,7 @@
 # Nightshade Engine
 
+New to this repo, or starting a fresh session? Run `/intro-nightshade` for a full orientation: the two-layer architecture, where every doc lives, the reference apps to copy, the build/gate workflow, and how to work here without blowing context. The command is source-controlled at `.claude/commands/intro-nightshade.md`.
+
 For games, start with the high-level `nightshade-api` facade. Read `docs/SPEC_RUST_API.md` (the full signature catalog) and the "Start Here" section of `docs/USAGE.md`. The api games `apps/coin_dash` and `apps/coin_rush` and the `template_api/` template are the working references. Reach for the engine layer only when the facade stops covering what you need.
 
 Read `docs/USAGE.md` before writing or modifying engine code (the `nightshade` crate layer).

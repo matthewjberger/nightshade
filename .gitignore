@@ -28,7 +28,9 @@ apps/tower_defense/tower_defense.nsmap
 *.tmp
 *.report.json
 screenshots/
-.claude/
+.claude/*
+!.claude/commands/
+!.claude/commands/**
 THIRD_PARTY_LICENSES.html
 *.tracy
 trace.csv

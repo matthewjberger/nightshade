@@ -1,0 +1,101 @@
+---
+description: Orient a new session on the nightshade engine. Architecture, where every detail lives, and how to work here without blowing context.
+---
+
+# Orient: Nightshade Engine
+
+You are starting work in the nightshade engine repo. This is your orientation. Read it in full, build the mental model below, then load only the specific docs a task actually needs. Do NOT read all of `docs/` up front. It is large (`USAGE.md` alone is ~3000 lines) and will blow your context. This file is the map. Load the territory only as a task needs it.
+
+## What this is
+
+A cross-platform data-oriented game engine (wgpu, freecs ECS, nalgebra_glm) shipped as two layers.
+
+- **`nightshade-api`** (`crates/nightshade-api`) is the high-level facade: roughly 300 free functions over `World` and `Entity`, plain data, no trait to implement. `open()`, `run()`, and `run!` boot a working scene (sky, sun, shadows, grid, orbit camera, prototype textures). Start here for a game.
+- **`nightshade`** (`crates/nightshade`) is the engine itself: the `State` trait, the ECS, the render graph, every subsystem. Drop to it one call at a time when the facade stops covering what you need, via `use nightshade_api::nightshade::prelude::*;`.
+
+Every facade function bottoms out in a real engine call and hands you the real `World`, so nothing is hidden and there is no migration cost.
+
+## Step 1: pick your layer before writing anything
+
+- Building or extending a game, scene, or demo: use the facade. Read `docs/SPEC_RUST_API.md` (the full signature catalog, written to be read once) and the "Start Here" section of `docs/USAGE.md`. Working references: `apps/coin_dash`, `apps/coin_rush`, `template_api/`, and `crates/nightshade-api/examples`.
+- Building or extending the engine, a custom render pass, a new component or system, or an engine-layer app: use the engine layer. Read the relevant section of `docs/USAGE.md` and the canonical engine-layer app `apps/sandbox` before writing.
+
+If unsure, default to the facade and only descend when a specific need forces it.
+
+## The mental model (hold this, do not re-derive it)
+
+- **The engine boundary is two streams.** Commands flow in, events flow out. Anything outside core (native logic, rhai, WASM, remote, a binding) sits on those two data streams and never gets `&mut World`. Two invariants keep it bounded and deterministic: commands emit events and never more commands, and participants run once per cycle in fixed order. Command replies are immediate (a spawn hands back a real `Entity` the same tick), but the events a command emits land one cycle later. Detail in `docs/COMMANDS_AND_EVENTS.md`.
+- **ECS is freecs archetypes.** Components are bitflag masks (`CAMERA | LOCAL_TRANSFORM | GLOBAL_TRANSFORM`). `world.core` is components and queries, `world.resources` is domain-grouped singletons. The default query is the closure form: `world.core.query().with(MASK).iter(|entity, table, index| { ... })` for reads, `query_mut()` for writes, `.without(MASK)` for negative filters. For structural mutation during iteration, gather `(entity, payload)` into a `Vec`, then apply in a second pass.
+- **Most systems run automatically** via `world.resources.schedules.frame` (physics, animation, navmesh, text sync, transforms, plus one `RETAINED_UI` entry). Do not call these manually. Camera controllers and a few others (cutscenes) are opt-in in `run_systems`. Never hand-run an engine system from app code. Fix the data dependency instead.
+- **Dual-world pattern.** A game keeps its own `freecs::ecs!` world for gameplay beside the engine `World`, bridged by an `EngineEntity(Entity)` component and sync helpers, synced to transforms once per frame. `apps/sandbox/src/ecs.rs` and `apps/game/src/systems/props.rs` are the live patterns.
+- **Rendering is a data-oriented render graph** (`RenderGraph<World>`): passes declare slot names, the graph resolves dependencies, store and clear ops, transient aliasing, and dead-pass culling. Every camera renders to its own offscreen viewport texture and the swapchain is composed from those. The draw path is GPU-driven: the GPU culls, classifies, bins, and builds indirect commands, while the CPU does delta uploads plus one fixed indirect draw per pipeline class. Detail in `docs/RENDERER.md` and `docs/GPU_DRIVEN_SCENE.md`.
+
+## Where every detail lives (read the one that matches your task, never all)
+
+| Doc | Read it when you need |
+| --- | --- |
+| `docs/SPEC_RUST_API.md` | The facade signature catalog. First stop for any game work. |
+| `docs/USAGE.md` | Engine-layer usage for every subsystem (meshes, cameras, lighting, materials, physics, audio, animation, UI, scenes). Grep or section-read it, do not read the whole file. |
+| `docs/ENGINE_FEATURES.md` | Index of every shipped mechanic and which app exercises it. Best "does the engine already do X, and where is the example". |
+| `docs/RENDERER.md` | Render graph architecture, every built-in pass, per-frame pipeline, camera viewports, custom passes. |
+| `docs/GPU_DRIVEN_SCENE.md` | The GPU scene, culling, and indirect-draw architecture, and what stays on the CPU by design. |
+| `docs/COMMANDS_AND_EVENTS.md` | The command and event boundary, the two invariants, the timing model. |
+| `docs/COMMAND_API.md` | The serializable `Command` enum, `Ref`, batch wiring, how bindings drive the engine. |
+| `docs/SCRIPTING.md`, `docs/SPEC_RHAI_MCP.md` | The rhai scripting model and the editor MCP tool surface. |
+| `docs/EDITOR_AGENT.md` | Driving the live editor over MCP (the bridge architecture and tool catalog). |
+| `docs/UI_TESTING.md` | `UiTestDriver` frame timing and assertions for retained UI. |
+| `docs/PROFILING.md` | The Tracy, chrome, and tracing workflow for frame-time investigation. |
+| `docs/STEAM.md`, `docs/STEAM_DECK.md`, `docs/RELEASES.md`, `docs/LICENSING.md` | Platform integration, deploy, release, and license tooling. |
+| `docs/C_BINDINGS.md`, `docs/GO_BINDINGS.md`, `docs/PYTHON_BINDINGS.md` | FFI bindings over the command surface. |
+| `docs/book/` (mdBook), `docs/by-example/` | Long-form tutorials and recipe-per-page. Reference, not required reading. |
+
+## Reference code (copy proven patterns, do not invent new architecture)
+
+- `apps/sandbox`: the canonical engine-layer 3D game. A thin `State` shell forwarding to `systems/<domain>` free functions, its own `freecs::ecs!` world, screen lifecycle funneled through `systems/lifecycle.rs`, retained-UI handles stored in resources, `theme.rs` for UI constants. Read it before writing a new engine-layer app.
+- `apps/coin_dash`, `apps/coin_rush`: idiomatic facade games. `run!(setup, ...systems)`, state in a plain struct holding `Entity` handles.
+- `template/` (engine skeleton), `template_api/` (facade skeleton): the same architecture stripped to a starting point.
+- Per-feature apps: `fireworks` (particles), `cloth`, `movement` (physics queries), `gallery` and `ui_test_harness` (retained UI), `navmesh`, `lights` (clustered forward, 1024 point lights), `ssr`, `decals`, `alpha_blending` (custom render-graph configs), `water`, `vfx`, `cutscene`, `editor` (the densest app). `docs/ENGINE_FEATURES.md` maps features to apps.
+
+## How to work here (the method that protects context)
+
+1. **Delegate broad searches.** For "where is X", "who calls Y", or any sweep across many files, spawn an `Explore` agent and keep only its conclusion. Do not read a pile of files into your own context.
+2. **Read the one relevant doc section**, not the whole doc. `USAGE.md` and `SPEC_RUST_API.md` are large. Grep for the subsystem or read a bounded range.
+3. **Read whole files before editing them.** Otherwise you duplicate code or misread the architecture.
+4. **Reuse existing patterns.** Find the nearest working app or example and follow it. Respect the `systems/<name>.rs` architecture: behavior goes in a system module, not lumped into `state.rs`.
+5. **When a search drives a removal or refactor**, double-check for other consumers across all apps before declaring it done.
+
+## Hard rules (non-negotiable, full set in the root `CLAUDE.md` and the user's global config)
+
+- Rust: no comments ever (only `///` or `//!` rustdoc when it earns its place), no debug logging, no abbreviations (`index`, not `i`), no `unsafe` unless told, no `mod.rs` (2024 edition), no `#[allow(...)]` to silence a lint (fix the cause), no `Rc<RefCell<T>>`.
+- `nalgebra_glm` only, never `glam`. Use `Vec2::component_mul()` for element-wise multiply. WGSL uniform structs need 16-byte alignment, so pack with `vec4`, not `vec3`.
+- Data-oriented, not OOP. No "Manager" suffixes, no one-line forwarding wrappers, no gratuitous `pub`. The builder pattern is the lone allowed OOP-ish exception.
+- When you replace a function, delete the old one and its now-orphaned helpers and imports in the same change. Never leave both.
+- Never default a new capability off. Build it as THE path, not a flag that ships false.
+- Call `mark_local_transform_dirty(world, entity)` after manually writing a transform. `freecs::Entity` is the entity type everywhere.
+- Windows host: use PowerShell-compatible commands and the dedicated file tools, not the Bash tool, for path operations.
+
+## Build, run, and the commit gate
+
+Use the `justfile`, never raw `cargo run`.
+
+- `just run <project>` runs a native app (blank arg opens the editor). Use `just run-app <project> -- <args>` to pass args.
+- `just run-example <name>` runs a facade example from `crates/nightshade-api/examples`. Use `just list-examples` to enumerate them.
+- `just run-wasm <project>` does a browser build via Trunk.
+- Gate before any commit: `just format`, then `just lint` (clippy across the workspace with warnings as errors, which also runs the wasm lint), then `just test`. Confirm green.
+- In PowerShell 5.1 do not pipe `2>&1` from cargo or just. It false-fails `$LASTEXITCODE`.
+- Git only when explicitly told. Conventional Commits (`type(scope): description`). No em-dashes, semicolons, `@`, or attribution or Co-Authored-By lines in messages. Never push without the user verifying.
+
+## Adding a component or system
+
+- **App-level game data** does not touch engine source. Define your own `freecs::ecs!` world with the component and run systems over it. See `apps/sandbox/src/ecs.rs`.
+- **Engine-level component.** Create the module at `src/ecs/<name>.rs` plus `src/ecs/<name>/components.rs`, with systems in `src/ecs/<name>/systems.rs`. Register it in `src/ecs/ecs.rs` (`pub mod <name>;`) and in `src/ecs/world.rs` (the `freecs::ecs!` macro and the `pub mod components` re-exports). Put resources in the `Resources { }` block. Re-export systems in `src/systems.rs` and add to the prelude in `src/lib.rs`. 2024 edition, so no `mod.rs`.
+
+## High-value gotchas
+
+- `spawn_scene` overwrites global render settings (atmosphere included). Save and restore around a partial subtree spawn.
+- Visibility is not dirty-signaled. Any delta render path must sync `get_visibility` separately.
+- Retained UI needs both `world.resources.user_interface.enabled` and `world.resources.retained_ui.enabled`.
+- Despawning a textured physics cube underflows its texture refcount. Do not despawn and respawn a textured cube as a refresh.
+- After heavy despawn and respawn churn, call `world.resources.mesh_render_state.request_full_rebuild()`.
+
+You now have the map. Ask what to build, or state the task, then load the one or two docs and the reference app it touches.
