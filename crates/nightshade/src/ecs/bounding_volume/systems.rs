@@ -63,7 +63,10 @@ pub fn ensure_bounding_volumes(world: &mut World) {
         .with(INSTANCED_MESH)
         .without(BOUNDING_VOLUME)
         .iter(|entity, table, idx| {
-            pending.push((entity, instanced_bounding_volume(mesh_cache, &table.instanced_mesh[idx])));
+            pending.push((
+                entity,
+                instanced_bounding_volume(mesh_cache, &table.instanced_mesh[idx]),
+            ));
         });
 
     for (entity, bv) in pending {
