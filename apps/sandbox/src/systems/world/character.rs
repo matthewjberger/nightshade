@@ -159,28 +159,12 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     spawn_model(sandbox_world, world, body);
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn load_model_bytes() -> Option<Vec<u8>> {
-    const MODEL_PATH: &str = "apps/sandbox/assets/racer.glb";
-    match std::fs::read(MODEL_PATH) {
-        Ok(bytes) => Some(bytes),
-        Err(error) => {
-            tracing::warn!("no character model at {MODEL_PATH}: {error}");
-            None
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn load_model_bytes() -> Option<Vec<u8>> {
-    None
-}
-
 fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
-    let Some(bytes) = load_model_bytes() else {
-        return;
-    };
-    let mut result = match nightshade::ecs::prefab::import_gltf_from_bytes(&bytes) {
+    const MODEL_BYTES: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../assets/gltf/x_bot.glb"
+    ));
+    let mut result = match nightshade::ecs::prefab::import_gltf_from_bytes(MODEL_BYTES) {
         Ok(result) => result,
         Err(error) => {
             tracing::error!("failed to import character model: {error}");
