@@ -4,8 +4,7 @@ use crate::systems::world::pose::{find_bone, joint_rotation, quat_to_rotation_ve
 use nightshade::ecs::physics::joints::{SphericalJoint, create_spherical_joint};
 use nightshade::ecs::transform::queries::query_children;
 use nightshade::ecs::world::{
-    COLLIDER, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
-    PHYSICS_INTERPOLATION, RIGID_BODY,
+    COLLIDER, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, PHYSICS_INTERPOLATION, RIGID_BODY,
 };
 use nightshade::prelude::*;
 use std::collections::HashMap;
@@ -165,7 +164,6 @@ fn build(sandbox_world: &mut SandboxWorld, world: &mut World) {
             world,
             NAME | LOCAL_TRANSFORM
                 | GLOBAL_TRANSFORM
-                | LOCAL_TRANSFORM_DIRTY
                 | RIGID_BODY
                 | COLLIDER
                 | PHYSICS_INTERPOLATION,
@@ -292,11 +290,10 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
         let character = &mut sandbox_world.resources.character;
         character.velocity = hips_velocity;
         character.grounded = false;
-        if let Some(body) = character.body {
-            if let Some(transform) = world.core.get_local_transform_mut(body) {
-                transform.translation = feet;
-            }
-            mark_local_transform_dirty(world, body);
+        if let Some(body) = character.body
+            && let Some(transform) = world.core.get_local_transform_mut(body)
+        {
+            transform.translation = feet;
         }
     }
 }
@@ -458,7 +455,6 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxWorld, world: &mut World, body:
         if let Some(transform) = world.core.get_local_transform_mut(body) {
             transform.translation = feet;
         }
-        mark_local_transform_dirty(world, body);
     }
 
     let mut world_rotation_by_bone: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
@@ -536,6 +532,5 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxWorld, world: &mut World, body:
                 transform.translation = translation;
             }
         }
-        mark_local_transform_dirty(world, entity);
     }
 }

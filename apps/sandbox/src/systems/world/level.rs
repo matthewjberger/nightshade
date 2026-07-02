@@ -3,7 +3,7 @@ use crate::systems::world::textures::{
     prototype_material,
 };
 use nightshade::ecs::world::components;
-use nightshade::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME};
+use nightshade::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME};
 use nightshade::prelude::*;
 
 pub const PLAYER_SPAWN_TAG: &str = "player_spawn";
@@ -212,7 +212,6 @@ fn spawn_ramp(
     if let Some(transform) = world.core.get_local_transform_mut(entity) {
         transform.rotation = nalgebra_glm::quat_angle_axis(angle, &Vec3::x());
     }
-    mark_local_transform_dirty(world, entity);
 }
 
 fn spawn_floor(world: &mut World) {
@@ -237,11 +236,7 @@ fn spawn_floor(world: &mut World) {
 }
 
 fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM,
-        1,
-    )[0];
+    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
     if let Some(name) = world.core.get_name_mut(entity) {
         name.0 = "PlayerSpawn".to_string();
     }
@@ -253,9 +248,6 @@ fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
             scale: Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
     world
         .core
         .set_global_transform(entity, components::GlobalTransform::default());

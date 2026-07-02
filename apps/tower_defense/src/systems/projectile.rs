@@ -120,9 +120,6 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                         && let Some(transform) = world.core.get_local_transform_mut(handle.0)
                     {
                         transform.translation = new_pos;
-                        world
-                            .core
-                            .set_local_transform_dirty(handle.0, LocalTransformDirty);
                     }
                 }
             }

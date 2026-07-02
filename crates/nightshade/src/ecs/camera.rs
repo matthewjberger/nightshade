@@ -29,7 +29,6 @@
 //!     translation: Vec3::new(0.0, 5.0, 10.0),
 //!     ..Default::default()
 //! });
-//! world.core.add_local_transform_dirty(entity);
 //! world.resources.active_camera = Some(entity);
 //! ```
 //!

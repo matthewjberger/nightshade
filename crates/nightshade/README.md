@@ -52,7 +52,6 @@ impl State for SpinCube {
             && let Some(transform) = world.core.get_local_transform_mut(entity)
         {
             transform.rotation = nalgebra_glm::quat_angle_axis(self.time, &Vec3::y_axis());
-            mark_local_transform_dirty(world, entity);
         }
     }
 }

@@ -40,7 +40,6 @@ fn apply_ground_height(sandbox_world: &mut SandboxWorld, world: &mut World) {
     if let Some(transform) = world.core.get_local_transform_mut(ground) {
         transform.translation.y = height;
     }
-    mark_local_transform_dirty(world, ground);
     if active {
         recenter(sandbox_world, world);
     }
@@ -79,9 +78,7 @@ fn recenter(sandbox_world: &SandboxWorld, world: &mut World) {
         transform.translation.z = snapped_z;
         moved = true;
     }
-    if moved {
-        mark_local_transform_dirty(world, ground);
-    }
+    if moved {}
 }
 
 fn ensure_ground(sandbox_world: &mut SandboxWorld, world: &mut World) -> Entity {

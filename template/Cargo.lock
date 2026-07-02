@@ -1184,9 +1184,9 @@ dependencies = [
 
 [[package]]
 name = "freecs"
-version = "2.0.1"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13983eed2e01937416cdc3c788fa221b57acc67ce2d12aa548dc489a8f2b7ddc"
+checksum = "1d03a4994aa31496def6d4bd997e68a9ac2672ee303526e5786a094738ef2fff"
 dependencies = [
  "paste",
  "rayon",
@@ -2141,9 +2141,9 @@ dependencies = [
 
 [[package]]
 name = "nightshade"
-version = "0.48.0"
+version = "0.50.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "028b7bbf87631babe13f1cccbb7940e0e19f4bb2840d7f5a3ae72f5d31489582"
+checksum = "8cb56eb36e0f8f1b64a9a94747a61bb4b40d600a33a29f9318153b8d0062a12d"
 dependencies = [
  "accesskit",
  "accesskit_winit",

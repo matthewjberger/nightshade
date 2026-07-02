@@ -230,9 +230,6 @@ impl PickingDemo {
         for mesh in &self.meshes {
             if let Some(transform) = world.core.get_local_transform_mut(mesh.entity) {
                 transform.rotation = rotation * transform.rotation;
-                world
-                    .core
-                    .set_local_transform_dirty(mesh.entity, LocalTransformDirty);
             }
         }
         for (mesh_entity, sphere_entity) in &self.debug_volumes {
@@ -240,9 +237,6 @@ impl PickingDemo {
                 let translation = Vec3::new(global.0[(0, 3)], global.0[(1, 3)], global.0[(2, 3)]);
                 if let Some(transform) = world.core.get_local_transform_mut(*sphere_entity) {
                     transform.translation = translation;
-                    world
-                        .core
-                        .set_local_transform_dirty(*sphere_entity, LocalTransformDirty);
                 }
             }
         }
@@ -468,7 +462,7 @@ fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32
     let lines = sphere_wireframe(radius, vec4(0.0, 1.0, 1.0, 1.0), 16);
     let entity = spawn_entities(
         world,
-        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
+        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
         1,
     )[0];
     world
@@ -485,9 +479,6 @@ fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32
     world
         .core
         .set_global_transform(entity, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(entity, LocalTransformDirty);
     world.core.set_lines(entity, Lines::new(lines));
     world
         .core

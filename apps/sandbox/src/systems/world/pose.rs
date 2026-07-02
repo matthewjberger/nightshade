@@ -660,7 +660,6 @@ pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
         if let Some(transform) = world.core.get_local_transform_mut(soft.entity) {
             transform.rotation = soft.rotation;
         }
-        mark_local_transform_dirty(world, soft.entity);
     }
 }
 
@@ -879,7 +878,6 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             continue;
         };
         transform.rotation = blend_rotation(transform.rotation, target, blend);
-        mark_local_transform_dirty(world, *entity);
     }
 
     if let Some(hips) = pose.hips {
@@ -894,7 +892,6 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
             transform.translation =
                 transform.translation + (target_translation - transform.translation) * blend;
         }
-        mark_local_transform_dirty(world, hips);
     }
 }
 

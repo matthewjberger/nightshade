@@ -19,7 +19,6 @@ pub fn apply_shell_actions(
                     controller.velocity = Vec3::zeros();
                 }
                 reset_physics_interpolation(world, player_entity);
-                mark_local_transform_dirty(world, player_entity);
             }
             character::teleport(sandbox_world, world, position);
         }

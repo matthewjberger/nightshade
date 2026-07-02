@@ -151,11 +151,7 @@ fn compute_path_cells(waypoints: &[Vec3]) -> std::collections::HashSet<(i32, i32
 }
 
 fn spawn_waypoint(world: &mut World, index: u32, position: Vec3) {
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM,
-        1,
-    )[0];
+    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
     world
         .core
         .set_name(entity, Name(format!("PathWaypoint_{index}")));
@@ -166,9 +162,6 @@ fn spawn_waypoint(world: &mut World, index: u32, position: Vec3) {
             ..Default::default()
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, LocalTransformDirty);
     world
         .core
         .set_global_transform(entity, GlobalTransform::default());

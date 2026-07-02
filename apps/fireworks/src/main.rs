@@ -154,7 +154,7 @@ impl State for FireworksDemo {
 
         let camera = spawn_entities(
             world,
-            LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
+            LOCAL_TRANSFORM | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
             1,
         )[0];
 
@@ -166,9 +166,6 @@ impl State for FireworksDemo {
                 scale: Vec3::new(1.0, 1.0, 1.0),
             },
         );
-        world
-            .core
-            .set_local_transform_dirty(camera, LocalTransformDirty);
         world
             .core
             .set_global_transform(camera, GlobalTransform::default());

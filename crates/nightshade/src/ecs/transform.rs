@@ -9,15 +9,15 @@
 //! - [`IgnoreParentScale`]: Marker to exclude parent scale from transform inheritance
 //!
 //! The transform system automatically propagates [`LocalTransform`] changes through
-//! the entity hierarchy to compute [`GlobalTransform`] matrices each frame.
+//! the entity hierarchy to compute [`GlobalTransform`] matrices each frame. Changes
+//! are detected through the ECS change ticks, so writing a transform through any
+//! component accessor is enough to schedule propagation.
 
-pub mod commands;
 pub mod components;
 pub mod queries;
 pub mod resources;
 pub mod systems;
 
-pub use commands::*;
 pub use components::*;
 pub use queries::*;
 pub use resources::*;

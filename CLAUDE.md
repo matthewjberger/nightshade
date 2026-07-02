@@ -31,6 +31,6 @@ Games use two ECS worlds: the engine `World` (rendering, physics, transforms) an
 
 - WGSL uniform structs need 16-byte alignment. Use `vec4` packing, not `vec3`.
 - `nalgebra_glm` only, never `glam`. `Vec2::component_mul()` for element-wise multiply.
-- `mark_local_transform_dirty(world, entity)` after manually setting transforms.
+- Transform writes through the component accessors propagate automatically via ECS change ticks. Raw table writes in `query_mut` closures do not register, so write transforms through `set_local_transform` or `get_local_transform_mut`.
 - `freecs::Entity` is the entity type everywhere.
 - Sprite atlas slot size: `nightshade::render::SPRITE_ATLAS_SLOT_SIZE` = (512, 512).

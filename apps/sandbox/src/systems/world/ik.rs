@@ -249,9 +249,6 @@ fn solve_two_bone(world: &mut World, body: Entity, chain: IkChain, target: Vec3)
     if let Some(transform) = world.core.get_local_transform_mut(chain.end) {
         transform.rotation = nalgebra_glm::quat_normalize(&new_end_local);
     }
-    mark_local_transform_dirty(world, chain.root);
-    mark_local_transform_dirty(world, chain.middle);
-    mark_local_transform_dirty(world, chain.end);
 }
 
 pub fn rotation_between(from: Vec3, to: Vec3) -> nalgebra_glm::Quat {

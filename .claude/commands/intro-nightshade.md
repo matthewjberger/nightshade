@@ -71,7 +71,7 @@ If unsure, default to the facade and only descend when a specific need forces it
 - Data-oriented, not OOP. No "Manager" suffixes, no one-line forwarding wrappers, no gratuitous `pub`. The builder pattern is the lone allowed OOP-ish exception.
 - When you replace a function, delete the old one and its now-orphaned helpers and imports in the same change. Never leave both.
 - Never default a new capability off. Build it as THE path, not a flag that ships false.
-- Call `mark_local_transform_dirty(world, entity)` after manually writing a transform. `freecs::Entity` is the entity type everywhere.
+- Transform writes through `set_local_transform` or `get_local_transform_mut` propagate automatically via ECS change ticks. `freecs::Entity` is the entity type everywhere.
 - Windows host: use PowerShell-compatible commands and the dedicated file tools, not the Bash tool, for path operations.
 
 ## Build, run, and the commit gate

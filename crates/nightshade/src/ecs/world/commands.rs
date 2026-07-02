@@ -441,22 +441,13 @@ pub(crate) fn setup_entity_transforms(
         entity,
         crate::ecs::world::components::GlobalTransform::default(),
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, crate::ecs::world::components::LocalTransformDirty);
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
     use crate::ecs::world::components;
-    use crate::ecs::world::{
-        GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
-    };
+    use crate::ecs::world::{GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, NAME};
 
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
-        1,
-    )[0];
+    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
 
     world
         .core
@@ -500,15 +491,9 @@ pub fn spawn_sun(world: &mut World) -> Entity {
 /// Spawn a directional light positioned above the origin without shadow casting.
 pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     use crate::ecs::world::components;
-    use crate::ecs::world::{
-        GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
-    };
+    use crate::ecs::world::{GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, NAME};
 
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
-        1,
-    )[0];
+    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
 
     world
         .core
@@ -549,15 +534,9 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
 /// Spawn a positioned light entity carrying a default [`components::Light`] for the caller to configure.
 pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name: &str) -> Entity {
     use crate::ecs::world::components;
-    use crate::ecs::world::{
-        GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME,
-    };
+    use crate::ecs::world::{GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, NAME};
 
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | LIGHT,
-        1,
-    )[0];
+    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
     world
         .core
         .set_name(entity, components::Name(name.to_string()));
@@ -582,15 +561,14 @@ pub fn spawn_mesh_at(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL_REF, NAME, RENDER_MESH, VISIBILITY,
+        BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME,
+        RENDER_MESH, VISIBILITY,
     };
 
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -772,15 +750,13 @@ fn spawn_3d_text_impl(
     billboard: bool,
 ) -> Entity {
     use crate::ecs::world::components;
-    use crate::ecs::world::{
-        GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME, TEXT, VISIBILITY,
-    };
+    use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, TEXT, VISIBILITY};
 
     let text_index = world.resources.text.cache.add_text(text);
 
     let entity = spawn_entities(
         world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
+        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
         1,
     )[0];
 
@@ -795,9 +771,6 @@ fn spawn_3d_text_impl(
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
     world
         .core
         .set_global_transform(entity, components::GlobalTransform::default());
@@ -1048,15 +1021,14 @@ pub fn spawn_instanced_mesh(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL_REF, NAME, VISIBILITY,
+        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, MATERIAL_REF, NAME,
+        VISIBILITY,
     };
 
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
             | MATERIAL_REF
             | VISIBILITY
@@ -1078,9 +1050,6 @@ pub fn spawn_instanced_mesh(
     world
         .core
         .set_global_transform(entity, components::GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
 
     world.core.set_instanced_mesh(
         entity,
@@ -1121,15 +1090,14 @@ pub fn spawn_instanced_mesh_with_material(
 ) -> Entity {
     use crate::ecs::world::components;
     use crate::ecs::world::{
-        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-        MATERIAL_REF, NAME, VISIBILITY,
+        CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, MATERIAL_REF, NAME,
+        VISIBILITY,
     };
 
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | INSTANCED_MESH
             | MATERIAL_REF
             | VISIBILITY
@@ -1151,9 +1119,6 @@ pub fn spawn_instanced_mesh_with_material(
     world
         .core
         .set_global_transform(entity, components::GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(entity, components::LocalTransformDirty);
 
     world.core.set_instanced_mesh(
         entity,

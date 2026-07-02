@@ -101,7 +101,7 @@ pub fn spawn_range_indicator(
 
         let line_entity = spawn_entities(
             world,
-            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
+            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
             1,
         )[0];
 
@@ -119,9 +119,6 @@ pub fn spawn_range_indicator(
         world
             .core
             .set_global_transform(line_entity, GlobalTransform::default());
-        world
-            .core
-            .set_local_transform_dirty(line_entity, LocalTransformDirty);
 
         world.core.set_lines(
             line_entity,
@@ -470,9 +467,6 @@ pub fn tower_shooting_system(game_world: &mut GameWorld, world: &mut World) {
                 if let Some(transform) = world.core.get_local_transform_mut(handle.0) {
                     transform.scale =
                         nalgebra_glm::vec3(0.4 * animation_scale, 0.8, 0.4 * animation_scale);
-                    world
-                        .core
-                        .set_local_transform_dirty(handle.0, LocalTransformDirty);
                 }
 
                 if animation_scale > 1.05 {

@@ -116,11 +116,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
 
             let line_entity = spawn_entities(
                 world,
-                NAME | LOCAL_TRANSFORM
-                    | GLOBAL_TRANSFORM
-                    | LOCAL_TRANSFORM_DIRTY
-                    | LINES
-                    | VISIBILITY,
+                NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
                 1,
             )[0];
 
@@ -138,9 +134,6 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
             world
                 .core
                 .set_global_transform(line_entity, GlobalTransform::default());
-            world
-                .core
-                .set_local_transform_dirty(line_entity, LocalTransformDirty);
 
             world.core.set_lines(
                 line_entity,
@@ -311,7 +304,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
 
         let box_entity = spawn_entities(
             world,
-            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | LINES | VISIBILITY,
+            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
             1,
         )[0];
 
@@ -331,9 +324,6 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
         world
             .core
             .set_global_transform(box_entity, GlobalTransform::default());
-        world
-            .core
-            .set_local_transform_dirty(box_entity, LocalTransformDirty);
         world.core.set_lines(box_entity, Lines::new(box_lines));
         world
             .core

@@ -175,7 +175,6 @@ pub fn spawn_terrain(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME

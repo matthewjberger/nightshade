@@ -5,7 +5,6 @@
 
 use nalgebra_glm::{Quat, Vec3};
 
-use crate::ecs::transform::systems::mutate_local_transform;
 use crate::ecs::world::{Entity, World};
 
 fn world_position(world: &World, entity: Entity) -> Option<Vec3> {
@@ -50,7 +49,7 @@ fn apply_world_delta(world: &mut World, entity: Entity, delta: Quat) {
     let new_world = (delta * bone_world).normalize();
     let new_local =
         (parent_world.try_inverse().unwrap_or_else(Quat::identity) * new_world).normalize();
-    if let Some(transform) = mutate_local_transform(world, entity) {
+    if let Some(transform) = world.core.get_local_transform_mut(entity) {
         transform.rotation = new_local;
     }
 }

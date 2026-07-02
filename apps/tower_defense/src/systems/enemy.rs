@@ -457,7 +457,6 @@ fn spawn_child_sphere(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -476,9 +475,6 @@ fn spawn_child_sphere(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world.core.set_render_mesh(child, RenderMesh::new("Sphere"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
@@ -524,7 +520,6 @@ fn spawn_child_sphere_emissive(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -543,9 +538,6 @@ fn spawn_child_sphere_emissive(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world.core.set_render_mesh(child, RenderMesh::new("Sphere"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
@@ -591,7 +583,6 @@ fn spawn_child_cube(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -610,9 +601,6 @@ fn spawn_child_cube(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world.core.set_render_mesh(child, RenderMesh::new("Cube"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
@@ -658,7 +646,6 @@ fn spawn_child_cylinder(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -677,9 +664,6 @@ fn spawn_child_cylinder(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world
         .core
         .set_render_mesh(child, RenderMesh::new("Cylinder"));
@@ -739,7 +723,6 @@ fn spawn_child_cone_rotated(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -758,9 +741,6 @@ fn spawn_child_cone_rotated(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world.core.set_render_mesh(child, RenderMesh::new("Cone"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
@@ -807,7 +787,6 @@ fn spawn_child_cone_emissive(
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
@@ -826,9 +805,6 @@ fn spawn_child_cone_emissive(
     world
         .core
         .set_global_transform(child, GlobalTransform::default());
-    world
-        .core
-        .set_local_transform_dirty(child, LocalTransformDirty);
     world.core.set_render_mesh(child, RenderMesh::new("Cone"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
@@ -977,9 +953,6 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
                     let visual_position =
                         new_position + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0);
                     transform.translation = visual_position;
-                    world
-                        .core
-                        .set_local_transform_dirty(handle.0, LocalTransformDirty);
                 }
             }
         }

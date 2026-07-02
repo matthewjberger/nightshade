@@ -518,7 +518,6 @@ impl NavMeshDemo {
             let trunk = spawn_entities(
                 world,
                 LOCAL_TRANSFORM
-                    | LOCAL_TRANSFORM_DIRTY
                     | GLOBAL_TRANSFORM
                     | RENDER_MESH
                     | MATERIAL_REF
@@ -579,7 +578,6 @@ impl NavMeshDemo {
                 let cone = spawn_entities(
                     world,
                     LOCAL_TRANSFORM
-                        | LOCAL_TRANSFORM_DIRTY
                         | GLOBAL_TRANSFORM
                         | RENDER_MESH
                         | MATERIAL_REF
@@ -782,11 +780,8 @@ impl NavMeshDemo {
             return;
         };
 
-        let agent_entity = spawn_entities(
-            world,
-            LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | NAVMESH_AGENT,
-            1,
-        )[0];
+        let agent_entity =
+            spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM | NAVMESH_AGENT, 1)[0];
 
         if let Some(transform) = world.core.get_local_transform_mut(agent_entity) {
             transform.translation = position;
@@ -808,7 +803,6 @@ impl NavMeshDemo {
             transform.translation = position;
             transform.scale = Vec3::new(FOX_SCALE, FOX_SCALE, FOX_SCALE);
         }
-        mark_local_transform_dirty(world, fox_entity);
 
         let initial_animation = self.animation_indices.survey;
         if let Some(player) = world.core.get_animation_player_mut(fox_entity) {
@@ -943,12 +937,10 @@ impl NavMeshDemo {
                 transform.rotation =
                     nalgebra_glm::quat_angle_axis(fox.current_rotation, &Vec3::y());
             }
-            mark_local_transform_dirty(world, fox.entity);
 
             if let Some(transform) = world.core.get_local_transform_mut(fox.name_entity) {
                 transform.translation = fox_pos + nalgebra_glm::vec3(0.0, 1.5, 0.0);
             }
-            mark_local_transform_dirty(world, fox.name_entity);
         }
     }
 
@@ -1071,7 +1063,6 @@ impl NavMeshDemo {
             );
             transform.rotation = nalgebra_glm::mat3_to_quat(&rotation_matrix);
         }
-        mark_local_transform_dirty(world, camera_entity);
     }
 
     fn handle_mouse_input(&mut self, world: &mut World) {

@@ -83,7 +83,7 @@
 //!
 //! ```ignore
 //! let entity = spawn_entities(world,
-//!     LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | RENDER_MESH,
+//!     LOCAL_TRANSFORM | GLOBAL_TRANSFORM | RENDER_MESH,
 //!     1
 //! )[0];
 //! ```
@@ -92,7 +92,6 @@
 //! |------|-------------|
 //! | `LOCAL_TRANSFORM` | Position/rotation/scale relative to parent |
 //! | `GLOBAL_TRANSFORM` | World-space transform (computed) |
-//! | `LOCAL_TRANSFORM_DIRTY` | Marks transform for hierarchy update |
 //! | `RENDER_MESH` | Visible 3D geometry |
 //! | `MATERIAL_REF` | Material reference |
 //! | `CAMERA` | Camera component |
@@ -239,7 +238,7 @@
 //! ```ignore
 //! // Dynamic rigid body with collider
 //! let entity = spawn_entities(world,
-//!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+//!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
 //!     1
 //! )[0];
 //! world.core.set_rigid_body(entity, RigidBodyComponent::new_dynamic());
@@ -418,7 +417,7 @@
 //!
 //! ```ignore
 //! let emitter = spawn_entities(world,
-//!     PARTICLE_EMITTER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+//!     PARTICLE_EMITTER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
 //!     1
 //! )[0];
 //!
@@ -442,7 +441,7 @@
 //!
 //! ```ignore
 //! let decal = spawn_entities(world,
-//!     DECAL | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+//!     DECAL | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
 //!     1
 //! )[0];
 //!
@@ -781,7 +780,6 @@ pub mod prelude {
         process_texture_queue, queue_texture_from_path, set_asset_search_paths,
     };
     pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
-    pub use crate::ecs::transform::commands::mark_local_transform_dirty;
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
     #[cfg(feature = "egui")]
     pub use crate::ecs::ui::egui_state::egui_context;
@@ -916,10 +914,7 @@ pub mod prelude {
     pub use crate::ecs::file_watcher::FileWatcher;
 
     // === decap re-exports (generated) ===
-    pub use crate::ecs::transform::systems::{
-        assign_local_transform, mutate_local_transform, update_parent,
-        validate_and_rebuild_children_cache,
-    };
+    pub use crate::ecs::transform::systems::{update_parent, validate_and_rebuild_children_cache};
     pub use crate::ecs::ui::widgets::world_canvas::{
         ui_canvas_arc, ui_canvas_circle, ui_canvas_circle_stroke, ui_canvas_clear,
         ui_canvas_cubic_bezier, ui_canvas_hit_test, ui_canvas_line, ui_canvas_polyline,

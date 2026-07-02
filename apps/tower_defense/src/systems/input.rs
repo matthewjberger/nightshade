@@ -30,7 +30,7 @@ pub fn input_system(game_world: &mut GameWorld, world: &mut World) {
             .add_text(format!("${}", sell_value));
         let text_entity = spawn_entities(
             world,
-            NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
+            NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
             1,
         )[0];
 

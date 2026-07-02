@@ -254,9 +254,6 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                                 0.15 * scale_factor,
                                 0.15 * scale_factor,
                             );
-                            world
-                                .core
-                                .set_local_transform_dirty(handle.0, LocalTransformDirty);
                         }
 
                         if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()
@@ -272,9 +269,6 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                     EffectType::PoisonBubble => {
                         if let Some(transform) = world.core.get_local_transform_mut(handle.0) {
                             transform.translation.y += delta_time * 0.5;
-                            world
-                                .core
-                                .set_local_transform_dirty(handle.0, LocalTransformDirty);
                         }
 
                         if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()

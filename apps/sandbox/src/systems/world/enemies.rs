@@ -109,7 +109,6 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
                     offset_z - LEG_HALF_LENGTH * swing.sin(),
                 );
             }
-            mark_local_transform_dirty(world, *leg);
         }
 
         translations.push((engine_entity, new_position));
@@ -147,18 +146,13 @@ fn patrol_target(index: usize) -> Vec3 {
 }
 
 fn spawn_visual(world: &mut World, position: Vec3, index: u32) -> (Entity, [Entity; 4]) {
-    let root = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM,
-        1,
-    )[0];
+    let root = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
     if let Some(name) = world.core.get_name_mut(root) {
         name.0 = format!("Sheep {}", index);
     }
     if let Some(transform) = world.core.get_local_transform_mut(root) {
         transform.translation = position;
     }
-    mark_local_transform_dirty(world, root);
 
     let wool = Material {
         base_color: [0.93, 0.91, 0.87, 1.0],
@@ -224,7 +218,6 @@ fn spawn_sheep_part(
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | GLOBAL_TRANSFORM
             | RENDER_MESH
             | MATERIAL_REF
@@ -240,7 +233,6 @@ fn spawn_sheep_part(
         transform.scale = scale;
     }
     world.core.set_parent(entity, Parent(Some(root)));
-    mark_local_transform_dirty(world, entity);
     if let Some(mesh) = world.core.get_render_mesh_mut(entity) {
         mesh.name = "Cube".to_string();
     }

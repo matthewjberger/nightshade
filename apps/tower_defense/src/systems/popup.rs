@@ -22,7 +22,7 @@ pub fn spawn_money_popup(
     let text_index = world.resources.text.cache.add_text(&text);
     let text_entity = spawn_entities(
         world,
-        NAME | LOCAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
+        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | TEXT | VISIBILITY,
         1,
     )[0];
 
@@ -74,9 +74,6 @@ pub fn update_money_popups(game_world: &mut GameWorld, world: &mut World, delta_
 
             if let Some(transform) = world.core.get_local_transform_mut(popup.text_entity) {
                 transform.translation.y += delta_time * 0.5;
-                world
-                    .core
-                    .set_local_transform_dirty(popup.text_entity, LocalTransformDirty);
             }
 
             if let Some(text_component) = world.core.get_text_mut(popup.text_entity) {

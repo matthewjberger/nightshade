@@ -147,7 +147,7 @@ pub fn apply_animations(world: &mut World) {
 
     for final_values in per_player_values {
         for (target_entity, values) in final_values {
-            if let Some(transform) = mutate_local_transform(world, target_entity) {
+            if let Some(transform) = world.core.get_local_transform_mut(target_entity) {
                 if let Some(translation) = values.translation {
                     transform.translation = translation;
                 }

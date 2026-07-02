@@ -35,11 +35,10 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxWorld, world: &mut World) {
     let mut resolved = translation;
     resolved.y = resolved.y.max(minimum_y);
     resolved = crate::systems::world::rocks::push_out_sphere(sandbox_world, resolved, 0.45);
-    if (resolved - translation).norm_squared() > 0.0 {
-        if let Some(transform) = world.core.get_local_transform_mut(fly_camera) {
-            transform.translation = resolved;
-        }
-        mark_local_transform_dirty(world, fly_camera);
+    if (resolved - translation).norm_squared() > 0.0
+        && let Some(transform) = world.core.get_local_transform_mut(fly_camera)
+    {
+        transform.translation = resolved;
     }
 }
 
@@ -69,7 +68,6 @@ pub fn set_fly(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: boo
         if let Some(transform) = world.core.get_local_transform_mut(fly_camera) {
             transform.rotation = rotation;
         }
-        mark_local_transform_dirty(world, fly_camera);
         sandbox_world.resources.player.fly_camera = Some(fly_camera);
         world.resources.active_camera = Some(fly_camera);
     } else {
@@ -115,7 +113,6 @@ pub fn reset(sandbox_world: &mut SandboxWorld, world: &mut World) {
         interpolation.previous_translation = spawn;
         interpolation.current_translation = spawn;
     }
-    mark_local_transform_dirty(world, player_entity);
 
     crate::systems::world::character::reset(sandbox_world, world);
 }

@@ -2,9 +2,7 @@ use crate::ecs::{CharacterState, RagdollMode, SandboxWorld};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::input::queries::query_active_gamepad;
 use nightshade::ecs::lines::components::{Line, Lines};
-use nightshade::ecs::world::{
-    GLOBAL_TRANSFORM, LINES, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, NAME, VISIBILITY,
-};
+use nightshade::ecs::world::{GLOBAL_TRANSFORM, LINES, LOCAL_TRANSFORM, NAME, VISIBILITY};
 use nightshade::prelude::*;
 
 const BUMPER_RADIUS: f32 = 0.55;
@@ -99,18 +97,13 @@ const SKELETON_JOINT_SIZE: f32 = 0.04;
 pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let feet = spawn_feet_position(world);
 
-    let body = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
-        1,
-    )[0];
+    let body = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
     if let Some(name) = world.core.get_name_mut(body) {
         name.0 = "Character".to_string();
     }
     if let Some(transform) = world.core.get_local_transform_mut(body) {
         transform.translation = feet;
     }
-    mark_local_transform_dirty(world, body);
 
     let camera = spawn_third_person_camera(
         world,
@@ -123,7 +116,7 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
 
     let spheres = spawn_entities(
         world,
-        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
         1,
     )[0];
     if let Some(name) = world.core.get_name_mut(spheres) {
@@ -136,7 +129,7 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
 
     let skeleton_lines = spawn_entities(
         world,
-        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LOCAL_TRANSFORM_DIRTY,
+        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
         1,
     )[0];
     if let Some(name) = world.core.get_name_mut(skeleton_lines) {
@@ -197,7 +190,6 @@ fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity
     if let Some(transform) = world.core.get_local_transform_mut(model) {
         transform.translation = Vec3::zeros();
     }
-    mark_local_transform_dirty(world, model);
 
     if let Some(player) = world.core.get_animation_player_mut(model) {
         let idle_clip = player
@@ -256,7 +248,6 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         if let Some(transform) = world.core.get_local_transform_mut(body) {
             transform.translation = feet;
         }
-        mark_local_transform_dirty(world, body);
 
         let state = &mut sandbox_world.resources.character;
         state.velocity = Vec3::zeros();
@@ -370,7 +361,6 @@ fn apply_model_motion(sandbox_world: &SandboxWorld, world: &mut World) {
         transform.translation = translation;
         transform.rotation = rotation;
     }
-    mark_local_transform_dirty(world, model);
 }
 
 fn flip_angle(progress: f32) -> f32 {
@@ -463,7 +453,6 @@ pub fn teleport(sandbox_world: &mut SandboxWorld, world: &mut World, capsule_cen
     if let Some(transform) = world.core.get_local_transform_mut(body) {
         transform.translation = feet;
     }
-    mark_local_transform_dirty(world, body);
 
     let state = &mut sandbox_world.resources.character;
     state.velocity = Vec3::zeros();
@@ -881,7 +870,6 @@ fn move_character(
             yaw_rotation
         };
     }
-    mark_local_transform_dirty(world, body);
 }
 
 /// Ledge hang: gravity is suspended while the hands own the edge.
@@ -942,7 +930,6 @@ fn hang_update(
         transform.translation = position;
         transform.rotation = nalgebra_glm::quat_angle_axis(state.facing_yaw, &Vec3::y());
     }
-    mark_local_transform_dirty(world, body);
 }
 
 fn sample_ground_distance(world: &World, probe_origin: Vec3) -> Option<f32> {
@@ -989,7 +976,6 @@ fn sync_first_person_player(sandbox_world: &SandboxWorld, world: &mut World, bod
         interpolation.previous_translation = capsule_center;
         interpolation.current_translation = capsule_center;
     }
-    mark_local_transform_dirty(world, player_entity);
 }
 
 fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {

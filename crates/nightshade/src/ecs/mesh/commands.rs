@@ -1,7 +1,7 @@
 use crate::ecs::material::resources::material_registry_insert;
 use crate::ecs::world::{
-    BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY,
-    MATERIAL_REF, NAME, Quat, RENDER_MESH, Vec3, World,
+    BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME, Quat,
+    RENDER_MESH, Vec3, World,
     components::{
         BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
     },
@@ -14,7 +14,6 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         world,
         NAME | LOCAL_TRANSFORM
             | GLOBAL_TRANSFORM
-            | LOCAL_TRANSFORM_DIRTY
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME

@@ -11,7 +11,6 @@ pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
         world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
-            | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
             | crate::ecs::world::GLOBAL_TRANSFORM
             | crate::ecs::world::CAMERA,
         1,
@@ -63,7 +62,6 @@ pub fn spawn_pan_orbit_camera_with_config(
         world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
-            | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
             | crate::ecs::world::GLOBAL_TRANSFORM
             | crate::ecs::world::CAMERA
             | PAN_ORBIT_CAMERA,
@@ -108,7 +106,6 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
         world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
-            | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
             | crate::ecs::world::GLOBAL_TRANSFORM
             | crate::ecs::world::CAMERA,
         1,
@@ -153,7 +150,6 @@ pub fn spawn_third_person_camera(
         world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
-            | crate::ecs::world::LOCAL_TRANSFORM_DIRTY
             | crate::ecs::world::GLOBAL_TRANSFORM
             | crate::ecs::world::CAMERA
             | THIRD_PERSON_CAMERA,

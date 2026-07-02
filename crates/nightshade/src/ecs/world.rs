@@ -58,7 +58,7 @@ pub mod components {
         VerticalAlignment,
     };
     pub use crate::ecs::transform::components::{
-        GlobalTransform, LocalTransform, LocalTransformDirty, Parent, Rotation,
+        GlobalTransform, LocalTransform, Parent, Rotation,
     };
     pub use crate::ecs::ui::components::{
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
@@ -152,7 +152,6 @@ freecs::ecs! {
             joint: crate::ecs::skin::components::Joint => JOINT,
             light: crate::ecs::light::components::Light => LIGHT,
             lines: crate::ecs::lines::components::Lines => LINES,
-            local_transform_dirty: crate::ecs::transform::components::LocalTransformDirty => LOCAL_TRANSFORM_DIRTY,
             local_transform: crate::ecs::transform::components::LocalTransform => LOCAL_TRANSFORM,
             material_ref: crate::ecs::material::components::MaterialRef => MATERIAL_REF,
             material_variants: crate::ecs::material::components::MaterialVariants => MATERIAL_VARIANTS,

@@ -1,60 +1,14 @@
-pub use crate::ecs::transform::commands::*;
 pub use crate::ecs::transform::queries::*;
 
 use crate::ecs::world::{
-    GLOBAL_TRANSFORM, LOCAL_TRANSFORM, LOCAL_TRANSFORM_DIRTY, PARENT, World,
+    GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, PARENT, RENDER_MESH, World,
     components::{GlobalTransform, Parent},
 };
 
 use crate::prelude::*;
 pub fn run_systems(world: &mut World) {
     let _span = tracing::info_span!("transform_systems").entered();
-    rebuild_children_cache_if_needed(world);
     update_global_transforms_system(world);
-}
-
-fn rebuild_children_cache_if_needed(world: &mut World) {
-    if !world.resources.transform_state.children_cache_valid {
-        validate_and_rebuild_children_cache(world);
-    }
-}
-
-pub fn assign_local_transform(
-    world: &mut World,
-    entity: freecs::Entity,
-    local_transform: crate::ecs::transform::components::LocalTransform,
-) {
-    world.core.set_local_transform(entity, local_transform);
-    mark_local_transform_dirty(world, entity);
-}
-
-/// Returns the entity's local transform for mutation, queueing the entity and
-/// its descendants for global transform recomputation at the end of the
-/// frame. The deferred queue is what makes this safe to call before the
-/// mutation: the propagation system reads the local transform after the
-/// caller has written it, where an immediate recompute here would publish the
-/// value from before the mutation.
-pub fn mutate_local_transform(
-    world: &mut World,
-    entity: freecs::Entity,
-) -> Option<&mut crate::ecs::transform::components::LocalTransform> {
-    if world.resources.transform_state.children_cache.is_empty()
-        && world.core.query_entities(PARENT).count() > 0
-    {
-        validate_and_rebuild_children_cache(world);
-    }
-
-    let mut stack = vec![entity];
-    while let Some(current) = stack.pop() {
-        world.resources.transform_state.dirty_entities.push(current);
-        if let Some(children) = world.resources.transform_state.children_cache.get(&current) {
-            for &child in children {
-                stack.push(child);
-            }
-        }
-    }
-
-    world.core.get_local_transform_mut(entity)
 }
 
 pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Parent>) {
@@ -86,7 +40,6 @@ pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Optio
     }
 
     world.resources.transform_state.children_cache_valid = false;
-    mark_local_transform_dirty(world, child);
 }
 
 pub fn validate_and_rebuild_children_cache(world: &mut World) {
@@ -106,30 +59,62 @@ pub fn validate_and_rebuild_children_cache(world: &mut World) {
     world.resources.transform_state.children_cache_valid = true;
 }
 
+/// Recomputes [`GlobalTransform`] for every entity whose [`LocalTransform`] or
+/// [`Parent`] changed since the previous run, plus all of their descendants.
+/// Change detection rides on the ECS change ticks, so any write through the
+/// component accessors is picked up automatically. The system keeps its own
+/// change cursor and fences the world tick after consuming, so writes made
+/// later in the frame land in the next run regardless of how often other
+/// consumers advance the tick. Propagation walks each dirty subtree top down,
+/// multiplying the parent's already-updated global by the child's local, one
+/// matrix product per entity.
 pub fn update_global_transforms_system(world: &mut World) {
-    let mut dirty_entities = std::mem::take(&mut world.resources.transform_state.dirty_entities);
+    let initial_pass = !world.resources.transform_state.initial_pass_done;
 
-    {
+    let mut dirty_entities = std::mem::take(&mut world.resources.transform_state.dirty_scratch);
+    dirty_entities.clear();
+
+    let mut hierarchy_changed = false;
+    if initial_pass {
         let dirty_ref = &mut dirty_entities;
         world
             .core
             .query()
-            .with(LOCAL_TRANSFORM_DIRTY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
+            .with(LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
             .iter(|entity, _, _| {
                 dirty_ref.push(entity);
             });
+        world.resources.transform_state.initial_pass_done = true;
+    } else {
+        let since_tick = world.resources.transform_state.last_consumed_tick;
+        dirty_entities.extend(
+            world
+                .core
+                .query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
+        );
+        let local_changed_count = dirty_entities.len();
+        dirty_entities.extend(world.core.query_entities_changed_since(PARENT, since_tick));
+        hierarchy_changed = dirty_entities.len() > local_changed_count;
     }
-    for entity in &dirty_entities {
-        world.core.remove_local_transform_dirty(*entity);
+    world.resources.transform_state.last_consumed_tick = world.core.current_tick();
+    world.core.increment_tick();
+
+    if hierarchy_changed || !world.resources.transform_state.children_cache_valid {
+        validate_and_rebuild_children_cache(world);
+    }
+
+    if dirty_entities.is_empty() {
+        world.resources.transform_state.dirty_scratch = dirty_entities;
+        return;
     }
 
     dirty_entities.sort_unstable_by_key(|entity| (entity.id, entity.generation));
     dirty_entities.dedup();
 
+    let mut seen = std::mem::take(&mut world.resources.transform_state.expansion_seen);
+    seen.clear();
+    seen.extend(dirty_entities.iter().copied());
     {
-        let mut seen = std::mem::take(&mut world.resources.transform_state.expansion_seen);
-        seen.clear();
-        seen.extend(dirty_entities.iter().copied());
         let children_cache = &world.resources.transform_state.children_cache;
         let mut index = 0;
         while index < dirty_entities.len() {
@@ -143,39 +128,67 @@ pub fn update_global_transforms_system(world: &mut World) {
                 }
             }
         }
-        world.resources.transform_state.expansion_seen = seen;
     }
 
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
-    let mut visited = std::mem::take(&mut world.resources.transform_state.ancestor_visited);
+    let mut stack = std::mem::take(&mut world.resources.transform_state.traversal_stack);
     let mut render_dirty_entities =
         std::mem::take(&mut world.resources.transform_state.render_dirty_scratch);
+    stack.clear();
     render_dirty_entities.clear();
 
     for entity in dirty_entities.iter().copied() {
-        let new_global_transform = if world.core.entity_has_components(entity, PARENT) {
-            visited.clear();
-            global_transform_of_with_cycle_detection(entity, world, &mut visited)
-        } else {
-            match world.core.get_local_transform(entity) {
-                Some(local_transform) => local_transform.as_matrix(),
-                None => nalgebra_glm::Mat4::identity(),
-            }
+        let parent_is_dirty = world
+            .core
+            .get_parent(entity)
+            .and_then(|parent| parent.0)
+            .is_some_and(|parent_entity| seen.contains(&parent_entity));
+        if !parent_is_dirty {
+            stack.push(entity);
+        }
+    }
+
+    while let Some(current) = stack.pop() {
+        if !seen.remove(&current) {
+            continue;
+        }
+
+        let local_matrix = match world.core.get_local_transform(current) {
+            Some(local_transform) => local_transform.as_matrix(),
+            None => nalgebra_glm::Mat4::identity(),
         };
 
-        if let Some(global_transform) = world.core.get_global_transform_mut(entity) {
+        let new_global_transform = match world.core.get_parent(current).and_then(|parent| parent.0)
+        {
+            Some(parent_entity) => {
+                let mut parent_matrix = world
+                    .core
+                    .get_global_transform(parent_entity)
+                    .map(|global_transform| global_transform.0)
+                    .unwrap_or_else(nalgebra_glm::Mat4::identity);
+                if world.core.entity_has_ignore_parent_scale(current) {
+                    parent_matrix = remove_scale_from_matrix(parent_matrix);
+                }
+                parent_matrix * local_matrix
+            }
+            None => local_matrix,
+        };
+
+        if let Some(global_transform) = world.core.get_global_transform_mut(current) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if world
-            .core
-            .entity_has_components(entity, crate::ecs::world::RENDER_MESH)
-            || world
-                .core
-                .entity_has_components(entity, crate::ecs::world::INSTANCED_MESH)
+        if world.core.entity_has_components(current, RENDER_MESH)
+            || world.core.entity_has_components(current, INSTANCED_MESH)
         {
-            render_dirty_entities.push(entity);
+            render_dirty_entities.push(current);
+        }
+
+        if let Some(children) = world.resources.transform_state.children_cache.get(&current) {
+            for child in children {
+                stack.push(*child);
+            }
         }
     }
 
@@ -186,54 +199,13 @@ pub fn update_global_transforms_system(world: &mut World) {
             .mark_transform_dirty(entity);
     }
 
-    world.resources.transform_state.ancestor_visited = visited;
-    world.resources.transform_state.render_dirty_scratch = render_dirty_entities;
-
+    seen.clear();
+    stack.clear();
     dirty_entities.clear();
-    world.resources.transform_state.dirty_entities = dirty_entities;
-}
-
-const MAX_HIERARCHY_DEPTH: usize = 256;
-
-fn global_transform_of_with_cycle_detection(
-    entity: freecs::Entity,
-    world: &World,
-    visited: &mut std::collections::HashSet<freecs::Entity>,
-) -> nalgebra_glm::Mat4 {
-    if visited.contains(&entity) {
-        tracing::error!("Cycle detected in parent hierarchy for entity {:?}", entity);
-        return nalgebra_glm::Mat4::identity();
-    }
-
-    visited.insert(entity);
-
-    if visited.len() > MAX_HIERARCHY_DEPTH {
-        tracing::warn!(
-            "Transform hierarchy depth {} exceeds recommended maximum {} for entity {:?}",
-            visited.len(),
-            MAX_HIERARCHY_DEPTH,
-            entity
-        );
-    }
-
-    let Some(local_transform) = world.core.get_local_transform(entity) else {
-        return nalgebra_glm::Mat4::identity();
-    };
-
-    if let Some(parent) = world.core.get_parent(entity)
-        && let Some(parent_entity) = parent.0
-    {
-        let mut parent_transform =
-            global_transform_of_with_cycle_detection(parent_entity, world, visited);
-
-        if world.core.entity_has_ignore_parent_scale(entity) {
-            parent_transform = remove_scale_from_matrix(parent_transform);
-        }
-
-        parent_transform * local_transform.as_matrix()
-    } else {
-        local_transform.as_matrix()
-    }
+    world.resources.transform_state.expansion_seen = seen;
+    world.resources.transform_state.traversal_stack = stack;
+    world.resources.transform_state.render_dirty_scratch = render_dirty_entities;
+    world.resources.transform_state.dirty_scratch = dirty_entities;
 }
 
 fn remove_scale_from_matrix(matrix: nalgebra_glm::Mat4) -> nalgebra_glm::Mat4 {
