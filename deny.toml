@@ -45,4 +45,8 @@ ignore = [
     # not attacker-controlled input.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+    # proc-macro-error2 is unmaintained, transitive via the leptos 0.7
+    # macros (leptos_macro, reactive_stores_macro, rstml). Compile-time
+    # only, and leptos has not migrated off it.
+    "RUSTSEC-2026-0173",
 ]
