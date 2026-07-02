@@ -36,4 +36,13 @@ ignore = [
     # instant is unmaintained, transitive via notify -> notify-types. The
     # author recommends web-time, but notify has not migrated yet.
     "RUSTSEC-2024-0384",
+    # ttf-parser is unmaintained, transitive via fontdue, fontdb, and
+    # ab_glyph. No safe upgrade exists and those crates have not migrated.
+    "RUSTSEC-2026-0192",
+    # quick-xml DoS advisories, fixed in 0.41, but wayland-scanner and
+    # zbus_xml both pin ^0.39 at their latest releases. Both paths parse
+    # trusted local XML (wayland protocol codegen, D-Bus introspection),
+    # not attacker-controlled input.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
 ]
