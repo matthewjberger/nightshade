@@ -1,5 +1,4 @@
 use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
-use crate::ecs::graphics::Atmosphere;
 use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{material_registry_insert, material_registry_remove_unused};
 use crate::ecs::mesh::components::{
@@ -39,14 +38,6 @@ pub enum RenderCommand {
     },
     LoadHdrSkyboxFromPath {
         path: std::path::PathBuf,
-    },
-    CaptureProceduralAtmosphereIBL {
-        atmosphere: Atmosphere,
-        time: f32,
-    },
-    CaptureIblSnapshots {
-        atmosphere: Atmosphere,
-        hours: Vec<f32>,
     },
     CaptureScreenshot {
         path: Option<std::path::PathBuf>,
@@ -1010,20 +1001,6 @@ pub fn load_hdr_skybox(world: &mut World, hdr_data: Vec<u8>) {
 
 pub fn load_hdr_skybox_from_path(world: &mut World, path: std::path::PathBuf) {
     queue_render_command(world, RenderCommand::LoadHdrSkyboxFromPath { path });
-}
-
-pub fn capture_procedural_atmosphere_ibl(world: &mut World, atmosphere: Atmosphere, time: f32) {
-    queue_render_command(
-        world,
-        RenderCommand::CaptureProceduralAtmosphereIBL { atmosphere, time },
-    );
-}
-
-pub fn capture_ibl_snapshots(world: &mut World, atmosphere: Atmosphere, hours: Vec<f32>) {
-    queue_render_command(
-        world,
-        RenderCommand::CaptureIblSnapshots { atmosphere, hours },
-    );
 }
 
 #[cfg(not(target_arch = "wasm32"))]

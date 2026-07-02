@@ -826,10 +826,9 @@ pub mod prelude {
     pub use crate::ecs::vfx::systems::update_vfx_system;
     pub use crate::ecs::vfx::textures::{FLARE_SLOT, GLOW_SLOT, SMOKE_SLOT, upload_vfx_textures};
     pub use crate::ecs::world::commands::{
-        EcsCommand, RenderCommand, capture_ibl_snapshots, capture_procedural_atmosphere_ibl,
-        despawn_entities_with_cache_cleanup, despawn_recursive_immediate, is_paused,
-        load_hdr_skybox, load_hdr_skybox_from_path, load_procedural_textures, pause,
-        set_material_with_textures, set_paused, set_time_scale,
+        EcsCommand, RenderCommand, despawn_entities_with_cache_cleanup,
+        despawn_recursive_immediate, is_paused, load_hdr_skybox, load_hdr_skybox_from_path,
+        load_procedural_textures, pause, set_material_with_textures, set_paused, set_time_scale,
         spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,

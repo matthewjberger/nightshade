@@ -13,7 +13,6 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     world.resources.renderer_state.use_fullscreen = true;
     world.resources.renderer_state.day_night.hour = 9.5;
     world.resources.renderer_state.day_night.auto_cycle = false;
-    capture_procedural_atmosphere_ibl(world, Atmosphere::DayNight, 9.5);
 
     textures::load_prototype_textures(world);
     level::load_or_build_level(world);

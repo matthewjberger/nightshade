@@ -169,7 +169,6 @@ struct SpinCube {
 impl State for SpinCube {
     fn initialize(&mut self, world: &mut World) {
         world.resources.render_settings.atmosphere = Atmosphere::Nebula;
-        capture_procedural_atmosphere_ibl(world, Atmosphere::Nebula, 0.0);
         let camera = spawn_pan_orbit_camera(
             world,
             Vec3::zeros(), 5.0, 0.5, 0.3,
