@@ -93,9 +93,8 @@ Use the `justfile`, never raw `cargo run`.
 ## High-value gotchas
 
 - `spawn_scene` overwrites global render settings (atmosphere included). Save and restore around a partial subtree spawn.
-- Visibility is not dirty-signaled. Any delta render path must sync `get_visibility` separately.
 - Retained UI needs both `world.resources.user_interface.enabled` and `world.resources.retained_ui.enabled`.
-- Despawning a textured physics cube underflows its texture refcount. Do not despawn and respawn a textured cube as a refresh.
-- After heavy despawn and respawn churn, call `world.resources.mesh_render_state.request_full_rebuild()`.
+- Renderer lifecycle, material reference counts, and transform propagation all derive from ECS change ticks and the structural change log. Write components through the accessors (`set_x`, `get_x_mut`), never through raw `query_mut` table writes, or the change goes unseen.
+- `world.resources.mesh_render_state.request_full_rebuild()` remains the escape hatch if a batch ever looks stale after unusual churn.
 
 You now have the map. Ask what to build, or state the task, then load the one or two docs and the reference app it touches.
