@@ -193,6 +193,7 @@ fn setup(world: &mut World) -> Game {
             color: [0.7, 0.8, 0.92],
             start: 28.0,
             end: ARENA * 1.9,
+            mode: Default::default(),
         }),
     );
     set_sun(world, [1.0, 0.96, 0.9], 3.2);
