@@ -214,16 +214,19 @@ pub struct Material {
     #[serde(default)]
     pub normal_map_two_component: bool,
     /// Detail albedo texture, tiled by `detail_uv_scale` and overlaid on the
-    /// base color for close-up surface variation.
+    /// base color for close-up surface variation. Load with `TextureUsage::Color`
+    /// so it lands in the sRGB texture array.
     #[serde(default)]
     pub detail_base_texture: Option<String>,
-    /// Detail normal map, reoriented onto the base surface normal.
+    /// Detail normal map, reoriented onto the base surface normal. Load with
+    /// `TextureUsage::Linear`.
     #[serde(default)]
     pub detail_normal_texture: Option<String>,
     /// UV tiling multiplier applied to the detail textures.
     #[serde(default = "default_detail_uv_scale")]
     pub detail_uv_scale: f32,
-    /// Height map for single-step parallax offset mapping.
+    /// Height map for single-step parallax offset mapping. Load with
+    /// `TextureUsage::Linear`.
     #[serde(default)]
     pub height_texture: Option<String>,
     /// Parallax height scale in UV units (0 disables parallax).
