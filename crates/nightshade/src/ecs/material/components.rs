@@ -232,6 +232,15 @@ pub struct Material {
     /// Parallax height scale in UV units (0 disables parallax).
     #[serde(default)]
     pub parallax_scale: f32,
+    /// World-space minimum corner of the reflection box used to reproject the
+    /// environment reflection so it aligns with a finite room instead of an
+    /// infinitely distant environment. Equal min and max disables box
+    /// projection.
+    #[serde(default)]
+    pub reflection_box_min: [f32; 3],
+    /// World-space maximum corner of the reflection box.
+    #[serde(default)]
+    pub reflection_box_max: [f32; 3],
     /// Path to metallic (B) / roughness (G) texture.
     pub metallic_roughness_texture: Option<String>,
     #[serde(default)]
@@ -525,6 +534,8 @@ impl Default for Material {
             detail_uv_scale: default_detail_uv_scale(),
             height_texture: None,
             parallax_scale: 0.0,
+            reflection_box_min: [0.0, 0.0, 0.0],
+            reflection_box_max: [0.0, 0.0, 0.0],
             metallic_roughness_texture: None,
             metallic_roughness_texture_transform: TextureTransform::IDENTITY,
             occlusion_texture: None,
