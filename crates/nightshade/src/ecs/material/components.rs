@@ -213,6 +213,22 @@ pub struct Material {
     /// Two-component normal map (RG only, B reconstructed).
     #[serde(default)]
     pub normal_map_two_component: bool,
+    /// Detail albedo texture, tiled by `detail_uv_scale` and overlaid on the
+    /// base color for close-up surface variation.
+    #[serde(default)]
+    pub detail_base_texture: Option<String>,
+    /// Detail normal map, reoriented onto the base surface normal.
+    #[serde(default)]
+    pub detail_normal_texture: Option<String>,
+    /// UV tiling multiplier applied to the detail textures.
+    #[serde(default = "default_detail_uv_scale")]
+    pub detail_uv_scale: f32,
+    /// Height map for single-step parallax offset mapping.
+    #[serde(default)]
+    pub height_texture: Option<String>,
+    /// Parallax height scale in UV units (0 disables parallax).
+    #[serde(default)]
+    pub parallax_scale: f32,
     /// Path to metallic (B) / roughness (G) texture.
     pub metallic_roughness_texture: Option<String>,
     #[serde(default)]
@@ -371,6 +387,9 @@ pub struct MaterialTextureIds {
     pub base: Option<TextureId>,
     pub emissive: Option<TextureId>,
     pub normal: Option<TextureId>,
+    pub detail_base: Option<TextureId>,
+    pub detail_normal: Option<TextureId>,
+    pub height: Option<TextureId>,
     pub metallic_roughness: Option<TextureId>,
     pub occlusion: Option<TextureId>,
     pub transmission: Option<TextureId>,
@@ -395,6 +414,10 @@ fn default_blend_opaque_alpha_threshold() -> f32 {
 
 fn default_normal_scale() -> f32 {
     1.0
+}
+
+fn default_detail_uv_scale() -> f32 {
+    4.0
 }
 
 fn default_occlusion_strength() -> f32 {
@@ -452,6 +475,9 @@ impl Material {
             self.base_texture.as_deref(),
             self.emissive_texture.as_deref(),
             self.normal_texture.as_deref(),
+            self.detail_base_texture.as_deref(),
+            self.detail_normal_texture.as_deref(),
+            self.height_texture.as_deref(),
             self.metallic_roughness_texture.as_deref(),
             self.occlusion_texture.as_deref(),
             self.transmission_texture.as_deref(),
@@ -491,6 +517,11 @@ impl Default for Material {
             normal_scale: 1.0,
             normal_map_flip_y: false,
             normal_map_two_component: false,
+            detail_base_texture: None,
+            detail_normal_texture: None,
+            detail_uv_scale: default_detail_uv_scale(),
+            height_texture: None,
+            parallax_scale: 0.0,
             metallic_roughness_texture: None,
             metallic_roughness_texture_transform: TextureTransform::IDENTITY,
             occlusion_texture: None,
