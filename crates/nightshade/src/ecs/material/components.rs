@@ -161,6 +161,10 @@ pub enum AlphaMode {
     Mask,
     /// Full alpha blending with background.
     Blend,
+    /// Stochastic (screen-door) transparency: alpha becomes a per-pixel dither
+    /// probability resolved by temporal antialiasing. Renders opaque, writes
+    /// depth, and needs no sorting, so it suits foliage and hair.
+    Dither,
 }
 
 /// PBR material definition following glTF 2.0 conventions.
