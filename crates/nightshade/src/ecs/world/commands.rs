@@ -52,6 +52,13 @@ pub enum RenderCommand {
         width: u32,
         height: u32,
     },
+    /// Upload a 3D color grading lookup table. `data` is RGBA8 for a
+    /// 16x16x16 table with red varying fastest then green then blue
+    /// (4096 texels, 16384 bytes). Set `color_lut_weight` on the color
+    /// grading settings to blend it in.
+    SetColorLut {
+        data: Vec<u8>,
+    },
 }
 
 #[derive(Default)]
