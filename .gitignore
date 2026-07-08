@@ -5,11 +5,14 @@ dist/
 public/
 **/public/
 !apps/editor/public/
+!apps/playground/public/
 apps/editor/runtime/engine*
+apps/playground/runtime/engine*
 logs/
 **/logs/
 /Cargo.lock
 !apps/editor/Cargo.lock
+!apps/playground/Cargo.lock
 *.md
 !CLAUDE.md
 !apps/editor/*.md
