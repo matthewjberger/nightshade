@@ -52,7 +52,7 @@ pub trait State {
     fn configure_render_graph(
         &mut self,
         _: &mut crate::render::wgpu::rendergraph::RenderGraph<
-            dyn crate::render::wgpu::render_configs::RenderConfigs,
+            crate::render::wgpu::render_configs::RenderInputs,
         >,
         _: &wgpu::Device,
         _: wgpu::TextureFormat,
@@ -72,7 +72,7 @@ pub trait State {
     fn update_render_graph(
         &mut self,
         _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<
-            dyn crate::render::wgpu::render_configs::RenderConfigs,
+            crate::render::wgpu::render_configs::RenderInputs,
         >,
         _world: &World,
     ) {

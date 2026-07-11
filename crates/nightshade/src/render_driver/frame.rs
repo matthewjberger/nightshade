@@ -44,10 +44,13 @@ fn build_render_view(
     world: &crate::ecs::world::World,
     camera_entity: freecs::Entity,
     matrices: &crate::ecs::camera::queries::CameraMatrices,
+    taa_jitter: [f32; 2],
     screen_size: (u32, u32),
 ) -> crate::render::config::RenderView {
     let view = matrices.view;
-    let projection = matrices.projection;
+    let mut projection = matrices.projection;
+    projection[(0, 2)] += taa_jitter[0];
+    projection[(1, 2)] += taa_jitter[1];
     let view_projection = projection * view;
     let inverse_view = nalgebra_glm::inverse(&view);
     let inverse_projection = nalgebra_glm::inverse(&projection);
@@ -112,11 +115,12 @@ fn build_render_view(
 
 fn build_render_lighting(
     world: &crate::ecs::world::World,
+    scene: &crate::render::config::RendererState,
 ) -> crate::render::config::RenderLighting {
     use super::lighting::{calculate_cascade_shadows, collect_area_lights, collect_lights};
     use crate::render::wgpu::passes::geometry::projection::MAX_AREA_LIGHTS;
     const MAX_LIGHTS: usize = 1024;
-    let light_result = collect_lights(world, MAX_LIGHTS);
+    let light_result = collect_lights(scene, MAX_LIGHTS);
     let directional = light_result.directional_light;
     let directional_light_direction = directional
         .as_ref()
@@ -127,9 +131,9 @@ fn build_render_lighting(
         })
         .unwrap_or([0.0, -1.0, 0.0, 0.0]);
     let cascade = calculate_cascade_shadows(world, directional.as_ref());
-    let area = collect_area_lights(world, MAX_AREA_LIGHTS);
+    let area = collect_area_lights(scene, MAX_AREA_LIGHTS);
     let mut sun = None;
-    for render_light in &world.resources.renderer_state.render_lights.lights {
+    for render_light in &scene.render_lights.lights {
         let light = &render_light.light;
         let transform = &render_light.transform;
         if light.light_type == crate::render::config::RenderLightType::Directional {
@@ -181,65 +185,62 @@ pub fn render_frame(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let mut inputs = super::inputs::compose_render_inputs(world);
+    let result = render_frame_inner(renderer, world, &mut inputs);
+    super::inputs::restore_render_inputs(world, inputs);
+    result
+}
+
+fn render_frame_inner(
+    renderer: &mut crate::render::wgpu::WgpuRenderer,
+    world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
+) -> Result<(), Box<dyn std::error::Error>> {
     let _span = tracing::info_span!("render_frame").entered();
-    if world.resources.renderer_state.gpu_profile.is_none() {
-        world.resources.renderer_state.gpu_profile = Some(renderer.gpu_profile.clone());
+    if inputs.scene.gpu_profile.is_none() {
+        inputs.scene.gpu_profile = Some(renderer.gpu_profile.clone());
         if renderer.gpu_profile.backend == crate::render::config::GpuBackend::Metal {
-            world.resources.renderer_state.occlusion_culling_enabled = false;
+            inputs.scene.occlusion_culling_enabled = false;
         }
     }
     renderer.frame_state.index = renderer.frame_state.index.wrapping_add(1);
 
-    if world.resources.render_settings.taa_enabled {
+    if inputs.settings.taa_enabled {
         let jitter_index = (renderer.frame_state.index % 8) as u32 + 1;
         let (render_width, render_height) = renderer.render_buffer_size;
         // Scale the projection jitter by the render scale so the sub-pixel
         // offsets distribute samples across the display-resolution grid the
         // resolve reconstructs, not the smaller render-buffer grid.
-        let render_scale = world
-            .resources
-            .render_settings
-            .render_scale
-            .clamp(0.25, 4.0);
-        world.resources.renderer_state.taa_jitter = [
+        let render_scale = inputs.settings.render_scale.clamp(0.25, 4.0);
+        inputs.scene.taa_jitter = [
             (taa_halton(jitter_index, 2) - 0.5) * 2.0 * render_scale / render_width.max(1) as f32,
             (taa_halton(jitter_index, 3) - 0.5) * 2.0 * render_scale / render_height.max(1) as f32,
         ];
     } else {
-        world.resources.renderer_state.taa_jitter = [0.0, 0.0];
+        inputs.scene.taa_jitter = [0.0, 0.0];
     }
 
     if let Some(matrices) = crate::ecs::camera::queries::query_active_camera_matrices(world) {
-        let jitter = world.resources.renderer_state.taa_jitter;
-        let mut projection = matrices.projection;
-        projection[(0, 2)] -= jitter[0];
-        projection[(1, 2)] -= jitter[1];
-        let view_projection: [[f32; 4]; 4] = (projection * matrices.view).into();
-        world.resources.renderer_state.prev_view_projection =
-            world.resources.renderer_state.view_projection;
-        world.resources.renderer_state.view_projection = view_projection;
+        let view_projection: [[f32; 4]; 4] = (matrices.projection * matrices.view).into();
+        inputs.scene.prev_view_projection = inputs.scene.view_projection;
+        inputs.scene.view_projection = view_projection;
     }
 
-    renderer.sync_present_mode(world.resources.render_settings.vsync_enabled);
+    renderer.sync_present_mode(inputs.settings.vsync_enabled);
     let current_settings_signature = crate::render::config::render_settings_signature(
-        &world.resources.render_settings,
-        &world.resources.debug_draw,
-        &world.resources.editor_selection,
+        &inputs.settings,
+        &inputs.debug_draw,
+        &inputs.editor_selection,
     );
     if renderer.frame_state.last_settings_signature != Some(current_settings_signature) {
-        world.resources.renderer_state.settings_version = world
-            .resources
-            .renderer_state
-            .settings_version
-            .wrapping_add(1);
+        inputs.scene.settings_version = inputs.scene.settings_version.wrapping_add(1);
         renderer.frame_state.last_settings_signature = Some(current_settings_signature);
     }
 
     let frame_time_ms = world.resources.window.timing.delta_time * 1000.0;
     if frame_time_ms > 0.0 {
-        world
-            .resources
-            .renderer_state
+        inputs
+            .scene
             .adaptive_sampling
             .record_frame_time(frame_time_ms);
     }
@@ -473,9 +474,9 @@ pub fn render_frame(
     #[cfg(feature = "assets")]
     {
         use crate::render::config::Atmosphere;
-        let atmosphere = world.resources.render_settings.atmosphere;
+        let atmosphere = inputs.settings.atmosphere;
         if atmosphere.is_procedural() {
-            let hour = world.resources.renderer_state.day_night.hour;
+            let hour = inputs.scene.day_night.hour;
             if renderer.frame_state.captured_ibl_atmosphere != Some(atmosphere) {
                 renderer.frame_state.captured_ibl_atmosphere = Some(atmosphere);
                 renderer.frame_state.captured_ibl_hour = hour;
@@ -493,12 +494,7 @@ pub fn render_frame(
                 renderer.frame_state.captured_day_night_snapshots = true;
                 ibl_snapshot_capture = Some((
                     atmosphere,
-                    world
-                        .resources
-                        .renderer_state
-                        .day_night
-                        .ibl_snapshot_hours
-                        .clone(),
+                    inputs.scene.day_night.ibl_snapshot_hours.clone(),
                 ));
             }
         } else {
@@ -518,14 +514,14 @@ pub fn render_frame(
         }
     }
 
-    drain_loading_tasks(renderer, world);
+    drain_loading_tasks(renderer, world, inputs);
 
     if !texture_reload_commands.is_empty() {
         use crate::render::wgpu::texture_cache::{TextureReloadResult, texture_cache_reload};
 
         for (name, rgba_data, width, height) in texture_reload_commands {
             let result = texture_cache_reload(
-                &mut world.resources.texture_cache,
+                &mut inputs.texture_cache,
                 &renderer.device,
                 &renderer.queue,
                 &name,
@@ -534,16 +530,16 @@ pub fn render_frame(
                 height,
             );
             if matches!(result, TextureReloadResult::Recreated) {
-                let usage_opt = registry_entry_by_name(
-                    &world.resources.texture_cache.registry,
-                    &name,
-                )
-                .map(|entry| match entry.texture.format() {
-                    wgpu::TextureFormat::Rgba8UnormSrgb | wgpu::TextureFormat::Bgra8UnormSrgb => {
-                        crate::render::wgpu::texture_cache::TextureUsage::Color
-                    }
-                    _ => crate::render::wgpu::texture_cache::TextureUsage::Linear,
-                });
+                let usage_opt =
+                    registry_entry_by_name(&inputs.texture_cache.registry, &name).map(|entry| {
+                        match entry.texture.format() {
+                            wgpu::TextureFormat::Rgba8UnormSrgb
+                            | wgpu::TextureFormat::Bgra8UnormSrgb => {
+                                crate::render::wgpu::texture_cache::TextureUsage::Color
+                            }
+                            _ => crate::render::wgpu::texture_cache::TextureUsage::Linear,
+                        }
+                    });
                 if let Some(usage) = usage_opt {
                     renderer.material_texture_arrays.upload(
                         &renderer.device,
@@ -564,7 +560,7 @@ pub fn render_frame(
                     && let Some(mesh_pass) =
                         (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
                     && let Some(texture_entry) =
-                        registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
                 {
                     mesh_pass.register_texture_with_data(
                         name.clone(),
@@ -579,7 +575,7 @@ pub fn render_frame(
                         .downcast_mut::<passes::geometry::SkinnedMeshPass>(
                     )
                     && let Some(texture_entry) =
-                        registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
                 {
                     skinned_mesh_pass.register_texture(
                         name.clone(),
@@ -593,7 +589,7 @@ pub fn render_frame(
                     && let Some(decal_pass) =
                         (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
                     && let Some(texture_entry) =
-                        registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
                 {
                     decal_pass.register_texture(
                         name,
@@ -644,9 +640,9 @@ pub fn render_frame(
                 );
             }
 
-            world.resources.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            world.resources.ibl_views.irradiance_view = Some(irradiance_view);
-            world.resources.ibl_views.prefiltered_view = Some(prefiltered_view);
+            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
+            inputs.ibl_views.irradiance_view = Some(irradiance_view);
+            inputs.ibl_views.prefiltered_view = Some(prefiltered_view);
         }
     }
 
@@ -691,9 +687,9 @@ pub fn render_frame(
                 );
             }
 
-            world.resources.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            world.resources.ibl_views.irradiance_view = Some(irradiance_view);
-            world.resources.ibl_views.prefiltered_view = Some(prefiltered_view);
+            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
+            inputs.ibl_views.irradiance_view = Some(irradiance_view);
+            inputs.ibl_views.prefiltered_view = Some(prefiltered_view);
         }
     }
 
@@ -726,8 +722,8 @@ pub fn render_frame(
         let culling_mask = world.core.get_camera_culling_mask(camera).copied();
         let environment = world.core.get_camera_environment(camera).copied();
         let effective = crate::ecs::camera::components::effective_shading_for_camera(
-            &world.resources.render_settings,
-            &world.resources.debug_draw,
+            &inputs.settings,
+            &inputs.debug_draw,
             &shading,
             post_process.as_ref(),
             culling_mask.as_ref(),
@@ -743,10 +739,9 @@ pub fn render_frame(
             frame_any_camera_wants_wireframe = true;
         }
     }
-    let lines_show_normals =
-        world.resources.debug_draw.show_normals || frame_any_camera_wants_normals;
+    let lines_show_normals = inputs.debug_draw.show_normals || frame_any_camera_wants_normals;
     let lines_show_bounding_volumes =
-        world.resources.debug_draw.show_bounding_volumes || frame_any_camera_wants_bounds;
+        inputs.debug_draw.show_bounding_volumes || frame_any_camera_wants_bounds;
 
     if let Some(overlay_pass) = render_graph_get_pass_mut(&mut renderer.graph, "scene_overlay_pass")
         && let Some(overlay_pass) =
@@ -758,6 +753,7 @@ pub fn render_frame(
             &renderer.device,
             &renderer.queue,
             world,
+            inputs,
             frame_any_camera_wants_wireframe,
         );
         super::lines::sync_bounding_volume_data(
@@ -765,21 +761,16 @@ pub fn render_frame(
             &renderer.device,
             &renderer.queue,
             world,
+            inputs,
             lines_show_bounding_volumes,
-            world.resources.debug_draw.show_selected_bounding_volume,
-            world
-                .resources
-                .editor_selection
-                .bounding_volume_selected_entity,
         );
         super::lines::sync_normal_data(
             lines_pass,
             &renderer.device,
             &renderer.queue,
             world,
+            inputs,
             lines_show_normals,
-            world.resources.debug_draw.normal_line_length,
-            world.resources.debug_draw.normal_line_color,
         );
     }
 
@@ -807,7 +798,7 @@ pub fn render_frame(
     }
 
     {
-        let raw_hour = world.resources.renderer_state.day_night.hour;
+        let raw_hour = inputs.scene.day_night.hour;
         let hour = raw_hour - (raw_hour / 24.0).floor() * 24.0;
         let world_id = world.resources.world_id;
         let mut bracket_views: Option<(
@@ -822,7 +813,7 @@ pub fn render_frame(
             && let Some(sky_pass) =
                 (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
             && let Some((index_a, index_b, blend)) =
-                sky_pass.select_ibl_bracket(world.resources.render_settings.atmosphere, hour)
+                sky_pass.select_ibl_bracket(inputs.settings.atmosphere, hour)
         {
             let irr_a =
                 sky_pass.ibl_snapshots[index_a]
@@ -857,6 +848,7 @@ pub fn render_frame(
 
         if let Some((irr_a, pref_a, irr_b, pref_b, blend)) = bracket_views {
             world.resources.render_settings.ibl_blend_factor = blend;
+            inputs.settings.ibl_blend_factor = blend;
 
             if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
                 && let Some(mesh_pass) =
@@ -891,9 +883,9 @@ pub fn render_frame(
                 );
             }
 
-            world.resources.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            world.resources.ibl_views.irradiance_view = Some(irr_a);
-            world.resources.ibl_views.prefiltered_view = Some(pref_a);
+            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
+            inputs.ibl_views.irradiance_view = Some(irr_a);
+            inputs.ibl_views.prefiltered_view = Some(pref_a);
         }
     }
 
@@ -972,16 +964,10 @@ pub fn render_frame(
             .dirty_entities_for_culling()
             .collect();
         for entity in dirty_entities {
-            let Some(dynamic) = world
-                .resources
-                .renderer_state
-                .render_dynamic_objects
-                .get(&entity)
-            else {
+            let Some(dynamic) = inputs.scene.render_dynamic_objects.get(&entity) else {
                 continue;
             };
-            let Some(bounding_volume) = world.resources.renderer_state.render_bounds.get(&entity)
-            else {
+            let Some(bounding_volume) = inputs.scene.render_bounds.get(&entity) else {
                 continue;
             };
             let global_transform = dynamic.transform;
@@ -1009,16 +995,17 @@ pub fn render_frame(
         .resources
         .mesh_render_state
         .requires_full_invalidation();
-    let frame_settings_version = world.resources.renderer_state.settings_version;
+    let frame_settings_version = inputs.scene.settings_version;
 
     let mouse_position = world.resources.input.mouse.position;
     let original_active_camera = world.resources.active_camera;
-    let focus_policy = world.resources.renderer_state.focus_policy;
+    let focus_policy = inputs.scene.focus_policy;
 
     let primary_cameras = world.resources.user_interface.required_cameras.clone();
     dispatch_window_renders(
         renderer,
         world,
+        inputs,
         WindowDispatchContext {
             cameras: primary_cameras,
             target_size: (
@@ -1363,8 +1350,9 @@ pub(crate) struct MaterialTextureUploadRequest<'a> {
 pub(crate) fn sync_conditional_pass_toggles(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) {
-    let view = &world.resources.renderer_state.active_view;
+    let view = &inputs.scene.active_view;
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ssao_pass", view.ssao_enabled);
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ssao_blur_pass", view.ssao_enabled);
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "bloom_pass", view.bloom_enabled);
@@ -1387,7 +1375,7 @@ pub(crate) fn sync_conditional_pass_toggles(
     // Run the temporal resolve only when enabled; otherwise a cheap blit
     // copies the post-process output through so the compose still has an
     // image, without executing the full resolve pass.
-    let taa_on = world.resources.render_settings.taa_enabled;
+    let taa_on = inputs.settings.taa_enabled;
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "taa_pass", taa_on);
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "taa_passthrough", !taa_on);
 }
@@ -1546,6 +1534,7 @@ pub(crate) fn clear_swapchain_for_window_ui(
 pub(crate) fn dispatch_window_renders(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
     ctx: WindowDispatchContext<'_>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _span =
@@ -1571,6 +1560,7 @@ pub(crate) fn dispatch_window_renders(
     }
 
     world.resources.window.camera_tile_render_iteration = 0;
+    inputs.view.camera_tile_render_iteration = 0;
 
     let ui_pass_states_before_loop = if has_viewports {
         let saved_states = render_graph_save_pass_enabled_states(&renderer.graph);
@@ -1594,10 +1584,7 @@ pub(crate) fn dispatch_window_renders(
         .map(|(entity, _)| *entity);
     let focused_camera = mouse_focused_camera.or(original_active_camera);
 
-    let requested_anisotropy = world
-        .resources
-        .render_settings
-        .material_anisotropy_filtering;
+    let requested_anisotropy = inputs.settings.material_anisotropy_filtering;
     let anisotropy_changed = renderer
         .material_texture_arrays
         .set_anisotropy(&renderer.device, requested_anisotropy);
@@ -1635,11 +1622,7 @@ pub(crate) fn dispatch_window_renders(
         } else {
             (tile_width, tile_height)
         };
-        let render_scale = world
-            .resources
-            .render_settings
-            .render_scale
-            .clamp(0.25, 4.0);
+        let render_scale = inputs.settings.render_scale.clamp(0.25, 4.0);
         let is_main_viewport_camera = Some(*camera_entity) == original_active_camera;
         let render_width = ((display_width as f32 * render_scale).round() as u32).max(1);
         let render_height = ((display_height as f32 * render_scale).round() as u32).max(1);
@@ -1682,7 +1665,9 @@ pub(crate) fn dispatch_window_renders(
             );
 
             world.resources.active_camera = Some(*camera_entity);
+            inputs.view.active_camera = Some(*camera_entity);
             world.resources.window.camera_tile_render_iteration = iteration_index as u32;
+            inputs.view.camera_tile_render_iteration = iteration_index as u32;
 
             let viewport_shading = world
                 .core
@@ -1699,8 +1684,8 @@ pub(crate) fn dispatch_window_renders(
             let camera_culling_mask = world.core.get_camera_culling_mask(*camera_entity).copied();
             let camera_environment = world.core.get_camera_environment(*camera_entity).copied();
             let effective = crate::ecs::camera::components::effective_shading_for_camera(
-                &world.resources.render_settings,
-                &world.resources.debug_draw,
+                &inputs.settings,
+                &inputs.debug_draw,
                 &viewport_shading,
                 camera_post_process.as_ref(),
                 camera_culling_mask.as_ref(),
@@ -1761,29 +1746,30 @@ pub(crate) fn dispatch_window_renders(
                     }
                 };
 
-            world.resources.renderer_state.active_view = effective;
+            inputs.scene.active_view = effective;
             let render_view =
                 crate::ecs::camera::queries::query_active_camera_matrices(world).map(|matrices| {
                     build_render_view(
                         world,
                         *camera_entity,
                         &matrices,
+                        inputs.scene.taa_jitter,
                         (render_width, render_height),
                     )
                 });
-            world.resources.renderer_state.render_view = render_view;
-            let render_lighting = build_render_lighting(world);
-            world.resources.renderer_state.render_lighting = Some(render_lighting);
-            sync_conditional_pass_toggles(renderer, world);
+            inputs.scene.render_view = render_view;
+            let render_lighting = build_render_lighting(world, &inputs.scene);
+            inputs.scene.render_lighting = Some(render_lighting);
+            sync_conditional_pass_toggles(renderer, world, inputs);
 
             if renderer.frame_state.extract_dirty_done_for_frame != renderer.frame_state.index {
                 let _span = tracing::info_span!("extract_frame_dirty_state").entered();
-                super::extract::extract_frame_dirty_state(renderer, world);
+                super::extract::extract_frame_dirty_state(renderer, world, inputs);
                 renderer.frame_state.extract_dirty_done_for_frame = renderer.frame_state.index;
             }
             if renderer.frame_state.text_meshes_prepared_for_frame != renderer.frame_state.index {
                 let _span = tracing::info_span!("prepare_text_meshes").entered();
-                super::extract::prepare_text_meshes(renderer, world);
+                super::extract::prepare_text_meshes(renderer, world, inputs);
                 renderer.frame_state.text_meshes_prepared_for_frame = renderer.frame_state.index;
             }
             let phase = if should_render {
@@ -1797,7 +1783,7 @@ pub(crate) fn dispatch_window_renders(
                     &mut renderer.graph,
                     &renderer.device,
                     &renderer.queue,
-                    world,
+                    inputs,
                     phase,
                 )?
             };
@@ -1836,32 +1822,32 @@ pub(crate) fn dispatch_window_renders(
     }
 
     world.resources.active_camera = original_active_camera;
-    world.resources.renderer_state.active_view =
-        match original_active_camera.filter(|_| cameras.is_empty()) {
-            Some(camera) => {
-                let shading = world
-                    .core
-                    .get_viewport_shading(camera)
-                    .copied()
-                    .unwrap_or_default();
-                let post_process = world.core.get_camera_post_process(camera).copied();
-                let culling_mask = world.core.get_camera_culling_mask(camera).copied();
-                let environment = world.core.get_camera_environment(camera).copied();
-                crate::ecs::camera::components::effective_shading_for_camera(
-                    &world.resources.render_settings,
-                    &world.resources.debug_draw,
-                    &shading,
-                    post_process.as_ref(),
-                    culling_mask.as_ref(),
-                    environment.as_ref(),
-                )
-            }
-            None => crate::ecs::camera::components::effective_shading_from_graphics(
-                &world.resources.render_settings,
-                &world.resources.debug_draw,
-            ),
-        };
-    sync_conditional_pass_toggles(renderer, world);
+    inputs.view.active_camera = original_active_camera;
+    inputs.scene.active_view = match original_active_camera.filter(|_| cameras.is_empty()) {
+        Some(camera) => {
+            let shading = world
+                .core
+                .get_viewport_shading(camera)
+                .copied()
+                .unwrap_or_default();
+            let post_process = world.core.get_camera_post_process(camera).copied();
+            let culling_mask = world.core.get_camera_culling_mask(camera).copied();
+            let environment = world.core.get_camera_environment(camera).copied();
+            crate::ecs::camera::components::effective_shading_for_camera(
+                &inputs.settings,
+                &inputs.debug_draw,
+                &shading,
+                post_process.as_ref(),
+                culling_mask.as_ref(),
+                environment.as_ref(),
+            )
+        }
+        None => crate::ecs::camera::components::effective_shading_from_graphics(
+            &inputs.settings,
+            &inputs.debug_draw,
+        ),
+    };
+    sync_conditional_pass_toggles(renderer, world, inputs);
 
     if let Some((ui_was_enabled, ui_image_was_enabled)) = ui_pass_states_before_loop {
         let _span = tracing::info_span!("ui_composite").entered();
@@ -1884,15 +1870,15 @@ pub(crate) fn dispatch_window_renders(
                 ("ui_image_pass", ui_image_was_enabled),
             ],
         );
-        super::extract::extract_frame_dirty_state(renderer, world);
-        super::extract::prepare_text_meshes(renderer, world);
+        super::extract::extract_frame_dirty_state(renderer, world, inputs);
+        super::extract::prepare_text_meshes(renderer, world, inputs);
         let command_buffers = {
             let _span = tracing::info_span!("ui_composite_execute").entered();
             render_graph_execute(
                 &mut renderer.graph,
                 &renderer.device,
                 &renderer.queue,
-                world,
+                inputs,
             )?
         };
         renderer.queue.submit(command_buffers);
@@ -1910,8 +1896,9 @@ pub(crate) fn dispatch_window_renders(
 
     if cameras.is_empty() {
         world.resources.window.camera_tile_render_iteration = 0;
+        inputs.view.camera_tile_render_iteration = 0;
 
-        if world.resources.render_settings.render_world_to_swapchain {
+        if inputs.settings.render_world_to_swapchain {
             let render_view =
                 crate::ecs::camera::queries::query_active_camera_matrices(world).map(|matrices| {
                     build_render_view(
@@ -1921,19 +1908,20 @@ pub(crate) fn dispatch_window_renders(
                             generation: 0,
                         }),
                         &matrices,
+                        inputs.scene.taa_jitter,
                         renderer.render_buffer_size,
                     )
                 });
-            world.resources.renderer_state.render_view = render_view;
-            let render_lighting = build_render_lighting(world);
-            world.resources.renderer_state.render_lighting = Some(render_lighting);
-            super::extract::extract_frame_dirty_state(renderer, world);
-            super::extract::prepare_text_meshes(renderer, world);
+            inputs.scene.render_view = render_view;
+            let render_lighting = build_render_lighting(world, &inputs.scene);
+            inputs.scene.render_lighting = Some(render_lighting);
+            super::extract::extract_frame_dirty_state(renderer, world, inputs);
+            super::extract::prepare_text_meshes(renderer, world, inputs);
             let command_buffers = render_graph_execute(
                 &mut renderer.graph,
                 &renderer.device,
                 &renderer.queue,
-                world,
+                inputs,
             )?;
             renderer.queue.submit(command_buffers);
             dispatch_pick_compute_if_pending(renderer, world);
@@ -1955,13 +1943,13 @@ pub(crate) fn dispatch_window_renders(
                 &[("ui_pass", true), ("ui_image_pass", true)],
             );
 
-            super::extract::extract_frame_dirty_state(renderer, world);
-            super::extract::prepare_text_meshes(renderer, world);
+            super::extract::extract_frame_dirty_state(renderer, world, inputs);
+            super::extract::prepare_text_meshes(renderer, world, inputs);
             let command_buffers = render_graph_execute(
                 &mut renderer.graph,
                 &renderer.device,
                 &renderer.queue,
-                world,
+                inputs,
             )?;
             renderer.queue.submit(command_buffers);
 
@@ -1973,14 +1961,14 @@ pub(crate) fn dispatch_window_renders(
         }
     }
 
-    let dispatched_settings_version = world.resources.renderer_state.settings_version;
+    let dispatched_settings_version = inputs.scene.settings_version;
     renderer.record_window_dispatch(dispatched_settings_version);
     Ok(())
 }
 
 pub(crate) fn upload_material_texture(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
-    world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
     request: MaterialTextureUploadRequest<'_>,
 ) {
     let MaterialTextureUploadRequest {
@@ -1991,8 +1979,8 @@ pub(crate) fn upload_material_texture(
         usage,
         sampler,
     } = request;
-    let Some(name) = registry_name_for(&world.resources.texture_cache.registry, texture.index)
-        .map(str::to_string)
+    let Some(name) =
+        registry_name_for(&inputs.texture_cache.registry, texture.index).map(str::to_string)
     else {
         tracing::error!(
             "upload_material_texture: no name registered for texture id {}",
@@ -2001,7 +1989,7 @@ pub(crate) fn upload_material_texture(
         return;
     };
     if let Err(e) = crate::render::wgpu::texture_cache::texture_cache_load_from_raw_rgba_with_format(
-        &mut world.resources.texture_cache,
+        &mut inputs.texture_cache,
         &renderer.device,
         &renderer.queue,
         &renderer.mip_generator,
@@ -2037,8 +2025,7 @@ pub(crate) fn upload_material_texture(
     if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
         && let Some(mesh_pass) =
             (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        && let Some(texture_entry) =
-            registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
     {
         mesh_pass.register_texture_with_data(
             name.clone(),
@@ -2062,8 +2049,7 @@ pub(crate) fn upload_material_texture(
         render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
         && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
             .downcast_mut::<passes::geometry::SkinnedMeshPass>()
-        && let Some(texture_entry) =
-            registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
     {
         skinned_mesh_pass.register_texture(
             name.clone(),
@@ -2086,8 +2072,7 @@ pub(crate) fn upload_material_texture(
     if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
         && let Some(decal_pass) =
             (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
-        && let Some(texture_entry) =
-            registry_entry_by_name(&world.resources.texture_cache.registry, &name)
+        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
     {
         decal_pass.register_texture(
             name,
@@ -2099,13 +2084,13 @@ pub(crate) fn upload_material_texture(
 
 pub(crate) fn reserve_material_layer(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
-    world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
     texture: crate::render::asset_id::TextureId,
     usage: crate::render::wgpu::texture_cache::TextureUsage,
     sampler: crate::render::wgpu::texture_cache::SamplerSettings,
 ) -> bool {
-    let Some(name) = registry_name_for(&world.resources.texture_cache.registry, texture.index)
-        .map(str::to_string)
+    let Some(name) =
+        registry_name_for(&inputs.texture_cache.registry, texture.index).map(str::to_string)
     else {
         return false;
     };
@@ -2143,6 +2128,7 @@ pub(crate) fn reserve_material_layer(
 pub(crate) fn drain_loading_tasks(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) {
     // Collect images the worker pool finished decoding. The GPU upload below
     // is the only throttled step; decoding already ran off this thread.
@@ -2165,7 +2151,7 @@ pub(crate) fn drain_loading_tasks(
             crate::ecs::loading::LoadingTask::ReserveLayer { texture, .. }
             | crate::ecs::loading::LoadingTask::UploadDecodedTexture { texture, .. }
             | crate::ecs::loading::LoadingTask::MaterializeTexture { texture, .. } => {
-                registry_name_for(&world.resources.texture_cache.registry, texture.index)
+                registry_name_for(&inputs.texture_cache.registry, texture.index)
                     .map(str::to_string)
                     .unwrap_or_else(|| format!("texture {}", texture.index))
             }
@@ -2179,7 +2165,7 @@ pub(crate) fn drain_loading_tasks(
                 // Reserving a stable layer and writing its placeholder is cheap and
                 // must happen before geometry first renders, so it does not draw from
                 // the per-frame upload budget.
-                if reserve_material_layer(renderer, world, texture, usage, sampler) {
+                if reserve_material_layer(renderer, inputs, texture, usage, sampler) {
                     reserved_any = true;
                 }
             }
@@ -2193,7 +2179,7 @@ pub(crate) fn drain_loading_tasks(
             } => {
                 upload_material_texture(
                     renderer,
-                    world,
+                    inputs,
                     MaterialTextureUploadRequest {
                         texture,
                         rgba_data: &rgba_data,
@@ -2262,7 +2248,7 @@ pub(crate) fn drain_loading_tasks(
                     }
                     upload_material_texture(
                         renderer,
-                        world,
+                        inputs,
                         MaterialTextureUploadRequest {
                             texture,
                             rgba_data: &decoded.rgba,
@@ -2297,7 +2283,7 @@ pub(crate) fn drain_loading_tasks(
     if needs_resolve {
         crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
             &mut world.resources.assets.material_registry,
-            &world.resources.texture_cache,
+            &inputs.texture_cache,
             &uploaded_textures,
         );
         world.resources.mesh_render_state.request_full_rebuild();
@@ -2306,9 +2292,8 @@ pub(crate) fn drain_loading_tasks(
         loading_pipeline_reset_source_arena(&mut world.resources.loading.pipeline);
     }
 
-    let evicted = crate::render::wgpu::texture_cache::texture_cache_remove_unused(
-        &mut world.resources.texture_cache,
-    );
+    let evicted =
+        crate::render::wgpu::texture_cache::texture_cache_remove_unused(&mut inputs.texture_cache);
     if !evicted.is_empty() {
         for name in &evicted {
             renderer.material_texture_arrays.release(name);

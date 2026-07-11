@@ -5,12 +5,13 @@ use crate::render::wgpu::rendergraph::render_graph_get_pass_mut;
 pub(crate) fn extract_frame_dirty_state(
     renderer: &mut WgpuRenderer,
     world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) {
     use crate::render::mesh_cache::{mesh_cache_take_dirty, mesh_cache_take_dirty_skinned};
 
     let frame_state = world.resources.mesh_render_state.take_frame_state();
-    let dirty_meshes = mesh_cache_take_dirty(&mut world.resources.assets.mesh_cache);
-    let dirty_skinned = mesh_cache_take_dirty_skinned(&mut world.resources.assets.mesh_cache);
+    let dirty_meshes = mesh_cache_take_dirty(&mut inputs.mesh_cache);
+    let dirty_skinned = mesh_cache_take_dirty_skinned(&mut inputs.mesh_cache);
 
     let shadow_scene_dirty = !frame_state.transform_dirty.is_empty()
         || !frame_state.entities_added.is_empty()
@@ -64,6 +65,7 @@ fn compute_ui_text_signature(text_instance: &crate::render::ui_data::UiTextInsta
 pub(crate) fn prepare_text_meshes(
     renderer: &mut WgpuRenderer,
     world: &mut crate::ecs::world::World,
+    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) {
     let pre_revision = renderer.glyph_atlas.revision;
 
@@ -103,7 +105,7 @@ pub(crate) fn prepare_text_meshes(
         }
     }
 
-    let mut frame_text = std::mem::take(&mut world.resources.retained_ui.frame.text_meshes);
+    let mut frame_text = std::mem::take(&mut inputs.ui.text_meshes);
     let mut active_entities: std::collections::HashSet<freecs::Entity> =
         std::collections::HashSet::new();
     for instance in &mut frame_text {
@@ -158,7 +160,7 @@ pub(crate) fn prepare_text_meshes(
     for entity in stale {
         renderer.frame_state.text_mesh_signatures.remove(&entity);
     }
-    world.resources.retained_ui.frame.text_meshes = frame_text;
+    inputs.ui.text_meshes = frame_text;
 
     if renderer.glyph_atlas.revision != pre_revision {
         if let Some(overlay_pass) =

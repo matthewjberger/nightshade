@@ -877,7 +877,7 @@ pub mod prelude {
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::passes;
     #[cfg(feature = "wgpu")]
-    pub use crate::render::wgpu::render_configs::RenderConfigs;
+    pub use crate::render::wgpu::render_configs::RenderInputs;
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::rendergraph::{
         PassExecutionContext, PassNode, RenderGraph, ResourceId, render_graph_add_buffer,

@@ -8,6 +8,7 @@ pub fn sync_lines_data(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     world: &World,
+    inputs: &crate::render::wgpu::render_configs::RenderInputs,
     wireframe_enabled: bool,
 ) {
     let line_entities = world.core.query_entities(
@@ -45,7 +46,7 @@ pub fn sync_lines_data(
     }
 
     if wireframe_enabled {
-        append_wireframe_lines(world, &mut line_data);
+        append_wireframe_lines(world, inputs, &mut line_data);
     }
 
     let line_count = line_data.len() as u32;
@@ -59,7 +60,11 @@ pub fn sync_lines_data(
 
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
-fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
+fn append_wireframe_lines(
+    world: &World,
+    inputs: &crate::render::wgpu::render_configs::RenderInputs,
+    line_data: &mut Vec<GpuLineData>,
+) {
     let camera_entity = world.resources.active_camera;
 
     for entity in world
@@ -91,9 +96,7 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
 
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in
-                crate::render::mesh_cache::mesh_cache_iter(&world.resources.assets.mesh_cache)
-            {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
                 if *name == render_mesh.name {
                     found_mesh = Some(mesh);
                     break;
@@ -108,13 +111,11 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
         push_mesh_wireframe_edges(line_data, entity.id, &global_transform.0, mesh);
     }
 
-    for (entity, instanced) in &world.resources.renderer_state.render_instanced_objects {
+    for (entity, instanced) in &inputs.scene.render_instanced_objects {
         let entity = *entity;
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in
-                crate::render::mesh_cache::mesh_cache_iter(&world.resources.assets.mesh_cache)
-            {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
                 if *name == instanced.mesh_name {
                     found_mesh = Some(mesh);
                     break;
@@ -177,10 +178,11 @@ pub fn sync_bounding_volume_data(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     world: &World,
+    inputs: &crate::render::wgpu::render_configs::RenderInputs,
     show_bounding_volumes: bool,
-    show_selected_bounding_volume: bool,
-    selected_entity: Option<freecs::Entity>,
 ) {
+    let show_selected_bounding_volume = inputs.debug_draw.show_selected_bounding_volume;
+    let selected_entity = inputs.editor_selection.bounding_volume_selected_entity;
     if !show_bounding_volumes && !show_selected_bounding_volume {
         lines_pass.bv_count = 0;
         lines_pass.bv_line_count = 0;
@@ -228,7 +230,7 @@ pub fn sync_bounding_volume_data(
             .entity_has_components(entity, crate::ecs::world::SKIN)
             && let Some(render_mesh) = world.core.get_render_mesh(entity)
             && let Some(mesh) = crate::render::generational_registry::registry_entry_by_name(
-                &world.resources.assets.mesh_cache.registry,
+                &inputs.mesh_cache.registry,
                 &render_mesh.name,
             )
             && let Some(vertices) = skinned_overlay_vertices(world, entity, mesh)
@@ -407,10 +409,11 @@ pub fn sync_normal_data(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     world: &World,
+    inputs: &crate::render::wgpu::render_configs::RenderInputs,
     show_normals: bool,
-    normal_line_length: f32,
-    normal_line_color: [f32; 4],
 ) {
+    let normal_line_length = inputs.debug_draw.normal_line_length;
+    let normal_line_color = inputs.debug_draw.normal_line_color;
     if !show_normals {
         lines_pass.normal_count = 0;
         lines_pass.normal_line_count = 0;
@@ -483,9 +486,7 @@ pub fn sync_normal_data(
 
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in
-                crate::render::mesh_cache::mesh_cache_iter(&world.resources.assets.mesh_cache)
-            {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
                 if *name == render_mesh.name {
                     found_mesh = Some(mesh);
                     break;
