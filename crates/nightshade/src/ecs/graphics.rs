@@ -12,6 +12,7 @@
 //! - [`Fog`]: Distance-based fog color and range
 //! - [`PbrDebugMode`]: Visualize individual PBR components
 
+pub mod animation_sync;
 pub mod resources;
 pub mod systems;
 
