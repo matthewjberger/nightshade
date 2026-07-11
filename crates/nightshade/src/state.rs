@@ -51,7 +51,9 @@ pub trait State {
     fn initialize(&mut self, _world: &mut World) {}
     fn configure_render_graph(
         &mut self,
-        _: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        _: &mut crate::render::wgpu::rendergraph::RenderGraph<
+            dyn crate::render::wgpu::render_configs::RenderConfigs,
+        >,
         _: &wgpu::Device,
         _: wgpu::TextureFormat,
         _: RenderResources,
@@ -69,7 +71,9 @@ pub trait State {
     /// Update render graph state each frame.
     fn update_render_graph(
         &mut self,
-        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<World>,
+        _graph: &mut crate::render::wgpu::rendergraph::RenderGraph<
+            dyn crate::render::wgpu::render_configs::RenderConfigs,
+        >,
         _world: &World,
     ) {
     }
