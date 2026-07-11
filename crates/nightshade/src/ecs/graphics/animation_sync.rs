@@ -2,9 +2,7 @@ use crate::ecs::animation::components::{
     AnimationChannel, AnimationInterpolation, AnimationLayer, AnimationPlayer, AnimationProperty,
     AnimationSamplerOutput,
 };
-use crate::ecs::graphics::resources::{
-    SkinnedChannelData, SkinnedJointData, SkinnedSkeletonData,
-};
+use crate::ecs::graphics::resources::{SkinnedChannelData, SkinnedJointData, SkinnedSkeletonData};
 use crate::ecs::world::{ANIMATION_PLAYER, Entity, SKIN, World};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -360,7 +358,10 @@ fn skin_armature_root(world: &World, skin_entity: Entity) -> nalgebra_glm::Mat4 
             if local_index_of.contains_key(&parent) {
                 return None;
             }
-            world.core.get_global_transform(parent).map(|global| global.0)
+            world
+                .core
+                .get_global_transform(parent)
+                .map(|global| global.0)
         })
         .unwrap_or_else(nalgebra_glm::Mat4::identity)
 }

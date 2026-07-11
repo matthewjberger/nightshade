@@ -59,7 +59,7 @@ impl SkinningUploadData {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SkinningCache {
     pub inverse_bind_matrices: Vec<Mat4>,
     pub skin_data: Vec<GpuSkinData>,
@@ -237,6 +237,28 @@ impl SkinningCache {
             0
         }
     }
+}
+
+/// Maintains `renderer_state.render_skinning` so the skinned-mesh and shadow
+/// passes read the bone palette without touching Skin components or bone
+/// transforms. The static layout rebuilds only when the skinned set changes
+/// (bumping `static_generation`); bone transforms refresh every frame.
+pub fn render_sync_skinning_system(world: &mut World) {
+    let mut cache = std::mem::take(&mut world.resources.renderer_state.render_skinning.cache);
+    let mut generation = world
+        .resources
+        .renderer_state
+        .render_skinning
+        .static_generation;
+    if cache.needs_rebuild(world) {
+        cache.rebuild_static_data(world);
+        generation = generation.wrapping_add(1);
+    }
+    let bone_transforms = cache.collect_bone_transforms(world);
+    let skinning = &mut world.resources.renderer_state.render_skinning;
+    skinning.cache = cache;
+    skinning.bone_transforms = bone_transforms;
+    skinning.static_generation = generation;
 }
 
 pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
