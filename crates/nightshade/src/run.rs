@@ -468,7 +468,7 @@ pub fn run_frame_body(
     crate::ecs::input::systems::gamepad_input_system(world);
     process_dropped_files(world);
 
-    renderer.initialize_fonts(world);
+    crate::render_driver::initialize_fonts(renderer, world);
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     crate::steam::steam_run_callbacks(&world.resources.steam);
@@ -538,13 +538,13 @@ pub fn run_frame_body(
         };
     let should_render = viewport_width > 0 && viewport_height > 0;
     if should_render {
-        if let Err(error) = renderer.update_with_state(state, world) {
+        if let Err(error) = crate::render_driver::update_with_state(renderer, state, world) {
             tracing::error!("Failed to update render graph: {error}");
         }
 
         state.pre_render(renderer, world);
 
-        if let Err(error) = renderer.render_frame(world) {
+        if let Err(error) = crate::render_driver::render_frame(renderer, world) {
             tracing::error!("Failed to draw frame: {error}");
         }
     }
@@ -1545,7 +1545,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 dimension.height,
             )) {
                 Ok(mut renderer) => {
-                    if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
+                    if let Err(error) = crate::render_driver::configure_with_state(
+                        &mut renderer,
+                        self.state.as_mut(),
+                    ) {
                         tracing::error!("Failed to configure renderer with state: {error}");
                     }
                     self.renderer = Some(renderer);
@@ -1630,7 +1633,9 @@ impl winit::application::ApplicationHandler for WindowContext {
             if let Some(receiver) = self.renderer_receiver.as_mut()
                 && let Ok(Some(mut renderer)) = receiver.try_recv()
             {
-                if let Err(error) = renderer.configure_with_state(self.state.as_mut()) {
+                if let Err(error) =
+                    crate::render_driver::configure_with_state(&mut renderer, self.state.as_mut())
+                {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);

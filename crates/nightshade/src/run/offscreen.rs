@@ -59,7 +59,7 @@ pub fn initialize_offscreen(
     world.resources.window.cached_viewport_size = Some(viewport);
     world.resources.window.cached_scale_factor = scale_factor;
 
-    if let Err(error) = renderer.configure_with_state(state) {
+    if let Err(error) = crate::render_driver::configure_with_state(renderer, state) {
         tracing::error!("Failed to configure renderer with state: {error}");
     }
 
