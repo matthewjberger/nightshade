@@ -54,256 +54,150 @@ impl Default for ViewportShading {
     }
 }
 
-pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72, 0.72, 0.72, 1.0);
+pub use crate::ecs::graphics::resources::{
+    EffectiveShading, FLAT_SHADING_COLOR, WIREFRAME_SENTINEL_COLOR,
+};
 
-/// Sentinel `flat_color` used to tell the mesh fragment shaders that the
-/// camera is in wireframe mode and that the surface should be discarded.
-/// `flat_color.a >= 2.0` is impossible for a regular color and is reserved
-/// for this purpose.
-pub const WIREFRAME_SENTINEL_COLOR: nalgebra_glm::Vec4 =
-    nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 2.0);
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct EffectiveShading {
-    pub unlit_mode: bool,
-    pub bloom_enabled: bool,
-    pub ssao_enabled: bool,
-    pub ssgi_enabled: bool,
-    pub ssr_enabled: bool,
-    pub show_normals: bool,
-    pub show_bounding_volumes: bool,
-    pub show_wireframe: bool,
-    pub selection_outline_enabled: bool,
-    pub flat_shading_color: Option<nalgebra_glm::Vec4>,
-    pub shadow_depth_enabled: bool,
-    pub lines_enabled: bool,
-    pub color_grading: ColorGrading,
-    pub depth_of_field: DepthOfField,
-    pub bloom_intensity: f32,
-    pub bloom_threshold: f32,
-    pub bloom_knee: f32,
-    pub bloom_filter_radius: f32,
-    pub ssao_radius: f32,
-    pub ssao_bias: f32,
-    pub ssao_intensity: f32,
-    pub ssao_sample_count: u32,
-    pub ssao_visualization: bool,
-    pub ssao_blur_depth_threshold: f32,
-    pub ssao_blur_normal_power: f32,
-    pub ssgi_radius: f32,
-    pub ssgi_intensity: f32,
-    pub ssgi_max_steps: u32,
-    pub ssr_max_steps: u32,
-    pub ssr_thickness: f32,
-    pub ssr_max_distance: f32,
-    pub ssr_stride: f32,
-    pub ssr_fade_start: f32,
-    pub ssr_fade_end: f32,
-    pub ssr_intensity: f32,
-    pub ambient_light: [f32; 4],
-    /// Bitmask of "culling layers" this view will render. Compared
-    /// against each entity's [`CullingMask`](crate::ecs::primitives::CullingMask)
-    /// at render-collection time; an entity is skipped when
-    /// `(entity_layers & culling_mask) == 0`. Defaults to `!0` (all
-    /// layers) so cameras without a `CameraCullingMask` component
-    /// continue to render every entity.
-    pub culling_mask: u32,
-    /// Resolved fog state for this view. `None` disables fog; `Some`
-    /// uses the contained Fog parameters. Inherits from `Graphics::fog`
-    /// unless the camera carries a `CameraEnvironment` override.
-    pub fog: Option<Fog>,
-    /// Resolved atmosphere selection for this view, used by the sky
-    /// pass and the IBL bracket selection. Defaults to
-    /// `Graphics::atmosphere` and can be overridden per camera via
-    /// `CameraEnvironment`.
-    pub atmosphere: Atmosphere,
-}
-
-impl EffectiveShading {
-    pub fn from_graphics(render: &RenderSettings, debug: &DebugDraw) -> Self {
-        Self {
-            unlit_mode: render.unlit_mode,
-            bloom_enabled: render.bloom_enabled,
-            ssao_enabled: render.ssao_enabled,
-            ssgi_enabled: render.ssgi_enabled,
-            ssr_enabled: render.ssr_enabled,
-            show_normals: debug.show_normals,
-            show_bounding_volumes: debug.show_bounding_volumes,
-            show_wireframe: false,
-            selection_outline_enabled: debug.selection_outline_enabled,
-            flat_shading_color: None,
-            shadow_depth_enabled: true,
-            lines_enabled: debug.show_normals || debug.show_bounding_volumes,
-            color_grading: render.color_grading,
-            depth_of_field: render.depth_of_field,
-            bloom_intensity: render.bloom_intensity,
-            bloom_threshold: render.bloom_threshold,
-            bloom_knee: render.bloom_knee,
-            bloom_filter_radius: render.bloom_filter_radius,
-            ssao_radius: render.ssao_radius,
-            ssao_bias: render.ssao_bias,
-            ssao_intensity: render.ssao_intensity,
-            ssao_sample_count: render.ssao_sample_count,
-            ssao_visualization: debug.ssao_visualization,
-            ssao_blur_depth_threshold: render.ssao_blur_depth_threshold,
-            ssao_blur_normal_power: render.ssao_blur_normal_power,
-            ssgi_radius: render.ssgi_radius,
-            ssgi_intensity: render.ssgi_intensity,
-            ssgi_max_steps: render.ssgi_max_steps,
-            ssr_max_steps: render.ssr_max_steps,
-            ssr_thickness: render.ssr_thickness,
-            ssr_max_distance: render.ssr_max_distance,
-            ssr_stride: render.ssr_stride,
-            ssr_fade_start: render.ssr_fade_start,
-            ssr_fade_end: render.ssr_fade_end,
-            ssr_intensity: render.ssr_intensity,
-            ambient_light: render.ambient_light,
-            culling_mask: !0,
-            fog: render.fog,
-            atmosphere: render.atmosphere,
-        }
-    }
-
-    pub fn for_camera(
-        render: &RenderSettings,
-        debug: &DebugDraw,
-        shading: &ViewportShading,
-        post_process: Option<&CameraPostProcess>,
-        culling_mask: Option<&CameraCullingMask>,
-        environment: Option<&CameraEnvironment>,
-    ) -> Self {
-        let mut effective = Self::from_graphics(render, debug);
-        if let Some(mask) = culling_mask {
-            effective.culling_mask = mask.0;
-        }
-        if let Some(env) = environment {
-            if let Some(atmosphere) = env.atmosphere {
-                effective.atmosphere = atmosphere;
-            }
-            effective.fog = match env.fog {
-                FogOverride::Inherit => effective.fog,
-                FogOverride::Disabled => None,
-                FogOverride::Override(fog) => Some(fog),
-            };
-        }
-        if let Some(overrides) = post_process {
-            if let Some(cg) = overrides.color_grading {
-                effective.color_grading = cg;
-            }
-            if let Some(dof) = overrides.depth_of_field {
-                effective.depth_of_field = dof;
-            }
-            if let Some(value) = overrides.bloom_intensity {
-                effective.bloom_intensity = value;
-            }
-            if let Some(value) = overrides.bloom_threshold {
-                effective.bloom_threshold = value;
-            }
-            if let Some(value) = overrides.bloom_knee {
-                effective.bloom_knee = value;
-            }
-            if let Some(value) = overrides.bloom_filter_radius {
-                effective.bloom_filter_radius = value;
-            }
-            if let Some(value) = overrides.ssao_intensity {
-                effective.ssao_intensity = value;
-            }
-            if let Some(value) = overrides.ssao_radius {
-                effective.ssao_radius = value;
-            }
-            if let Some(value) = overrides.ssgi_intensity {
-                effective.ssgi_intensity = value;
-            }
-            if let Some(value) = overrides.ssr_intensity {
-                effective.ssr_intensity = value;
-            }
-            if let Some(value) = overrides.ambient_light {
-                effective.ambient_light = value;
-            }
-        }
-        match shading.mode {
-            ShadingMode::Rendered => {}
-            ShadingMode::Solid => {
-                effective.unlit_mode = true;
-                effective.bloom_enabled = false;
-                effective.ssao_enabled = false;
-                effective.ssgi_enabled = false;
-                effective.ssr_enabled = false;
-                effective.shadow_depth_enabled = false;
-            }
-            ShadingMode::Flat => {
-                effective.bloom_enabled = false;
-                effective.ssao_enabled = false;
-                effective.ssgi_enabled = false;
-                effective.ssr_enabled = false;
-                effective.flat_shading_color = Some(FLAT_SHADING_COLOR);
-            }
-            ShadingMode::Wireframe => {
-                effective.unlit_mode = true;
-                effective.bloom_enabled = false;
-                effective.ssao_enabled = false;
-                effective.ssgi_enabled = false;
-                effective.ssr_enabled = false;
-                effective.shadow_depth_enabled = false;
-                effective.flat_shading_color = Some(WIREFRAME_SENTINEL_COLOR);
-                effective.show_wireframe = true;
-            }
-        }
-        if !shading.show_overlays {
-            effective.show_normals = false;
-            effective.show_bounding_volumes = false;
-            effective.selection_outline_enabled = false;
-        }
-        effective.lines_enabled =
-            effective.show_normals || effective.show_bounding_volumes || effective.show_wireframe;
-        effective
+pub fn effective_shading_from_graphics(
+    render: &RenderSettings,
+    debug: &DebugDraw,
+) -> EffectiveShading {
+    EffectiveShading {
+        unlit_mode: render.unlit_mode,
+        bloom_enabled: render.bloom_enabled,
+        ssao_enabled: render.ssao_enabled,
+        ssgi_enabled: render.ssgi_enabled,
+        ssr_enabled: render.ssr_enabled,
+        show_normals: debug.show_normals,
+        show_bounding_volumes: debug.show_bounding_volumes,
+        show_wireframe: false,
+        selection_outline_enabled: debug.selection_outline_enabled,
+        flat_shading_color: None,
+        shadow_depth_enabled: true,
+        lines_enabled: debug.show_normals || debug.show_bounding_volumes,
+        color_grading: render.color_grading,
+        depth_of_field: render.depth_of_field,
+        bloom_intensity: render.bloom_intensity,
+        bloom_threshold: render.bloom_threshold,
+        bloom_knee: render.bloom_knee,
+        bloom_filter_radius: render.bloom_filter_radius,
+        ssao_radius: render.ssao_radius,
+        ssao_bias: render.ssao_bias,
+        ssao_intensity: render.ssao_intensity,
+        ssao_sample_count: render.ssao_sample_count,
+        ssao_visualization: debug.ssao_visualization,
+        ssao_blur_depth_threshold: render.ssao_blur_depth_threshold,
+        ssao_blur_normal_power: render.ssao_blur_normal_power,
+        ssgi_radius: render.ssgi_radius,
+        ssgi_intensity: render.ssgi_intensity,
+        ssgi_max_steps: render.ssgi_max_steps,
+        ssr_max_steps: render.ssr_max_steps,
+        ssr_thickness: render.ssr_thickness,
+        ssr_max_distance: render.ssr_max_distance,
+        ssr_stride: render.ssr_stride,
+        ssr_fade_start: render.ssr_fade_start,
+        ssr_fade_end: render.ssr_fade_end,
+        ssr_intensity: render.ssr_intensity,
+        ambient_light: render.ambient_light,
+        culling_mask: !0,
+        fog: render.fog,
+        atmosphere: render.atmosphere,
     }
 }
 
-impl Default for EffectiveShading {
-    fn default() -> Self {
-        Self {
-            unlit_mode: false,
-            bloom_enabled: true,
-            ssao_enabled: false,
-            ssgi_enabled: false,
-            ssr_enabled: false,
-            show_normals: false,
-            show_bounding_volumes: false,
-            show_wireframe: false,
-            selection_outline_enabled: false,
-            flat_shading_color: None,
-            shadow_depth_enabled: true,
-            lines_enabled: false,
-            color_grading: ColorGrading::default(),
-            depth_of_field: DepthOfField::default(),
-            bloom_intensity: 0.5,
-            bloom_threshold: 1.0,
-            bloom_knee: 0.5,
-            bloom_filter_radius: 0.005,
-            ssao_radius: 0.5,
-            ssao_bias: 0.025,
-            ssao_intensity: 1.0,
-            ssao_sample_count: 64,
-            ssao_visualization: false,
-            ssao_blur_depth_threshold: 0.005,
-            ssao_blur_normal_power: 8.0,
-            ssgi_radius: 2.0,
-            ssgi_intensity: 1.0,
-            ssgi_max_steps: 16,
-            ssr_max_steps: 64,
-            ssr_thickness: 0.3,
-            ssr_max_distance: 50.0,
-            ssr_stride: 1.0,
-            ssr_fade_start: 0.8,
-            ssr_fade_end: 1.0,
-            ssr_intensity: 1.0,
-            ambient_light: [0.1, 0.1, 0.1, 1.0],
-            culling_mask: !0,
-            fog: None,
-            atmosphere: Atmosphere::None,
+pub fn effective_shading_for_camera(
+    render: &RenderSettings,
+    debug: &DebugDraw,
+    shading: &ViewportShading,
+    post_process: Option<&CameraPostProcess>,
+    culling_mask: Option<&CameraCullingMask>,
+    environment: Option<&CameraEnvironment>,
+) -> EffectiveShading {
+    let mut effective = effective_shading_from_graphics(render, debug);
+    if let Some(mask) = culling_mask {
+        effective.culling_mask = mask.0;
+    }
+    if let Some(env) = environment {
+        if let Some(atmosphere) = env.atmosphere {
+            effective.atmosphere = atmosphere;
+        }
+        effective.fog = match env.fog {
+            FogOverride::Inherit => effective.fog,
+            FogOverride::Disabled => None,
+            FogOverride::Override(fog) => Some(fog),
+        };
+    }
+    if let Some(overrides) = post_process {
+        if let Some(cg) = overrides.color_grading {
+            effective.color_grading = cg;
+        }
+        if let Some(dof) = overrides.depth_of_field {
+            effective.depth_of_field = dof;
+        }
+        if let Some(value) = overrides.bloom_intensity {
+            effective.bloom_intensity = value;
+        }
+        if let Some(value) = overrides.bloom_threshold {
+            effective.bloom_threshold = value;
+        }
+        if let Some(value) = overrides.bloom_knee {
+            effective.bloom_knee = value;
+        }
+        if let Some(value) = overrides.bloom_filter_radius {
+            effective.bloom_filter_radius = value;
+        }
+        if let Some(value) = overrides.ssao_intensity {
+            effective.ssao_intensity = value;
+        }
+        if let Some(value) = overrides.ssao_radius {
+            effective.ssao_radius = value;
+        }
+        if let Some(value) = overrides.ssgi_intensity {
+            effective.ssgi_intensity = value;
+        }
+        if let Some(value) = overrides.ssr_intensity {
+            effective.ssr_intensity = value;
+        }
+        if let Some(value) = overrides.ambient_light {
+            effective.ambient_light = value;
         }
     }
+    match shading.mode {
+        ShadingMode::Rendered => {}
+        ShadingMode::Solid => {
+            effective.unlit_mode = true;
+            effective.bloom_enabled = false;
+            effective.ssao_enabled = false;
+            effective.ssgi_enabled = false;
+            effective.ssr_enabled = false;
+            effective.shadow_depth_enabled = false;
+        }
+        ShadingMode::Flat => {
+            effective.bloom_enabled = false;
+            effective.ssao_enabled = false;
+            effective.ssgi_enabled = false;
+            effective.ssr_enabled = false;
+            effective.flat_shading_color = Some(FLAT_SHADING_COLOR);
+        }
+        ShadingMode::Wireframe => {
+            effective.unlit_mode = true;
+            effective.bloom_enabled = false;
+            effective.ssao_enabled = false;
+            effective.ssgi_enabled = false;
+            effective.ssr_enabled = false;
+            effective.shadow_depth_enabled = false;
+            effective.flat_shading_color = Some(WIREFRAME_SENTINEL_COLOR);
+            effective.show_wireframe = true;
+        }
+    }
+    if !shading.show_overlays {
+        effective.show_normals = false;
+        effective.show_bounding_volumes = false;
+        effective.selection_outline_enabled = false;
+    }
+    effective.lines_enabled =
+        effective.show_normals || effective.show_bounding_volumes || effective.show_wireframe;
+    effective
 }
 
 /// Locks a camera's projection aspect to a fixed value regardless
