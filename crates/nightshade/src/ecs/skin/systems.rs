@@ -3,310 +3,83 @@ use freecs::Entity;
 use nalgebra_glm::Mat4;
 use std::collections::HashMap;
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GpuSkinData {
-    pub joint_count: u32,
-    pub base_bone_index: u32,
-    pub base_ibm_index: u32,
-    pub base_output_index: u32,
-}
+pub use crate::render::skinning::{GpuSkinData, SkinningCache, skinned_world_bounds};
 
-/// Conservative world-space bounding sphere for a skinned instance, derived
-/// from its animated bone world positions plus a mesh-radius margin. Returns
-/// `[center_x, center_y, center_z, radius]`. When the bone range is missing it
-/// returns a never-cull sphere so a stale bound can only cost the cull, never
-/// drop the instance.
-pub fn skinned_world_bounds(
-    bones: &[Mat4],
-    base_bone: usize,
-    joint_count: usize,
-    margin: f32,
-) -> [f32; 4] {
-    if joint_count == 0 || base_bone + joint_count > bones.len() {
-        return [0.0, 0.0, 0.0, 1.0e9];
-    }
-    let skin_bones = &bones[base_bone..base_bone + joint_count];
-    let mut centroid = nalgebra_glm::vec3(0.0, 0.0, 0.0);
-    for bone in skin_bones {
-        centroid += nalgebra_glm::vec3(bone[(0, 3)], bone[(1, 3)], bone[(2, 3)]);
-    }
-    centroid /= joint_count as f32;
-    let mut max_distance_squared = 0.0f32;
-    for bone in skin_bones {
-        let position = nalgebra_glm::vec3(bone[(0, 3)], bone[(1, 3)], bone[(2, 3)]);
-        max_distance_squared = max_distance_squared.max((position - centroid).norm_squared());
-    }
-    let radius = max_distance_squared.sqrt() + margin;
-    [centroid.x, centroid.y, centroid.z, radius]
-}
-
-pub struct SkinningUploadData {
-    pub bone_transforms: Vec<Mat4>,
-    pub inverse_bind_matrices: Vec<Mat4>,
-    pub skin_data: Vec<GpuSkinData>,
-    pub entity_skin_indices: HashMap<Entity, u32>,
-    pub total_joints: u32,
-}
-
-impl SkinningUploadData {
-    pub fn get_joint_offset(&self, skin_index: u32) -> u32 {
-        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
-            skin_data.base_output_index
-        } else {
-            0
-        }
-    }
-}
-
-#[derive(Default, Clone)]
-pub struct SkinningCache {
-    pub inverse_bind_matrices: Vec<Mat4>,
-    pub skin_data: Vec<GpuSkinData>,
-    pub entity_skin_indices: HashMap<Entity, u32>,
-    pub joint_entities: Vec<Entity>,
-    pub total_joints: u32,
-    pub skinned_entity_ids: Vec<u32>,
-    pub static_data_uploaded: bool,
-}
-
-impl SkinningCache {
-    pub fn needs_rebuild(&self, world: &World) -> bool {
-        if !self.static_data_uploaded {
-            return true;
-        }
-
-        let mut mismatch = false;
-        let mut count = 0usize;
-        let expected = &self.skinned_entity_ids;
-        world
-            .core
-            .query()
-            .with(SKIN | RENDER_MESH)
-            .iter(|entity, _, _| {
-                let index = count;
-                count += 1;
-                if mismatch {
-                    return;
-                }
-                if index >= expected.len() || entity.id != expected[index] {
-                    mismatch = true;
-                }
-            });
-        if mismatch {
-            return true;
-        }
-        count != expected.len()
+/// Whether the live skinned entity set no longer matches the cache's recorded
+/// set, requiring a static-data rebuild.
+pub fn skinning_cache_needs_rebuild(cache: &SkinningCache, world: &World) -> bool {
+    if !cache.static_data_uploaded {
+        return true;
     }
 
-    pub fn rebuild_static_data(&mut self, world: &World) {
-        self.skinned_entity_ids.clear();
-        self.inverse_bind_matrices.clear();
-        self.skin_data.clear();
-        self.entity_skin_indices.clear();
-        self.joint_entities.clear();
-        self.total_joints = 0;
-
-        let mut any = false;
-        let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
-        let mut bone_index = 0u32;
-        let joint_entities = &mut self.joint_entities;
-        let skinned_entity_ids = &mut self.skinned_entity_ids;
-        world
-            .core
-            .query()
-            .with(SKIN | RENDER_MESH)
-            .iter(|entity, table, idx| {
-                any = true;
-                skinned_entity_ids.push(entity.id);
-                let skin = &table.skin[idx];
-                for &joint_entity in &skin.joints {
-                    bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
-                        let index = bone_index;
-                        joint_entities.push(joint_entity);
-                        bone_index += 1;
-                        index
-                    });
-                }
-            });
-
-        if !any {
-            self.static_data_uploaded = true;
-            return;
-        }
-
-        let mut skin_configs: HashMap<u64, u32> = HashMap::new();
-        let mut unique_skin_index = 0u32;
-        let mut current_ibm_offset = 0u32;
-        let mut current_output_offset = 0u32;
-        let skin_data = &mut self.skin_data;
-        let inverse_bind_matrices = &mut self.inverse_bind_matrices;
-        let entity_skin_indices = &mut self.entity_skin_indices;
-        world
-            .core
-            .query()
-            .with(SKIN | RENDER_MESH)
-            .iter(|entity, table, idx| {
-                let skin = &table.skin[idx];
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                for joint in skin.joints.iter() {
-                    use std::hash::Hash;
-                    joint.id.hash(&mut hasher);
-                }
-                for matrix in skin.inverse_bind_matrices.iter() {
-                    for row in 0..4 {
-                        for column in 0..4 {
-                            use std::hash::Hash;
-                            matrix[(row, column)].to_bits().hash(&mut hasher);
-                        }
-                    }
-                }
-                use std::hash::Hasher;
-                let skin_hash = hasher.finish();
-
-                let skin_index = if let Some(&existing_index) = skin_configs.get(&skin_hash) {
-                    existing_index
-                } else {
-                    let index = unique_skin_index;
-                    skin_configs.insert(skin_hash, index);
-
-                    let base_bone_index = if let Some(&first_joint) = skin.joints.first() {
-                        bone_entity_to_index.get(&first_joint).copied().unwrap_or(0)
-                    } else {
-                        0
-                    };
-
-                    let joint_count = skin.joints.len().min(256) as u32;
-
-                    let gpu_skin_data = GpuSkinData {
-                        joint_count,
-                        base_bone_index,
-                        base_ibm_index: current_ibm_offset,
-                        base_output_index: current_output_offset,
-                    };
-                    skin_data.push(gpu_skin_data);
-
-                    for (joint_index, &inverse_bind) in
-                        skin.inverse_bind_matrices.iter().enumerate()
-                    {
-                        if joint_index < 256 {
-                            inverse_bind_matrices.push(inverse_bind);
-                        }
-                    }
-
-                    current_ibm_offset += joint_count;
-                    current_output_offset += joint_count;
-
-                    unique_skin_index += 1;
-                    index
-                };
-
-                entity_skin_indices.insert(entity, skin_index);
-            });
-
-        self.total_joints = current_output_offset;
-        self.static_data_uploaded = true;
-    }
-
-    pub fn collect_bone_transforms(&self, world: &World) -> Vec<Mat4> {
-        let mut bone_transforms = Vec::with_capacity(self.joint_entities.len());
-
-        for &joint_entity in &self.joint_entities {
-            if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
-                bone_transforms.push(joint_global_transform.0);
-            } else {
-                bone_transforms.push(Mat4::identity());
-            }
-        }
-
-        bone_transforms
-    }
-
-    pub fn get_joint_offset(&self, skin_index: u32) -> u32 {
-        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
-            skin_data.base_output_index
-        } else {
-            0
-        }
-    }
-
-    pub fn get_base_bone_index(&self, skin_index: u32) -> u32 {
-        if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
-            skin_data.base_bone_index
-        } else {
-            0
-        }
-    }
-}
-
-/// Maintains `renderer_state.render_skinning` so the skinned-mesh and shadow
-/// passes read the bone palette without touching Skin components or bone
-/// transforms. The static layout rebuilds only when the skinned set changes
-/// (bumping `static_generation`); bone transforms refresh every frame.
-pub fn render_sync_skinning_system(world: &mut World) {
-    let mut cache = std::mem::take(&mut world.resources.renderer_state.render_skinning.cache);
-    let mut generation = world
-        .resources
-        .renderer_state
-        .render_skinning
-        .static_generation;
-    if cache.needs_rebuild(world) {
-        cache.rebuild_static_data(world);
-        generation = generation.wrapping_add(1);
-    }
-    let bone_transforms = cache.collect_bone_transforms(world);
-    let skinning = &mut world.resources.renderer_state.render_skinning;
-    skinning.cache = cache;
-    skinning.bone_transforms = bone_transforms;
-    skinning.static_generation = generation;
-}
-
-pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
-    let mut bone_transforms = Vec::new();
-    let mut inverse_bind_matrices = Vec::new();
-    let mut skin_data_vec = Vec::new();
-    let mut entity_skin_indices = HashMap::new();
-
-    let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
-    let mut bone_index = 0u32;
-
+    let mut mismatch = false;
+    let mut count = 0usize;
+    let expected = &cache.skinned_entity_ids;
     world
         .core
         .query()
         .with(SKIN | RENDER_MESH)
-        .iter(|_, table, idx| {
+        .iter(|entity, _, _| {
+            let index = count;
+            count += 1;
+            if mismatch {
+                return;
+            }
+            if index >= expected.len() || entity.id != expected[index] {
+                mismatch = true;
+            }
+        });
+    if mismatch {
+        return true;
+    }
+    count != expected.len()
+}
+
+/// Rebuilds the cache's static layout from the Skin components: deduplicated
+/// skins, inverse bind matrices, and the dense bone-index assignment.
+pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &World) {
+    cache.skinned_entity_ids.clear();
+    cache.inverse_bind_matrices.clear();
+    cache.skin_data.clear();
+    cache.entity_skin_indices.clear();
+    cache.joint_entities.clear();
+    cache.total_joints = 0;
+
+    let mut any = false;
+    let mut bone_entity_to_index: HashMap<Entity, u32> = HashMap::new();
+    let mut bone_index = 0u32;
+    let joint_entities = &mut cache.joint_entities;
+    let skinned_entity_ids = &mut cache.skinned_entity_ids;
+    world
+        .core
+        .query()
+        .with(SKIN | RENDER_MESH)
+        .iter(|entity, table, idx| {
+            any = true;
+            skinned_entity_ids.push(entity.id);
             let skin = &table.skin[idx];
             for &joint_entity in &skin.joints {
                 bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                     let index = bone_index;
-                    if let Some(joint_global_transform) =
-                        world.core.get_global_transform(joint_entity)
-                    {
-                        bone_transforms.push(joint_global_transform.0);
-                    } else {
-                        bone_transforms.push(Mat4::identity());
-                    }
+                    joint_entities.push(joint_entity);
                     bone_index += 1;
                     index
                 });
             }
         });
 
-    if bone_transforms.is_empty() && entity_skin_indices.is_empty() {
-        return SkinningUploadData {
-            bone_transforms: Vec::new(),
-            inverse_bind_matrices: Vec::new(),
-            skin_data: Vec::new(),
-            entity_skin_indices: HashMap::new(),
-            total_joints: 0,
-        };
+    if !any {
+        cache.static_data_uploaded = true;
+        return;
     }
 
     let mut skin_configs: HashMap<u64, u32> = HashMap::new();
     let mut unique_skin_index = 0u32;
     let mut current_ibm_offset = 0u32;
     let mut current_output_offset = 0u32;
-
+    let skin_data = &mut cache.skin_data;
+    let inverse_bind_matrices = &mut cache.inverse_bind_matrices;
+    let entity_skin_indices = &mut cache.entity_skin_indices;
     world
         .core
         .query()
@@ -349,7 +122,7 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
                     base_ibm_index: current_ibm_offset,
                     base_output_index: current_output_offset,
                 };
-                skin_data_vec.push(gpu_skin_data);
+                skin_data.push(gpu_skin_data);
 
                 for (joint_index, &inverse_bind) in skin.inverse_bind_matrices.iter().enumerate() {
                     if joint_index < 256 {
@@ -367,11 +140,44 @@ pub fn collect_skinning_data(world: &World) -> SkinningUploadData {
             entity_skin_indices.insert(entity, skin_index);
         });
 
-    SkinningUploadData {
-        bone_transforms,
-        inverse_bind_matrices,
-        skin_data: skin_data_vec,
-        entity_skin_indices,
-        total_joints: current_output_offset,
+    cache.total_joints = current_output_offset;
+    cache.static_data_uploaded = true;
+}
+
+/// The current world transform of every cached joint entity, in the cache's
+/// dense bone order.
+pub fn skinning_cache_collect_bone_transforms(cache: &SkinningCache, world: &World) -> Vec<Mat4> {
+    let mut bone_transforms = Vec::with_capacity(cache.joint_entities.len());
+
+    for &joint_entity in &cache.joint_entities {
+        if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
+            bone_transforms.push(joint_global_transform.0);
+        } else {
+            bone_transforms.push(Mat4::identity());
+        }
     }
+
+    bone_transforms
+}
+
+/// Maintains `renderer_state.render_skinning` so the skinned-mesh and shadow
+/// passes read the bone palette without touching Skin components or bone
+/// transforms. The static layout rebuilds only when the skinned set changes
+/// (bumping `static_generation`); bone transforms refresh every frame.
+pub fn render_sync_skinning_system(world: &mut World) {
+    let mut cache = std::mem::take(&mut world.resources.renderer_state.render_skinning.cache);
+    let mut generation = world
+        .resources
+        .renderer_state
+        .render_skinning
+        .static_generation;
+    if skinning_cache_needs_rebuild(&cache, world) {
+        skinning_cache_rebuild_static_data(&mut cache, world);
+        generation = generation.wrapping_add(1);
+    }
+    let bone_transforms = skinning_cache_collect_bone_transforms(&cache, world);
+    let skinning = &mut world.resources.renderer_state.render_skinning;
+    skinning.cache = cache;
+    skinning.bone_transforms = bone_transforms;
+    skinning.static_generation = generation;
 }
