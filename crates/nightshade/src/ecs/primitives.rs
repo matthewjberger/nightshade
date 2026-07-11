@@ -45,37 +45,7 @@ impl enum2schema::Schema for CastsShadow {
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Guid(pub u64);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RenderLayer(pub u32);
-
-impl enum2schema::Schema for RenderLayer {
-    fn schema() -> enum2schema::serde_json::Value {
-        enum2schema::serde_json::json!({ "type": "integer" })
-    }
-}
-
-impl Default for RenderLayer {
-    fn default() -> Self {
-        Self(Self::WORLD)
-    }
-}
-
-impl RenderLayer {
-    pub const WORLD: u32 = 0;
-    pub const OVERLAY: u32 = 1;
-
-    pub fn new(layer: u32) -> Self {
-        Self(layer)
-    }
-
-    pub fn is_in_layer(&self, layer: u32) -> bool {
-        self.0 == layer
-    }
-
-    pub fn is_overlay(&self) -> bool {
-        self.0 == Self::OVERLAY
-    }
-}
+pub use crate::render::render_layer::RenderLayer;
 
 /// Bitmask of "culling layers" this entity belongs to. Independent
 /// from [`RenderLayer`] (which selects WORLD vs OVERLAY rendering).
