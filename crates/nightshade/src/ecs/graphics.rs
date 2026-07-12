@@ -13,4 +13,5 @@
 //! - [`PbrDebugMode`]: Visualize individual PBR components
 
 pub mod animation_sync;
+pub mod scene_sync;
 pub mod systems;

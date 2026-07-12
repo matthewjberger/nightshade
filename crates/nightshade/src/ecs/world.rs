@@ -293,6 +293,7 @@ freecs::ecs! {
         text: crate::ecs::text::resources::TextState,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         transform_state: crate::ecs::transform::resources::TransformState,
+        render_scene_sync: crate::ecs::graphics::scene_sync::RenderSceneSync,
         tweens: crate::ecs::tween::Tweens,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
         user_interface: crate::ecs::ui::UserInterface,

@@ -179,9 +179,14 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        if world.core.entity_has_components(current, RENDER_MESH)
-            || world.core.entity_has_components(current, INSTANCED_MESH)
-        {
+        let render_relevant = RENDER_MESH
+            | INSTANCED_MESH
+            | crate::ecs::world::LIGHT
+            | crate::ecs::world::DECAL
+            | crate::ecs::world::TEXT
+            | crate::ecs::world::WATER
+            | crate::ecs::world::CLOTH;
+        if world.core.component_mask(current).unwrap_or(0) & render_relevant != 0 {
             render_dirty_entities.push(current);
         }
 

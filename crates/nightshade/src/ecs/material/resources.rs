@@ -30,6 +30,10 @@ pub struct MaterialRegistry {
     pub protected_indices: Vec<u32>,
     /// Maps content hash to material name for deduplication.
     pub content_hash_to_name: HashMap<u64, String>,
+    /// Monotonic version bumped on every registry mutation, so the scene
+    /// sync can skip rebuilding the resolved material table on frames where
+    /// nothing changed.
+    pub version: u64,
 }
 
 impl Default for MaterialRegistry {
@@ -41,6 +45,7 @@ impl Default for MaterialRegistry {
             pending_resolve: Vec::new(),
             protected_indices: Vec::new(),
             content_hash_to_name: HashMap::new(),
+            version: 0,
         };
 
         let default_materials = [
@@ -131,6 +136,7 @@ pub fn material_registry_insert(
     name: String,
     material: Material,
 ) -> MaterialId {
+    registry.version = registry.version.wrapping_add(1);
     let new_texture_names = collect_material_texture_names(&material);
     if let Some(&existing_index) = registry.registry.name_to_index.get(&name)
         && let Some(existing_material) = registry.registry.entries[existing_index as usize].as_ref()
@@ -254,6 +260,7 @@ pub fn material_registry_resolve_uploaded_textures(
     texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
     uploaded: &[TextureId],
 ) {
+    registry.version = registry.version.wrapping_add(1);
     let mut dirty: HashSet<u32> = HashSet::new();
     for id in uploaded {
         let Some(name) = registry_name_for(&texture_cache.registry, id.index) else {
@@ -317,6 +324,9 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
         }
     }
 
+    if !removed.is_empty() {
+        registry.version = registry.version.wrapping_add(1);
+    }
     removed
 }
 

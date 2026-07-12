@@ -259,6 +259,10 @@ pub struct MeshRenderStateInner {
     pub instanced_local_matrices_dirty: HashSet<Entity>,
     pub custom_data_overrides: HashMap<Entity, [f32; 4]>,
     pub custom_data_dirty: HashSet<Entity>,
+    /// Entities whose non-structural per-object state (visibility, morph
+    /// weights) changed this frame. The pass refreshes exactly these slots
+    /// instead of scanning every registered object.
+    pub object_state_dirty: HashSet<Entity>,
     pub instanced_compute_dispatch_needed: bool,
     pub instanced_meshes_changed: bool,
     pub entities_added: Vec<Entity>,
@@ -277,6 +281,7 @@ impl MeshRenderState {
                 instanced_local_matrices_dirty: HashSet::new(),
                 custom_data_overrides: HashMap::new(),
                 custom_data_dirty: HashSet::new(),
+                object_state_dirty: HashSet::new(),
                 instanced_compute_dispatch_needed: false,
                 instanced_meshes_changed: false,
                 entities_added: Vec::new(),
@@ -290,6 +295,10 @@ impl MeshRenderState {
 
     pub fn mark_transform_dirty(&mut self, entity: Entity) {
         self.inner.transform_dirty.insert(entity);
+    }
+
+    pub fn mark_object_state_dirty(&mut self, entity: Entity) {
+        self.inner.object_state_dirty.insert(entity);
     }
 
     pub fn mark_instanced_local_matrices_dirty(&mut self, entity: Entity) {

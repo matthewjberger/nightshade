@@ -274,6 +274,8 @@ fn reload_material_command(
         &name,
     ) {
         *existing = new_material;
+        let version = &mut world.resources.assets.material_registry.version;
+        *version = version.wrapping_add(1);
     }
 
     let entities_to_dirty: Vec<Entity> = world

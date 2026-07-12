@@ -35,6 +35,14 @@ impl MeshPass {
         configs: &crate::wgpu::render_configs::RenderInputs,
         queue: &wgpu::Queue,
     ) {
+        let dirty = self
+            .frame_dirty
+            .as_mut()
+            .map(|frame_dirty| std::mem::take(&mut frame_dirty.object_state_dirty))
+            .unwrap_or_default();
+        if dirty.is_empty() {
+            return;
+        }
         let Some(world_state) = self.world_state_get_mut(self.current_world_id) else {
             return;
         };
@@ -44,10 +52,11 @@ impl MeshPass {
 
         let object_size = std::mem::size_of::<ObjectData>() as u64;
 
-        for (slot, entity_opt) in world_state.gpu_registry.slot_to_entity.iter().enumerate() {
-            let Some(entity) = entity_opt else {
+        for entity in dirty {
+            let Some(&slot) = world_state.gpu_registry.entity_to_slot.get(&entity) else {
                 continue;
             };
+            let slot = slot as usize;
             if (slot as u32) >= world_state.regular_object_count {
                 continue;
             }
@@ -60,7 +69,7 @@ impl MeshPass {
             let dynamic = configs
                 .scene
                 .render_dynamic_objects
-                .get(entity)
+                .get(&entity)
                 .copied()
                 .unwrap_or(crate::config::DynamicObjectState {
                     visible: 1,
