@@ -28,6 +28,7 @@ struct SceneDirt {
     mesh_name_refresh: HashSet<crate::ecs::world::Entity>,
     bounds_refresh: HashSet<crate::ecs::world::Entity>,
     object_state_dirty: Vec<crate::ecs::world::Entity>,
+    skinned_objects: bool,
     entity_lists: bool,
     lights: bool,
     decals: bool,
@@ -82,6 +83,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             dirt.instanced_refresh.insert(entity);
             if mask & (crate::ecs::world::SKIN | crate::ecs::world::CULLING_MASK) != 0 {
                 dirt.entity_lists = true;
+            }
+            if mask & crate::ecs::world::SKIN != 0 {
+                dirt.skinned_objects = true;
             }
         }
         if mask & crate::ecs::world::CASTS_SHADOW != 0 {
@@ -207,6 +211,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         dirt.instanced_refresh.insert(entity);
         dirt.object_state_dirty.push(entity);
         let mask = world.core.component_mask(entity).unwrap_or(0);
+        dirt.skinned_objects |= mask & crate::ecs::world::SKIN != 0;
         dirt.lights |= mask & crate::ecs::world::LIGHT != 0;
         dirt.decals |= mask & crate::ecs::world::DECAL != 0;
         dirt.water |= mask & crate::ecs::world::WATER != 0;
@@ -215,6 +220,8 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     for entity in morph_changed {
         dirt.object_refresh.insert(entity);
         dirt.object_state_dirty.push(entity);
+        dirt.skinned_objects |=
+            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
     }
     for entity in layer_changed {
         dirt.object_refresh.insert(entity);
@@ -226,12 +233,16 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     for entity in mesh_changed {
         dirt.object_refresh.insert(entity);
         dirt.mesh_name_refresh.insert(entity);
+        dirt.skinned_objects |=
+            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
     }
     for entity in instanced_changed {
         dirt.instanced_refresh.insert(entity);
     }
     for entity in bounds_changed {
         dirt.bounds_refresh.insert(entity);
+        dirt.skinned_objects |=
+            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
     }
 
     for &entity in &world.resources.mesh_render_state.inner.transform_dirty {
@@ -242,6 +253,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         if mask & crate::ecs::world::INSTANCED_MESH != 0 {
             dirt.instanced_refresh.insert(entity);
         }
+        dirt.skinned_objects |= mask & crate::ecs::world::SKIN != 0;
         dirt.lights |= mask & crate::ecs::world::LIGHT != 0;
         dirt.decals |= mask & crate::ecs::world::DECAL != 0;
         dirt.water |= mask & crate::ecs::world::WATER != 0;
@@ -290,6 +302,54 @@ fn dynamic_object_state(
         is_overlay,
         render_layer: render_layer_value,
     }
+}
+
+fn refill_instanced_object_data(
+    world: &World,
+    entity: crate::ecs::world::Entity,
+    data: &mut crate::render::config::InstancedObjectData,
+) -> bool {
+    let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) else {
+        return false;
+    };
+    data.world_models.clear();
+    data.world_models.extend(
+        instanced_mesh
+            .cached_model_matrices()
+            .iter()
+            .map(|matrix| matrix.model),
+    );
+    data.world_normals.clear();
+    data.world_normals.extend(
+        instanced_mesh
+            .cached_model_matrices()
+            .iter()
+            .map(|matrix| matrix.normal_matrix),
+    );
+    data.local_matrices.clear();
+    data.local_matrices
+        .extend_from_slice(instanced_mesh.cached_local_matrices());
+    data.custom_tints.clear();
+    data.custom_tints.extend(
+        instanced_mesh
+            .custom_data_slice()
+            .iter()
+            .map(|custom| custom.tint),
+    );
+    data.mesh_name.clear();
+    data.mesh_name.push_str(&instanced_mesh.mesh_name);
+    data.render_layer = world
+        .core
+        .get_render_layer(entity)
+        .map(|layer| layer.0)
+        .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
+    data.visible = u32::from(world.core.get_visibility(entity).is_none_or(|v| v.visible));
+    data.parent_transform = world
+        .core
+        .get_global_transform(entity)
+        .map(|global| global.0)
+        .unwrap_or_else(nalgebra_glm::Mat4::identity);
+    true
 }
 
 fn instanced_object_data(
@@ -441,21 +501,32 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.instanced_refresh {
-        match instanced_object_data(world, entity) {
-            Some(data) => {
+        if let Some(existing) = world
+            .resources
+            .renderer_state
+            .render_instanced_objects
+            .get_mut(&entity)
+        {
+            let mut data = std::mem::take(existing);
+            if refill_instanced_object_data(world, entity, &mut data) {
                 world
                     .resources
                     .renderer_state
                     .render_instanced_objects
                     .insert(entity, data);
-            }
-            None => {
+            } else {
                 world
                     .resources
                     .renderer_state
                     .render_instanced_objects
                     .remove(&entity);
             }
+        } else if let Some(data) = instanced_object_data(world, entity) {
+            world
+                .resources
+                .renderer_state
+                .render_instanced_objects
+                .insert(entity, data);
         }
     }
     for &entity in &dirt.bounds_refresh {
@@ -855,6 +926,11 @@ pub fn render_sync_system(world: &mut World) {
     if dirt.full {
         world.resources.render_scene_sync.materials_dirty = true;
         world.resources.mesh_render_state.request_full_rebuild();
+        world.resources.renderer_state.skinned_objects_generation = world
+            .resources
+            .renderer_state
+            .skinned_objects_generation
+            .wrapping_add(1);
         sync_objects_full(world);
         sync_entity_lists(world);
         sync_lights(world);
@@ -868,6 +944,13 @@ pub fn render_sync_system(world: &mut World) {
     }
 
     sync_objects_delta(world, &dirt);
+    if dirt.skinned_objects {
+        world.resources.renderer_state.skinned_objects_generation = world
+            .resources
+            .renderer_state
+            .skinned_objects_generation
+            .wrapping_add(1);
+    }
     if dirt.entity_lists {
         sync_entity_lists(world);
     }

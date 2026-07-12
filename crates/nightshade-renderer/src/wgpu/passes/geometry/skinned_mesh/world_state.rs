@@ -343,6 +343,10 @@ pub(super) struct SkinnedWorldRenderState {
     pub skinned_entities: Vec<freecs::Entity>,
     pub opaque_draw_groups: Vec<SkinnedDrawGroup>,
     pub transparent_draw_groups: Vec<SkinnedDrawGroup>,
+    pub cached_cull_objects: Vec<super::types::SkinnedCullObject>,
+    pub cached_bounds_inputs: Vec<(usize, usize, f32)>,
+    pub cached_materials_generation: u64,
+    pub cached_skinned_objects_generation: u64,
 
     pub last_used_frame: u64,
 
@@ -362,6 +366,10 @@ impl SkinnedWorldRenderState {
             skinned_entities: Vec::new(),
             opaque_draw_groups: Vec::new(),
             transparent_draw_groups: Vec::new(),
+            cached_cull_objects: Vec::new(),
+            cached_bounds_inputs: Vec::new(),
+            cached_materials_generation: u64::MAX,
+            cached_skinned_objects_generation: u64::MAX,
             last_used_frame: 0,
             gpu_buffers: None,
             ibl_brdf_lut_view: None,

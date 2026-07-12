@@ -32,7 +32,7 @@ pub struct SkinnedMeshPass {
     /// freshly collected transforms are bit-identical, the bone upload
     /// and the skinning compute dispatch are both skipped so idle
     /// skeletons cost nothing on the CPU or GPU.
-    pub(super) cached_bone_transforms: Vec<nalgebra_glm::Mat4>,
+    pub(super) cached_palette_generation: u64,
     /// `static_generation` of the skinning snapshot the pass last uploaded, so a
     /// bump signals the skinned set changed and the static GPU buffers and cache
     /// mirror must be refreshed from `renderer_state.render_skinning`.

@@ -1282,6 +1282,10 @@ pub struct RenderSkinning {
     pub cache: crate::skinning::SkinningCache,
     pub bone_transforms: Vec<nalgebra_glm::Mat4>,
     pub static_generation: u64,
+    /// Bumped whenever any bone transform changed since the last sync, so
+    /// consumers can gate uploads on a counter instead of comparing the
+    /// whole palette.
+    pub bone_transforms_generation: u64,
 }
 
 /// Animation state resolved once per frame by the engine so the skinned-mesh
@@ -1319,6 +1323,9 @@ pub struct RenderMaterials {
     pub transparent_ids: std::collections::HashSet<u32>,
     pub mask_ids: std::collections::HashSet<u32>,
     pub double_sided_ids: std::collections::HashSet<u32>,
+    /// Bumped whenever the table or the entity maps change, so consumers can
+    /// gate their material conversions on a counter.
+    pub generation: u64,
 }
 
 /// One scene light with its world transform, snapshotted once per frame so the
@@ -1648,6 +1655,10 @@ pub struct RendererState {
     /// the ECS for lights themselves.
     #[cfg(feature = "wgpu")]
     pub render_lighting: Option<RenderLighting>,
+    /// Bumped whenever a skinned entity's object state changed (visibility,
+    /// morph weights, transform, bounds), so the skinned pass can gate its
+    /// instance rebuild on a counter.
+    pub skinned_objects_generation: u64,
     /// Monotonic version bumped by the renderer whenever
     /// `render_settings_signature` changes between frames.
     pub settings_version: u64,
@@ -1971,6 +1982,7 @@ impl Default for RendererState {
             render_animation: SkinnedAnimationSnapshot::default(),
             #[cfg(feature = "wgpu")]
             render_lighting: None,
+            skinned_objects_generation: 0,
             settings_version: 0,
             focus_policy: ViewportFocusPolicy::default(),
             adaptive_sampling: AdaptiveSamplingState::default(),

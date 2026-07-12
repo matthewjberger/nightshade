@@ -276,6 +276,21 @@ fn reload_material_command(
         *existing = new_material;
         let version = &mut world.resources.assets.material_registry.version;
         *version = version.wrapping_add(1);
+        if let Some(&index) = world
+            .resources
+            .assets
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&name)
+        {
+            world
+                .resources
+                .assets
+                .material_registry
+                .dirty_indices
+                .push(index);
+        }
     }
 
     let entities_to_dirty: Vec<Entity> = world

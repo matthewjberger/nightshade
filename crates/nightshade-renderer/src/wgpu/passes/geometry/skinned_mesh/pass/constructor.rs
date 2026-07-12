@@ -1321,7 +1321,7 @@ impl SkinnedMeshPass {
             joint_matrices_buffer,
             prev_joint_matrices_buffer,
             skin_data_buffer,
-            cached_bone_transforms: Vec::new(),
+            cached_palette_generation: 0,
             cached_skinning_generation: 0,
             animation: super::super::animation::SkinnedAnimationGpu::new(device),
             bone_transforms_generation: 0,

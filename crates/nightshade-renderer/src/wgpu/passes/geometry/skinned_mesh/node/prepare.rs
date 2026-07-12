@@ -22,15 +22,6 @@ impl SkinnedMeshPass {
 
         self.sync_skinned_meshes(device, queue, &configs.mesh_cache);
 
-        self.state_mut().skinned_entities.clear();
-        self.state_mut().opaque_draw_groups.clear();
-        self.state_mut().transparent_draw_groups.clear();
-        let mut objects = Vec::new();
-        let mut materials = Vec::new();
-        let mut custom_data = Vec::new();
-        let mut entity_is_transparent: Vec<bool> = Vec::new();
-        let mut object_bounds: Vec<[f32; 4]> = Vec::new();
-
         let mut buffers_resized = false;
         let max_buffer_size = device.limits().max_buffer_size as usize;
         let matrix_size = std::mem::size_of::<[[f32; 4]; 4]>();
@@ -107,8 +98,9 @@ impl SkinnedMeshPass {
             }
         }
 
-        let bone_transforms = configs.scene.render_skinning.bone_transforms.clone();
-        let bones_changed = self.cached_bone_transforms != bone_transforms;
+        let bone_transforms = &configs.scene.render_skinning.bone_transforms;
+        let bones_changed = self.cached_palette_generation
+            != configs.scene.render_skinning.bone_transforms_generation;
         if !bone_transforms.is_empty() {
             let required_size = bone_transforms.len();
             if required_size > self.bone_transforms_buffer_size {
@@ -141,7 +133,7 @@ impl SkinnedMeshPass {
                 queue.write_buffer(
                     &self.bone_transforms_buffer,
                     0,
-                    bytemuck::cast_slice(&bone_transforms),
+                    bytemuck::cast_slice(bone_transforms),
                 );
             }
         }
@@ -201,307 +193,384 @@ impl SkinnedMeshPass {
             } else {
                 0
             };
-        self.cached_bone_transforms = bone_transforms;
+        self.cached_palette_generation = configs.scene.render_skinning.bone_transforms_generation;
 
-        for &entity in &configs.scene.render_skinned_meshes {
-            if configs
-                .scene
-                .render_dynamic_objects
-                .get(&entity)
-                .is_some_and(|dynamic| dynamic.visible == 0)
-            {
-                continue;
+        let statics_dirty = skinned_set_changed
+            || buffers_resized
+            || self.gpu_batching_enabled != configs.scene.gpu_batching_enabled
+            || self.state().cached_materials_generation
+                != configs.scene.render_materials.generation
+            || self.state().cached_skinned_objects_generation
+                != configs.scene.skinned_objects_generation;
+
+        if !statics_dirty {
+            if self.state().cached_cull_objects.is_empty() {
+                return;
             }
+            if bones_changed {
+                let palette = &configs.scene.render_skinning.bone_transforms;
+                let state = self.state_mut();
+                for index in 0..state.cached_bounds_inputs.len() {
+                    let (base_bone, joint_count, rest_radius) = state.cached_bounds_inputs[index];
+                    state.cached_cull_objects[index].bounds = crate::skinning::skinned_world_bounds(
+                        palette,
+                        base_bone,
+                        joint_count,
+                        rest_radius,
+                    );
+                }
+                let cull_objects = std::mem::take(&mut self.state_mut().cached_cull_objects);
+                queue.write_buffer(
+                    &self.gpu().cull_objects_buffer,
+                    0,
+                    bytemuck::cast_slice(&cull_objects),
+                );
+                self.state_mut().cached_cull_objects = cull_objects;
+            }
+        } else {
+            self.state_mut().skinned_entities.clear();
+            self.state_mut().opaque_draw_groups.clear();
+            self.state_mut().transparent_draw_groups.clear();
+            let mut objects = Vec::new();
+            let mut materials = Vec::new();
+            let mut custom_data = Vec::new();
+            let mut entity_is_transparent: Vec<bool> = Vec::new();
+            let mut object_bounds: Vec<[f32; 4]> = Vec::new();
+            let mut bounds_inputs: Vec<(usize, usize, f32)> = Vec::new();
 
-            let mesh_name = match configs.scene.render_object_meshes.get(&entity) {
-                Some(name) => name,
-                None => continue,
-            };
+            for &entity in &configs.scene.render_skinned_meshes {
+                if configs
+                    .scene
+                    .render_dynamic_objects
+                    .get(&entity)
+                    .is_some_and(|dynamic| dynamic.visible == 0)
+                {
+                    continue;
+                }
 
-            let mesh_id = match self.skinned_meshes.get(mesh_name) {
-                Some(&id) => id,
-                None => continue,
-            };
+                let mesh_name = match configs.scene.render_object_meshes.get(&entity) {
+                    Some(name) => name,
+                    None => continue,
+                };
 
-            let skin_index = self
-                .skinning_cache
-                .entity_skin_indices
-                .get(&entity)
-                .copied()
-                .unwrap_or(0);
-            let joint_offset = self.skinning_cache.get_joint_offset(skin_index);
+                let mesh_id = match self.skinned_meshes.get(mesh_name) {
+                    Some(&id) => id,
+                    None => continue,
+                };
 
-            let material_id = materials.len() as u32;
-            let material_data = {
-                let render_materials = &configs.scene.render_materials;
-                let global_id = render_materials
-                    .entity_to_id
+                let skin_index = self
+                    .skinning_cache
+                    .entity_skin_indices
                     .get(&entity)
                     .copied()
                     .unwrap_or(0);
-                match global_id
-                    .checked_sub(1)
-                    .and_then(|index| render_materials.entries.get(index as usize))
-                {
-                    Some(entry) => convert_material_to_gpu_data(
-                        &entry.material,
-                        &entry.texture_ids,
-                        &self.material_layer_map,
-                    ),
-                    None => default_material_data([1.0, 1.0, 1.0, 1.0]),
-                }
-            };
+                let joint_offset = self.skinning_cache.get_joint_offset(skin_index);
 
-            let is_transparent = material_data.alpha_mode == 2;
-            entity_is_transparent.push(is_transparent);
-            materials.push(material_data);
-            custom_data.push([1.0f32, 1.0, 1.0, 1.0]);
-
-            let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
-            let dynamic = configs.scene.render_dynamic_objects.get(&entity).copied();
-            let morph_weights = dynamic.map(|d| d.morph_weights).unwrap_or([0.0; 8]);
-
-            let flip_winding = dynamic
-                .map(|d| {
-                    u32::from(
-                        nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&d.transform)) < 0.0,
-                    )
-                })
-                .unwrap_or(0);
-
-            objects.push(SkinnedObjectData {
-                transform_index: 0,
-                mesh_id,
-                material_id,
-                joint_offset,
-                morph_weights,
-                morph_target_count: mesh_data.morph_target_count,
-                morph_displacement_offset: mesh_data.morph_displacement_offset,
-                mesh_vertex_offset: mesh_data.vertex_offset,
-                mesh_vertex_count: mesh_data.vertex_count,
-                flip_winding,
-                entity_id: entity.id,
-                is_transparent: u32::from(is_transparent),
-                _padding: 0,
-            });
-
-            let mesh_rest_radius = configs
-                .scene
-                .render_bounds
-                .get(&entity)
-                .map(|bv| bv.sphere_radius)
-                .unwrap_or(2.0);
-            let base_bone = self.skinning_cache.get_base_bone_index(skin_index) as usize;
-            let joint_count = self
-                .skinning_cache
-                .skin_data
-                .get(skin_index as usize)
-                .map(|skin| skin.joint_count as usize)
-                .unwrap_or(0);
-            object_bounds.push(crate::skinning::skinned_world_bounds(
-                &self.cached_bone_transforms,
-                base_bone,
-                joint_count,
-                mesh_rest_radius,
-            ));
-
-            self.state_mut().skinned_entities.push(entity);
-        }
-
-        if objects.is_empty() {
-            return;
-        }
-
-        self.gpu_batching_enabled = configs.scene.gpu_batching_enabled;
-        let mesh_count = self.skinned_mesh_data.len().max(1);
-
-        let (objects, custom_data, cull_objects, commands) = if self.gpu_batching_enabled {
-            // GPU-driven path: no CPU sort or command build. Objects stay in ECS
-            // order; the GPU classify/count/build emits the per-(class,mesh)
-            // commands and stamps each cull object's command index. The draw
-            // issues a fixed `mesh_count` commands per class (empty slots draw
-            // nothing), so the per-class draw-group lengths are set to that.
-            let has_transparent = entity_is_transparent.iter().any(|&value| value);
-            let placeholder = SkinnedDrawGroup {
-                mesh_id: 0,
-                first_instance: 0,
-                instance_count: 0,
-            };
-            // The opaque region is [0, mesh_count) and the transparent region is
-            // [mesh_count, 2 * mesh_count). The transparent draw offset is derived
-            // from the opaque group length, so opaque is always `mesh_count`
-            // (empty command slots draw nothing); transparent is set only when
-            // there are transparent objects so the OIT path is skipped otherwise.
-            self.state_mut().opaque_draw_groups = vec![placeholder; mesh_count];
-            if has_transparent {
-                self.state_mut().transparent_draw_groups = vec![placeholder; mesh_count];
-            }
-            let cull_objects: Vec<SkinnedCullObject> = object_bounds
-                .iter()
-                .map(|&bounds| SkinnedCullObject {
-                    bounds,
-                    command_index: 0,
-                    _pad: [0; 3],
-                })
-                .collect();
-            let commands = vec![
-                SkinnedDrawIndexedIndirect {
-                    index_count: 0,
-                    instance_count: 0,
-                    first_index: 0,
-                    base_vertex: 0,
-                    first_instance: 0,
+                let material_id = materials.len() as u32;
+                let material_data = {
+                    let render_materials = &configs.scene.render_materials;
+                    let global_id = render_materials
+                        .entity_to_id
+                        .get(&entity)
+                        .copied()
+                        .unwrap_or(0);
+                    match global_id
+                        .checked_sub(1)
+                        .and_then(|index| render_materials.entries.get(index as usize))
+                    {
+                        Some(entry) => convert_material_to_gpu_data(
+                            &entry.material,
+                            &entry.texture_ids,
+                            &self.material_layer_map,
+                        ),
+                        None => default_material_data([1.0, 1.0, 1.0, 1.0]),
+                    }
                 };
-                2 * mesh_count
-            ];
-            (objects, custom_data, cull_objects, commands)
-        } else {
-            // CPU path: order instances by (opaque-before-transparent, mesh_id)
-            // so every same-mesh run is contiguous and drawn with one instanced
-            // draw call. `objects` and `custom_data` are indexed by the GPU
-            // instance index, so they are permuted together; `materials` is
-            // addressed by `object.material_id` (absolute) and stays put.
-            let mut order: Vec<usize> = (0..objects.len()).collect();
-            order.sort_by_key(|&index| (entity_is_transparent[index], objects[index].mesh_id));
 
-            let objects: Vec<SkinnedObjectData> =
-                order.iter().map(|&index| objects[index]).collect();
-            let custom_data: Vec<[f32; 4]> =
-                order.iter().map(|&index| custom_data[index]).collect();
-            let entity_is_transparent: Vec<bool> = order
-                .iter()
-                .map(|&index| entity_is_transparent[index])
-                .collect();
-            let object_bounds: Vec<[f32; 4]> =
-                order.iter().map(|&index| object_bounds[index]).collect();
-            {
-                let previous_entities: Vec<_> = self.state().skinned_entities.clone();
-                let reordered: Vec<_> = order
-                    .iter()
-                    .map(|&index| previous_entities[index])
-                    .collect();
-                self.state_mut().skinned_entities = reordered;
-            }
+                let is_transparent = material_data.alpha_mode == 2;
+                entity_is_transparent.push(is_transparent);
+                materials.push(material_data);
+                custom_data.push([1.0f32, 1.0, 1.0, 1.0]);
 
-            let mut index = 0;
-            while index < objects.len() {
-                let is_transparent = entity_is_transparent[index];
-                let mesh_id = objects[index].mesh_id;
-                let first_instance = index as u32;
-                while index < objects.len()
-                    && entity_is_transparent[index] == is_transparent
-                    && objects[index].mesh_id == mesh_id
-                {
-                    index += 1;
-                }
-                let group = SkinnedDrawGroup {
+                let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
+                let dynamic = configs.scene.render_dynamic_objects.get(&entity).copied();
+                let morph_weights = dynamic.map(|d| d.morph_weights).unwrap_or([0.0; 8]);
+
+                let flip_winding = dynamic
+                    .map(|d| {
+                        u32::from(
+                            nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&d.transform))
+                                < 0.0,
+                        )
+                    })
+                    .unwrap_or(0);
+
+                objects.push(SkinnedObjectData {
+                    transform_index: 0,
                     mesh_id,
-                    first_instance,
-                    instance_count: index as u32 - first_instance,
-                };
-                if is_transparent {
-                    self.state_mut().transparent_draw_groups.push(group);
-                } else {
-                    self.state_mut().opaque_draw_groups.push(group);
-                }
+                    material_id,
+                    joint_offset,
+                    morph_weights,
+                    morph_target_count: mesh_data.morph_target_count,
+                    morph_displacement_offset: mesh_data.morph_displacement_offset,
+                    mesh_vertex_offset: mesh_data.vertex_offset,
+                    mesh_vertex_count: mesh_data.vertex_count,
+                    flip_winding,
+                    entity_id: entity.id,
+                    is_transparent: u32::from(is_transparent),
+                    _padding: 0,
+                });
+
+                let mesh_rest_radius = configs
+                    .scene
+                    .render_bounds
+                    .get(&entity)
+                    .map(|bv| bv.sphere_radius)
+                    .unwrap_or(2.0);
+                let base_bone = self.skinning_cache.get_base_bone_index(skin_index) as usize;
+                let joint_count = self
+                    .skinning_cache
+                    .skin_data
+                    .get(skin_index as usize)
+                    .map(|skin| skin.joint_count as usize)
+                    .unwrap_or(0);
+                object_bounds.push(crate::skinning::skinned_world_bounds(
+                    &configs.scene.render_skinning.bone_transforms,
+                    base_bone,
+                    joint_count,
+                    mesh_rest_radius,
+                ));
+                bounds_inputs.push((base_bone, joint_count, mesh_rest_radius));
+
+                self.state_mut().skinned_entities.push(entity);
             }
 
-            let mut commands: Vec<SkinnedDrawIndexedIndirect> = Vec::new();
-            let mut command_index_per_object = vec![0u32; objects.len()];
+            if objects.is_empty() {
+                let materials_generation = configs.scene.render_materials.generation;
+                let skinned_objects_generation = configs.scene.skinned_objects_generation;
+                let state = self.state_mut();
+                state.cached_cull_objects = Vec::new();
+                state.cached_bounds_inputs = Vec::new();
+                state.cached_materials_generation = materials_generation;
+                state.cached_skinned_objects_generation = skinned_objects_generation;
+                return;
+            }
+
+            self.gpu_batching_enabled = configs.scene.gpu_batching_enabled;
+            let mesh_count = self.skinned_mesh_data.len().max(1);
+
+            let (objects, custom_data, cull_objects, commands, bounds_inputs) = if self
+                .gpu_batching_enabled
             {
-                let ordered_groups: Vec<(u32, u32, u32)> = self
-                    .state()
-                    .opaque_draw_groups
+                // GPU-driven path: no CPU sort or command build. Objects stay in ECS
+                // order; the GPU classify/count/build emits the per-(class,mesh)
+                // commands and stamps each cull object's command index. The draw
+                // issues a fixed `mesh_count` commands per class (empty slots draw
+                // nothing), so the per-class draw-group lengths are set to that.
+                let has_transparent = entity_is_transparent.iter().any(|&value| value);
+                let placeholder = SkinnedDrawGroup {
+                    mesh_id: 0,
+                    first_instance: 0,
+                    instance_count: 0,
+                };
+                // The opaque region is [0, mesh_count) and the transparent region is
+                // [mesh_count, 2 * mesh_count). The transparent draw offset is derived
+                // from the opaque group length, so opaque is always `mesh_count`
+                // (empty command slots draw nothing); transparent is set only when
+                // there are transparent objects so the OIT path is skipped otherwise.
+                self.state_mut().opaque_draw_groups = vec![placeholder; mesh_count];
+                if has_transparent {
+                    self.state_mut().transparent_draw_groups = vec![placeholder; mesh_count];
+                }
+                let cull_objects: Vec<SkinnedCullObject> = object_bounds
                     .iter()
-                    .chain(self.state().transparent_draw_groups.iter())
-                    .map(|group| (group.mesh_id, group.first_instance, group.instance_count))
+                    .map(|&bounds| SkinnedCullObject {
+                        bounds,
+                        command_index: 0,
+                        _pad: [0; 3],
+                    })
                     .collect();
-                for (mesh_id, first_instance, instance_count) in ordered_groups {
-                    let command_index = commands.len() as u32;
-                    let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
-                    commands.push(SkinnedDrawIndexedIndirect {
-                        index_count: mesh_data.index_count,
+                let commands = vec![
+                    SkinnedDrawIndexedIndirect {
+                        index_count: 0,
                         instance_count: 0,
-                        first_index: mesh_data.index_offset,
-                        base_vertex: mesh_data.vertex_offset as i32,
+                        first_index: 0,
+                        base_vertex: 0,
+                        first_instance: 0,
+                    };
+                    2 * mesh_count
+                ];
+                (objects, custom_data, cull_objects, commands, bounds_inputs)
+            } else {
+                // CPU path: order instances by (opaque-before-transparent, mesh_id)
+                // so every same-mesh run is contiguous and drawn with one instanced
+                // draw call. `objects` and `custom_data` are indexed by the GPU
+                // instance index, so they are permuted together; `materials` is
+                // addressed by `object.material_id` (absolute) and stays put.
+                let mut order: Vec<usize> = (0..objects.len()).collect();
+                order.sort_by_key(|&index| (entity_is_transparent[index], objects[index].mesh_id));
+
+                let objects: Vec<SkinnedObjectData> =
+                    order.iter().map(|&index| objects[index]).collect();
+                let custom_data: Vec<[f32; 4]> =
+                    order.iter().map(|&index| custom_data[index]).collect();
+                let entity_is_transparent: Vec<bool> = order
+                    .iter()
+                    .map(|&index| entity_is_transparent[index])
+                    .collect();
+                let object_bounds: Vec<[f32; 4]> =
+                    order.iter().map(|&index| object_bounds[index]).collect();
+                let bounds_inputs: Vec<(usize, usize, f32)> =
+                    order.iter().map(|&index| bounds_inputs[index]).collect();
+                {
+                    let previous_entities: Vec<_> = self.state().skinned_entities.clone();
+                    let reordered: Vec<_> = order
+                        .iter()
+                        .map(|&index| previous_entities[index])
+                        .collect();
+                    self.state_mut().skinned_entities = reordered;
+                }
+
+                let mut index = 0;
+                while index < objects.len() {
+                    let is_transparent = entity_is_transparent[index];
+                    let mesh_id = objects[index].mesh_id;
+                    let first_instance = index as u32;
+                    while index < objects.len()
+                        && entity_is_transparent[index] == is_transparent
+                        && objects[index].mesh_id == mesh_id
+                    {
+                        index += 1;
+                    }
+                    let group = SkinnedDrawGroup {
+                        mesh_id,
                         first_instance,
-                    });
-                    for object_index in first_instance..first_instance + instance_count {
-                        command_index_per_object[object_index as usize] = command_index;
+                        instance_count: index as u32 - first_instance,
+                    };
+                    if is_transparent {
+                        self.state_mut().transparent_draw_groups.push(group);
+                    } else {
+                        self.state_mut().opaque_draw_groups.push(group);
                     }
                 }
-            }
-            let cull_objects: Vec<SkinnedCullObject> = (0..objects.len())
-                .map(|index| SkinnedCullObject {
-                    bounds: object_bounds[index],
-                    command_index: command_index_per_object[index],
-                    _pad: [0; 3],
-                })
-                .collect();
-            (objects, custom_data, cull_objects, commands)
-        };
 
-        {
-            let mut needs_bind_group_rebuild = false;
+                let mut commands: Vec<SkinnedDrawIndexedIndirect> = Vec::new();
+                let mut command_index_per_object = vec![0u32; objects.len()];
+                {
+                    let ordered_groups: Vec<(u32, u32, u32)> = self
+                        .state()
+                        .opaque_draw_groups
+                        .iter()
+                        .chain(self.state().transparent_draw_groups.iter())
+                        .map(|group| (group.mesh_id, group.first_instance, group.instance_count))
+                        .collect();
+                    for (mesh_id, first_instance, instance_count) in ordered_groups {
+                        let command_index = commands.len() as u32;
+                        let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
+                        commands.push(SkinnedDrawIndexedIndirect {
+                            index_count: mesh_data.index_count,
+                            instance_count: 0,
+                            first_index: mesh_data.index_offset,
+                            base_vertex: mesh_data.vertex_offset as i32,
+                            first_instance,
+                        });
+                        for object_index in first_instance..first_instance + instance_count {
+                            command_index_per_object[object_index as usize] = command_index;
+                        }
+                    }
+                }
+                let cull_objects: Vec<SkinnedCullObject> = (0..objects.len())
+                    .map(|index| SkinnedCullObject {
+                        bounds: object_bounds[index],
+                        command_index: command_index_per_object[index],
+                        _pad: [0; 3],
+                    })
+                    .collect();
+                (objects, custom_data, cull_objects, commands, bounds_inputs)
+            };
+
             {
-                let gpu = self.world_states[self.current_world_id as usize]
-                    .as_mut()
-                    .unwrap()
-                    .gpu_buffers
-                    .as_mut()
-                    .unwrap();
-                if grow_storage_buffer::<SkinnedCullObject>(
-                    device,
-                    &mut gpu.cull_objects_buffer,
-                    &mut gpu.cull_objects_buffer_size,
-                    cull_objects.len(),
-                    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    "Skinned Mesh Cull Objects Buffer (Resized)",
-                ) {
-                    needs_bind_group_rebuild = true;
+                let mut needs_bind_group_rebuild = false;
+                {
+                    let gpu = self.world_states[self.current_world_id as usize]
+                        .as_mut()
+                        .unwrap()
+                        .gpu_buffers
+                        .as_mut()
+                        .unwrap();
+                    if grow_storage_buffer::<SkinnedCullObject>(
+                        device,
+                        &mut gpu.cull_objects_buffer,
+                        &mut gpu.cull_objects_buffer_size,
+                        cull_objects.len(),
+                        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Cull Objects Buffer (Resized)",
+                    ) {
+                        needs_bind_group_rebuild = true;
+                    }
+                    if grow_storage_buffer::<SkinnedDrawIndexedIndirect>(
+                        device,
+                        &mut gpu.indirect_commands_buffer,
+                        &mut gpu.indirect_commands_buffer_size,
+                        commands.len(),
+                        wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::INDIRECT
+                            | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Indirect Commands Buffer (Resized)",
+                    ) {
+                        needs_bind_group_rebuild = true;
+                    }
+                    if grow_storage_buffer::<u32>(
+                        device,
+                        &mut gpu.visible_indices_buffer,
+                        &mut gpu.visible_indices_buffer_size,
+                        objects.len(),
+                        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Visible Indices Buffer (Resized)",
+                    ) {
+                        needs_bind_group_rebuild = true;
+                    }
                 }
-                if grow_storage_buffer::<SkinnedDrawIndexedIndirect>(
-                    device,
-                    &mut gpu.indirect_commands_buffer,
-                    &mut gpu.indirect_commands_buffer_size,
-                    commands.len(),
-                    wgpu::BufferUsages::STORAGE
-                        | wgpu::BufferUsages::INDIRECT
-                        | wgpu::BufferUsages::COPY_DST,
-                    "Skinned Mesh Indirect Commands Buffer (Resized)",
-                ) {
-                    needs_bind_group_rebuild = true;
-                }
-                if grow_storage_buffer::<u32>(
-                    device,
-                    &mut gpu.visible_indices_buffer,
-                    &mut gpu.visible_indices_buffer_size,
-                    objects.len(),
-                    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    "Skinned Mesh Visible Indices Buffer (Resized)",
-                ) {
-                    needs_bind_group_rebuild = true;
+                if needs_bind_group_rebuild {
+                    self.rebuild_instance_bind_group(device);
+                    self.rebuild_cull_bind_group(device);
+                    self.gpu_mut().batch_bind_group = None;
                 }
             }
-            if needs_bind_group_rebuild {
+
+            queue.write_buffer(
+                &self.gpu().cull_objects_buffer,
+                0,
+                bytemuck::cast_slice(&cull_objects),
+            );
+            queue.write_buffer(
+                &self.gpu().indirect_commands_buffer,
+                0,
+                bytemuck::cast_slice(&commands),
+            );
+
+            {
+                {
+                    let gpu = self.world_states[self.current_world_id as usize]
+                        .as_mut()
+                        .unwrap()
+                        .gpu_buffers
+                        .as_mut()
+                        .unwrap();
+                    if grow_storage_buffer::<SkinnedObjectData>(
+                        device,
+                        &mut gpu.object_buffer,
+                        &mut gpu.object_buffer_size,
+                        objects.len(),
+                        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Object Buffer (Per-World, Resized)",
+                    ) {
+                        gpu.batch_bind_group = None;
+                    }
+                }
                 self.rebuild_instance_bind_group(device);
-                self.rebuild_cull_bind_group(device);
-                self.gpu_mut().batch_bind_group = None;
             }
-        }
 
-        queue.write_buffer(
-            &self.gpu().cull_objects_buffer,
-            0,
-            bytemuck::cast_slice(&cull_objects),
-        );
-        queue.write_buffer(
-            &self.gpu().indirect_commands_buffer,
-            0,
-            bytemuck::cast_slice(&commands),
-        );
-
-        {
             {
                 let gpu = self.world_states[self.current_world_id as usize]
                     .as_mut()
@@ -509,118 +578,106 @@ impl SkinnedMeshPass {
                     .gpu_buffers
                     .as_mut()
                     .unwrap();
-                if grow_storage_buffer::<SkinnedObjectData>(
+                grow_storage_buffer::<MaterialData>(
                     device,
-                    &mut gpu.object_buffer,
-                    &mut gpu.object_buffer_size,
-                    objects.len(),
+                    &mut gpu.materials_buffer,
+                    &mut gpu.materials_buffer_size,
+                    materials.len(),
                     wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    "Skinned Mesh Object Buffer (Per-World, Resized)",
-                ) {
+                    "Skinned Mesh Materials Buffer (Per-World, Resized)",
+                );
+            }
+
+            {
+                {
+                    let gpu = self.world_states[self.current_world_id as usize]
+                        .as_mut()
+                        .unwrap()
+                        .gpu_buffers
+                        .as_mut()
+                        .unwrap();
+                    grow_storage_buffer::<[f32; 4]>(
+                        device,
+                        &mut gpu.custom_data_buffer,
+                        &mut gpu.custom_data_buffer_size,
+                        custom_data.len(),
+                        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Custom Data Buffer (Per-World, Resized)",
+                    );
+                }
+                self.rebuild_instance_bind_group(device);
+            }
+
+            queue.write_buffer(&self.gpu().object_buffer, 0, bytemuck::cast_slice(&objects));
+            queue.write_buffer(
+                &self.gpu().materials_buffer,
+                0,
+                bytemuck::cast_slice(&materials),
+            );
+            queue.write_buffer(
+                &self.gpu().custom_data_buffer,
+                0,
+                bytemuck::cast_slice(&custom_data),
+            );
+
+            let materials_generation = configs.scene.render_materials.generation;
+            let skinned_objects_generation = configs.scene.skinned_objects_generation;
+            let state = self.state_mut();
+            state.cached_cull_objects = cull_objects;
+            state.cached_bounds_inputs = bounds_inputs;
+            state.cached_materials_generation = materials_generation;
+            state.cached_skinned_objects_generation = skinned_objects_generation;
+
+            if self.gpu_batching_enabled {
+                let object_count = objects.len() as u32;
+                let mesh_geo: Vec<[u32; 4]> = self
+                    .skinned_mesh_data
+                    .iter()
+                    .map(|mesh| [mesh.index_count, mesh.index_offset, mesh.vertex_offset, 0])
+                    .collect();
+                if mesh_geo.len() > self.batch_mesh_geo_buffer_size {
+                    let new_size = mesh_geo.len().next_power_of_two();
+                    self.batch_mesh_geo_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Skinned Mesh Batch Mesh Geo Buffer (Resized)"),
+                        size: (std::mem::size_of::<[u32; 4]>() * new_size) as u64,
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+                    self.batch_mesh_geo_buffer_size = new_size;
+                    self.gpu_mut().batch_bind_group = None;
+                }
+                if !mesh_geo.is_empty() {
+                    queue.write_buffer(
+                        &self.batch_mesh_geo_buffer,
+                        0,
+                        bytemuck::cast_slice(&mesh_geo),
+                    );
+                }
+
+                let needed = 2 * mesh_count;
+                if needed > self.gpu().dense_capacity_size {
+                    let new_size = needed.next_power_of_two();
+                    let gpu = self.gpu_mut();
+                    gpu.dense_capacity_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Skinned Mesh Dense Capacity Buffer (Resized)"),
+                        size: (std::mem::size_of::<u32>() * new_size) as u64,
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+                    gpu.dense_capacity_size = new_size;
+                    gpu.command_map_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Skinned Mesh Command Map Buffer (Resized)"),
+                        size: (std::mem::size_of::<u32>() * new_size) as u64,
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+                    gpu.command_map_size = new_size;
                     gpu.batch_bind_group = None;
                 }
+
+                let params = [object_count, mesh_count as u32, mesh_count as u32, 0u32];
+                queue.write_buffer(&self.batch_params_buffer, 0, bytemuck::cast_slice(&params));
             }
-            self.rebuild_instance_bind_group(device);
-        }
-
-        {
-            let gpu = self.world_states[self.current_world_id as usize]
-                .as_mut()
-                .unwrap()
-                .gpu_buffers
-                .as_mut()
-                .unwrap();
-            grow_storage_buffer::<MaterialData>(
-                device,
-                &mut gpu.materials_buffer,
-                &mut gpu.materials_buffer_size,
-                materials.len(),
-                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                "Skinned Mesh Materials Buffer (Per-World, Resized)",
-            );
-        }
-
-        {
-            {
-                let gpu = self.world_states[self.current_world_id as usize]
-                    .as_mut()
-                    .unwrap()
-                    .gpu_buffers
-                    .as_mut()
-                    .unwrap();
-                grow_storage_buffer::<[f32; 4]>(
-                    device,
-                    &mut gpu.custom_data_buffer,
-                    &mut gpu.custom_data_buffer_size,
-                    custom_data.len(),
-                    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    "Skinned Mesh Custom Data Buffer (Per-World, Resized)",
-                );
-            }
-            self.rebuild_instance_bind_group(device);
-        }
-
-        queue.write_buffer(&self.gpu().object_buffer, 0, bytemuck::cast_slice(&objects));
-        queue.write_buffer(
-            &self.gpu().materials_buffer,
-            0,
-            bytemuck::cast_slice(&materials),
-        );
-        queue.write_buffer(
-            &self.gpu().custom_data_buffer,
-            0,
-            bytemuck::cast_slice(&custom_data),
-        );
-
-        if self.gpu_batching_enabled {
-            let object_count = objects.len() as u32;
-            let mesh_geo: Vec<[u32; 4]> = self
-                .skinned_mesh_data
-                .iter()
-                .map(|mesh| [mesh.index_count, mesh.index_offset, mesh.vertex_offset, 0])
-                .collect();
-            if mesh_geo.len() > self.batch_mesh_geo_buffer_size {
-                let new_size = mesh_geo.len().next_power_of_two();
-                self.batch_mesh_geo_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Skinned Mesh Batch Mesh Geo Buffer (Resized)"),
-                    size: (std::mem::size_of::<[u32; 4]>() * new_size) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-                self.batch_mesh_geo_buffer_size = new_size;
-                self.gpu_mut().batch_bind_group = None;
-            }
-            if !mesh_geo.is_empty() {
-                queue.write_buffer(
-                    &self.batch_mesh_geo_buffer,
-                    0,
-                    bytemuck::cast_slice(&mesh_geo),
-                );
-            }
-
-            let needed = 2 * mesh_count;
-            if needed > self.gpu().dense_capacity_size {
-                let new_size = needed.next_power_of_two();
-                let gpu = self.gpu_mut();
-                gpu.dense_capacity_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Skinned Mesh Dense Capacity Buffer (Resized)"),
-                    size: (std::mem::size_of::<u32>() * new_size) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-                gpu.dense_capacity_size = new_size;
-                gpu.command_map_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Skinned Mesh Command Map Buffer (Resized)"),
-                    size: (std::mem::size_of::<u32>() * new_size) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-                gpu.command_map_size = new_size;
-                gpu.batch_bind_group = None;
-            }
-
-            let params = [object_count, mesh_count as u32, mesh_count as u32, 0u32];
-            queue.write_buffer(&self.batch_params_buffer, 0, bytemuck::cast_slice(&params));
         }
 
         self.sync_textures(&configs.texture_cache);
@@ -856,7 +913,7 @@ impl SkinnedMeshPass {
             let frustum_planes = extract_frustum_planes(&view_projection);
             let cull_uniforms = SkinnedCullUniforms {
                 frustum_planes: frustum_planes.map(|plane| [plane.x, plane.y, plane.z, plane.w]),
-                object_count: objects.len() as u32,
+                object_count: self.state().cached_cull_objects.len() as u32,
                 _pad: [0; 3],
             };
             queue.write_buffer(

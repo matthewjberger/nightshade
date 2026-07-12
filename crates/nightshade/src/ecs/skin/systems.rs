@@ -144,20 +144,31 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     cache.static_data_uploaded = true;
 }
 
-/// The current world transform of every cached joint entity, in the cache's
-/// dense bone order.
-pub fn skinning_cache_collect_bone_transforms(cache: &SkinningCache, world: &World) -> Vec<Mat4> {
-    let mut bone_transforms = Vec::with_capacity(cache.joint_entities.len());
+/// Refreshes `bone_transforms` in place with the current world transform of
+/// every cached joint entity, in the cache's dense bone order. Returns true
+/// when any transform (or the palette length) changed, comparing while
+/// writing so change detection costs no extra pass or allocation.
+pub fn skinning_cache_collect_bone_transforms_into(
+    cache: &SkinningCache,
+    world: &World,
+    bone_transforms: &mut Vec<Mat4>,
+) -> bool {
+    let mut changed = bone_transforms.len() != cache.joint_entities.len();
+    bone_transforms.resize(cache.joint_entities.len(), Mat4::identity());
 
-    for &joint_entity in &cache.joint_entities {
-        if let Some(joint_global_transform) = world.core.get_global_transform(joint_entity) {
-            bone_transforms.push(joint_global_transform.0);
-        } else {
-            bone_transforms.push(Mat4::identity());
+    for (index, &joint_entity) in cache.joint_entities.iter().enumerate() {
+        let transform = world
+            .core
+            .get_global_transform(joint_entity)
+            .map(|joint_global_transform| joint_global_transform.0)
+            .unwrap_or_else(Mat4::identity);
+        if bone_transforms[index] != transform {
+            bone_transforms[index] = transform;
+            changed = true;
         }
     }
 
-    bone_transforms
+    changed
 }
 
 /// Maintains `renderer_state.render_skinning` so the skinned-mesh and shadow
@@ -175,9 +186,20 @@ pub fn render_sync_skinning_system(world: &mut World) {
         skinning_cache_rebuild_static_data(&mut cache, world);
         generation = generation.wrapping_add(1);
     }
-    let bone_transforms = skinning_cache_collect_bone_transforms(&cache, world);
+    let mut bone_transforms = std::mem::take(
+        &mut world
+            .resources
+            .renderer_state
+            .render_skinning
+            .bone_transforms,
+    );
+    let bones_changed =
+        skinning_cache_collect_bone_transforms_into(&cache, world, &mut bone_transforms);
     let skinning = &mut world.resources.renderer_state.render_skinning;
     skinning.cache = cache;
     skinning.bone_transforms = bone_transforms;
     skinning.static_generation = generation;
+    if bones_changed {
+        skinning.bone_transforms_generation = skinning.bone_transforms_generation.wrapping_add(1);
+    }
 }

@@ -34,6 +34,9 @@ pub struct MaterialRegistry {
     /// sync can skip rebuilding the resolved material table on frames where
     /// nothing changed.
     pub version: u64,
+    /// Registry indices mutated since the scene sync last drained them, so
+    /// the resolved table refreshes only the entries that changed.
+    pub dirty_indices: Vec<u32>,
 }
 
 impl Default for MaterialRegistry {
@@ -46,6 +49,7 @@ impl Default for MaterialRegistry {
             protected_indices: Vec::new(),
             content_hash_to_name: HashMap::new(),
             version: 0,
+            dirty_indices: Vec::new(),
         };
 
         let default_materials = [
@@ -166,6 +170,7 @@ pub fn material_registry_insert(
             .insert(index);
     }
     registry.pending_resolve.push(index);
+    registry.dirty_indices.push(index);
     MaterialId::new(index, generation)
 }
 
@@ -273,6 +278,7 @@ pub fn material_registry_resolve_uploaded_textures(
     dirty.extend(registry.pending_resolve.drain(..));
     for index in dirty {
         resolve_one_material(registry, index as usize, texture_cache);
+        registry.dirty_indices.push(index);
     }
 }
 
@@ -318,6 +324,7 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
             }
             registry.registry.entries[index] = None;
             registry.registry.free_indices.push(index as u32);
+            registry.dirty_indices.push(index as u32);
             if let Some(slot) = registry.texture_ids.get_mut(index) {
                 *slot = MaterialTextureIds::default();
             }
