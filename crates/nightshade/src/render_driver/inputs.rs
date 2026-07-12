@@ -1,19 +1,29 @@
 use crate::ecs::world::World;
 use crate::render::wgpu::render_configs::{RenderInputs, UiFrameInputs, ViewInputs};
 
-/// Composes the renderer's per-frame input from the world. Large snapshot
-/// state is moved out of the resources rather than cloned; small configs are
-/// copied. [`restore_render_inputs`] puts the moved state back after the
-/// frame so the engine and game code observe it as usual between frames.
+/// Composes the renderer's per-frame input by moving state out of the world.
+///
+/// Every non-`Copy` input is taken with `std::mem::take`, not cloned, so
+/// handing the renderer its inputs costs nothing regardless of scene size.
+///
+/// INVARIANT: between this call and [`restore_render_inputs`], the world's
+/// copies of the taken resources (`render_settings`, `debug_draw`,
+/// `editor_selection`, `renderer_state`, `ibl_views`, `shadow_atlas`,
+/// `texture_cache`, `assets.mesh_cache`, `loading.pending_particle_textures`,
+/// the retained-UI frame and render slots, and the grass and terrain state)
+/// are empty defaults. Nothing may read or write them until the restore runs;
+/// writes are discarded when the taken state is moved back. The only
+/// exception is `loading.pending_particle_textures`, which the restore merges
+/// so uploads queued mid-frame survive.
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
-        settings: resources.render_settings.clone(),
-        debug_draw: resources.debug_draw.clone(),
-        editor_selection: resources.editor_selection.clone(),
+        settings: std::mem::take(&mut resources.render_settings),
+        debug_draw: std::mem::take(&mut resources.debug_draw),
+        editor_selection: std::mem::take(&mut resources.editor_selection),
         scene: std::mem::take(&mut resources.renderer_state),
-        ibl_views: resources.ibl_views.clone(),
+        ibl_views: std::mem::take(&mut resources.ibl_views),
         shadow_atlas: std::mem::take(&mut resources.shadow_atlas),
         wind: resources.wind,
         mesh_cache: std::mem::take(&mut resources.assets.mesh_cache),
@@ -38,19 +48,25 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         },
         world_id: resources.world_id,
         #[cfg(feature = "grass")]
-        grass: resources.grass.clone(),
+        grass: std::mem::take(&mut resources.grass),
         #[cfg(feature = "terrain")]
-        terrain: resources.terrain.clone(),
+        terrain: std::mem::take(&mut resources.terrain),
         #[cfg(feature = "terrain")]
         terrain_render: std::mem::take(&mut resources.terrain_render),
     }
 }
 
-/// Moves the snapshot state carried by [`RenderInputs`] back into the world.
-/// Containers the engine may have pushed to while the input was taken keep
-/// both sides: the taken contents come back first, then anything new.
+/// Moves the state carried by [`RenderInputs`] back into the world, ending the
+/// window in which the world's copies are empty. Everything is a plain move
+/// that overwrites the world's default-valued placeholder, except
+/// `loading.pending_particle_textures`: the taken contents come back first and
+/// anything the engine queued mid-frame is appended after them, preserving the
+/// upload cursor the particle pass keeps into that list.
 pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs) {
     let resources = &mut world.resources;
+    resources.render_settings = inputs.settings;
+    resources.debug_draw = inputs.debug_draw;
+    resources.editor_selection = inputs.editor_selection;
     resources.renderer_state = inputs.scene;
     resources.ibl_views = inputs.ibl_views;
     resources.shadow_atlas = inputs.shadow_atlas;
@@ -67,8 +83,13 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs) {
     retained.frame.ui_images = inputs.ui.images;
     retained.frame.text_meshes = inputs.ui.text_meshes;
     retained.render_slots = inputs.ui.render_slots;
+    #[cfg(feature = "grass")]
+    {
+        resources.grass = inputs.grass;
+    }
     #[cfg(feature = "terrain")]
     {
+        resources.terrain = inputs.terrain;
         resources.terrain_render = inputs.terrain_render;
     }
 }

@@ -847,7 +847,6 @@ fn render_frame_inner(
         }
 
         if let Some((irr_a, pref_a, irr_b, pref_b, blend)) = bracket_views {
-            world.resources.render_settings.ibl_blend_factor = blend;
             inputs.settings.ibl_blend_factor = blend;
 
             if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")

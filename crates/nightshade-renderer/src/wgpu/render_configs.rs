@@ -8,7 +8,6 @@ use freecs::Entity;
 use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
-#[derive(Default)]
 pub struct UiFrameInputs {
     pub rects: Vec<crate::wgpu::passes::geometry::UiRect>,
     pub rect_entities: Vec<Option<Entity>>,
@@ -21,7 +20,6 @@ pub struct UiFrameInputs {
 /// The state of the view being rendered right now: the active camera, frame
 /// timing, and the viewport layout the compose pass targets. The driver
 /// updates this between camera dispatches within a frame.
-#[derive(Default, Clone)]
 pub struct ViewInputs {
     pub active_camera: Option<Entity>,
     pub uptime_milliseconds: u64,
@@ -33,7 +31,6 @@ pub struct ViewInputs {
 }
 
 /// Everything the renderer consumes for one frame.
-#[derive(Default)]
 pub struct RenderInputs {
     /// User-facing render settings: post-processing, atmosphere, layers.
     pub settings: crate::config::RenderSettings,
