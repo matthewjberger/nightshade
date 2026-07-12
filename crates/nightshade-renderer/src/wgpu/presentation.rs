@@ -10,22 +10,23 @@ use crate::wgpu::rendergraph::{
 };
 
 /// Acquires the surface texture for this frame, reconfiguring the surface once
-/// if it reports outdated, and registers it (plus the spotlight shadow atlas)
-/// as the graph's external textures. Returns `None` when no frame is
-/// available; present the returned texture after the graph executes.
+/// if it reports outdated or lost, and registers it (plus the spotlight shadow
+/// atlas) as the graph's external textures. Returns `None` when no frame is
+/// available, such as an occluded or timed-out surface; present the returned
+/// texture after the graph executes.
 pub fn acquire_surface_frame(renderer: &mut WgpuRenderer) -> Option<wgpu::SurfaceTexture> {
     let surface_texture = match renderer.surface.get_current_texture() {
         wgpu::CurrentSurfaceTexture::Success(frame)
         | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
-        wgpu::CurrentSurfaceTexture::Outdated => {
+        wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
             renderer
                 .surface
                 .configure(&renderer.device, &renderer.surface_config);
             match renderer.surface.get_current_texture() {
                 wgpu::CurrentSurfaceTexture::Success(frame)
                 | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
-                other => {
-                    panic!("Failed to get surface texture after reconfiguration: {other:?}")
+                _ => {
+                    return None;
                 }
             }
         }
