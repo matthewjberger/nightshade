@@ -56,12 +56,18 @@ impl SkinnedMeshPass {
         }
 
         for dirty_name in std::mem::take(&mut self.dirty_skinned_mesh_names) {
-            let mesh_in_cache = registry_entry_by_name(&mesh_cache.registry, &dirty_name)
-                .and_then(|mesh| mesh.skin_data.as_ref().map(|s| s.skinned_vertices.clone()));
+            let mesh_in_cache =
+                registry_entry_by_name(&mesh_cache.registry, &dirty_name).and_then(|mesh| {
+                    mesh.skin_data
+                        .as_ref()
+                        .map(|skin| (skin.skinned_vertices.clone(), mesh.indices.clone()))
+                });
             match (self.skinned_meshes.get(&dirty_name).copied(), mesh_in_cache) {
-                (Some(mesh_id), Some(skinned_vertices)) => {
+                (Some(mesh_id), Some((skinned_vertices, indices))) => {
                     let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
-                    if skinned_vertices.len() as u32 == mesh_data.vertex_count {
+                    if skinned_vertices.len() as u32 == mesh_data.vertex_count
+                        && indices.len() as u32 == mesh_data.index_count
+                    {
                         let vertex_data = bytemuck::cast_slice(&skinned_vertices);
                         let vertex_offset_bytes = (mesh_data.vertex_offset as usize
                             * std::mem::size_of::<SkinnedVertex>())
@@ -71,6 +77,23 @@ impl SkinnedMeshPass {
                             vertex_offset_bytes,
                             vertex_data,
                         );
+                        let index_offset_bytes =
+                            (mesh_data.index_offset as usize * std::mem::size_of::<u32>()) as u64;
+                        queue.write_buffer(
+                            &self.skinned_index_buffer,
+                            index_offset_bytes,
+                            bytemuck::cast_slice(&indices),
+                        );
+                    } else {
+                        // The layout changed size, so the mesh cannot be
+                        // rewritten in place: retire the old slot and let the
+                        // registration pass below re-add it at fresh offsets.
+                        registry_changed = true;
+                        if let Some(slot) = self.skinned_mesh_data.get_mut(mesh_id as usize) {
+                            slot.vertex_count = 0;
+                            slot.index_count = 0;
+                        }
+                        self.skinned_meshes.remove(&dirty_name);
                     }
                 }
                 (Some(mesh_id), None) => {

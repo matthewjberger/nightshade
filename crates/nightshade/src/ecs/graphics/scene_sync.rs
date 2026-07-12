@@ -253,7 +253,20 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         if mask & crate::ecs::world::INSTANCED_MESH != 0 {
             dirt.instanced_refresh.insert(entity);
         }
-        dirt.skinned_objects |= mask & crate::ecs::world::SKIN != 0;
+        if mask & crate::ecs::world::SKIN != 0 {
+            let previous_flipped = world
+                .resources
+                .renderer_state
+                .render_dynamic_objects
+                .get(&entity)
+                .map(|state| {
+                    nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
+                });
+            let current_flipped = world.core.get_global_transform(entity).map(|global| {
+                nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
+            });
+            dirt.skinned_objects |= previous_flipped != current_flipped;
+        }
         dirt.lights |= mask & crate::ecs::world::LIGHT != 0;
         dirt.decals |= mask & crate::ecs::world::DECAL != 0;
         dirt.water |= mask & crate::ecs::world::WATER != 0;
