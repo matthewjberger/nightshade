@@ -3,30 +3,19 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
-use crate::render::generational_registry::*;
+use crate::render::generational_registry::registry_name_for;
 use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
+use crate::render::wgpu::lights::{collect_area_lights, collect_lights};
+use crate::render::wgpu::pass_sync;
 use crate::render::wgpu::passes;
+use crate::render::wgpu::presentation;
 use crate::render::wgpu::rendergraph;
-#[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
-use crate::render::wgpu::rendergraph::render_graph_get_texture;
 use crate::render::wgpu::rendergraph::{
-    render_graph_add_pass, render_graph_compile, render_graph_enable_only_passes,
-    render_graph_execute, render_graph_get_pass_mut, render_graph_get_texture_view,
+    render_graph_enable_only_passes, render_graph_execute, render_graph_get_texture_view,
     render_graph_restore_pass_enabled_states, render_graph_save_pass_enabled_states,
     render_graph_set_external_texture, render_graph_set_pass_enabled,
 };
-
-fn taa_halton(index: u32, base: u32) -> f32 {
-    let mut result = 0.0;
-    let mut fraction = 1.0;
-    let mut current = index;
-    while current > 0 {
-        fraction /= base as f32;
-        result += fraction * (current % base) as f32;
-        current /= base;
-    }
-    result
-}
+use crate::render::wgpu::texture_uploads;
 
 fn fit_constrained_aspect(tile_width: u32, tile_height: u32, aspect: f32) -> (u32, u32) {
     let aspect = aspect.max(0.0001);
@@ -117,7 +106,7 @@ fn build_render_lighting(
     world: &crate::ecs::world::World,
     scene: &crate::render::config::RendererState,
 ) -> crate::render::config::RenderLighting {
-    use super::lighting::{calculate_cascade_shadows, collect_area_lights, collect_lights};
+    use super::lighting::calculate_cascade_shadows;
     use crate::render::wgpu::passes::geometry::projection::MAX_AREA_LIGHTS;
     const MAX_LIGHTS: usize = 1024;
     let light_result = collect_lights(scene, MAX_LIGHTS);
@@ -197,28 +186,9 @@ fn render_frame_inner(
     inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _span = tracing::info_span!("render_frame").entered();
-    if inputs.scene.gpu_profile.is_none() {
-        inputs.scene.gpu_profile = Some(renderer.gpu_profile.clone());
-        if renderer.gpu_profile.backend == crate::render::config::GpuBackend::Metal {
-            inputs.scene.occlusion_culling_enabled = false;
-        }
-    }
+    pass_sync::sync_gpu_profile(renderer, inputs);
     renderer.frame_state.index = renderer.frame_state.index.wrapping_add(1);
-
-    if inputs.settings.taa_enabled {
-        let jitter_index = (renderer.frame_state.index % 8) as u32 + 1;
-        let (render_width, render_height) = renderer.render_buffer_size;
-        // Scale the projection jitter by the render scale so the sub-pixel
-        // offsets distribute samples across the display-resolution grid the
-        // resolve reconstructs, not the smaller render-buffer grid.
-        let render_scale = inputs.settings.render_scale.clamp(0.25, 4.0);
-        inputs.scene.taa_jitter = [
-            (taa_halton(jitter_index, 2) - 0.5) * 2.0 * render_scale / render_width.max(1) as f32,
-            (taa_halton(jitter_index, 3) - 0.5) * 2.0 * render_scale / render_height.max(1) as f32,
-        ];
-    } else {
-        inputs.scene.taa_jitter = [0.0, 0.0];
-    }
+    pass_sync::sync_taa_jitter(renderer, inputs);
 
     if let Some(matrices) = crate::ecs::camera::queries::query_active_camera_matrices(world) {
         let view_projection: [[f32; 4]; 4] = (matrices.projection * matrices.view).into();
@@ -227,15 +197,7 @@ fn render_frame_inner(
     }
 
     renderer.sync_present_mode(inputs.settings.vsync_enabled);
-    let current_settings_signature = crate::render::config::render_settings_signature(
-        &inputs.settings,
-        &inputs.debug_draw,
-        &inputs.editor_selection,
-    );
-    if renderer.frame_state.last_settings_signature != Some(current_settings_signature) {
-        inputs.scene.settings_version = inputs.scene.settings_version.wrapping_add(1);
-        renderer.frame_state.last_settings_signature = Some(current_settings_signature);
-    }
+    pass_sync::sync_settings_version(renderer, inputs);
 
     let frame_time_ms = world.resources.window.timing.delta_time * 1000.0;
     if frame_time_ms > 0.0 {
@@ -303,93 +265,7 @@ fn render_frame_inner(
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
-    if renderer.screenshot.pending {
-        let _ = renderer.device.poll(wgpu::PollType::Poll);
-
-        if renderer
-            .screenshot
-            .map_complete
-            .load(std::sync::atomic::Ordering::Relaxed)
-        {
-            let buffer_slice = renderer.screenshot.staging_buffer.slice(..);
-            let data = buffer_slice.get_mapped_range();
-
-            let width = renderer.screenshot.width;
-            let height = renderer.screenshot.height;
-            let bytes_per_pixel = 4u32;
-            let unpadded_bytes_per_row = width * bytes_per_pixel;
-            let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-            let padded_bytes_per_row = unpadded_bytes_per_row.div_ceil(align) * align;
-
-            let mut pixels = Vec::with_capacity((width * height * bytes_per_pixel) as usize);
-            for row in 0..height {
-                let start = (row * padded_bytes_per_row) as usize;
-                let end = start + (unpadded_bytes_per_row) as usize;
-                pixels.extend_from_slice(&data[start..end]);
-            }
-            drop(data);
-            renderer.screenshot.staging_buffer.unmap();
-
-            if matches!(
-                renderer.surface_config.format,
-                wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Bgra8UnormSrgb
-            ) {
-                for pixel in pixels.chunks_exact_mut(4) {
-                    pixel.swap(0, 2);
-                }
-            }
-
-            let path = renderer.screenshot.path.take().unwrap_or_else(|| {
-                let screenshots_dir = std::path::PathBuf::from("screenshots");
-                if !screenshots_dir.exists() {
-                    let _ = std::fs::create_dir_all(&screenshots_dir);
-                }
-                let timestamp = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
-                screenshots_dir.join(format!("screenshot_{}.png", timestamp))
-            });
-
-            let save_width = width;
-            let save_height = height;
-            let max_dimension = renderer.screenshot.max_dimension.take();
-            std::thread::spawn(move || {
-                let Some(mut image) = image::RgbaImage::from_raw(save_width, save_height, pixels)
-                else {
-                    tracing::error!("Failed to create image from screenshot data");
-                    return;
-                };
-                if let Some(limit) = max_dimension {
-                    image = crop_center_square(image);
-                    let (w, h) = image.dimensions();
-                    let longest = w.max(h);
-                    if longest > limit {
-                        let scale = limit as f32 / longest as f32;
-                        let new_w = ((w as f32 * scale).round() as u32).max(1);
-                        let new_h = ((h as f32 * scale).round() as u32).max(1);
-                        image = image::imageops::resize(
-                            &image,
-                            new_w,
-                            new_h,
-                            image::imageops::FilterType::Lanczos3,
-                        );
-                    }
-                }
-                if let Err(error) = image.save(&path) {
-                    tracing::error!("Failed to save screenshot: {}", error);
-                } else {
-                    tracing::info!("Screenshot saved to: {}", path.display());
-                }
-            });
-
-            renderer.screenshot.pending = false;
-            renderer
-                .screenshot
-                .map_complete
-                .store(false, std::sync::atomic::Ordering::Relaxed);
-        }
-    }
+    presentation::poll_screenshot_readback(renderer);
 
     renderer.resize_render_buffers(
         renderer.surface_config.width,
@@ -400,13 +276,9 @@ fn render_frame_inner(
     let mut texture_reload_commands = Vec::new();
     let mut hdr_skybox_commands = Vec::new();
     let mut color_lut_command: Option<Vec<u8>> = None;
-    #[cfg(feature = "assets")]
-    let mut procedural_ibl_capture: Option<(crate::render::config::Atmosphere, f32)> = None;
-    #[cfg(feature = "assets")]
-    let mut ibl_snapshot_capture: Option<(crate::render::config::Atmosphere, Vec<f32>)> = None;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
     let mut screenshot_path: Option<Option<std::path::PathBuf>> = None;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
     let mut screenshot_max_dimension: Option<u32> = None;
 
     let render_commands = std::mem::take(&mut world.resources.commands.render);
@@ -445,61 +317,21 @@ fn render_frame_inner(
                     }
                 }
             }
+            #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
             crate::ecs::world::RenderCommand::CaptureScreenshot {
                 path,
                 max_dimension,
             } => {
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    screenshot_path = Some(path);
-                    screenshot_max_dimension = max_dimension;
-                }
-                #[cfg(target_arch = "wasm32")]
-                {
-                    let _ = path;
-                    let _ = max_dimension;
-                }
+                screenshot_path = Some(path);
+                screenshot_max_dimension = max_dimension;
             }
+            #[cfg(not(all(not(target_arch = "wasm32"), feature = "screenshot")))]
+            crate::ecs::world::RenderCommand::CaptureScreenshot { .. } => {}
         }
     }
 
-    if let Some(data) = color_lut_command
-        && let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "postprocess_pass")
-        && let Some(pass) =
-            (pass as &mut dyn std::any::Any).downcast_mut::<passes::PostProcessPass>()
-    {
-        pass.set_color_lut(data);
-    }
-
-    #[cfg(feature = "assets")]
-    {
-        use crate::render::config::Atmosphere;
-        let atmosphere = inputs.settings.atmosphere;
-        if atmosphere.is_procedural() {
-            let hour = inputs.scene.day_night.hour;
-            if renderer.frame_state.captured_ibl_atmosphere != Some(atmosphere) {
-                renderer.frame_state.captured_ibl_atmosphere = Some(atmosphere);
-                renderer.frame_state.captured_ibl_hour = hour;
-                renderer.frame_state.captured_day_night_snapshots = false;
-                let time = if atmosphere == Atmosphere::DayNight {
-                    hour
-                } else {
-                    0.0
-                };
-                procedural_ibl_capture = Some((atmosphere, time));
-            } else if atmosphere == Atmosphere::DayNight
-                && !renderer.frame_state.captured_day_night_snapshots
-                && hour != renderer.frame_state.captured_ibl_hour
-            {
-                renderer.frame_state.captured_day_night_snapshots = true;
-                ibl_snapshot_capture = Some((
-                    atmosphere,
-                    inputs.scene.day_night.ibl_snapshot_hours.clone(),
-                ));
-            }
-        } else {
-            renderer.frame_state.captured_ibl_atmosphere = None;
-        }
+    if let Some(data) = color_lut_command {
+        pass_sync::set_color_lut(renderer, data);
     }
 
     if !ui_image_uploads.is_empty() {
@@ -516,191 +348,28 @@ fn render_frame_inner(
 
     drain_loading_tasks(renderer, world, inputs);
 
-    if !texture_reload_commands.is_empty() {
-        use crate::render::wgpu::texture_cache::{TextureReloadResult, texture_cache_reload};
-
-        for (name, rgba_data, width, height) in texture_reload_commands {
-            let result = texture_cache_reload(
-                &mut inputs.texture_cache,
-                &renderer.device,
-                &renderer.queue,
-                &name,
-                &rgba_data,
-                width,
-                height,
-            );
-            if matches!(result, TextureReloadResult::Recreated) {
-                let usage_opt =
-                    registry_entry_by_name(&inputs.texture_cache.registry, &name).map(|entry| {
-                        match entry.texture.format() {
-                            wgpu::TextureFormat::Rgba8UnormSrgb
-                            | wgpu::TextureFormat::Bgra8UnormSrgb => {
-                                crate::render::wgpu::texture_cache::TextureUsage::Color
-                            }
-                            _ => crate::render::wgpu::texture_cache::TextureUsage::Linear,
-                        }
-                    });
-                if let Some(usage) = usage_opt {
-                    renderer.material_texture_arrays.upload(
-                        &renderer.device,
-                        &renderer.queue,
-                        &renderer.mip_generator,
-                        crate::render::wgpu::material_texture_arrays::MaterialTextureUpload {
-                            name: name.clone(),
-                            rgba_data: &rgba_data,
-                            width,
-                            height,
-                            usage,
-                            wrap_u: crate::render::wgpu::texture_cache::SamplerWrap::Repeat,
-                            wrap_v: crate::render::wgpu::texture_cache::SamplerWrap::Repeat,
-                        },
-                    );
-                }
-                if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-                    && let Some(mesh_pass) =
-                        (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-                    && let Some(texture_entry) =
-                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
-                {
-                    mesh_pass.register_texture_with_data(
-                        name.clone(),
-                        texture_entry.view.clone(),
-                        texture_entry.sampler.clone(),
-                    );
-                }
-
-                if let Some(skinned_mesh_pass) =
-                    render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-                    && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                        .downcast_mut::<passes::geometry::SkinnedMeshPass>(
-                    )
-                    && let Some(texture_entry) =
-                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
-                {
-                    skinned_mesh_pass.register_texture(
-                        name.clone(),
-                        texture_entry.view.clone(),
-                        texture_entry.sampler.clone(),
-                    );
-                }
-
-                if let Some(decal_pass) =
-                    render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-                    && let Some(decal_pass) =
-                        (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
-                    && let Some(texture_entry) =
-                        registry_entry_by_name(&inputs.texture_cache.registry, &name)
-                {
-                    decal_pass.register_texture(
-                        name,
-                        texture_entry.view.clone(),
-                        texture_entry.sampler.clone(),
-                    );
-                }
-            }
-        }
+    for (name, rgba_data, width, height) in texture_reload_commands {
+        texture_uploads::reload_material_texture(
+            renderer,
+            &mut inputs.texture_cache,
+            name,
+            &rgba_data,
+            width,
+            height,
+        );
     }
 
     #[cfg(feature = "assets")]
-    if !hdr_skybox_commands.is_empty() {
-        let mut ibl_views = None;
-
-        if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-            && let Some(sky_pass) =
-                (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-        {
-            for hdr_data in hdr_skybox_commands {
-                ibl_views =
-                    Some(sky_pass.load_hdr_skybox(&renderer.device, &renderer.queue, &hdr_data));
-            }
-        }
-
-        if let Some((irradiance_view, prefiltered_view)) = ibl_views {
-            if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-                && let Some(mesh_pass) =
-                    (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-            {
-                mesh_pass.update_ibl_textures(
-                    renderer.brdf_lut_view.clone(),
-                    irradiance_view.clone(),
-                    prefiltered_view.clone(),
-                );
-            }
-
-            if let Some(skinned_mesh_pass) =
-                render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-                && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                    .downcast_mut::<passes::geometry::SkinnedMeshPass>(
-                )
-            {
-                skinned_mesh_pass.set_ibl_textures(
-                    renderer.brdf_lut_view.clone(),
-                    irradiance_view.clone(),
-                    prefiltered_view.clone(),
-                );
-            }
-
-            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            inputs.ibl_views.irradiance_view = Some(irradiance_view);
-            inputs.ibl_views.prefiltered_view = Some(prefiltered_view);
-        }
-    }
+    crate::render::wgpu::ibl::load_hdr_skyboxes(
+        renderer,
+        &mut inputs.ibl_views,
+        hdr_skybox_commands,
+    );
+    #[cfg(not(feature = "assets"))]
+    drop(hdr_skybox_commands);
 
     #[cfg(feature = "assets")]
-    if let Some((atmosphere, time)) = procedural_ibl_capture {
-        let mut ibl_views = None;
-
-        if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-            && let Some(sky_pass) =
-                (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-        {
-            ibl_views = sky_pass.capture_procedural_atmosphere(
-                &renderer.device,
-                &renderer.queue,
-                atmosphere,
-                time,
-            );
-        }
-
-        if let Some((irradiance_view, prefiltered_view)) = ibl_views {
-            if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-                && let Some(mesh_pass) =
-                    (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-            {
-                mesh_pass.update_ibl_textures(
-                    renderer.brdf_lut_view.clone(),
-                    irradiance_view.clone(),
-                    prefiltered_view.clone(),
-                );
-            }
-
-            if let Some(skinned_mesh_pass) =
-                render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-                && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                    .downcast_mut::<passes::geometry::SkinnedMeshPass>(
-                )
-            {
-                skinned_mesh_pass.set_ibl_textures(
-                    renderer.brdf_lut_view.clone(),
-                    irradiance_view.clone(),
-                    prefiltered_view.clone(),
-                );
-            }
-
-            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            inputs.ibl_views.irradiance_view = Some(irradiance_view);
-            inputs.ibl_views.prefiltered_view = Some(prefiltered_view);
-        }
-    }
-
-    #[cfg(feature = "assets")]
-    if let Some((atmosphere, hours)) = ibl_snapshot_capture
-        && let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-        && let Some(sky_pass) =
-            (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-    {
-        sky_pass.capture_ibl_snapshots(&renderer.device, &renderer.queue, atmosphere, &hours);
-    }
+    crate::render::wgpu::ibl::sync_procedural_ibl(renderer, inputs);
 
     let mut frame_any_camera_wants_normals = false;
     let mut frame_any_camera_wants_bounds = false;
@@ -743,11 +412,7 @@ fn render_frame_inner(
     let lines_show_bounding_volumes =
         inputs.debug_draw.show_bounding_volumes || frame_any_camera_wants_bounds;
 
-    if let Some(overlay_pass) = render_graph_get_pass_mut(&mut renderer.graph, "scene_overlay_pass")
-        && let Some(overlay_pass) =
-            (overlay_pass as &mut dyn std::any::Any).downcast_mut::<passes::SceneOverlayPass>()
-    {
-        let lines_pass = &mut overlay_pass.lines;
+    if let Some(lines_pass) = pass_sync::lines_pass_mut(&mut renderer.graph) {
         super::lines::sync_lines_data(
             lines_pass,
             &renderer.device,
@@ -774,171 +439,13 @@ fn render_frame_inner(
         );
     }
 
-    let point_shadow_view = render_graph_get_pass_mut(&mut renderer.graph, "shadow_depth_pass")
-        .and_then(|pass| {
-            (pass as &dyn std::any::Any)
-                .downcast_ref::<passes::ShadowDepthPass>()
-                .map(|shadow_pass| shadow_pass.point_light_cubemap_view().clone())
-        });
+    pass_sync::sync_point_shadow_cubemap(renderer);
 
-    if let Some(view) = point_shadow_view {
-        if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-            && let Some(mesh_pass) =
-                (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        {
-            mesh_pass.update_point_shadow_cubemap(view.clone());
-        }
-        if let Some(skinned_mesh_pass) =
-            render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-            && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                .downcast_mut::<passes::SkinnedMeshPass>()
-        {
-            skinned_mesh_pass.update_point_shadow_cubemap(view);
-        }
-    }
+    crate::render::wgpu::ibl::apply_ibl_bracket_blend(renderer, inputs);
 
-    {
-        let raw_hour = inputs.scene.day_night.hour;
-        let hour = raw_hour - (raw_hour / 24.0).floor() * 24.0;
-        let world_id = world.resources.world_id;
-        let mut bracket_views: Option<(
-            wgpu::TextureView,
-            wgpu::TextureView,
-            wgpu::TextureView,
-            wgpu::TextureView,
-            f32,
-        )> = None;
-
-        if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-            && let Some(sky_pass) =
-                (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-            && let Some((index_a, index_b, blend)) =
-                sky_pass.select_ibl_bracket(inputs.settings.atmosphere, hour)
-        {
-            let irr_a =
-                sky_pass.ibl_snapshots[index_a]
-                    .1
-                    .create_view(&wgpu::TextureViewDescriptor {
-                        dimension: Some(wgpu::TextureViewDimension::Cube),
-                        ..Default::default()
-                    });
-            let pref_a =
-                sky_pass.ibl_snapshots[index_a]
-                    .2
-                    .create_view(&wgpu::TextureViewDescriptor {
-                        dimension: Some(wgpu::TextureViewDimension::Cube),
-                        ..Default::default()
-                    });
-            let irr_b =
-                sky_pass.ibl_snapshots[index_b]
-                    .1
-                    .create_view(&wgpu::TextureViewDescriptor {
-                        dimension: Some(wgpu::TextureViewDimension::Cube),
-                        ..Default::default()
-                    });
-            let pref_b =
-                sky_pass.ibl_snapshots[index_b]
-                    .2
-                    .create_view(&wgpu::TextureViewDescriptor {
-                        dimension: Some(wgpu::TextureViewDimension::Cube),
-                        ..Default::default()
-                    });
-            bracket_views = Some((irr_a, pref_a, irr_b, pref_b, blend));
-        }
-
-        if let Some((irr_a, pref_a, irr_b, pref_b, blend)) = bracket_views {
-            inputs.settings.ibl_blend_factor = blend;
-
-            if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-                && let Some(mesh_pass) =
-                    (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-            {
-                mesh_pass.update_ibl_textures_blended(
-                    renderer.brdf_lut_view.clone(),
-                    irr_a.clone(),
-                    pref_a.clone(),
-                    irr_b.clone(),
-                    pref_b.clone(),
-                    blend,
-                );
-            }
-
-            if let Some(skinned_mesh_pass) =
-                render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-                && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                    .downcast_mut::<passes::geometry::SkinnedMeshPass>(
-                )
-            {
-                skinned_mesh_pass.update_ibl_textures_blended_for_world(
-                    world_id,
-                    passes::geometry::BlendedIblViews {
-                        brdf_lut: renderer.brdf_lut_view.clone(),
-                        irradiance_a: irr_a.clone(),
-                        prefiltered_a: pref_a.clone(),
-                        irradiance_b: irr_b,
-                        prefiltered_b: pref_b,
-                        blend_factor: blend,
-                    },
-                );
-            }
-
-            inputs.ibl_views.brdf_lut_view = Some(renderer.brdf_lut_view.clone());
-            inputs.ibl_views.irradiance_view = Some(irr_a);
-            inputs.ibl_views.prefiltered_view = Some(pref_a);
-        }
-    }
-
-    let surface_texture = match renderer.surface.get_current_texture() {
-        wgpu::CurrentSurfaceTexture::Success(frame)
-        | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
-        wgpu::CurrentSurfaceTexture::Outdated => {
-            renderer
-                .surface
-                .configure(&renderer.device, &renderer.surface_config);
-            match renderer.surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(frame)
-                | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
-                other => {
-                    panic!("Failed to get surface texture after reconfiguration: {other:?}")
-                }
-            }
-        }
-        _ => {
-            return Ok(());
-        }
+    let Some(surface_texture) = presentation::acquire_surface_frame(renderer) else {
+        return Ok(());
     };
-
-    let surface_texture_view = surface_texture
-        .texture
-        .create_view(&wgpu::TextureViewDescriptor {
-            label: wgpu::Label::default(),
-            aspect: wgpu::TextureAspect::default(),
-            format: Some(renderer.surface_format),
-            dimension: None,
-            base_mip_level: 0,
-            mip_level_count: None,
-            base_array_layer: 0,
-            array_layer_count: None,
-            usage: None,
-        });
-
-    render_graph_set_external_texture(
-        &mut renderer.graph,
-        renderer.targets.swapchain,
-        Some(surface_texture.texture.clone()),
-        surface_texture_view,
-        renderer.surface_config.width,
-        renderer.surface_config.height,
-    );
-
-    render_graph_set_external_texture(
-        &mut renderer.graph,
-        renderer.targets.spotlight_shadow_atlas,
-        Some(renderer.spotlight_shadow_atlas_texture.clone()),
-        renderer.spotlight_shadow_atlas_view.clone(),
-        renderer.spotlight_shadow_atlas_texture.width(),
-        renderer.spotlight_shadow_atlas_texture.height(),
-    );
 
     let active_camera_entities: std::collections::HashSet<freecs::Entity> = world
         .resources
@@ -1020,94 +527,21 @@ fn render_frame_inner(
         },
     )?;
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        if !renderer.screenshot.pending
-            && let Some(path) = screenshot_path
-            && let Some(compute_output_texture) =
-                render_graph_get_texture(&renderer.graph, renderer.targets.compute_output)
-        {
-            let width = renderer.surface_config.width;
-            let height = renderer.surface_config.height;
-            let bytes_per_pixel = 4u32;
-            let unpadded_bytes_per_row = width * bytes_per_pixel;
-            let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-            let padded_bytes_per_row = unpadded_bytes_per_row.div_ceil(align) * align;
-
-            let required_buffer_size = (padded_bytes_per_row * height) as u64;
-            if renderer.screenshot.staging_buffer.size() < required_buffer_size {
-                renderer.screenshot.staging_buffer =
-                    renderer.device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("Screenshot Staging Buffer"),
-                        size: required_buffer_size,
-                        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-                        mapped_at_creation: false,
-                    });
-            }
-
-            let mut encoder =
-                renderer
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Screenshot Encoder"),
-                    });
-
-            encoder.copy_texture_to_buffer(
-                wgpu::TexelCopyTextureInfo {
-                    texture: compute_output_texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyBufferInfo {
-                    buffer: &renderer.screenshot.staging_buffer,
-                    layout: wgpu::TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(padded_bytes_per_row),
-                        rows_per_image: Some(height),
-                    },
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-            );
-
-            renderer.queue.submit(std::iter::once(encoder.finish()));
-
-            renderer.screenshot.path = path;
-            renderer.screenshot.width = width;
-            renderer.screenshot.height = height;
-            renderer.screenshot.max_dimension = screenshot_max_dimension;
-            renderer.screenshot.pending = true;
-
-            let map_complete = renderer.screenshot.map_complete.clone();
-            renderer.screenshot.staging_buffer.slice(..).map_async(
-                wgpu::MapMode::Read,
-                move |_| {
-                    map_complete.store(true, std::sync::atomic::Ordering::Relaxed);
-                },
-            );
-        }
+    #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
+    if let Some(path) = screenshot_path {
+        presentation::request_screenshot_copy(renderer, path, screenshot_max_dimension);
     }
 
     surface_texture.present();
 
     Ok(())
 }
+
 pub fn configure_with_state(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     state: &mut dyn crate::run::State,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "scene_overlay_pass")
-        && let Some(overlay) =
-            (pass as &mut dyn std::any::Any).downcast_mut::<passes::SceneOverlayPass>()
-    {
-        overlay
-            .text
-            .update_glyph_atlas(&renderer.device, &renderer.glyph_atlas.texture_view);
-    }
+    pass_sync::rebind_glyph_atlas(renderer);
 
     state.configure_render_graph(
         &mut renderer.graph,
@@ -1131,93 +565,7 @@ pub fn configure_with_state(
         },
     );
 
-    let viewport_blit_pass = passes::BlitPass::new(&renderer.device, renderer.surface_format)
-        .with_name("viewport_blit_pass");
-    render_graph_add_pass(
-        &mut renderer.graph,
-        Box::new(viewport_blit_pass),
-        &[
-            ("input", renderer.targets.aa_output),
-            ("output", renderer.targets.viewport_resource),
-        ],
-    )?;
-
-    let cached_viewport_preload_pass =
-        passes::BlitPass::new(&renderer.device, renderer.surface_format)
-            .with_name("cached_viewport_preload_pass")
-            .with_runs_in_full(false)
-            .with_runs_in_compose_only(true);
-    render_graph_add_pass(
-        &mut renderer.graph,
-        Box::new(cached_viewport_preload_pass),
-        &[
-            ("input", renderer.targets.viewport_resource),
-            ("output", renderer.targets.aa_output),
-        ],
-    )?;
-
-    let swapchain_compose_pass =
-        passes::ViewportComposePass::new(&renderer.device, renderer.surface_format);
-    render_graph_add_pass(
-        &mut renderer.graph,
-        Box::new(swapchain_compose_pass),
-        &[
-            ("input", renderer.targets.aa_output),
-            ("output", renderer.targets.swapchain),
-        ],
-    )?;
-
-    let mut ui_pass = passes::UiPass::new(&renderer.device, renderer.surface_format);
-    ui_pass.update_glyph_atlas(&renderer.device, &renderer.glyph_atlas.texture_view);
-    render_graph_add_pass(
-        &mut renderer.graph,
-        Box::new(ui_pass),
-        &[
-            ("color", renderer.targets.swapchain),
-            ("depth", renderer.targets.ui_depth),
-        ],
-    )?;
-
-    if let Some(ui_image_pass) = renderer.ui_image_pass.take() {
-        render_graph_add_pass(
-            &mut renderer.graph,
-            ui_image_pass,
-            &[
-                ("color", renderer.targets.swapchain),
-                ("depth", renderer.targets.ui_depth),
-            ],
-        )?;
-    }
-
-    #[cfg(feature = "egui")]
-    {
-        let egui_pass = passes::EguiPass::new(&renderer.device, renderer.surface_format);
-        render_graph_add_pass(
-            &mut renderer.graph,
-            Box::new(egui_pass),
-            &[("color", renderer.targets.swapchain)],
-        )?;
-    }
-
-    let pick_keepalive_pass = passes::PickKeepalivePass::new();
-    render_graph_add_pass(
-        &mut renderer.graph,
-        Box::new(pick_keepalive_pass),
-        &[
-            ("entity_id", renderer.targets.entity_id),
-            ("depth", renderer.targets.depth),
-        ],
-    )?;
-
-    render_graph_compile(&mut renderer.graph)?;
-    Ok(())
-}
-
-pub(crate) fn initialize_fonts(
-    renderer: &mut crate::render::wgpu::WgpuRenderer,
-    _world: &mut crate::ecs::world::World,
-) {
-    renderer.frame_state.glyph_atlas_initialized = true;
+    presentation::install_presentation_passes(renderer)
 }
 
 pub fn update_with_state(
@@ -1225,8 +573,6 @@ pub fn update_with_state(
     state: &mut dyn crate::run::State,
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    initialize_fonts(renderer, world);
-
     for pending_load in world.resources.loading.pending_font_loads.drain(..) {
         world
             .resources
@@ -1240,21 +586,15 @@ pub fn update_with_state(
     Ok(())
 }
 
-/// Hands the cloth pass its vertex buffer write targets for this frame.
-///
-/// Cloth entities render through the regular mesh and shadow passes;
-/// the cloth simulation writes deformed vertices into those passes'
-/// vertex buffers at each cloth's registered mesh range. The targets
-/// are refreshed every frame so buffer growth, compaction, and mesh
-/// re-registration are picked up, and the mesh cull bounds are widened
-/// to the cloth's full deformation range.
+/// Gathers each cloth's mesh name and widened cull bounds from the world and
+/// hands the cloth pass its vertex buffer write targets for this frame.
 pub(crate) fn sync_cloth_write_targets(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &crate::ecs::world::World,
 ) {
     use crate::ecs::world::{CLOTH, RENDER_MESH};
 
-    let mut cloths: Vec<(String, [f32; 3], f32)> = Vec::new();
+    let mut cloths: Vec<pass_sync::ClothWriteBounds> = Vec::new();
     world
         .core
         .query()
@@ -1262,121 +602,31 @@ pub(crate) fn sync_cloth_write_targets(
         .iter(|_entity, table, index| {
             let cloth = &table.cloth[index];
             let bounds = crate::ecs::cloth::systems::cloth_bounding_volume(cloth);
-            cloths.push((
-                table.render_mesh[index].name.clone(),
-                [
+            cloths.push(pass_sync::ClothWriteBounds {
+                mesh_name: table.render_mesh[index].name.clone(),
+                center: [
                     bounds.obb.center.x,
                     bounds.obb.center.y,
                     bounds.obb.center.z,
                 ],
-                bounds.sphere_radius,
-            ));
+                sphere_radius: bounds.sphere_radius,
+            });
         });
-    if cloths.is_empty() {
-        return;
-    }
-
-    let mut targets: std::collections::HashMap<
-        String,
-        Vec<crate::render::wgpu::passes::geometry::ClothWriteTarget>,
-    > = std::collections::HashMap::new();
-
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
-        for (name, center, radius) in &cloths {
-            mesh_pass.override_mesh_bounds(&renderer.queue, name, *center, *radius);
-            if let Some((buffer, buffer_generation, vertex_offset)) =
-                mesh_pass.vertex_write_target(name)
-            {
-                targets.entry(name.clone()).or_default().push(
-                    crate::render::wgpu::passes::geometry::ClothWriteTarget {
-                        buffer,
-                        buffer_generation,
-                        vertex_offset,
-                    },
-                );
-            }
-        }
-    }
-
-    if let Some(shadow_pass) = render_graph_get_pass_mut(&mut renderer.graph, "shadow_depth_pass")
-        && let Some(shadow_pass) =
-            (shadow_pass as &mut dyn std::any::Any).downcast_mut::<passes::ShadowDepthPass>()
-    {
-        for (name, _, _) in &cloths {
-            if let Some((buffer, buffer_generation, vertex_offset)) =
-                shadow_pass.vertex_write_target(name)
-            {
-                targets.entry(name.clone()).or_default().push(
-                    crate::render::wgpu::passes::geometry::ClothWriteTarget {
-                        buffer,
-                        buffer_generation,
-                        vertex_offset,
-                    },
-                );
-            }
-        }
-    }
-
-    if let Some(cloth_pass) = render_graph_get_pass_mut(&mut renderer.graph, "cloth_pass")
-        && let Some(cloth_pass) =
-            (cloth_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::ClothPass>()
-    {
-        cloth_pass.set_write_targets(targets);
-    }
+    pass_sync::set_cloth_write_targets(renderer, &cloths);
 }
 
-pub(crate) struct MaterialTextureUploadRequest<'a> {
-    texture: crate::render::asset_id::TextureId,
-    rgba_data: &'a [u8],
-    width: u32,
-    height: u32,
-    usage: crate::render::wgpu::texture_cache::TextureUsage,
-    sampler: crate::render::wgpu::texture_cache::SamplerSettings,
-}
-
-/// Enables conditional passes only when their consumers are active so the
-/// graph can discard unused attachment stores. Disabling a pass drops its
-/// declared reads from store-op analysis: with SSAO and depth of field off
-/// nothing reads `view_normals` or the final `depth` contents, with no
-/// pending pick nothing reads `entity_id`, and with no skinned meshes the
-/// skinned pass stops holding `entity_id` stored for the mesh pass.
-/// The postprocess pass samples `scene_color` directly while depth of
-/// field is disabled, so the depth of field node can turn off instead of
-/// blitting the scene into `dof_output` every frame.
 pub(crate) fn sync_conditional_pass_toggles(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &crate::ecs::world::World,
-    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
+    inputs: &crate::render::wgpu::render_configs::RenderInputs,
 ) {
-    let view = &inputs.scene.active_view;
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ssao_pass", view.ssao_enabled);
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ssao_blur_pass", view.ssao_enabled);
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "bloom_pass", view.bloom_enabled);
-    let _ = render_graph_set_pass_enabled(
-        &mut renderer.graph,
-        "depth_of_field_pass",
-        view.depth_of_field.enabled,
-    );
     let picking_active = world.resources.gpu_picking.has_pending_request();
-    let _ =
-        render_graph_set_pass_enabled(&mut renderer.graph, "pick_keepalive_pass", picking_active);
     let has_skinned_meshes = world
         .core
         .query_entities(crate::ecs::world::SKIN)
         .next()
         .is_some();
-    let _ =
-        render_graph_set_pass_enabled(&mut renderer.graph, "skinned_mesh_pass", has_skinned_meshes);
-
-    // Run the temporal resolve only when enabled; otherwise a cheap blit
-    // copies the post-process output through so the compose still has an
-    // image, without executing the full resolve pass.
-    let taa_on = inputs.settings.taa_enabled;
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "taa_pass", taa_on);
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "taa_passthrough", !taa_on);
+    pass_sync::sync_conditional_pass_toggles(renderer, inputs, picking_active, has_skinned_meshes);
 }
 
 pub(crate) fn dispatch_pick_compute_if_pending(
@@ -1583,24 +833,10 @@ pub(crate) fn dispatch_window_renders(
         .map(|(entity, _)| *entity);
     let focused_camera = mouse_focused_camera.or(original_active_camera);
 
-    let requested_anisotropy = inputs.settings.material_anisotropy_filtering;
-    let anisotropy_changed = renderer
-        .material_texture_arrays
-        .set_anisotropy(&renderer.device, requested_anisotropy);
-    if renderer.material_texture_arrays.take_bindless_dirty() || anisotropy_changed {
-        if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-            && let Some(mesh_pass) =
-                (pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        {
-            mesh_pass.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
-        }
-        if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-            && let Some(skinned) =
-                (pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkinnedMeshPass>()
-        {
-            skinned.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
-        }
-    }
+    texture_uploads::sync_material_texture_bindings(
+        renderer,
+        inputs.settings.material_anisotropy_filtering,
+    );
 
     for (iteration_index, camera_entity) in cameras.iter().enumerate() {
         let (tile_width, tile_height) = world
@@ -1859,8 +1095,6 @@ pub(crate) fn dispatch_window_renders(
             surface_height.max(1),
         );
 
-        let swapped_ui = swap_window_ui_frame(world, target_size);
-
         let saved_pass_states = render_graph_save_pass_enabled_states(&renderer.graph);
         render_graph_enable_only_passes(
             &mut renderer.graph,
@@ -1881,8 +1115,6 @@ pub(crate) fn dispatch_window_renders(
             )?
         };
         renderer.queue.submit(command_buffers);
-
-        restore_window_ui_frame(world, swapped_ui);
 
         render_graph_restore_pass_enabled_states(&mut renderer.graph, &saved_pass_states);
         let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ui_pass", ui_was_enabled);
@@ -1925,7 +1157,6 @@ pub(crate) fn dispatch_window_renders(
             renderer.queue.submit(command_buffers);
             dispatch_pick_compute_if_pending(renderer, world);
         } else {
-            let swapped_ui = swap_window_ui_frame(world, target_size);
             clear_swapchain_for_window_ui(renderer, world);
 
             let _ = rendergraph::render_graph_resize_transient_resource(
@@ -1952,8 +1183,6 @@ pub(crate) fn dispatch_window_renders(
             )?;
             renderer.queue.submit(command_buffers);
 
-            restore_window_ui_frame(world, swapped_ui);
-
             render_graph_restore_pass_enabled_states(&mut renderer.graph, &saved_pass_states);
             let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ui_pass", true);
             let _ = render_graph_set_pass_enabled(&mut renderer.graph, "ui_image_pass", true);
@@ -1963,165 +1192,6 @@ pub(crate) fn dispatch_window_renders(
     let dispatched_settings_version = inputs.scene.settings_version;
     renderer.record_window_dispatch(dispatched_settings_version);
     Ok(())
-}
-
-pub(crate) fn upload_material_texture(
-    renderer: &mut crate::render::wgpu::WgpuRenderer,
-    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
-    request: MaterialTextureUploadRequest<'_>,
-) {
-    let MaterialTextureUploadRequest {
-        texture,
-        rgba_data,
-        width,
-        height,
-        usage,
-        sampler,
-    } = request;
-    let Some(name) =
-        registry_name_for(&inputs.texture_cache.registry, texture.index).map(str::to_string)
-    else {
-        tracing::error!(
-            "upload_material_texture: no name registered for texture id {}",
-            texture.index
-        );
-        return;
-    };
-    if let Err(e) = crate::render::wgpu::texture_cache::texture_cache_load_from_raw_rgba_with_format(
-        &mut inputs.texture_cache,
-        &renderer.device,
-        &renderer.queue,
-        &renderer.mip_generator,
-        crate::render::wgpu::texture_cache::TextureUploadRequest {
-            name: name.clone(),
-            rgba_data,
-            dimensions: (width, height),
-            spec: crate::render::wgpu::texture_cache::TextureUploadSpec {
-                format: usage.wgpu_format(),
-                sampler,
-            },
-        },
-    ) {
-        tracing::error!("Failed to load texture: {}", e);
-        return;
-    }
-
-    let layer_index = renderer.material_texture_arrays.upload(
-        &renderer.device,
-        &renderer.queue,
-        &renderer.mip_generator,
-        crate::render::wgpu::material_texture_arrays::MaterialTextureUpload {
-            name: name.clone(),
-            rgba_data,
-            width,
-            height,
-            usage,
-            wrap_u: sampler.wrap_u,
-            wrap_v: sampler.wrap_v,
-        },
-    );
-
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
-    {
-        mesh_pass.register_texture_with_data(
-            name.clone(),
-            texture_entry.view.clone(),
-            texture_entry.sampler.clone(),
-        );
-        if let Some(layer) = layer_index {
-            mesh_pass.add_material_layer_mapping(
-                texture,
-                crate::render::wgpu::material_texture_arrays::MaterialTextureLayer {
-                    usage,
-                    layer,
-                    wrap_u: sampler.wrap_u,
-                    wrap_v: sampler.wrap_v,
-                },
-            );
-        }
-    }
-
-    if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
-        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
-    {
-        skinned_mesh_pass.register_texture(
-            name.clone(),
-            texture_entry.view.clone(),
-            texture_entry.sampler.clone(),
-        );
-        if let Some(layer) = layer_index {
-            skinned_mesh_pass.add_material_layer_mapping(
-                texture,
-                crate::render::wgpu::material_texture_arrays::MaterialTextureLayer {
-                    usage,
-                    layer,
-                    wrap_u: sampler.wrap_u,
-                    wrap_v: sampler.wrap_v,
-                },
-            );
-        }
-    }
-
-    if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-        && let Some(decal_pass) =
-            (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
-        && let Some(texture_entry) = registry_entry_by_name(&inputs.texture_cache.registry, &name)
-    {
-        decal_pass.register_texture(
-            name,
-            texture_entry.view.clone(),
-            texture_entry.sampler.clone(),
-        );
-    }
-}
-
-pub(crate) fn reserve_material_layer(
-    renderer: &mut crate::render::wgpu::WgpuRenderer,
-    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
-    texture: crate::render::asset_id::TextureId,
-    usage: crate::render::wgpu::texture_cache::TextureUsage,
-    sampler: crate::render::wgpu::texture_cache::SamplerSettings,
-) -> bool {
-    let Some(name) =
-        registry_name_for(&inputs.texture_cache.registry, texture.index).map(str::to_string)
-    else {
-        return false;
-    };
-    let Some(layer) = renderer.material_texture_arrays.reserve_layer(
-        &renderer.queue,
-        name,
-        usage,
-        sampler.wrap_u,
-        sampler.wrap_v,
-    ) else {
-        return false;
-    };
-    let mapping = crate::render::wgpu::material_texture_arrays::MaterialTextureLayer {
-        usage,
-        layer,
-        wrap_u: sampler.wrap_u,
-        wrap_v: sampler.wrap_v,
-    };
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
-        mesh_pass.add_material_layer_mapping(texture, mapping);
-    }
-    if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
-    {
-        skinned_mesh_pass.add_material_layer_mapping(texture, mapping);
-    }
-    true
 }
 
 pub(crate) fn drain_loading_tasks(
@@ -2164,7 +1234,13 @@ pub(crate) fn drain_loading_tasks(
                 // Reserving a stable layer and writing its placeholder is cheap and
                 // must happen before geometry first renders, so it does not draw from
                 // the per-frame upload budget.
-                if reserve_material_layer(renderer, inputs, texture, usage, sampler) {
+                if texture_uploads::reserve_material_layer(
+                    renderer,
+                    &inputs.texture_cache,
+                    texture,
+                    usage,
+                    sampler,
+                ) {
                     reserved_any = true;
                 }
             }
@@ -2176,10 +1252,10 @@ pub(crate) fn drain_loading_tasks(
                 usage,
                 sampler,
             } => {
-                upload_material_texture(
+                texture_uploads::upload_material_texture(
                     renderer,
-                    inputs,
-                    MaterialTextureUploadRequest {
+                    &mut inputs.texture_cache,
+                    texture_uploads::MaterialTextureUploadRequest {
                         texture,
                         rgba_data: &rgba_data,
                         width,
@@ -2222,8 +1298,7 @@ pub(crate) fn drain_loading_tasks(
                     // spec/gloss conversion). Direct-recipe textures already have
                     // their PNG bytes captured at queue_gltf_load and are skipped
                     // here via the `entry`-style insert.
-                    let texture_name = world
-                        .resources
+                    let texture_name = inputs
                         .texture_cache
                         .registry
                         .index_to_name
@@ -2245,10 +1320,10 @@ pub(crate) fn drain_loading_tasks(
                                 sampler,
                             });
                     }
-                    upload_material_texture(
+                    texture_uploads::upload_material_texture(
                         renderer,
-                        inputs,
-                        MaterialTextureUploadRequest {
+                        &mut inputs.texture_cache,
+                        texture_uploads::MaterialTextureUploadRequest {
                             texture,
                             rgba_data: &decoded.rgba,
                             width: decoded.width,
@@ -2294,58 +1369,10 @@ pub(crate) fn drain_loading_tasks(
     let evicted =
         crate::render::wgpu::texture_cache::texture_cache_remove_unused(&mut inputs.texture_cache);
     if !evicted.is_empty() {
+        texture_uploads::unregister_evicted_textures(renderer, &evicted);
         for name in &evicted {
-            renderer.material_texture_arrays.release(name);
             world.resources.assets.texture_sources.remove(name);
-        }
-        if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-            && let Some(mesh_pass) =
-                (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        {
-            for name in &evicted {
-                mesh_pass.unregister_texture(name);
-            }
-        }
-        if let Some(skinned_mesh_pass) =
-            render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-            && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                .downcast_mut::<passes::geometry::SkinnedMeshPass>()
-        {
-            for name in &evicted {
-                skinned_mesh_pass.unregister_texture(name);
-            }
-        }
-        if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-            && let Some(decal_pass) =
-                (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
-        {
-            for name in &evicted {
-                decal_pass.unregister_texture(name);
-            }
         }
         world.resources.mesh_render_state.request_full_rebuild();
     }
-}
-
-struct SwappedWindowUi;
-
-fn swap_window_ui_frame(
-    _world: &mut crate::ecs::world::World,
-    _target_size: (u32, u32),
-) -> SwappedWindowUi {
-    SwappedWindowUi
-}
-
-fn restore_window_ui_frame(_world: &mut crate::ecs::world::World, _saved: SwappedWindowUi) {}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn crop_center_square(image: image::RgbaImage) -> image::RgbaImage {
-    let (width, height) = image.dimensions();
-    if width == height {
-        return image;
-    }
-    let side = width.min(height);
-    let x = (width - side) / 2;
-    let y = (height - side) / 2;
-    image::imageops::crop_imm(&image, x, y, side, side).to_image()
 }

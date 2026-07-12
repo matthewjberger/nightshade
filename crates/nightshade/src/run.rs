@@ -468,8 +468,6 @@ pub fn run_frame_body(
     crate::ecs::input::systems::gamepad_input_system(world);
     process_dropped_files(world);
 
-    crate::render_driver::initialize_fonts(renderer, world);
-
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     crate::steam::steam_run_callbacks(&world.resources.steam);
 

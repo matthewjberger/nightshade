@@ -33,7 +33,7 @@ pub use hiz::HizPass;
 
 mod mesh;
 pub use mesh::MeshPass;
-pub use mesh::types::MeshRenderState;
+pub use mesh::types::{MeshRenderState, MeshRenderStateInner};
 
 mod scene_overlay;
 pub use scene_overlay::SceneOverlayPass;

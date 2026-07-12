@@ -785,7 +785,6 @@ impl super::WgpuRenderer {
                 text_meshes_prepared_for_frame: u64::MAX,
                 extract_dirty_done_for_frame: u64::MAX,
                 text_mesh_signatures: std::collections::HashMap::new(),
-                glyph_atlas_initialized: false,
                 captured_ibl_atmosphere: None,
                 captured_ibl_hour: 0.0,
                 captured_day_night_snapshots: false,

@@ -22,12 +22,17 @@ mod execution;
 pub mod glyph_atlas;
 #[cfg(feature = "assets")]
 pub mod hdr;
+pub mod ibl;
 mod initialization;
+pub mod lights;
 pub mod material_texture_arrays;
 pub mod mip_generator;
+pub mod pass_sync;
 pub mod passes;
+pub mod presentation;
 pub mod render_configs;
 mod surface;
+pub mod texture_uploads;
 pub use nightshade_rendergraph as rendergraph;
 pub mod shader_compose;
 mod stagger;
@@ -155,7 +160,6 @@ pub struct FrameState {
     pub text_meshes_prepared_for_frame: u64,
     pub extract_dirty_done_for_frame: u64,
     pub text_mesh_signatures: std::collections::HashMap<freecs::Entity, u64>,
-    pub glyph_atlas_initialized: bool,
     pub captured_ibl_atmosphere: Option<crate::config::Atmosphere>,
     pub captured_ibl_hour: f32,
     pub captured_day_night_snapshots: bool,
