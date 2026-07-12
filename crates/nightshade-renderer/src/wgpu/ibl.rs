@@ -3,11 +3,11 @@
 //! snapshot brackets. Every capture fans the resulting views out to the mesh
 //! and skinned mesh passes and records them in [`RenderInputs::ibl_views`].
 
+#[cfg(feature = "assets")]
 use crate::config::IblViews;
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::passes;
 use crate::wgpu::render_configs::RenderInputs;
-use crate::wgpu::rendergraph::render_graph_get_pass_mut;
 
 #[cfg(feature = "assets")]
 fn apply_ibl_views(
@@ -16,10 +16,7 @@ fn apply_ibl_views(
     irradiance_view: wgpu::TextureView,
     prefiltered_view: wgpu::TextureView,
 ) {
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         mesh_pass.update_ibl_textures(
             renderer.brdf_lut_view.clone(),
             irradiance_view.clone(),
@@ -28,9 +25,7 @@ fn apply_ibl_views(
     }
 
     if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+        crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
     {
         skinned_mesh_pass.set_ibl_textures(
             renderer.brdf_lut_view.clone(),
@@ -55,10 +50,7 @@ pub fn load_hdr_skyboxes(
     }
     let mut captured = None;
 
-    if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-        && let Some(sky_pass) =
-            (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-    {
+    if let Some(sky_pass) = crate::wgpu::pass_access::sky_pass_mut(&mut renderer.graph) {
         for hdr_data in hdr_skybox_data {
             captured = Some(sky_pass.load_hdr_skybox(&renderer.device, &renderer.queue, &hdr_data));
         }
@@ -92,10 +84,7 @@ pub fn sync_procedural_ibl(renderer: &mut WgpuRenderer, inputs: &mut RenderInput
         };
 
         let mut captured = None;
-        if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-            && let Some(sky_pass) =
-                (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-        {
+        if let Some(sky_pass) = crate::wgpu::pass_access::sky_pass_mut(&mut renderer.graph) {
             captured = sky_pass.capture_procedural_atmosphere(
                 &renderer.device,
                 &renderer.queue,
@@ -117,10 +106,7 @@ pub fn sync_procedural_ibl(renderer: &mut WgpuRenderer, inputs: &mut RenderInput
     {
         renderer.frame_state.captured_day_night_snapshots = true;
         let hours = inputs.scene.day_night.ibl_snapshot_hours.clone();
-        if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-            && let Some(sky_pass) =
-                (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
-        {
+        if let Some(sky_pass) = crate::wgpu::pass_access::sky_pass_mut(&mut renderer.graph) {
             sky_pass.capture_ibl_snapshots(&renderer.device, &renderer.queue, atmosphere, &hours);
         }
     }
@@ -142,9 +128,7 @@ pub fn apply_ibl_bracket_blend(renderer: &mut WgpuRenderer, inputs: &mut RenderI
         f32,
     )> = None;
 
-    if let Some(sky_pass) = render_graph_get_pass_mut(&mut renderer.graph, "sky_pass")
-        && let Some(sky_pass) =
-            (sky_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkyPass>()
+    if let Some(sky_pass) = crate::wgpu::pass_access::sky_pass_mut(&mut renderer.graph)
         && let Some((index_a, index_b, blend)) =
             sky_pass.select_ibl_bracket(inputs.settings.atmosphere, hour)
     {
@@ -178,10 +162,7 @@ pub fn apply_ibl_bracket_blend(renderer: &mut WgpuRenderer, inputs: &mut RenderI
     if let Some((irr_a, pref_a, irr_b, pref_b, blend)) = bracket_views {
         inputs.settings.ibl_blend_factor = blend;
 
-        if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-            && let Some(mesh_pass) =
-                (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        {
+        if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
             mesh_pass.update_ibl_textures_blended(
                 renderer.brdf_lut_view.clone(),
                 irr_a.clone(),
@@ -193,9 +174,7 @@ pub fn apply_ibl_bracket_blend(renderer: &mut WgpuRenderer, inputs: &mut RenderI
         }
 
         if let Some(skinned_mesh_pass) =
-            render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-            && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+            crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
         {
             skinned_mesh_pass.update_ibl_textures_blended_for_world(
                 world_id,

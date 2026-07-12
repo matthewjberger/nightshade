@@ -11,9 +11,7 @@ use crate::wgpu::passes;
 use crate::wgpu::passes::geometry::MeshRenderStateInner;
 use crate::wgpu::passes::geometry::lines::LinesPass;
 use crate::wgpu::render_configs::RenderInputs;
-use crate::wgpu::rendergraph::{
-    RenderGraph, render_graph_get_pass_mut, render_graph_set_pass_enabled,
-};
+use crate::wgpu::rendergraph::{RenderGraph, render_graph_set_pass_enabled};
 
 /// Hands the frame's dirty state to the passes that consume it: the shadow
 /// pass gets a coarse scene-dirty flag, the mesh pass gets the full dirty set
@@ -34,16 +32,11 @@ pub fn apply_frame_dirty_state(
         || !dirty_meshes.is_empty()
         || !dirty_skinned.is_empty();
 
-    if let Some(shadow_pass) = render_graph_get_pass_mut(&mut renderer.graph, "shadow_depth_pass")
-        && let Some(pass) =
-            (shadow_pass as &mut dyn std::any::Any).downcast_mut::<passes::ShadowDepthPass>()
-    {
+    if let Some(pass) = crate::wgpu::pass_access::shadow_depth_pass_mut(&mut renderer.graph) {
         pass.shadow_scene_dirty = shadow_scene_dirty;
     }
 
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(pass) = (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         pass.frame_dirty = Some(frame_state);
         let dirty_ids: std::collections::HashSet<u32> = dirty_meshes
             .iter()
@@ -52,10 +45,7 @@ pub fn apply_frame_dirty_state(
         pass.dirty_mesh_ids = dirty_ids;
     }
 
-    if let Some(skinned_pass) = render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(pass) = (skinned_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
-    {
+    if let Some(pass) = crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph) {
         pass.dirty_skinned_mesh_names.extend(dirty_skinned);
     }
 }
@@ -63,33 +53,25 @@ pub fn apply_frame_dirty_state(
 /// Rebinds the glyph atlas texture on every pass that samples it. Call after
 /// the atlas revision changes (a glyph rasterization grew or repacked it).
 pub fn rebind_glyph_atlas(renderer: &mut WgpuRenderer) {
-    if let Some(overlay_pass) = render_graph_get_pass_mut(&mut renderer.graph, "scene_overlay_pass")
-        && let Some(overlay_pass) =
-            (overlay_pass as &mut dyn std::any::Any).downcast_mut::<passes::SceneOverlayPass>()
+    if let Some(overlay_pass) =
+        crate::wgpu::pass_access::scene_overlay_pass_mut(&mut renderer.graph)
     {
         overlay_pass
             .text
             .update_glyph_atlas(&renderer.device, &renderer.glyph_atlas.texture_view);
     }
-    if let Some(ui_pass) = render_graph_get_pass_mut(&mut renderer.graph, "ui_pass")
-        && let Some(ui_pass) = (ui_pass as &mut dyn std::any::Any).downcast_mut::<passes::UiPass>()
-    {
+    if let Some(ui_pass) = crate::wgpu::pass_access::ui_pass_mut(&mut renderer.graph) {
         ui_pass.update_glyph_atlas(&renderer.device, &renderer.glyph_atlas.texture_view);
     }
 }
 
 pub fn lines_pass_mut(graph: &mut RenderGraph<RenderInputs>) -> Option<&mut LinesPass> {
-    let overlay_pass = render_graph_get_pass_mut(graph, "scene_overlay_pass")?;
-    let overlay_pass =
-        (overlay_pass as &mut dyn std::any::Any).downcast_mut::<passes::SceneOverlayPass>()?;
+    let overlay_pass = crate::wgpu::pass_access::scene_overlay_pass_mut(graph)?;
     Some(&mut overlay_pass.lines)
 }
 
 pub fn set_color_lut(renderer: &mut WgpuRenderer, data: Vec<u8>) {
-    if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "postprocess_pass")
-        && let Some(pass) =
-            (pass as &mut dyn std::any::Any).downcast_mut::<passes::PostProcessPass>()
-    {
+    if let Some(pass) = crate::wgpu::pass_access::postprocess_pass_mut(&mut renderer.graph) {
         pass.set_color_lut(data);
     }
 }
@@ -97,24 +79,15 @@ pub fn set_color_lut(renderer: &mut WgpuRenderer, data: Vec<u8>) {
 /// Rebinds the shadow pass's point-light cubemap on the mesh and skinned mesh
 /// passes so lighting samples the cubemap the current shadow pass owns.
 pub fn sync_point_shadow_cubemap(renderer: &mut WgpuRenderer) {
-    let point_shadow_view = render_graph_get_pass_mut(&mut renderer.graph, "shadow_depth_pass")
-        .and_then(|pass| {
-            (pass as &dyn std::any::Any)
-                .downcast_ref::<passes::ShadowDepthPass>()
-                .map(|shadow_pass| shadow_pass.point_light_cubemap_view().clone())
-        });
+    let point_shadow_view = crate::wgpu::pass_access::shadow_depth_pass_mut(&mut renderer.graph)
+        .map(|shadow_pass| shadow_pass.point_light_cubemap_view().clone());
 
     if let Some(view) = point_shadow_view {
-        if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-            && let Some(mesh_pass) =
-                (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-        {
+        if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
             mesh_pass.update_point_shadow_cubemap(view.clone());
         }
         if let Some(skinned_mesh_pass) =
-            render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-            && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-                .downcast_mut::<passes::SkinnedMeshPass>()
+            crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
         {
             skinned_mesh_pass.update_point_shadow_cubemap(view);
         }
@@ -145,10 +118,7 @@ pub fn set_cloth_write_targets(renderer: &mut WgpuRenderer, cloths: &[ClothWrite
     let mut targets: std::collections::HashMap<String, Vec<passes::geometry::ClothWriteTarget>> =
         std::collections::HashMap::new();
 
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         for cloth in cloths {
             mesh_pass.override_mesh_bounds(
                 &renderer.queue,
@@ -170,9 +140,7 @@ pub fn set_cloth_write_targets(renderer: &mut WgpuRenderer, cloths: &[ClothWrite
         }
     }
 
-    if let Some(shadow_pass) = render_graph_get_pass_mut(&mut renderer.graph, "shadow_depth_pass")
-        && let Some(shadow_pass) =
-            (shadow_pass as &mut dyn std::any::Any).downcast_mut::<passes::ShadowDepthPass>()
+    if let Some(shadow_pass) = crate::wgpu::pass_access::shadow_depth_pass_mut(&mut renderer.graph)
     {
         for cloth in cloths {
             if let Some((buffer, buffer_generation, vertex_offset)) =
@@ -189,10 +157,7 @@ pub fn set_cloth_write_targets(renderer: &mut WgpuRenderer, cloths: &[ClothWrite
         }
     }
 
-    if let Some(cloth_pass) = render_graph_get_pass_mut(&mut renderer.graph, "cloth_pass")
-        && let Some(cloth_pass) =
-            (cloth_pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::ClothPass>()
-    {
+    if let Some(cloth_pass) = crate::wgpu::pass_access::cloth_pass_mut(&mut renderer.graph) {
         cloth_pass.set_write_targets(targets);
     }
 }
@@ -307,10 +272,7 @@ pub fn prepare_egui_pass(
         pixels_per_point,
     };
 
-    if let Some(egui_pass) = render_graph_get_pass_mut(&mut renderer.graph, "egui_pass")
-        && let Some(egui_pass) =
-            (egui_pass as &mut dyn std::any::Any).downcast_mut::<passes::EguiPass>()
-    {
+    if let Some(egui_pass) = crate::wgpu::pass_access::egui_pass_mut(&mut renderer.graph) {
         egui_pass.update_textures(&renderer.device, &renderer.queue, textures_delta);
         egui_pass.set_screen_descriptor(screen_descriptor);
         egui_pass.set_paint_jobs(paint_jobs);

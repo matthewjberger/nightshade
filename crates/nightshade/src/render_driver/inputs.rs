@@ -250,18 +250,20 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             active_viewport_rect: resources.window.active_viewport_rect,
         },
         world_id: resources.world_id,
-        commands,
-        cameras,
-        active_camera_frame,
-        fallback_shading,
-        pick_request,
-        has_skinned_meshes,
-        mesh_frame_state,
-        dirty_world_spheres,
-        global_dirty_signal,
-        mouse_position,
-        force_render_cameras,
-        debug_lines,
+        frame: crate::render::wgpu::render_configs::FrameInputs {
+            commands,
+            cameras,
+            active_camera_frame,
+            fallback_shading,
+            pick_request,
+            has_skinned_meshes,
+            mesh_frame_state,
+            dirty_world_spheres,
+            global_dirty_signal,
+            mouse_position,
+            force_render_cameras,
+            debug_lines,
+        },
         #[cfg(feature = "grass")]
         grass: std::mem::take(&mut resources.grass),
         #[cfg(feature = "terrain")]
@@ -313,7 +315,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     for entity in outputs.force_render_cleared {
         resources.window.force_render_cameras.remove(&entity);
     }
-    if let Some((screen_x, screen_y)) = inputs.pick_request
+    if let Some((screen_x, screen_y)) = inputs.frame.pick_request
         && resources.gpu_picking.pending_request.is_none()
     {
         resources.gpu_picking.pending_request =

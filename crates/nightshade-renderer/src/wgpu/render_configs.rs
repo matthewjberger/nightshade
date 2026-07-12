@@ -114,6 +114,42 @@ pub struct LinesFrameInputs {
     pub normals: Option<Vec<crate::wgpu::passes::geometry::lines::GpuNormalData>>,
 }
 
+/// One frame's orchestration snapshot: everything the caller captured for
+/// this frame beyond the persistent scene state. Consumed by the frame
+/// dispatch, never read by passes.
+pub struct FrameInputs {
+    /// Render commands drained from the caller's queue for this frame.
+    pub commands: Vec<RendererCommand>,
+    /// The cameras to dispatch this frame, in dispatch order.
+    pub cameras: Vec<CameraFrameInputs>,
+    /// The active camera's frame data, for the previous-frame reprojection
+    /// matrices and the no-viewport render path.
+    pub active_camera_frame: Option<CameraFrameInputs>,
+    /// The shading used when no camera drives the view.
+    pub fallback_shading: crate::config::EffectiveShading,
+    /// A pending GPU pick request as (screen_x, screen_y), consumed by the
+    /// main viewport camera's dispatch.
+    pub pick_request: Option<(u32, u32)>,
+    /// Whether any skinned meshes exist this frame.
+    pub has_skinned_meshes: bool,
+    /// The frame's mesh dirty state, applied to the passes once before the
+    /// first graph execution.
+    pub mesh_frame_state: Option<crate::wgpu::passes::geometry::MeshRenderStateInner>,
+    /// World-space bounding spheres of entities that changed this frame,
+    /// used for per-viewport dirtiness culling.
+    pub dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)>,
+    /// True when dirty work cannot be localized to a frustum and every
+    /// cached viewport must re-render.
+    pub global_dirty_signal: bool,
+    /// The pointer position, for focus-driven viewport update policies.
+    pub mouse_position: nalgebra_glm::Vec2,
+    /// Cameras whose next render is forced; the renderer reports which ones
+    /// it cleared through [`FrameOutputs`].
+    pub force_render_cameras: std::collections::HashSet<Entity>,
+    /// Debug line geometry gathered for this frame.
+    pub debug_lines: LinesFrameInputs,
+}
+
 /// State the renderer hands back after a frame: writes that belong to the
 /// caller's world, produced instead of performed because the renderer never
 /// sees the world.
@@ -151,36 +187,8 @@ pub struct RenderInputs {
     pub view: ViewInputs,
     /// Identity of the world being rendered, keying per-world GPU state.
     pub world_id: u64,
-    /// Render commands drained from the caller's queue for this frame.
-    pub commands: Vec<RendererCommand>,
-    /// The cameras to dispatch this frame, in dispatch order.
-    pub cameras: Vec<CameraFrameInputs>,
-    /// The active camera's frame data, for the previous-frame reprojection
-    /// matrices and the no-viewport render path.
-    pub active_camera_frame: Option<CameraFrameInputs>,
-    /// The shading used when no camera drives the view.
-    pub fallback_shading: crate::config::EffectiveShading,
-    /// A pending GPU pick request as (screen_x, screen_y), consumed by the
-    /// main viewport camera's dispatch.
-    pub pick_request: Option<(u32, u32)>,
-    /// Whether any skinned meshes exist this frame.
-    pub has_skinned_meshes: bool,
-    /// The frame's mesh dirty state, applied to the passes once before the
-    /// first graph execution.
-    pub mesh_frame_state: Option<crate::wgpu::passes::geometry::MeshRenderStateInner>,
-    /// World-space bounding spheres of entities that changed this frame,
-    /// used for per-viewport dirtiness culling.
-    pub dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)>,
-    /// True when dirty work cannot be localized to a frustum and every
-    /// cached viewport must re-render.
-    pub global_dirty_signal: bool,
-    /// The pointer position, for focus-driven viewport update policies.
-    pub mouse_position: nalgebra_glm::Vec2,
-    /// Cameras whose next render is forced; the renderer reports which ones
-    /// it cleared through [`FrameOutputs`].
-    pub force_render_cameras: std::collections::HashSet<Entity>,
-    /// Debug line geometry gathered for this frame.
-    pub debug_lines: LinesFrameInputs,
+    /// The frame's orchestration snapshot: cameras, commands, and dirt.
+    pub frame: FrameInputs,
     #[cfg(feature = "grass")]
     pub grass: crate::grass_config::GrassSettings,
     #[cfg(feature = "terrain")]

@@ -19,6 +19,7 @@ mod camera_viewport;
 #[cfg(feature = "assets")]
 pub mod envmap_filter;
 mod execution;
+pub mod frame;
 pub mod glyph_atlas;
 #[cfg(feature = "assets")]
 pub mod hdr;
@@ -27,6 +28,7 @@ mod initialization;
 pub mod lights;
 pub mod material_texture_arrays;
 pub mod mip_generator;
+pub mod pass_access;
 pub mod pass_sync;
 pub mod passes;
 pub mod picking;

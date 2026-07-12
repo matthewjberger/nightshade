@@ -6,8 +6,6 @@ use crate::asset_id::TextureId;
 use crate::generational_registry::{registry_entry_by_name, registry_name_for};
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::material_texture_arrays::{MaterialTextureLayer, MaterialTextureUpload};
-use crate::wgpu::passes;
-use crate::wgpu::rendergraph::render_graph_get_pass_mut;
 use crate::wgpu::texture_cache::{
     SamplerSettings, TextureCache, TextureReloadResult, TextureUploadRequest, TextureUploadSpec,
     TextureUsage, texture_cache_load_from_raw_rgba_with_format, texture_cache_reload,
@@ -77,9 +75,7 @@ pub fn upload_material_texture(
         },
     );
 
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         mesh_pass.register_texture_with_data(
@@ -101,9 +97,7 @@ pub fn upload_material_texture(
     }
 
     if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+        crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         skinned_mesh_pass.register_texture(
@@ -124,9 +118,7 @@ pub fn upload_material_texture(
         }
     }
 
-    if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-        && let Some(decal_pass) =
-            (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
+    if let Some(decal_pass) = crate::wgpu::pass_access::decal_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         decal_pass.register_texture(
@@ -163,16 +155,11 @@ pub fn reserve_material_layer(
         wrap_u: sampler.wrap_u,
         wrap_v: sampler.wrap_v,
     };
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         mesh_pass.add_material_layer_mapping(texture, mapping);
     }
     if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+        crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
     {
         skinned_mesh_pass.add_material_layer_mapping(texture, mapping);
     }
@@ -224,9 +211,7 @@ pub fn reload_material_texture(
             },
         );
     }
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         mesh_pass.register_texture_with_data(
@@ -237,9 +222,7 @@ pub fn reload_material_texture(
     }
 
     if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+        crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         skinned_mesh_pass.register_texture(
@@ -249,9 +232,7 @@ pub fn reload_material_texture(
         );
     }
 
-    if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-        && let Some(decal_pass) =
-            (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
+    if let Some(decal_pass) = crate::wgpu::pass_access::decal_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
     {
         decal_pass.register_texture(
@@ -266,27 +247,19 @@ pub fn unregister_evicted_textures(renderer: &mut WgpuRenderer, evicted: &[Strin
     for name in evicted {
         renderer.material_texture_arrays.release(name);
     }
-    if let Some(mesh_pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) =
-            (mesh_pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         for name in evicted {
             mesh_pass.unregister_texture(name);
         }
     }
     if let Some(skinned_mesh_pass) =
-        render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned_mesh_pass) = (skinned_mesh_pass as &mut dyn std::any::Any)
-            .downcast_mut::<passes::geometry::SkinnedMeshPass>()
+        crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
     {
         for name in evicted {
             skinned_mesh_pass.unregister_texture(name);
         }
     }
-    if let Some(decal_pass) = render_graph_get_pass_mut(&mut renderer.graph, "decal_pass")
-        && let Some(decal_pass) =
-            (decal_pass as &mut dyn std::any::Any).downcast_mut::<passes::DecalPass>()
-    {
+    if let Some(decal_pass) = crate::wgpu::pass_access::decal_pass_mut(&mut renderer.graph) {
         for name in evicted {
             decal_pass.unregister_texture(name);
         }
@@ -303,15 +276,10 @@ pub fn sync_material_texture_bindings(renderer: &mut WgpuRenderer, requested_ani
     if !(renderer.material_texture_arrays.take_bindless_dirty() || anisotropy_changed) {
         return;
     }
-    if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "mesh_pass")
-        && let Some(mesh_pass) = (pass as &mut dyn std::any::Any).downcast_mut::<passes::MeshPass>()
-    {
+    if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
         mesh_pass.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
     }
-    if let Some(pass) = render_graph_get_pass_mut(&mut renderer.graph, "skinned_mesh_pass")
-        && let Some(skinned) =
-            (pass as &mut dyn std::any::Any).downcast_mut::<passes::geometry::SkinnedMeshPass>()
-    {
+    if let Some(skinned) = crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph) {
         skinned.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
     }
 }
