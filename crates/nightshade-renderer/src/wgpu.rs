@@ -60,6 +60,15 @@ pub struct CameraViewport {
 
 pub const DEPTH_PICK_SAMPLE_SIZE: u32 = 5;
 
+/// The GPU state the engine's render driver orchestrates each frame.
+///
+/// Fields are deliberately public: this crate owns the GPU resources and the
+/// passes, while the engine-side driver owns the frame loop, so the driver
+/// reads and writes this struct directly the same way the passes read
+/// [`RenderInputs`](crate::wgpu::render_configs::RenderInputs). It is plain
+/// data plus free functions, not an object boundary. Anything a pass or the
+/// driver does not need should stay out of this struct rather than be hidden
+/// inside it.
 pub struct WgpuRenderer {
     pub surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,

@@ -49,13 +49,7 @@ pub fn sync_lines_data(
         append_wireframe_lines(world, inputs, &mut line_data);
     }
 
-    let line_count = line_data.len() as u32;
-    let total_needed = line_count + lines_pass.bv_line_count;
-    if total_needed > lines_pass.current_capacity {
-        lines_pass.ensure_capacity(device, queue, total_needed);
-    }
-
-    lines_pass.update_line_data(queue, &line_data);
+    lines_pass.upload_lines(device, queue, &line_data);
 }
 
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -184,8 +178,7 @@ pub fn sync_bounding_volume_data(
     let show_selected_bounding_volume = inputs.debug_draw.show_selected_bounding_volume;
     let selected_entity = inputs.editor_selection.bounding_volume_selected_entity;
     if !show_bounding_volumes && !show_selected_bounding_volume {
-        lines_pass.bv_count = 0;
-        lines_pass.bv_line_count = 0;
+        lines_pass.clear_bounding_volumes();
         return;
     }
 
@@ -273,17 +266,7 @@ pub fn sync_bounding_volume_data(
         });
     }
 
-    let bv_count = bv_data.len() as u32;
-    if bv_count > lines_pass.bv_capacity {
-        lines_pass.ensure_bv_capacity(device, bv_count);
-    }
-
-    let total_lines_needed = lines_pass.line_count + bv_count * 12;
-    if total_lines_needed > lines_pass.current_capacity {
-        lines_pass.ensure_capacity(device, queue, total_lines_needed);
-    }
-
-    lines_pass.update_bounding_volumes(queue, &bv_data);
+    lines_pass.upload_bounding_volumes(device, queue, &bv_data);
 }
 
 fn sphere_in_frustum(
@@ -415,16 +398,14 @@ pub fn sync_normal_data(
     let normal_line_length = inputs.debug_draw.normal_line_length;
     let normal_line_color = inputs.debug_draw.normal_line_color;
     if !show_normals {
-        lines_pass.normal_count = 0;
-        lines_pass.normal_line_count = 0;
+        lines_pass.clear_normals();
         return;
     }
 
     let camera_matrices = match crate::ecs::camera::queries::query_active_camera_matrices(world) {
         Some(m) => m,
         None => {
-            lines_pass.normal_count = 0;
-            lines_pass.normal_line_count = 0;
+            lines_pass.clear_normals();
             return;
         }
     };
@@ -536,15 +517,5 @@ pub fn sync_normal_data(
         }
     }
 
-    let normal_count = normal_data.len() as u32;
-    if normal_count > lines_pass.normal_capacity {
-        lines_pass.ensure_normal_capacity(device, normal_count);
-    }
-
-    let total_lines_needed = lines_pass.line_count + lines_pass.bv_line_count + normal_count;
-    if total_lines_needed > lines_pass.current_capacity {
-        lines_pass.ensure_capacity(device, queue, total_lines_needed);
-    }
-
-    lines_pass.update_normals(queue, &normal_data);
+    lines_pass.upload_normals(device, queue, &normal_data);
 }

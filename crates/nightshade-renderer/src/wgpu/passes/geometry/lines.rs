@@ -56,7 +56,7 @@ pub struct GpuNormalData {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct NormalParams {
-    pub normal_count: u32,
+    pub(crate) normal_count: u32,
     pub line_offset: u32,
     pub _padding: [u32; 2],
 }
@@ -78,7 +78,7 @@ pub struct GpuLineData {
 pub struct CullingData {
     pub view_proj: [[f32; 4]; 4],
     pub frustum_planes: [[f32; 4]; 6],
-    pub line_count: u32,
+    pub(crate) line_count: u32,
     pub _padding: [u32; 15],
 }
 
@@ -109,24 +109,24 @@ pub struct LinesPass {
     culling_bind_group: BindGroup,
     culling_pipeline: ComputePipeline,
     culling_data_buffer: wgpu::Buffer,
-    pub line_count: u32,
-    pub current_capacity: u32,
+    pub(crate) line_count: u32,
+    pub(crate) current_capacity: u32,
     bv_buffer: wgpu::Buffer,
     bv_params_buffer: wgpu::Buffer,
     bv_bind_group_layout: BindGroupLayout,
     bv_bind_group: BindGroup,
     bv_pipeline: ComputePipeline,
-    pub bv_count: u32,
-    pub bv_capacity: u32,
-    pub bv_line_count: u32,
+    pub(crate) bv_count: u32,
+    pub(crate) bv_capacity: u32,
+    pub(crate) bv_line_count: u32,
     normal_buffer: wgpu::Buffer,
     normal_params_buffer: wgpu::Buffer,
     normal_bind_group_layout: BindGroupLayout,
     normal_bind_group: BindGroup,
     normal_pipeline: ComputePipeline,
-    pub normal_count: u32,
-    pub normal_capacity: u32,
-    pub normal_line_count: u32,
+    pub(crate) normal_count: u32,
+    pub(crate) normal_capacity: u32,
+    pub(crate) normal_line_count: u32,
 }
 
 /// Builds a `main`-entry compute pipeline from a single bind group layout.
@@ -626,12 +626,7 @@ impl LinesPass {
         }
     }
 
-    pub fn ensure_capacity(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        required_lines: u32,
-    ) {
+    fn ensure_capacity(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, required_lines: u32) {
         if required_lines <= self.current_capacity {
             return;
         }
@@ -749,7 +744,7 @@ impl LinesPass {
         self.current_capacity = new_capacity;
     }
 
-    pub fn ensure_bv_capacity(&mut self, device: &wgpu::Device, required_bvs: u32) {
+    fn ensure_bv_capacity(&mut self, device: &wgpu::Device, required_bvs: u32) {
         if required_bvs <= self.bv_capacity {
             return;
         }
@@ -786,11 +781,7 @@ impl LinesPass {
         self.bv_capacity = new_capacity;
     }
 
-    pub fn update_bounding_volumes(
-        &mut self,
-        queue: &wgpu::Queue,
-        bv_data: &[GpuBoundingVolumeData],
-    ) {
+    fn update_bounding_volumes(&mut self, queue: &wgpu::Queue, bv_data: &[GpuBoundingVolumeData]) {
         self.bv_count = bv_data.len() as u32;
         self.bv_line_count = self.bv_count * 12;
 
@@ -824,7 +815,7 @@ impl LinesPass {
         compute_pass.dispatch_workgroups(dispatch_size, 1, 1);
     }
 
-    pub fn ensure_normal_capacity(&mut self, device: &wgpu::Device, required_normals: u32) {
+    fn ensure_normal_capacity(&mut self, device: &wgpu::Device, required_normals: u32) {
         if required_normals <= self.normal_capacity {
             return;
         }
@@ -861,7 +852,7 @@ impl LinesPass {
         self.normal_capacity = new_capacity;
     }
 
-    pub fn update_normals(&mut self, queue: &wgpu::Queue, normal_data: &[GpuNormalData]) {
+    fn update_normals(&mut self, queue: &wgpu::Queue, normal_data: &[GpuNormalData]) {
         self.normal_count = normal_data.len() as u32;
         self.normal_line_count = self.normal_count;
 
@@ -929,7 +920,71 @@ impl LinesPass {
         );
     }
 
-    pub fn update_line_data(&mut self, queue: &wgpu::Queue, line_data: &[GpuLineData]) {
+    /// Uploads the frame's debug lines, growing the shared line buffer to
+    /// hold them alongside the bounding-volume region.
+    pub fn upload_lines(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        line_data: &[GpuLineData],
+    ) {
+        let line_count = line_data.len() as u32;
+        let total_needed = line_count + self.bv_line_count;
+        if total_needed > self.current_capacity {
+            self.ensure_capacity(device, queue, total_needed);
+        }
+        self.update_line_data(queue, line_data);
+    }
+
+    /// Uploads the frame's bounding-volume boxes, growing the box and line
+    /// buffers as needed.
+    pub fn upload_bounding_volumes(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        bv_data: &[GpuBoundingVolumeData],
+    ) {
+        let bv_count = bv_data.len() as u32;
+        if bv_count > self.bv_capacity {
+            self.ensure_bv_capacity(device, bv_count);
+        }
+        let total_lines_needed = self.line_count + bv_count * 12;
+        if total_lines_needed > self.current_capacity {
+            self.ensure_capacity(device, queue, total_lines_needed);
+        }
+        self.update_bounding_volumes(queue, bv_data);
+    }
+
+    /// Uploads the frame's normal-visualization lines, growing the normal and
+    /// line buffers as needed.
+    pub fn upload_normals(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        normal_data: &[GpuNormalData],
+    ) {
+        let normal_count = normal_data.len() as u32;
+        if normal_count > self.normal_capacity {
+            self.ensure_normal_capacity(device, normal_count);
+        }
+        let total_lines_needed = self.line_count + self.bv_line_count + normal_count;
+        if total_lines_needed > self.current_capacity {
+            self.ensure_capacity(device, queue, total_lines_needed);
+        }
+        self.update_normals(queue, normal_data);
+    }
+
+    pub fn clear_bounding_volumes(&mut self) {
+        self.bv_count = 0;
+        self.bv_line_count = 0;
+    }
+
+    pub fn clear_normals(&mut self) {
+        self.normal_count = 0;
+        self.normal_line_count = 0;
+    }
+
+    fn update_line_data(&mut self, queue: &wgpu::Queue, line_data: &[GpuLineData]) {
         if !line_data.is_empty() {
             let clamped_count = (line_data.len() as u32).min(self.current_capacity);
             self.line_count = clamped_count;
