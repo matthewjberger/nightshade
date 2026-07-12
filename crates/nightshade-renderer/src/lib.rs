@@ -330,6 +330,8 @@ pub mod mesh_cache;
 pub mod particles;
 pub mod procedural_meshes;
 pub mod render_layer;
+#[cfg(feature = "rendergraph")]
+pub mod rendergraph;
 pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
@@ -340,4 +342,5 @@ pub mod wind;
 #[cfg(feature = "wgpu")]
 pub mod wgpu;
 
+#[cfg(feature = "wgpu")]
 pub use core::*;

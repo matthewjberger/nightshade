@@ -81,13 +81,33 @@ uninstall-hooks:
     rm -f .git/hooks/pre-commit
 
 # Runs linter and displays warnings
-lint: lint-wasm
+lint: lint-wasm lint-rendergraph check-feature-forwarding
     cargo clippy --all --all-targets -- -D warnings
 
 # Runs linter for wasm32 target
 lint-wasm:
     cargo clippy --target wasm32-unknown-unknown --workspace -- -D warnings
     cargo clippy --target wasm32-unknown-unknown -p nightshade-api --no-default-features --features leptos,offscreen -- -D warnings
+
+# Builds the frame graph alone. This is the layering firewall: the rendergraph
+# module must compile with the rest of the renderer absent, so any reach from
+# the graph into renderer code fails here.
+lint-rendergraph:
+    cargo clippy -p nightshade-renderer --no-default-features --features rendergraph -- -D warnings
+
+# Verifies every forwarding feature in nightshade still forwards to the
+# matching nightshade-renderer feature, so a dropped entry fails the gate
+# instead of silently compiling the renderer without it.
+check-feature-forwarding:
+    #!/usr/bin/env bash
+    status=0
+    for feature in wgpu assets egui debug_render screenshot grass terrain engine; do
+        if ! grep -q "nightshade-renderer/${feature}" crates/nightshade/Cargo.toml; then
+            echo "missing forwarding: nightshade '${feature}' does not forward to nightshade-renderer/${feature}"
+            status=1
+        fi
+    done
+    exit ${status}
 
 # Pushes template changes to nightshade-template repo
 push-template:
@@ -147,6 +167,7 @@ pull-template-api:
 
 # Publishes the nightshade and nightshade-api crates to crates.io
 publish-crate:
+    cargo publish -p nightshade-renderer
     cargo publish -p nightshade
     cargo publish -p nightshade-api
 

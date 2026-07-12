@@ -58,7 +58,6 @@ nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
 nightshade = { version = "0.50.0", path = "crates/nightshade" }
 nightshade-api = { version = "0.50.0", path = "crates/nightshade-api" }
 nightshade-renderer = { version = "0.50.0", path = "crates/nightshade-renderer", default-features = false }
-nightshade-rendergraph = { version = "0.50.0", path = "crates/nightshade-rendergraph" }
 petgraph = { version = "0.8", features = ["serde-1"] }
 rapier3d = { version = "0.30", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"

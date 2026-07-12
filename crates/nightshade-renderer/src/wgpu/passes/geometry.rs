@@ -56,7 +56,8 @@ mod skinned_mesh;
 pub use skinned_mesh::{BlendedIblViews, SkinnedMeshPass};
 
 mod ui_rect;
-pub use ui_rect::{UiLayer, UiRect, UiShadow};
+pub use crate::ui_data::UiLayer;
+pub use ui_rect::{UiRect, UiShadow};
 
 mod ui_image;
 pub use ui_image::{UiImage, UiImagePass};

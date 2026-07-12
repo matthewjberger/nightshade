@@ -8,7 +8,7 @@ license.workspace = true
 readme = "README.md"
 edition.workspace = true
 rust-version.workspace = true
-description = "GPU-driven wgpu renderer for the nightshade engine, built on nightshade-rendergraph."
+description = "GPU-driven wgpu renderer with a built-in frame graph."
 keywords = ["graphics", "rendering", "wgpu", "gamedev"]
 categories = ["graphics", "rendering", "game-engines"]
 
@@ -24,7 +24,8 @@ tracing = { workspace = true }
 
 wgpu = { workspace = true, optional = true }
 naga_oil = { workspace = true, optional = true }
-nightshade-rendergraph = { workspace = true, optional = true }
+petgraph = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
 
 image = { workspace = true, optional = true }
 half = { workspace = true, optional = true }
@@ -40,7 +41,8 @@ wasm-bindgen-futures = { workspace = true }
 
 [features]
 default = ["wgpu"]
-wgpu = ["dep:wgpu", "dep:naga_oil", "dep:nightshade-rendergraph", "dep:cosmic-text", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
+rendergraph = ["dep:wgpu", "dep:petgraph", "dep:thiserror"]
+wgpu = ["rendergraph", "dep:wgpu", "dep:naga_oil", "dep:cosmic-text", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 assets = ["dep:image", "dep:half"]
 screenshot = ["dep:image"]
 engine = []

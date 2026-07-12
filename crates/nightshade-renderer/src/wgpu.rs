@@ -35,7 +35,7 @@ pub mod render_configs;
 mod surface;
 pub mod texture_uploads;
 pub mod view;
-pub use nightshade_rendergraph as rendergraph;
+pub use crate::rendergraph;
 pub mod shader_compose;
 mod stagger;
 pub mod texture_cache;

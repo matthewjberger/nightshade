@@ -16,7 +16,7 @@
 //! # Basic Graph Setup
 //!
 //! ```ignore
-//! use nightshade_rendergraph::{RenderGraph, PassNode, PassExecutionContext};
+//! use nightshade_renderer::rendergraph::{RenderGraph, PassNode, PassExecutionContext};
 //!
 //! let mut graph = render_graph_new();
 //!

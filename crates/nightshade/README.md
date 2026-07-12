@@ -59,11 +59,10 @@ impl State for SpinCube {
 
 ## Architecture
 
-The engine is the top of a three-crate stack:
+The engine sits on top of a standalone renderer:
 
 - `nightshade` owns the ECS, the frame schedule, physics, animation, audio, input, UI, asset loading, and the render driver that snapshots the scene into the renderer's per-frame inputs.
-- [`nightshade-renderer`](https://crates.io/crates/nightshade-renderer) is a standalone GPU-driven wgpu renderer. It consumes one owned `RenderInputs` value per frame and never sees the ECS world.
-- [`nightshade-rendergraph`](https://crates.io/crates/nightshade-rendergraph) is the frame graph underneath: pass scheduling, transient resource aliasing, and store-op optimization, generic over the inputs type.
+- [`nightshade-renderer`](https://crates.io/crates/nightshade-renderer) is a standalone GPU-driven wgpu renderer. It consumes one owned `RenderInputs` value per frame and never sees the ECS world. Its frame graph (pass scheduling, transient resource aliasing, store-op optimization) is usable on its own through the `rendergraph` feature.
 
 Each layer only knows the one below it.
 
