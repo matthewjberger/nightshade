@@ -535,6 +535,12 @@ impl MeshPass {
         let entities_removed = std::mem::take(&mut fd.entities_removed);
         let dirty_transforms = std::mem::take(&mut fd.transform_dirty);
 
+        // Refresh the material table before classifying the added entities:
+        // their material ids index the current table, and without this upload
+        // a table that changed since the last rebuild leaves the GPU copy
+        // stale and the new objects sampling the wrong material.
+        let materials = self.collect_and_upload_materials(configs, device, queue);
+
         let world_state = self.world_states[self.current_world_id as usize]
             .as_mut()
             .unwrap();
@@ -644,25 +650,18 @@ impl MeshPass {
                 continue;
             };
 
-            let material_id = configs
-                .scene
-                .render_materials
-                .entity_to_id
-                .get(&entity)
-                .copied()
-                .unwrap_or(0);
+            let material_id = materials.material_map.get(&entity).copied().unwrap_or(0);
 
             let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) else {
                 continue;
             };
             let transform = dynamic.transform;
 
-            let render_materials = &configs.scene.render_materials;
-            let material_is_transparent = render_materials.transparent_ids.contains(&material_id);
-            let material_is_mask = render_materials.mask_ids.contains(&material_id);
+            let material_is_transparent = materials.transparent_material_ids.contains(&material_id);
+            let material_is_mask = materials.mask_material_ids.contains(&material_id);
             let custom_alpha = 1.0_f32;
             let is_transparent = material_is_transparent || custom_alpha < 1.0;
-            let is_double_sided = render_materials.double_sided_ids.contains(&material_id)
+            let is_double_sided = materials.double_sided_material_ids.contains(&material_id)
                 || nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&transform)) < 0.0;
             let is_overlay = configs
                 .scene

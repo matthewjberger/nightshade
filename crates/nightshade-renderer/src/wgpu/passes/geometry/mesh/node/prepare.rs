@@ -10,13 +10,13 @@ use super::super::types::{
 use crate::wgpu::passes::geometry::material_gpu::{
     convert_material_to_gpu_data, default_material_data,
 };
-struct MaterialCollection {
-    materials_data: Vec<MaterialData>,
-    material_map: HashMap<freecs::Entity, u32>,
-    name_to_material_id: HashMap<String, u32>,
-    transparent_material_ids: std::collections::HashSet<u32>,
-    double_sided_material_ids: std::collections::HashSet<u32>,
-    mask_material_ids: std::collections::HashSet<u32>,
+pub(in super::super) struct MaterialCollection {
+    pub(in super::super) materials_data: Vec<MaterialData>,
+    pub(in super::super) material_map: HashMap<freecs::Entity, u32>,
+    pub(in super::super) name_to_material_id: HashMap<String, u32>,
+    pub(in super::super) transparent_material_ids: std::collections::HashSet<u32>,
+    pub(in super::super) double_sided_material_ids: std::collections::HashSet<u32>,
+    pub(in super::super) mask_material_ids: std::collections::HashSet<u32>,
 }
 
 struct BatchAccumulator {
@@ -228,7 +228,7 @@ impl MeshPass {
         }
     }
 
-    fn collect_and_upload_materials(
+    pub(in super::super) fn collect_and_upload_materials(
         &mut self,
         configs: &crate::wgpu::render_configs::RenderInputs,
         device: &wgpu::Device,

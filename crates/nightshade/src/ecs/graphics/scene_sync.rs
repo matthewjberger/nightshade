@@ -115,6 +115,10 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         }
         if mask & crate::ecs::world::MATERIAL_REF != 0 {
             world.resources.render_scene_sync.materials_dirty = true;
+            world
+                .resources
+                .mesh_render_state
+                .mark_material_dirty(entity);
         }
     }
 
@@ -182,13 +186,18 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         .query_entities_changed_since(crate::ecs::world::TEXT_CHARACTER_COLORS, since)
         .next()
         .is_some();
-    if world
+    let material_ref_changed: Vec<crate::ecs::world::Entity> = world
         .core
         .query_entities_changed_since(crate::ecs::world::MATERIAL_REF, since)
-        .next()
-        .is_some()
-    {
+        .collect();
+    if !material_ref_changed.is_empty() {
         world.resources.render_scene_sync.materials_dirty = true;
+        for entity in material_ref_changed {
+            world
+                .resources
+                .mesh_render_state
+                .mark_material_dirty(entity);
+        }
     }
     world.resources.render_scene_sync.data_cursor = world.core.current_tick();
     world.core.increment_tick();
