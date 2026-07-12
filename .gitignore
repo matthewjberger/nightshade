@@ -18,6 +18,7 @@ logs/
 !apps/editor/*.md
 !crates/nightshade/*.md
 !crates/nightshade-api/*.md
+!crates/nightshade-renderer/*.md
 !template/*.md
 !docs/*.md
 !docs/book/**/*.md
