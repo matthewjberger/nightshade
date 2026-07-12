@@ -1,14 +1,5 @@
 use crate::render::wgpu::WgpuRenderer;
-use crate::render::wgpu::pass_sync::{apply_frame_dirty_state, rebind_glyph_atlas};
-
-pub(crate) fn extract_frame_dirty_state(
-    renderer: &mut WgpuRenderer,
-    world: &mut crate::ecs::world::World,
-    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
-) {
-    let frame_state = world.resources.mesh_render_state.take_frame_state();
-    apply_frame_dirty_state(renderer, frame_state, &mut inputs.mesh_cache);
-}
+use crate::render::wgpu::pass_sync::rebind_glyph_atlas;
 
 fn compute_ui_text_signature(text_instance: &crate::render::ui_data::UiTextInstance) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -26,10 +17,13 @@ fn compute_ui_text_signature(text_instance: &crate::render::ui_data::UiTextInsta
     hasher.finish()
 }
 
+/// Regenerates dirty world-text meshes and the retained-UI text meshes for
+/// this frame, rasterizing any new glyphs into the atlas. Runs before the
+/// frame's inputs are composed, while the world still owns the retained
+/// frame.
 pub(crate) fn prepare_text_meshes(
     renderer: &mut WgpuRenderer,
     world: &mut crate::ecs::world::World,
-    inputs: &mut crate::render::wgpu::render_configs::RenderInputs,
 ) {
     let pre_revision = renderer.glyph_atlas.revision;
 
@@ -69,7 +63,7 @@ pub(crate) fn prepare_text_meshes(
         }
     }
 
-    let mut frame_text = std::mem::take(&mut inputs.ui.text_meshes);
+    let mut frame_text = std::mem::take(&mut world.resources.retained_ui.frame.text_meshes);
     let mut active_entities: std::collections::HashSet<freecs::Entity> =
         std::collections::HashSet::new();
     for instance in &mut frame_text {
@@ -124,7 +118,7 @@ pub(crate) fn prepare_text_meshes(
     for entity in stale {
         renderer.frame_state.text_mesh_signatures.remove(&entity);
     }
-    inputs.ui.text_meshes = frame_text;
+    world.resources.retained_ui.frame.text_meshes = frame_text;
 
     if renderer.glyph_atlas.revision != pre_revision {
         rebind_glyph_atlas(renderer);

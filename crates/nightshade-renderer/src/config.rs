@@ -1982,6 +1982,30 @@ impl Default for RendererState {
 
 pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72, 0.72, 0.72, 1.0);
 
+/// Update mode for a camera's viewport tile.
+///
+/// - `Always`: re-render every frame regardless of dirty state.
+/// - `WhenVisible`: same as `Always` for now (any dispatched camera is
+///   treated as visible). Reserved for future visibility/focus tracking.
+/// - `WhenDirty`: re-render only when the camera moved, when first becoming
+///   visible (no cached frame yet), or when the frame's coarse dirty signal
+///   indicates a transform/scene mutation. Otherwise blit the cached
+///   viewport texture from the previous render.
+/// - `Once`: render exactly the first time the camera is visible, then
+///   reuse the cached texture forever.
+/// - `Disabled`: never render after the first frame; the cached texture
+///   is whatever the first render produced (or zero-initialized memory if
+///   the camera was never rendered).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum ViewportUpdateMode {
+    #[default]
+    Always,
+    WhenVisible,
+    WhenDirty,
+    Once,
+    Disabled,
+}
+
 /// Sentinel `flat_color` used to tell the mesh fragment shaders that the
 /// camera is in wireframe mode and that the surface should be discarded.
 /// `flat_color.a >= 2.0` is impossible for a regular color and is reserved

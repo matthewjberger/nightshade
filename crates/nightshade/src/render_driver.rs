@@ -1,16 +1,16 @@
 //! The engine-side render driver: everything that reads or writes the ECS
-//! `World` to feed the renderer. It drains render commands, executes loading
-//! tasks, generates text meshes, extracts per-frame dirty state, resolves
-//! per-camera views, and drives the render graph. The renderer itself never
-//! sees the `World`; it consumes the `RenderInputs` contract and the GPU
-//! resources this driver uploads.
+//! `World` around a frame. Before the frame it polls readbacks, drains the
+//! loading pipeline, generates text meshes, and composes the `RenderInputs`
+//! snapshot; after the frame it restores the taken state and applies the
+//! frame's outputs. The frame itself never sees the `World`: once the inputs
+//! are composed, rendering runs against them alone, so a mid-frame read of a
+//! taken resource is unrepresentable rather than a latent bug.
 
 #[cfg(feature = "egui")]
 mod egui;
 mod extract;
 mod frame;
 mod inputs;
-mod lighting;
 mod lines;
 mod shadow_atlas;
 pub mod text_mesh;

@@ -345,3 +345,52 @@ fn crop_center_square(image: image::RgbaImage) -> image::RgbaImage {
     let y = (height - side) / 2;
     image::imageops::crop_imm(&image, x, y, side, side).to_image()
 }
+
+/// Clears the swapchain to the given background color (or the default dark
+/// gray) so retained-UI-only frames start from a defined surface without
+/// running the scene graph.
+pub fn clear_swapchain(renderer: &mut WgpuRenderer, background: Option<nalgebra_glm::Vec4>) {
+    let Some(view) = crate::wgpu::rendergraph::render_graph_get_texture_view(
+        &renderer.graph,
+        renderer.targets.swapchain,
+    ) else {
+        return;
+    };
+    let clear = background
+        .map(|color| wgpu::Color {
+            r: color.x as f64,
+            g: color.y as f64,
+            b: color.z as f64,
+            a: color.w as f64,
+        })
+        .unwrap_or(wgpu::Color {
+            r: 0.04,
+            g: 0.04,
+            b: 0.06,
+            a: 1.0,
+        });
+    let mut encoder = renderer
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Window UI Swapchain Clear"),
+        });
+    {
+        let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Window UI Swapchain Clear Pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(clear),
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+    }
+    renderer.queue.submit(std::iter::once(encoder.finish()));
+}

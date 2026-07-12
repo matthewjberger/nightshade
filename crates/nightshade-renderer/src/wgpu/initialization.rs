@@ -782,8 +782,6 @@ impl super::WgpuRenderer {
             frame_state: super::FrameState {
                 index: 0,
                 last_settings_signature: None,
-                text_meshes_prepared_for_frame: u64::MAX,
-                extract_dirty_done_for_frame: u64::MAX,
                 text_mesh_signatures: std::collections::HashMap::new(),
                 captured_ibl_atmosphere: None,
                 captured_ibl_hour: 0.0,

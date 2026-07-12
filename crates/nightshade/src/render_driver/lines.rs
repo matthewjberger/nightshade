@@ -1,16 +1,9 @@
 use crate::ecs::world::World;
 use crate::render::wgpu::passes::geometry::lines::{
-    GpuBoundingVolumeData, GpuLineData, GpuNormalData, LinesPass, extract_frustum_planes,
+    GpuBoundingVolumeData, GpuLineData, GpuNormalData, extract_frustum_planes,
 };
 
-pub fn sync_lines_data(
-    lines_pass: &mut LinesPass,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    world: &World,
-    inputs: &crate::render::wgpu::render_configs::RenderInputs,
-    wireframe_enabled: bool,
-) {
+pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineData> {
     let line_entities = world.core.query_entities(
         crate::ecs::world::LINES
             | crate::ecs::world::GLOBAL_TRANSFORM
@@ -46,20 +39,17 @@ pub fn sync_lines_data(
     }
 
     if wireframe_enabled {
-        append_wireframe_lines(world, inputs, &mut line_data);
+        append_wireframe_lines(world, &mut line_data);
     }
 
-    lines_pass.upload_lines(device, queue, &line_data);
+    line_data
 }
 
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
-fn append_wireframe_lines(
-    world: &World,
-    inputs: &crate::render::wgpu::render_configs::RenderInputs,
-    line_data: &mut Vec<GpuLineData>,
-) {
+fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
     let camera_entity = world.resources.active_camera;
+    let mesh_cache = &world.resources.assets.mesh_cache;
 
     for entity in world
         .core
@@ -90,7 +80,7 @@ fn append_wireframe_lines(
 
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(mesh_cache) {
                 if *name == render_mesh.name {
                     found_mesh = Some(mesh);
                     break;
@@ -105,11 +95,11 @@ fn append_wireframe_lines(
         push_mesh_wireframe_edges(line_data, entity.id, &global_transform.0, mesh);
     }
 
-    for (entity, instanced) in &inputs.scene.render_instanced_objects {
+    for (entity, instanced) in &world.resources.renderer_state.render_instanced_objects {
         let entity = *entity;
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(mesh_cache) {
                 if *name == instanced.mesh_name {
                     found_mesh = Some(mesh);
                     break;
@@ -167,22 +157,21 @@ fn push_mesh_wireframe_edges(
     }
 }
 
-pub fn sync_bounding_volume_data(
-    lines_pass: &mut LinesPass,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+pub fn gather_bounding_volume_data(
     world: &World,
-    inputs: &crate::render::wgpu::render_configs::RenderInputs,
     show_bounding_volumes: bool,
-) {
-    let show_selected_bounding_volume = inputs.debug_draw.show_selected_bounding_volume;
-    let selected_entity = inputs.editor_selection.bounding_volume_selected_entity;
+) -> Option<Vec<GpuBoundingVolumeData>> {
+    let show_selected_bounding_volume = world.resources.debug_draw.show_selected_bounding_volume;
+    let selected_entity = world
+        .resources
+        .editor_selection
+        .bounding_volume_selected_entity;
     if !show_bounding_volumes && !show_selected_bounding_volume {
-        lines_pass.clear_bounding_volumes();
-        return;
+        return None;
     }
 
     let camera_entity = world.resources.active_camera;
+    let mesh_cache = &world.resources.assets.mesh_cache;
     let mut bv_data = Vec::new();
 
     for entity in world
@@ -223,7 +212,7 @@ pub fn sync_bounding_volume_data(
             .entity_has_components(entity, crate::ecs::world::SKIN)
             && let Some(render_mesh) = world.core.get_render_mesh(entity)
             && let Some(mesh) = crate::render::generational_registry::registry_entry_by_name(
-                &inputs.mesh_cache.registry,
+                &mesh_cache.registry,
                 &render_mesh.name,
             )
             && let Some(vertices) = skinned_overlay_vertices(world, entity, mesh)
@@ -266,7 +255,7 @@ pub fn sync_bounding_volume_data(
         });
     }
 
-    lines_pass.upload_bounding_volumes(device, queue, &bv_data);
+    Some(bv_data)
 }
 
 fn sphere_in_frustum(
@@ -387,33 +376,20 @@ fn world_position_bounds(
     Some((minimum, maximum))
 }
 
-pub fn sync_normal_data(
-    lines_pass: &mut LinesPass,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    world: &World,
-    inputs: &crate::render::wgpu::render_configs::RenderInputs,
-    show_normals: bool,
-) {
-    let normal_line_length = inputs.debug_draw.normal_line_length;
-    let normal_line_color = inputs.debug_draw.normal_line_color;
+pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNormalData>> {
+    let normal_line_length = world.resources.debug_draw.normal_line_length;
+    let normal_line_color = world.resources.debug_draw.normal_line_color;
     if !show_normals {
-        lines_pass.clear_normals();
-        return;
+        return None;
     }
 
-    let camera_matrices = match crate::ecs::camera::queries::query_active_camera_matrices(world) {
-        Some(m) => m,
-        None => {
-            lines_pass.clear_normals();
-            return;
-        }
-    };
+    let camera_matrices = crate::ecs::camera::queries::query_active_camera_matrices(world)?;
 
     let view_proj = camera_matrices.projection * camera_matrices.view;
     let frustum_planes = extract_frustum_planes(&view_proj);
 
     let camera_entity = world.resources.active_camera;
+    let mesh_cache = &world.resources.assets.mesh_cache;
     let mut normal_data = Vec::new();
 
     for entity in world
@@ -467,7 +443,7 @@ pub fn sync_normal_data(
 
         let mesh = {
             let mut found_mesh = None;
-            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(&inputs.mesh_cache) {
+            for (name, mesh) in crate::render::mesh_cache::mesh_cache_iter(mesh_cache) {
                 if *name == render_mesh.name {
                     found_mesh = Some(mesh);
                     break;
@@ -517,5 +493,5 @@ pub fn sync_normal_data(
         }
     }
 
-    lines_pass.upload_normals(device, queue, &normal_data);
+    Some(normal_data)
 }

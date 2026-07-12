@@ -1,13 +1,20 @@
 //! CPU-side collection of the frame's light lists from [`RendererState`]
-//! into the packed GPU structures the mesh and shadow passes consume.
+//! into the packed GPU structures the mesh and shadow passes consume, plus
+//! the cascade shadow fit against the dispatching camera's frustum.
 
-use crate::config::{RenderAreaLightShape, RenderLightType, RendererState};
+use crate::config::{
+    RenderAreaLightShape, RenderLightData, RenderLightType, RenderLighting, RendererState,
+};
 use crate::wgpu::passes::geometry::projection::{
     AREA_EMISSIVE_LAYER_NONE, AREA_SHAPE_DISK, AREA_SHAPE_RECTANGLE, AREA_SHAPE_SPHERE,
     AREA_SHAPE_TUBE, AreaLightCollectionResult, AreaLightData, COOKIE_LAYER_NONE,
-    LightCollectionResult, LightData, transform_forward, transform_right, transform_translation,
-    transform_up,
+    CascadeShadowResult, LightCollectionResult, LightData, MAX_AREA_LIGHTS,
+    calculate_cascade_view_projection, default_shadow_normal_bias_value,
+    get_frustum_corners_world_space, reverse_z_ortho_light, transform_forward, transform_right,
+    transform_translation, transform_up,
 };
+use crate::wgpu::passes::shadow_depth::{CASCADE_SPLIT_DISTANCES, scale_cascade_splits};
+use crate::wgpu::render_configs::CameraFrameInputs;
 
 pub fn collect_lights(scene: &RendererState, max_lights: usize) -> LightCollectionResult {
     let mut directional_lights = Vec::new();
@@ -180,5 +187,178 @@ pub fn collect_area_lights(
     AreaLightCollectionResult {
         area_lights_data,
         entity_to_index,
+    }
+}
+
+pub fn calculate_cascade_shadows(
+    camera: Option<&CameraFrameInputs>,
+    directional_light: Option<&(RenderLightData, nalgebra_glm::Mat4)>,
+) -> CascadeShadowResult {
+    let mut cascade_view_projections = [[[0.0f32; 4]; 4]; crate::wgpu::passes::NUM_SHADOW_CASCADES];
+    let mut cascade_diameters = [0.0f32; crate::wgpu::passes::NUM_SHADOW_CASCADES];
+    let mut cascade_split_distances = CASCADE_SPLIT_DISTANCES;
+
+    let (light_view_projection, shadow_bias, shadow_normal_bias, light_size, shadows_enabled) =
+        if let Some((light, light_transform)) = directional_light {
+            let light_direction = transform_forward(light_transform);
+
+            let camera_matrices = camera.and_then(|camera| camera.matrices);
+
+            if let Some(camera_matrices) = camera_matrices {
+                let (fov, aspect, camera_near) = camera
+                    .map(|camera| {
+                        (
+                            camera.projection.y_fov_rad,
+                            camera.projection.aspect,
+                            camera.projection.z_near,
+                        )
+                    })
+                    .unwrap_or((std::f32::consts::FRAC_PI_4, 1.78, 0.1));
+
+                cascade_split_distances = scale_cascade_splits(camera_near);
+
+                let cascade_resolution = crate::wgpu::passes::CASCADE_SLOT_RESOLUTION;
+
+                for cascade_index in 0..crate::wgpu::passes::NUM_SHADOW_CASCADES {
+                    let cascade_near = if cascade_index == 0 {
+                        camera_near
+                    } else {
+                        cascade_split_distances[cascade_index - 1]
+                    };
+                    let cascade_far = cascade_split_distances[cascade_index];
+
+                    let frustum_corners = get_frustum_corners_world_space(
+                        &camera_matrices.view,
+                        fov,
+                        aspect,
+                        cascade_near,
+                        cascade_far,
+                    );
+
+                    let result = calculate_cascade_view_projection(
+                        &frustum_corners,
+                        &light_direction,
+                        cascade_resolution,
+                        cascade_far,
+                    );
+
+                    cascade_view_projections[cascade_index] = result.view_projection.into();
+                    cascade_diameters[cascade_index] = result.cascade_diameter;
+                }
+            } else {
+                let up = if light_direction.y.abs() > 0.99 {
+                    nalgebra_glm::vec3(1.0, 0.0, 0.0)
+                } else {
+                    nalgebra_glm::vec3(0.0, 1.0, 0.0)
+                };
+
+                for cascade_index in 0..crate::wgpu::passes::NUM_SHADOW_CASCADES {
+                    let cascade_far = cascade_split_distances[cascade_index];
+                    let half_size = cascade_far * 0.5;
+
+                    let scene_center = nalgebra_glm::vec3(0.0, 0.0, 0.0);
+                    let light_position = scene_center - light_direction * 100.0;
+                    let light_view = nalgebra_glm::look_at(&light_position, &scene_center, &up);
+                    let light_projection = reverse_z_ortho_light(
+                        -half_size,
+                        half_size,
+                        -half_size,
+                        half_size,
+                        0.1,
+                        cascade_far * 2.0,
+                    );
+
+                    cascade_view_projections[cascade_index] =
+                        (light_projection * light_view).into();
+                    cascade_diameters[cascade_index] = cascade_far;
+                }
+            }
+
+            let bias = if light.shadow_bias > 0.0 {
+                light.shadow_bias
+            } else {
+                0.02
+            };
+            (
+                cascade_view_projections[0],
+                bias,
+                light.shadow_normal_bias,
+                light.shadow_softness,
+                1.0,
+            )
+        } else {
+            (
+                nalgebra_glm::Mat4::identity().into(),
+                0.0,
+                default_shadow_normal_bias_value(),
+                1.0,
+                0.0,
+            )
+        };
+
+    CascadeShadowResult {
+        cascade_view_projections,
+        cascade_diameters,
+        cascade_split_distances,
+        light_view_projection,
+        shadow_bias,
+        shadow_normal_bias,
+        light_size,
+        shadows_enabled,
+    }
+}
+
+/// Collects the frame's full lighting: light lists, area lights, the cascade
+/// shadow fit for the dispatching camera, and the sun.
+pub fn build_render_lighting(
+    scene: &RendererState,
+    camera: Option<&CameraFrameInputs>,
+) -> RenderLighting {
+    const MAX_LIGHTS: usize = 1024;
+    let light_result = collect_lights(scene, MAX_LIGHTS);
+    let directional = light_result.directional_light;
+    let directional_light_direction = directional
+        .as_ref()
+        .map(|(_light, transform)| {
+            let dir = transform_forward(transform);
+            [dir.x, dir.y, dir.z, 0.0]
+        })
+        .unwrap_or([0.0, -1.0, 0.0, 0.0]);
+    let cascade = calculate_cascade_shadows(camera, directional.as_ref());
+    let area = collect_area_lights(scene, MAX_AREA_LIGHTS);
+    let mut sun = None;
+    for render_light in &scene.render_lights.lights {
+        let light = &render_light.light;
+        let transform = &render_light.transform;
+        if light.light_type == RenderLightType::Directional {
+            sun = Some((
+                -transform_forward(transform).normalize(),
+                light.color * light.intensity,
+            ));
+            break;
+        }
+    }
+    let (sun_direction, sun_color) = sun.unwrap_or((
+        nalgebra_glm::vec3(0.35, 0.8, 0.35).normalize(),
+        nalgebra_glm::vec3(4.0, 3.8, 3.2),
+    ));
+    RenderLighting {
+        num_directional_lights: light_result.num_directional_lights,
+        has_directional_light: directional.is_some(),
+        entity_to_lights_index: light_result.entity_to_index,
+        lights_data: light_result.lights_data,
+        directional_light_direction,
+        cascade_view_projections: cascade.cascade_view_projections,
+        cascade_diameters: cascade.cascade_diameters,
+        cascade_split_distances: cascade.cascade_split_distances,
+        light_view_projection: cascade.light_view_projection,
+        shadow_bias: cascade.shadow_bias,
+        shadow_normal_bias: cascade.shadow_normal_bias,
+        directional_light_size: cascade.light_size,
+        shadows_enabled: cascade.shadows_enabled,
+        area_lights_data: area.area_lights_data,
+        area_entity_to_index: area.entity_to_index,
+        sun_direction,
+        sun_color,
     }
 }

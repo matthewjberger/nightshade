@@ -1,21 +1,224 @@
 use crate::ecs::world::World;
-use crate::render::wgpu::render_configs::{RenderInputs, UiFrameInputs, ViewInputs};
+use crate::render::wgpu::render_configs::{
+    CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
+    LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
+};
 
-/// Composes the renderer's per-frame input by moving state out of the world.
+fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
+    let matrices =
+        crate::ecs::camera::queries::query_camera_matrices(world, entity).map(|matrices| {
+            CameraMatricesInputs {
+                view: matrices.view,
+                projection: matrices.projection,
+                camera_position: matrices.camera_position,
+            }
+        });
+    let projection = match world.core.get_camera(entity).map(|c| &c.projection) {
+        Some(crate::ecs::camera::components::Projection::Perspective(persp)) => {
+            CameraProjectionParams {
+                z_near: persp.z_near,
+                z_far: persp.z_far.unwrap_or(1000.0),
+                y_fov_rad: persp.y_fov_rad,
+                aspect: persp.aspect_ratio.unwrap_or_else(|| {
+                    crate::ecs::camera::queries::query_window_aspect_ratio(world).unwrap_or(1.78)
+                }),
+                orthographic: None,
+            }
+        }
+        Some(crate::ecs::camera::components::Projection::Orthographic(ortho)) => {
+            CameraProjectionParams {
+                z_near: ortho.z_near,
+                z_far: ortho.z_far,
+                y_fov_rad: std::f32::consts::FRAC_PI_4,
+                aspect: 1.78,
+                orthographic: Some((ortho.x_mag, ortho.y_mag)),
+            }
+        }
+        None => CameraProjectionParams::default(),
+    };
+    let shading = world
+        .core
+        .get_viewport_shading(entity)
+        .copied()
+        .unwrap_or_default();
+    let post_process = world.core.get_camera_post_process(entity).copied();
+    let culling_mask = world.core.get_camera_culling_mask(entity).copied();
+    let environment = world.core.get_camera_environment(entity).copied();
+    let effective_shading = crate::ecs::camera::components::effective_shading_for_camera(
+        &world.resources.render_settings,
+        &world.resources.debug_draw,
+        &shading,
+        post_process.as_ref(),
+        culling_mask.as_ref(),
+        environment.as_ref(),
+    );
+    CameraFrameInputs {
+        entity,
+        matrices,
+        projection,
+        constrained_aspect: world
+            .core
+            .get_constrained_aspect(entity)
+            .map(|constrained| constrained.0),
+        effective_shading,
+        update_mode: world
+            .core
+            .get_viewport_update_mode(entity)
+            .copied()
+            .unwrap_or_default(),
+        world_transform: world.core.get_global_transform(entity).map(|gt| gt.0),
+    }
+}
+
+fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
+    std::mem::take(&mut world.resources.commands.render)
+        .into_iter()
+        .filter_map(|command| match command {
+            crate::ecs::world::RenderCommand::UploadUiImageLayer {
+                layer,
+                rgba_data,
+                width,
+                height,
+            } => Some(RendererCommand::UploadUiImageLayer {
+                layer,
+                rgba_data,
+                width,
+                height,
+            }),
+            crate::ecs::world::RenderCommand::ReloadTexture {
+                name,
+                rgba_data,
+                width,
+                height,
+            } => Some(RendererCommand::ReloadTexture {
+                name,
+                rgba_data,
+                width,
+                height,
+            }),
+            crate::ecs::world::RenderCommand::LoadHdrSkybox { hdr_data } => {
+                Some(RendererCommand::LoadHdrSkybox { hdr_data })
+            }
+            crate::ecs::world::RenderCommand::SetColorLut { data } => {
+                Some(RendererCommand::SetColorLut { data })
+            }
+            crate::ecs::world::RenderCommand::LoadHdrSkyboxFromPath { path } => {
+                match std::fs::read(&path) {
+                    Ok(bytes) => {
+                        tracing::info!("Successfully read HDR file: {}", path.display());
+                        Some(RendererCommand::LoadHdrSkybox { hdr_data: bytes })
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to read HDR file {}: {}", path.display(), error);
+                        None
+                    }
+                }
+            }
+            crate::ecs::world::RenderCommand::CaptureScreenshot {
+                path,
+                max_dimension,
+            } => Some(RendererCommand::CaptureScreenshot {
+                path,
+                max_dimension,
+            }),
+        })
+        .collect()
+}
+
+/// Composes the renderer's per-frame input by snapshotting everything the
+/// frame needs from the world, then moving the large state out of the world.
 ///
 /// Every non-`Copy` input is taken with `std::mem::take`, not cloned, so
 /// handing the renderer its inputs costs nothing regardless of scene size.
-///
-/// INVARIANT: between this call and [`restore_render_inputs`], the world's
-/// copies of the taken resources (`render_settings`, `debug_draw`,
-/// `editor_selection`, `renderer_state`, `ibl_views`, `shadow_atlas`,
-/// `texture_cache`, `assets.mesh_cache`, `loading.pending_particle_textures`,
-/// the retained-UI frame and render slots, and the grass and terrain state)
-/// are empty defaults. Nothing may read or write them until the restore runs;
-/// writes are discarded when the taken state is moved back. The only
-/// exception is `loading.pending_particle_textures`, which the restore merges
-/// so uploads queued mid-frame survive.
+/// The frame itself never sees the world: anything it needs is captured
+/// here, and anything it produces for the world comes back through
+/// [`FrameOutputs`] in [`restore_render_inputs`].
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
+    let commands = map_render_commands(world);
+
+    let cameras: Vec<CameraFrameInputs> = world
+        .resources
+        .user_interface
+        .required_cameras
+        .iter()
+        .map(|&entity| snapshot_camera(world, entity))
+        .collect();
+    let active_camera_frame = world
+        .resources
+        .active_camera
+        .map(|entity| snapshot_camera(world, entity));
+    let fallback_shading = crate::ecs::camera::components::effective_shading_from_graphics(
+        &world.resources.render_settings,
+        &world.resources.debug_draw,
+    );
+
+    let mut wants_normals = world.resources.debug_draw.show_normals;
+    let mut wants_bounds = world.resources.debug_draw.show_bounding_volumes;
+    let mut wants_wireframe = false;
+    for camera in cameras.iter().chain(active_camera_frame.iter()) {
+        wants_normals |= camera.effective_shading.show_normals;
+        wants_bounds |= camera.effective_shading.show_bounding_volumes;
+        wants_wireframe |= camera.effective_shading.show_wireframe;
+    }
+    let debug_lines = LinesFrameInputs {
+        lines: super::lines::gather_lines_data(world, wants_wireframe),
+        bounding_volumes: super::lines::gather_bounding_volume_data(world, wants_bounds),
+        normals: super::lines::gather_normal_data(world, wants_normals),
+    };
+
+    let pick_request = world
+        .resources
+        .gpu_picking
+        .take_pending_request()
+        .map(|request| (request.screen_x, request.screen_y));
+    let has_skinned_meshes = world
+        .core
+        .query_entities(crate::ecs::world::SKIN)
+        .next()
+        .is_some();
+
+    let dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)> = {
+        let scene = &world.resources.renderer_state;
+        let mut spheres = Vec::new();
+        for entity in world
+            .resources
+            .mesh_render_state
+            .dirty_entities_for_culling()
+        {
+            let Some(dynamic) = scene.render_dynamic_objects.get(&entity) else {
+                continue;
+            };
+            let Some(bounding_volume) = scene.render_bounds.get(&entity) else {
+                continue;
+            };
+            let global_transform = dynamic.transform;
+            let world_center = global_transform
+                * nalgebra_glm::Vec4::new(
+                    bounding_volume.center.x,
+                    bounding_volume.center.y,
+                    bounding_volume.center.z,
+                    1.0,
+                );
+            let world_center =
+                nalgebra_glm::Vec3::new(world_center.x, world_center.y, world_center.z);
+            let scale = nalgebra_glm::length(&nalgebra_glm::Vec3::new(
+                global_transform[(0, 0)],
+                global_transform[(1, 0)],
+                global_transform[(2, 0)],
+            ));
+            let world_radius = bounding_volume.sphere_radius * scale;
+            spheres.push((world_center, world_radius));
+        }
+        spheres
+    };
+    let global_dirty_signal = world
+        .resources
+        .mesh_render_state
+        .requires_full_invalidation();
+    let mesh_frame_state = Some(world.resources.mesh_render_state.take_frame_state());
+    let mouse_position = world.resources.input.mouse.position;
+    let force_render_cameras = world.resources.window.force_render_cameras.clone();
+
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
@@ -47,6 +250,18 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             active_viewport_rect: resources.window.active_viewport_rect,
         },
         world_id: resources.world_id,
+        commands,
+        cameras,
+        active_camera_frame,
+        fallback_shading,
+        pick_request,
+        has_skinned_meshes,
+        mesh_frame_state,
+        dirty_world_spheres,
+        global_dirty_signal,
+        mouse_position,
+        force_render_cameras,
+        debug_lines,
         #[cfg(feature = "grass")]
         grass: std::mem::take(&mut resources.grass),
         #[cfg(feature = "terrain")]
@@ -56,13 +271,14 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     }
 }
 
-/// Moves the state carried by [`RenderInputs`] back into the world, ending the
-/// window in which the world's copies are empty. Everything is a plain move
-/// that overwrites the world's default-valued placeholder, except
-/// `loading.pending_particle_textures`: the taken contents come back first and
-/// anything the engine queued mid-frame is appended after them, preserving the
-/// upload cursor the particle pass keeps into that list.
-pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs) {
+/// Moves the state carried by [`RenderInputs`] back into the world and
+/// applies the frame's [`FrameOutputs`]: the viewport texture sizes, the
+/// force-render clears, and any pick request the frame did not consume.
+/// Everything taken is a plain move back, except
+/// `loading.pending_particle_textures`: the taken contents come back first
+/// and anything the engine queued mid-frame is appended after them,
+/// preserving the upload cursor the particle pass keeps into that list.
+pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: FrameOutputs) {
     let resources = &mut world.resources;
     resources.render_settings = inputs.settings;
     resources.debug_draw = inputs.debug_draw;
@@ -91,5 +307,16 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs) {
     {
         resources.terrain = inputs.terrain;
         resources.terrain_render = inputs.terrain_render;
+    }
+
+    resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
+    for entity in outputs.force_render_cleared {
+        resources.window.force_render_cameras.remove(&entity);
+    }
+    if let Some((screen_x, screen_y)) = inputs.pick_request
+        && resources.gpu_picking.pending_request.is_none()
+    {
+        resources.gpu_picking.pending_request =
+            Some(crate::ecs::gpu_picking::GpuPickRequest { screen_x, screen_y });
     }
 }

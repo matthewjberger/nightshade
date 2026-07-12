@@ -24,9 +24,10 @@ pub mod components {
     pub use crate::ecs::camera::components::{
         Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
         OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode, Smoothing,
-        ViewportShading, ViewportUpdateMode,
+        ViewportShading,
     };
     pub use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
+    pub use crate::render::config::ViewportUpdateMode;
 
     pub use crate::ecs::cloth::components::{Cloth, ClothPinning};
     pub use crate::ecs::decal::components::Decal;
@@ -179,7 +180,7 @@ freecs::ecs! {
             text: crate::ecs::text::components::Text => TEXT,
             third_person_camera: crate::ecs::camera::components::ThirdPersonCamera => THIRD_PERSON_CAMERA,
             viewport_shading: crate::ecs::camera::components::ViewportShading => VIEWPORT_SHADING,
-            viewport_update_mode: crate::ecs::camera::components::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
+            viewport_update_mode: crate::render::config::ViewportUpdateMode => VIEWPORT_UPDATE_MODE,
             visibility: crate::ecs::primitives::Visibility => VISIBILITY,
             water: crate::ecs::water::components::Water => WATER,
             beam: crate::ecs::vfx::components::Beam => BEAM,
