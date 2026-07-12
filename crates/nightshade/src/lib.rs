@@ -612,7 +612,6 @@ pub mod prelude {
     pub use crate::ecs::audio::systems::{
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
     };
-    pub use crate::ecs::bounding_volume::components::BoundingVolume;
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{
         spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
@@ -639,19 +638,8 @@ pub mod prelude {
     };
     pub use crate::ecs::event_bus::commands::{publish_app_event, publish_event};
     pub use crate::ecs::event_bus::resources::Message;
-    pub use crate::ecs::generational_registry::{
-        GenerationalRegistry, registry_add_reference, registry_clear, registry_entry,
-        registry_entry_by_name, registry_entry_by_name_mut, registry_insert, registry_is_empty,
-        registry_is_filled, registry_is_valid, registry_len, registry_lookup_index,
-        registry_name_for, registry_reference_count, registry_remove, registry_remove_reference,
-        registry_remove_unused, registry_reserve_name,
-    };
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
-    };
-    #[cfg(feature = "grass")]
-    pub use crate::ecs::grass::{
-        GrassDomain, GrassHeightMap, GrassPusher, GrassSettings, GrassTypeParams,
     };
     #[cfg(feature = "gamepad")]
     pub use crate::ecs::input::queries::query_active_gamepad;
@@ -736,7 +724,6 @@ pub mod prelude {
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::commands::import_gltf_with_resources;
     pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
-    pub use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_remove_unused};
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
     #[cfg(feature = "scene_graph")]
@@ -767,13 +754,10 @@ pub mod prelude {
     };
     #[cfg(all(feature = "terrain", feature = "physics"))]
     pub use crate::ecs::terrain::terrain_collider_system;
-    #[cfg(feature = "terrain")]
-    pub use crate::ecs::terrain::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
-    pub use crate::ecs::text::components::{TextAlignment, TextProperties, VerticalAlignment};
-    pub use crate::ecs::text::resources::font_engine::FontKind;
+    pub use crate::ecs::text::components::TextProperties;
     #[cfg(feature = "assets")]
     pub use crate::ecs::texture_loader::{
         AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
@@ -819,7 +803,6 @@ pub mod prelude {
         UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
         UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
     };
-    pub use crate::ecs::ui::{Anchor, Rect, UiTextInstance};
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::vfx::presets::{VfxFamily, VfxPreset, despawn_vfx, spawn_vfx};
     pub use crate::ecs::vfx::systems::update_vfx_system;
@@ -833,6 +816,24 @@ pub mod prelude {
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
         spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
     };
+    pub use crate::render::bounding_volume::BoundingVolume;
+    pub use crate::render::generational_registry::{
+        GenerationalRegistry, registry_add_reference, registry_clear, registry_entry,
+        registry_entry_by_name, registry_entry_by_name_mut, registry_insert, registry_is_empty,
+        registry_is_filled, registry_is_valid, registry_len, registry_lookup_index,
+        registry_name_for, registry_reference_count, registry_remove, registry_remove_reference,
+        registry_remove_unused, registry_reserve_name,
+    };
+    #[cfg(feature = "grass")]
+    pub use crate::render::grass_config::{
+        GrassDomain, GrassHeightMap, GrassPusher, GrassSettings, GrassTypeParams,
+    };
+    pub use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
+    #[cfg(feature = "terrain")]
+    pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
+    pub use crate::render::text_data::FontKind;
+    pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
+    pub use crate::render::ui_data::{Anchor, Rect, UiTextInstance};
     pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
     #[cfg(feature = "assets")]

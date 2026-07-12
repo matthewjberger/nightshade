@@ -1,8 +1,8 @@
-use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
-use crate::ecs::generational_registry::registry_entry_by_name;
 use crate::ecs::mesh::components::InstancedMesh;
-use crate::ecs::prefab::resources::MeshCache;
 use crate::ecs::world::{BOUNDING_VOLUME, Entity, INSTANCED_MESH, RENDER_MESH, World};
+use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
+use crate::render::generational_registry::registry_entry_by_name;
+use crate::render::mesh_cache::MeshCache;
 use nalgebra_glm::vec3;
 
 fn resolve_bounding_volume(mesh_cache: &MeshCache, mesh_name: &str) -> BoundingVolume {

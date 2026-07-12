@@ -4,7 +4,7 @@
 //! [`ViewportShading`] is a component the editor (or any caller) attaches
 //! to a camera entity to choose the shading mode and overlay visibility
 //! for that camera's tile. The renderer reads it together with the global
-//! [`RenderSettings`](crate::ecs::graphics::resources::RenderSettings) defaults to
+//! [`RenderSettings`](crate::render::config::RenderSettings) defaults to
 //! produce an [`EffectiveShading`] for the camera, then writes it into
 //! `world.resources.renderer_state.active_view` while the camera's render
 //! graph executes. Passes read from `renderer_state.active_view`, never from
@@ -25,10 +25,10 @@
 //! the selection outline) for that camera only. The world ground grid is
 //! a separate global toggle.
 
-use crate::ecs::graphics::resources::{
+use crate::ecs::primitives::CameraCullingMask;
+use crate::render::config::{
     Atmosphere, ColorGrading, DebugDraw, DepthOfField, Fog, RenderSettings,
 };
-use crate::ecs::primitives::CameraCullingMask;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ShadingMode {
@@ -54,9 +54,7 @@ impl Default for ViewportShading {
     }
 }
 
-pub use crate::ecs::graphics::resources::{
-    EffectiveShading, FLAT_SHADING_COLOR, WIREFRAME_SENTINEL_COLOR,
-};
+use crate::render::config::{EffectiveShading, FLAT_SHADING_COLOR, WIREFRAME_SENTINEL_COLOR};
 
 pub fn effective_shading_from_graphics(
     render: &RenderSettings,

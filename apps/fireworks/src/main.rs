@@ -900,7 +900,7 @@ impl FireworksDemo {
             emitter.burst_count = particles_per_point;
             emitter.spawn_rate = 0.0;
             emitter.one_shot = true;
-            emitter.shape = nightshade::ecs::particles::components::EmitterShape::Point;
+            emitter.shape = nightshade::render::particles::EmitterShape::Point;
             emitter.direction = direction;
             emitter.initial_velocity_min = speed * 0.85;
             emitter.initial_velocity_max = speed * 1.15;

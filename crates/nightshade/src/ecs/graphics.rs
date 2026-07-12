@@ -13,7 +13,4 @@
 //! - [`PbrDebugMode`]: Visualize individual PBR components
 
 pub mod animation_sync;
-pub mod resources;
 pub mod systems;
-
-pub use resources::*;

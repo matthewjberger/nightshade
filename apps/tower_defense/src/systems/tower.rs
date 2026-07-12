@@ -3,9 +3,9 @@ use crate::ecs::{
     RANGE_INDICATOR, RangeIndicator, TOWER, Tower, TowerType,
 };
 use crate::systems::{create_muzzle_flash, spawn_money_popup};
-use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
+use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn spawn_tower(
     game_world: &mut GameWorld,

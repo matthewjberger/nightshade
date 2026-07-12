@@ -92,7 +92,7 @@
 //! // Bloom with custom mip levels
 //! let bloom = BloomPass::new(device, width, height);
 //!
-//! // SSAO (tuned at runtime via world.resources.render_settings.ssao_*)
+//! // SSAO (tuned at runtime via RenderInputs::settings ssao_* fields)
 //! let ssao = SsaoPass::new(device);
 //!
 //! // Post-process with bloom intensity

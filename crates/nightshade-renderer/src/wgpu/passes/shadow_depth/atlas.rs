@@ -1,6 +1,6 @@
 //! Single source of truth for spotlight and rectangular area-light shadow atlas
 //! slot assignment. A frame-schedule system computes the assignment once per
-//! frame into `world.resources.shadow_atlas`. The shadow depth pass renders the
+//! frame into `RenderInputs::shadow_atlas`. The shadow depth pass renders the
 //! atlas from that stored result, and the mesh light collection writes its
 //! sampling buffer and shadow indices from the same result, so the rendered
 //! slots and the sampled slots are always the same data.

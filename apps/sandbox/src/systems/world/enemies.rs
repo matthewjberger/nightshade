@@ -1,8 +1,8 @@
 use crate::ecs::{ENEMY, ENGINE_ENTITY, Enemy, EngineEntity, SandboxWorld};
-use nightshade::ecs::material::components::Material;
 use nightshade::ecs::sync::sync_engine_translation;
 use nightshade::ecs::world::commands::{spawn_entities, spawn_material};
 use nightshade::prelude::*;
+use nightshade::render::material::Material;
 
 const ENEMY_COUNT: u32 = 5;
 const ENEMY_SPEED: f32 = 1.6;

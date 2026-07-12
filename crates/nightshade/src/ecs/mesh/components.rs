@@ -1,12 +1,10 @@
 //! Mesh component definitions.
 
 mod instanced;
-mod primitives;
 
 pub use instanced::*;
-pub use primitives::*;
 
-use crate::ecs::asset_id::MeshId;
+use crate::render::asset_id::MeshId;
 use serde::{Deserialize, Serialize};
 
 /// Component referencing a mesh by name in the mesh cache.

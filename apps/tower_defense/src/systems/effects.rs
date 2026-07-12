@@ -1,8 +1,8 @@
 use crate::ecs::{ENTITY_HANDLE, EffectType, EntityHandle, GameWorld, VISUAL_EFFECT, VisualEffect};
 use crate::systems::despawn_entity;
-use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
+use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn create_explosion_effect(game_world: &mut GameWorld, world: &mut World, position: Vec3) {
     for _ in 0..8 {
@@ -74,8 +74,7 @@ pub fn create_death_effect(_game_world: &mut GameWorld, world: &mut World, posit
     smoke_emitter.size_start = 0.3;
     smoke_emitter.size_end = 0.8;
     smoke_emitter.velocity_spread = 0.6;
-    smoke_emitter.shape =
-        nightshade::ecs::particles::components::EmitterShape::Sphere { radius: 0.2 };
+    smoke_emitter.shape = nightshade::render::particles::EmitterShape::Sphere { radius: 0.2 };
     world.core.set_particle_emitter(entity, smoke_emitter);
 }
 

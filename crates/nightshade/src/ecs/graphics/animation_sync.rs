@@ -2,8 +2,8 @@ use crate::ecs::animation::components::{
     AnimationChannel, AnimationInterpolation, AnimationLayer, AnimationPlayer, AnimationProperty,
     AnimationSamplerOutput,
 };
-use crate::ecs::graphics::resources::{SkinnedChannelData, SkinnedJointData, SkinnedSkeletonData};
 use crate::ecs::world::{ANIMATION_PLAYER, Entity, SKIN, World};
+use crate::render::config::{SkinnedChannelData, SkinnedJointData, SkinnedSkeletonData};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 

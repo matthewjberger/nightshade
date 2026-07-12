@@ -7,8 +7,8 @@
 //! - [`GpuPickRequest`]: Screen coordinates to sample
 //! - [`GpuPickResult`]: World position, normal, depth, and entity id
 
-use crate::ecs::window::resources::ViewportRect;
 use crate::ecs::world::Vec2;
+use crate::render::config::ViewportRect;
 
 #[derive(Debug, Clone, Copy)]
 pub struct GpuPickRequest {

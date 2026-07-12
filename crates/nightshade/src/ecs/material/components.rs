@@ -1,6 +1,6 @@
 //! Material component definitions.
 
-use crate::ecs::asset_id::MaterialId;
+use crate::render::asset_id::MaterialId;
 use serde::{Deserialize, Serialize};
 
 /// Component referencing a material by name in the [`super::MaterialRegistry`].
@@ -89,5 +89,3 @@ impl From<&str> for MaterialRef {
         }
     }
 }
-
-pub use crate::render::material::{AlphaMode, Material, MaterialTextureIds, TextureTransform};

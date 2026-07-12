@@ -184,7 +184,7 @@ fn spawn_static_block(
     name: &str,
     position: Vec3,
     size: Vec3,
-    material: nightshade::ecs::material::components::Material,
+    material: nightshade::render::material::Material,
 ) -> Entity {
     let entity = spawn_static_physics_cube_with_material(world, position, size, material);
     if let Some(entity_name) = world.core.get_name_mut(entity) {
@@ -199,7 +199,7 @@ fn spawn_ramp(
     name: &str,
     base_position: Vec3,
     angle: f32,
-    material: nightshade::ecs::material::components::Material,
+    material: nightshade::render::material::Material,
 ) {
     let center_height = (RAMP_THICKNESS / 2.0) * angle.cos() + (RAMP_LENGTH / 2.0) * angle.sin();
     let entity = spawn_static_block(

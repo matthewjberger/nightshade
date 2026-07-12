@@ -45,8 +45,6 @@ impl enum2schema::Schema for CastsShadow {
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Guid(pub u64);
 
-pub use crate::render::render_layer::RenderLayer;
-
 /// Bitmask of "culling layers" this entity belongs to. Independent
 /// from [`RenderLayer`] (which selects WORLD vs OVERLAY rendering).
 /// Cameras with a [`CameraCullingMask`] component skip entities

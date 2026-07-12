@@ -9,8 +9,9 @@
 //! - **GPU Particles**: Compute shader particle simulation and billboard rendering
 //! - **Text Rendering**: Signed distance field text with GPU atlasing
 //!
-//! Most rendering is automatic based on ECS components. Custom passes can be added
-//! via `State::configure_render_graph`.
+//! Custom passes implement [`PassNode`](wgpu::rendergraph::PassNode) over
+//! [`RenderInputs`](wgpu::render_configs::RenderInputs) and are added to the
+//! [`RenderGraph`](wgpu::rendergraph::RenderGraph) alongside the built-in ones.
 //!
 //! # Custom Shader Authoring
 //!
@@ -178,13 +179,13 @@
 //! ## 3. Implement PassNode
 //!
 //! ```ignore
-//! impl PassNode<World> for MyEffectPass {
+//! impl PassNode<RenderInputs> for MyEffectPass {
 //!     fn name(&self) -> &str { "my_effect_pass" }
 //!     fn reads(&self) -> Vec<&str> { vec!["input"] }
 //!     fn writes(&self) -> Vec<&str> { vec!["output"] }
 //!
-//!     fn prepare(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue, world: &World) {
-//!         self.time = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+//!     fn prepare(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue, inputs: &RenderInputs) {
+//!         self.time = inputs.view.uptime_milliseconds as f32 / 1000.0;
 //!         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[
 //!             self.time,
 //!             self.intensity,
@@ -197,7 +198,7 @@
 //!
 //!     fn execute<'r, 'e>(
 //!         &mut self,
-//!         ctx: PassExecutionContext<'r, 'e, World>,
+//!         ctx: PassExecutionContext<'r, 'e, RenderInputs>,
 //!     ) -> Result<Vec<SubGraphRunCommand<'r>>> {
 //!         let input_view = ctx.get_texture_view("input")?;
 //!         let (output_view, load_op, store_op) = ctx.get_color_attachment("output")?;
@@ -237,109 +238,77 @@
 //! ## 4. Add to Render Graph
 //!
 //! ```ignore
-//! fn configure_render_graph(
-//!     &mut self,
-//!     graph: &mut RenderGraph<World>,
-//!     device: &wgpu::Device,
-//!     surface_format: wgpu::TextureFormat,
-//!     resources: RenderResources,
-//! ) {
-//!     let my_pass = MyEffectPass::new(device, surface_format);
+//! let my_pass = MyEffectPass::new(device, surface_format);
+//! // With the graph and the built-in target handles in hand:
 //!     render_graph_add_pass(graph, Box::new(my_pass), &[
-//!         ("input", resources.scene_color),
-//!         ("output", resources.swapchain),
+//!         ("input", targets.scene_color),
+//!         ("output", targets.swapchain),
 //!     ]).unwrap();
-//! }
 //! ```
 //!
 //! # Render Graph Configuration
 //!
-//! Override the default render pipeline by implementing `configure_render_graph`:
+//! Extend or modify the default pipeline by adding passes against the
+//! built-in target handles:
 //!
 //! ## Bloom + Post-Processing
 //!
 //! ```ignore
-//! fn configure_render_graph(
-//!     &mut self,
-//!     graph: &mut RenderGraph<World>,
-//!     device: &wgpu::Device,
-//!     surface_format: wgpu::TextureFormat,
-//!     resources: RenderResources,
-//! ) {
-//!     let (width, height) = (1920, 1080);
+//! let (width, height) = (1920, 1080);
 //!
-//!     // Create intermediate bloom texture at half resolution
-//!     let bloom_texture = render_graph_add_color_texture(graph, "bloom")
-//!         .format(wgpu::TextureFormat::Rgba16Float)
-//!         .size(width / 2, height / 2)
-//!         .clear_color(wgpu::Color::BLACK)
-//!         .transient();
+//! // Create an intermediate bloom texture at half resolution
+//! let bloom_texture = render_graph_add_color_texture(graph, "bloom")
+//!     .format(wgpu::TextureFormat::Rgba16Float)
+//!     .size(width / 2, height / 2)
+//!     .clear_color(wgpu::Color::BLACK)
+//!     .transient();
 //!
-//!     // Add bloom pass
-//!     let bloom_pass = passes::BloomPass::new(device, width, height);
-//!     render_graph_pass(graph, Box::new(bloom_pass))
-//!         .read("hdr", resources.scene_color)
-//!         .write("bloom", bloom_texture);
+//! // Add bloom pass
+//! let bloom_pass = passes::BloomPass::new(device, width, height);
+//! render_graph_pass(graph, Box::new(bloom_pass))
+//!     .read("hdr", targets.scene_color)
+//!     .write("bloom", bloom_texture);
 //!
-//!     // Add post-process pass combining HDR + bloom
-//!     let postprocess = passes::PostProcessPass::new(device, surface_format, 0.3);
-//!     render_graph_pass(graph, Box::new(postprocess))
-//!         .read("hdr", resources.scene_color)
-//!         .read("bloom", bloom_texture)
-//!         .read("ssao", resources.ssao)
-//!         .write("output", resources.swapchain);
-//! }
+//! // Add post-process pass combining HDR + bloom
+//! let postprocess = passes::PostProcessPass::new(device, surface_format, 0.3);
+//! render_graph_pass(graph, Box::new(postprocess))
+//!     .read("hdr", targets.scene_color)
+//!     .read("bloom", bloom_texture)
+//!     .read("ssao", targets.ssao)
+//!     .write("output", targets.swapchain);
 //! ```
 //!
 //! ## SSAO (Screen-Space Ambient Occlusion)
 //!
 //! ```ignore
-//! fn configure_render_graph(...) {
-//!     // SSAO raw pass
-//!     let ssao_pass = passes::SsaoPass::new(device);
-//!     render_graph_pass(graph, Box::new(ssao_pass))
-//!         .read("depth", resources.depth)
-//!         .read("view_normals", resources.view_normals)
-//!         .write("ssao_raw", resources.ssao_raw);
+//! // SSAO raw pass
+//! let ssao_pass = passes::SsaoPass::new(device);
+//! render_graph_pass(graph, Box::new(ssao_pass))
+//!     .read("depth", targets.depth)
+//!     .read("view_normals", targets.view_normals)
+//!     .write("ssao_raw", targets.ssao_raw);
 //!
-//!     // SSAO blur pass for soft shadows
-//!     let ssao_blur = passes::SsaoBlurPass::new(device);
-//!     render_graph_pass(graph, Box::new(ssao_blur))
-//!         .read("ssao_raw", resources.ssao_raw)
-//!         .read("depth", resources.depth)
-//!         .read("view_normals", resources.view_normals)
-//!         .write("ssao", resources.ssao);
-//! }
+//! // SSAO blur pass for soft shadows
+//! let ssao_blur = passes::SsaoBlurPass::new(device);
+//! render_graph_pass(graph, Box::new(ssao_blur))
+//!     .read("ssao_raw", targets.ssao_raw)
+//!     .read("depth", targets.depth)
+//!     .read("view_normals", targets.view_normals)
+//!     .write("ssao", targets.ssao);
 //! ```
 //!
 //! # Graphics Settings
 //!
-//! Shading and post-processing live on `world.resources.render_settings`,
-//! debug overlays on `world.resources.debug_draw`:
+//! Shading and post-processing arrive in [`RenderInputs::settings`]
+//! ([`RenderSettings`](config::RenderSettings)), debug overlays in
+//! [`RenderInputs::debug_draw`] ([`DebugDraw`](config::DebugDraw)), and the
+//! per-frame scene snapshot in [`RenderInputs::scene`]
+//! ([`RendererState`](config::RendererState)). The caller composes these
+//! before the frame; passes only read them.
 //!
-//! ```ignore
-//! let render = &mut world.resources.render_settings;
+//! # Built-in Targets
 //!
-//! // Atmosphere/sky
-//! render.atmosphere = Atmosphere::Sky;        // Procedural sky
-//! render.atmosphere = Atmosphere::None;       // Solid clear color
-//! render.atmosphere = Atmosphere::Hdr;        // HDR skybox
-//!
-//! // Post-processing
-//! render.bloom_enabled = true;
-//! render.bloom_intensity = 0.3;               // 0.0 - 1.0
-//! render.ssao_enabled = true;
-//! render.ssao_radius = 0.5;                   // World units
-//! render.ssao_intensity = 1.0;
-//!
-//! // Visual aids
-//! world.resources.debug_draw.show_grid = true;       // Ground grid
-//! world.resources.renderer_state.show_cursor = true; // OS cursor visibility
-//! ```
-//!
-//! # Available RenderResources
-//!
-//! The `RenderResources` struct provides access to built-in textures:
+//! The graph declares these built-in textures:
 //!
 //! - `scene_color`: HDR render target (Rgba16Float)
 //! - `depth`: Depth buffer (reverse-Z)

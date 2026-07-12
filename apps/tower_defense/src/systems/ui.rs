@@ -1,6 +1,6 @@
 use crate::ecs::GameWorld;
-use nightshade::ecs::generational_registry::registry_entry_by_name_mut;
 use nightshade::prelude::*;
+use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn ui_update_system(game_world: &mut GameWorld, world: &mut World) {
     if game_world.resources.wave_announce_timer > 0.0 {

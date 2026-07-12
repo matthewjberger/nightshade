@@ -3,7 +3,7 @@ use freecs::Entity;
 use nalgebra_glm::Mat4;
 use std::collections::HashMap;
 
-pub use crate::render::skinning::{GpuSkinData, SkinningCache, skinned_world_bounds};
+use crate::render::skinning::{GpuSkinData, SkinningCache};
 
 /// Whether the live skinned entity set no longer matches the cache's recorded
 /// set, requiring a static-data rebuild.

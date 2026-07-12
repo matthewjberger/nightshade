@@ -11,7 +11,7 @@
 //!
 //! - `world.resources.window.timing` â€” frame timing ([`WindowTiming`](resources::WindowTiming))
 //! - `world.resources.input` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
-//! - `world.resources.render_settings` â€” shading and post-process settings ([`RenderSettings`](crate::ecs::graphics::resources::RenderSettings))
+//! - `world.resources.render_settings` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.resources.active_camera` â€” current camera entity
 //! - `world.resources.entities.names` â€” name-to-entity mapping
 
@@ -21,12 +21,12 @@ pub mod components {
         AnimationProperty, AnimationSampler, AnimationSamplerOutput, AnimationValue,
     };
     pub use crate::ecs::audio::components::{AudioBus, AudioListener, AudioSource};
-    pub use crate::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
     pub use crate::ecs::camera::components::{
         Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
         OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode, Smoothing,
         ViewportShading, ViewportUpdateMode,
     };
+    pub use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
 
     pub use crate::ecs::cloth::components::{Cloth, ClothPinning};
     pub use crate::ecs::decal::components::Decal;
@@ -34,14 +34,10 @@ pub mod components {
     pub use crate::ecs::light::components::{AreaLightShape, Light, LightType};
     pub use crate::ecs::lines::components::{Line, Lines, MAX_LINES};
     pub use crate::ecs::material::components::{
-        AlphaMode, Material, MaterialRef, MaterialVariantMapping, MaterialVariants,
+        MaterialRef, MaterialVariantMapping, MaterialVariants,
     };
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::morph::components::MorphWeights;
-    pub use crate::ecs::particles::components::{
-        ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
-        ParticleTextureUpload,
-    };
     pub use crate::ecs::physics::components::{
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
@@ -51,11 +47,10 @@ pub mod components {
     pub use crate::ecs::primitives::Guid;
     pub use crate::ecs::primitives::Name;
     pub use crate::ecs::primitives::Visibility;
-    pub use crate::ecs::primitives::{CameraCullingMask, CullingMask, RenderLayer};
+    pub use crate::ecs::primitives::{CameraCullingMask, CullingMask};
     pub use crate::ecs::skin::components::{Joint, Skin};
     pub use crate::ecs::text::components::{
-        Text, TextAlignment, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
-        VerticalAlignment,
+        Text, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
     };
     pub use crate::ecs::transform::components::{
         GlobalTransform, LocalTransform, Parent, Rotation,
@@ -66,20 +61,22 @@ pub mod components {
     };
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::water::components::Water;
+    pub use crate::render::material::{AlphaMode, Material};
+    pub use crate::render::particles::{
+        ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
+        ParticleTextureUpload,
+    };
+    pub use crate::render::render_layer::RenderLayer;
+    pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
 }
 
 pub mod resources {
     pub use crate::ecs::asset_state::AssetState;
     #[cfg(feature = "audio")]
     pub use crate::ecs::audio::resources::AudioEngine;
-    pub use crate::ecs::cloth::resources::{ClothMeshSync, Wind};
+    pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
-    pub use crate::ecs::graphics::resources::{
-        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
-        GpuDeviceType, GpuProfile, IblViews, MeshLodChain, MeshLodLevel, RenderSettings,
-        RendererState, TonemapAlgorithm, VertexSnap,
-    };
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
@@ -87,13 +84,21 @@ pub mod resources {
     pub use crate::ecs::physics::resources::PhysicsWorld;
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::resources::CachedPrefab;
-    pub use crate::ecs::prefab::resources::{AnimationCache, MeshCache, PrefabCache};
+    pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
     pub use crate::ecs::text::resources::{TextCache, TextState};
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
-    pub use crate::ecs::window::resources::{ViewportRect, Window, WindowTiming};
+    pub use crate::ecs::window::resources::{Window, WindowTiming};
     pub use crate::ecs::world::cleanup::CleanupState;
+    pub use crate::render::config::ViewportRect;
+    pub use crate::render::config::{
+        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
+        GpuDeviceType, GpuProfile, IblViews, MeshLodChain, MeshLodLevel, RenderSettings,
+        RendererState, TonemapAlgorithm, VertexSnap,
+    };
+    pub use crate::render::mesh_cache::MeshCache;
     pub use crate::render::wgpu::texture_cache::TextureCache;
+    pub use crate::render::wind::Wind;
 }
 
 pub mod events {
@@ -131,7 +136,7 @@ freecs::ecs! {
             animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
-            bounding_volume: crate::ecs::bounding_volume::components::BoundingVolume => BOUNDING_VOLUME,
+            bounding_volume: crate::render::bounding_volume::BoundingVolume => BOUNDING_VOLUME,
             camera_culling_mask: crate::ecs::primitives::CameraCullingMask => CAMERA_CULLING_MASK,
             camera_environment: crate::ecs::camera::components::CameraEnvironment => CAMERA_ENVIRONMENT,
             camera_post_process: crate::ecs::camera::components::CameraPostProcess => CAMERA_POST_PROCESS,
@@ -160,10 +165,10 @@ freecs::ecs! {
             navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
             pan_orbit_camera: crate::ecs::camera::components::PanOrbitCamera => PAN_ORBIT_CAMERA,
             parent: crate::ecs::transform::components::Parent => PARENT,
-            particle_emitter: crate::ecs::particles::components::ParticleEmitter => PARTICLE_EMITTER,
+            particle_emitter: crate::render::particles::ParticleEmitter => PARTICLE_EMITTER,
             physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
-            render_layer: crate::ecs::primitives::RenderLayer => RENDER_LAYER,
+            render_layer: crate::render::render_layer::RenderLayer => RENDER_LAYER,
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
             rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
             rotation: crate::ecs::transform::components::Rotation => ROTATION,
@@ -253,12 +258,12 @@ freecs::ecs! {
         file_watcher: crate::ecs::file_watcher::FileWatcher,
         gpu_picking: crate::ecs::gpu_picking::GpuPicking,
         #[cfg(feature = "grass")]
-        grass: crate::ecs::grass::GrassSettings,
-        render_settings: crate::ecs::graphics::resources::RenderSettings,
-        debug_draw: crate::ecs::graphics::resources::DebugDraw,
-        editor_selection: crate::ecs::graphics::resources::EditorSelection,
-        renderer_state: crate::ecs::graphics::resources::RendererState,
-        ibl_views: crate::ecs::graphics::resources::IblViews,
+        grass: crate::render::grass_config::GrassSettings,
+        render_settings: crate::render::config::RenderSettings,
+        debug_draw: crate::render::config::DebugDraw,
+        editor_selection: crate::render::config::EditorSelection,
+        renderer_state: crate::render::config::RendererState,
+        ibl_views: crate::render::config::IblViews,
         input: crate::ecs::input::resources::Input,
         is_runtime: bool,
         loading: crate::ecs::loading::LoadingState,
@@ -281,16 +286,16 @@ freecs::ecs! {
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         steam: crate::steam::SteamResources,
         #[cfg(feature = "terrain")]
-        terrain: crate::ecs::terrain::TerrainSettings,
+        terrain: crate::render::terrain_config::TerrainSettings,
         #[cfg(feature = "terrain")]
-        terrain_render: crate::ecs::terrain::TerrainRenderState,
+        terrain_render: crate::render::terrain_config::TerrainRenderState,
         text: crate::ecs::text::resources::TextState,
         texture_cache: crate::render::wgpu::texture_cache::TextureCache,
         transform_state: crate::ecs::transform::resources::TransformState,
         tweens: crate::ecs::tween::Tweens,
         ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
         user_interface: crate::ecs::ui::UserInterface,
-        wind: crate::ecs::cloth::resources::Wind,
+        wind: crate::render::wind::Wind,
         window: crate::ecs::window::resources::Window,
         world_id: u64,
     }

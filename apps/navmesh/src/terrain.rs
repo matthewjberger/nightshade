@@ -1,13 +1,14 @@
 use nalgebra_glm::{Quat, Vec3, vec3};
-use nightshade::ecs::bounding_volume::components::{BoundingVolume, OrientedBoundingBox};
-use nightshade::ecs::generational_registry::registry_add_reference;
-use nightshade::ecs::material::components::{Material, MaterialRef};
+use nightshade::ecs::material::components::MaterialRef;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::mesh::components::{Mesh, RenderMesh, Vertex};
 use nightshade::ecs::physics::components::{ColliderComponent, ColliderShape, RigidBodyComponent};
 use nightshade::ecs::physics::types::InteractionGroups;
-use nightshade::ecs::prefab::resources::mesh_cache_insert;
 use nightshade::prelude::*;
+use nightshade::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
+use nightshade::render::generational_registry::registry_add_reference;
+use nightshade::render::material::Material;
+use nightshade::render::mesh_cache::mesh_cache_insert;
 use noise::{Billow, Fbm, MultiFractal, NoiseFn, Perlin, RidgedMulti, Simplex};
 use serde::{Deserialize, Serialize};
 

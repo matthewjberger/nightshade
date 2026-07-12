@@ -1,14 +1,14 @@
-use crate::ecs::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
 use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{material_registry_insert, material_registry_remove_unused};
-use crate::ecs::mesh::components::{
+#[cfg(feature = "physics")]
+use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
+use crate::ecs::world::{Entity, NAME, World};
+use crate::render::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
+use crate::render::procedural_meshes::{
     create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
     create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
-#[cfg(feature = "physics")]
-use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
-use crate::ecs::prefab::resources::{mesh_cache_insert, mesh_cache_remove_unused};
-use crate::ecs::world::{Entity, NAME, World};
 use crate::render::wgpu::texture_cache::{
     texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
 };
@@ -21,7 +21,7 @@ pub enum EcsCommand {
     },
     ReloadMaterial {
         name: String,
-        material: Box<crate::ecs::material::components::Material>,
+        material: Box<crate::render::material::Material>,
     },
 }
 
@@ -175,7 +175,7 @@ pub fn register_material(
     world: &mut World,
     entity: Entity,
     name: String,
-    material: crate::ecs::material::components::Material,
+    material: crate::render::material::Material,
 ) {
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -253,7 +253,7 @@ pub fn process_commands_system(world: &mut World) {
 fn reload_material_command(
     world: &mut World,
     name: String,
-    new_material: crate::ecs::material::components::Material,
+    new_material: crate::render::material::Material,
 ) {
     use crate::ecs::world::MATERIAL_REF;
 
@@ -815,7 +815,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 pub fn set_material_with_textures(
     world: &mut World,
     entity: Entity,
-    material: crate::ecs::material::components::Material,
+    material: crate::render::material::Material,
 ) {
     let material_ref = world.core.get_material_ref(entity).cloned();
 
@@ -1180,7 +1180,7 @@ pub fn spawn_material(
     world: &mut World,
     entity: Entity,
     name: String,
-    material: crate::ecs::material::components::Material,
+    material: crate::render::material::Material,
 ) {
     material_registry_insert(
         &mut world.resources.assets.material_registry,

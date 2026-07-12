@@ -14,7 +14,6 @@
 //! - `world.core.remove_components(entity, MASK)` - Remove a component
 
 pub mod animation;
-pub mod asset_id;
 pub mod asset_state;
 #[cfg(all(
     feature = "assets",
@@ -34,13 +33,10 @@ pub mod file_watcher;
 pub mod decal;
 pub mod event;
 pub mod event_bus;
-pub mod generational_registry;
 #[cfg(feature = "gizmos")]
 pub mod gizmos;
 pub mod gpu_picking;
 pub mod graphics;
-#[cfg(feature = "grass")]
-pub mod grass;
 pub mod input;
 pub mod light;
 pub mod lines;

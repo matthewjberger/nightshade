@@ -934,7 +934,7 @@ impl From<u32> for ColorGradeMode {
 
 /// Post-process effects pass settings. Held in
 /// `Graphics::effects` as plain data; the `EffectsPass` reads it from
-/// `world.resources.renderer_state.effects` each frame and uploads
+/// `RendererState::effects` each frame and uploads
 /// `uniforms` (with `time`, and optionally `hue_rotation`, overridden
 /// for the current frame) to the GPU.
 #[derive(Clone, Debug)]
@@ -956,7 +956,7 @@ impl Default for EffectsState {
 
 /// User-tunable rendering settings. This is the subset of former
 /// `Graphics` state that materially controls how a scene is shaded and
-/// is safe to persist. Held as `world.resources.render_settings`.
+/// is safe to persist. Carried in `RenderInputs::settings`.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RenderSettings {
     /// Software frame rate cap in frames per second. `None` lets the
@@ -1061,7 +1061,7 @@ pub struct RenderSettings {
     pub ibl_blend_factor: f32,
 }
 
-/// Debug visualization toggles. Held as `world.resources.debug_draw`.
+/// Debug visualization toggles. Carried in `RenderInputs::debug_draw`.
 #[derive(Clone)]
 pub struct DebugDraw {
     /// Show debug grid overlay.
@@ -1090,7 +1090,7 @@ pub struct DebugDraw {
 }
 
 /// Editor/selection state used by tools that highlight entities. Held
-/// as `world.resources.editor_selection`.
+/// in `RenderInputs::editor_selection`.
 #[derive(Clone, Default)]
 pub struct EditorSelection {
     /// Entity to highlight with bounding volume.
@@ -1534,7 +1534,7 @@ pub struct RenderBounds {
 }
 
 /// Runtime-only renderer bookkeeping that apps generally do not edit
-/// directly. Held as `world.resources.renderer_state`.
+/// directly. Carried in `RenderInputs::scene`.
 #[derive(Clone)]
 pub struct RendererState {
     /// Internal bookkeeping for the macOS frame-rate auto-default.

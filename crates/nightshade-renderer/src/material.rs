@@ -306,7 +306,7 @@ pub struct Material {
 /// Mirrors the `Option<String>` fields on [`Material`] one-for-one so that
 /// hot-path code (per-frame material rebuild) can index a layer map by
 /// [`TextureId`] without re-hashing texture names. Lives in a parallel `Vec`
-/// alongside the the engine material registry entries; populated
+/// alongside the material registry entries the caller resolves; populated
 /// by `material_registry_resolve_uploaded_textures` from the renderer drain.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MaterialTextureIds {

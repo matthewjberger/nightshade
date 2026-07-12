@@ -509,7 +509,7 @@ impl NavMeshDemo {
                 .name_to_index
                 .get(&trunk_material_name)
             {
-                nightshade::ecs::generational_registry::registry_add_reference(
+                nightshade::render::generational_registry::registry_add_reference(
                     &mut world.resources.assets.material_registry.registry,
                     mat_index,
                 );
@@ -569,7 +569,7 @@ impl NavMeshDemo {
                     .name_to_index
                     .get(&cone_material_name)
                 {
-                    nightshade::ecs::generational_registry::registry_add_reference(
+                    nightshade::render::generational_registry::registry_add_reference(
                         &mut world.resources.assets.material_registry.registry,
                         mat_index,
                     );

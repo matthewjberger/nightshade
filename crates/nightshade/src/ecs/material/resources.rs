@@ -1,8 +1,8 @@
 //! Material registry resource.
 
-use crate::ecs::asset_id::{MaterialId, TextureId};
-use crate::ecs::generational_registry::*;
-use crate::ecs::material::components::{Material, MaterialTextureIds};
+use crate::render::asset_id::{MaterialId, TextureId};
+use crate::render::generational_registry::*;
+use crate::render::material::{Material, MaterialTextureIds};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
@@ -339,7 +339,7 @@ pub fn material_registry_iter(
 }
 
 fn hash_texture_transform(
-    transform: &crate::ecs::material::components::TextureTransform,
+    transform: &crate::render::material::TextureTransform,
     hasher: &mut std::collections::hash_map::DefaultHasher,
 ) {
     for component in &transform.offset {
