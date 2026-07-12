@@ -24,8 +24,8 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
             let was_dirty = instanced_mesh.dirty;
             let had_gpu_dirty = instanced_mesh.local_matrices_gpu_dirty();
             let parent_only_changed = instanced_mesh.update_world_matrices(&parent_transform);
-            instanced_mesh.take_dirty_custom_data_indices();
-            if was_dirty {
+            let custom_data_dirty = !instanced_mesh.take_dirty_custom_data_indices().is_empty();
+            if was_dirty || custom_data_dirty {
                 transform_dirty.push(entity);
             }
             if had_gpu_dirty {

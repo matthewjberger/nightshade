@@ -1938,6 +1938,7 @@ impl MeshPass {
             scene_bind_group_dirty: true,
             scratch_mesh_updates: Vec::new(),
             frame_dirty: None,
+            frame_dirty_consumed: true,
             dirty_mesh_ids: HashSet::new(),
             last_mesh_cache_clear_generation: 0,
         };

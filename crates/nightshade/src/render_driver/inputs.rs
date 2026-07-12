@@ -311,9 +311,14 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         resources.terrain_render = inputs.terrain_render;
     }
 
-    resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
+    if outputs.frame_executed {
+        resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
+    }
     for entity in outputs.force_render_cleared {
         resources.window.force_render_cameras.remove(&entity);
+    }
+    if let Some(unconsumed) = inputs.frame.mesh_frame_state {
+        resources.mesh_render_state.restore_unconsumed(unconsumed);
     }
     if let Some((screen_x, screen_y)) = inputs.frame.pick_request
         && resources.gpu_picking.pending_request.is_none()

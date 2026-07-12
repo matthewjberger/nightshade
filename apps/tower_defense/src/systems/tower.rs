@@ -5,7 +5,6 @@ use crate::ecs::{
 use crate::systems::{create_muzzle_flash, spawn_money_popup};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
-use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn spawn_tower(
     game_world: &mut GameWorld,
@@ -469,31 +468,23 @@ pub fn tower_shooting_system(game_world: &mut GameWorld, world: &mut World) {
                         nalgebra_glm::vec3(0.4 * animation_scale, 0.8, 0.4 * animation_scale);
                 }
 
-                if animation_scale > 1.05 {
-                    if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()
-                        && let Some(material) = registry_entry_by_name_mut(
-                            &mut world.resources.assets.material_registry.registry,
-                            &material_ref.name,
-                        )
-                    {
-                        let flash_intensity = (animation_scale - 1.0) * 5.0;
-                        material.emissive_factor = [
-                            tower.tower_type.color().x * 0.5 + flash_intensity,
-                            tower.tower_type.color().y * 0.5 + flash_intensity,
-                            tower.tower_type.color().z * 0.5 + flash_intensity,
-                        ];
-                    }
-                } else if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()
-                    && let Some(material) = registry_entry_by_name_mut(
-                        &mut world.resources.assets.material_registry.registry,
+                if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                    let flash_intensity = if animation_scale > 1.05 {
+                        (animation_scale - 1.0) * 5.0
+                    } else {
+                        0.0
+                    };
+                    material_registry_mutate(
+                        &mut world.resources.assets.material_registry,
                         &material_ref.name,
-                    )
-                {
-                    material.emissive_factor = [
-                        tower.tower_type.color().x * 0.5,
-                        tower.tower_type.color().y * 0.5,
-                        tower.tower_type.color().z * 0.5,
-                    ];
+                        |material| {
+                            material.emissive_factor = [
+                                tower.tower_type.color().x * 0.5 + flash_intensity,
+                                tower.tower_type.color().y * 0.5 + flash_intensity,
+                                tower.tower_type.color().z * 0.5 + flash_intensity,
+                            ];
+                        },
+                    );
                 }
             }
 

@@ -164,6 +164,10 @@ pub struct MeshPass {
     pub(super) scene_bind_group_dirty: bool,
     pub(super) scratch_mesh_updates: Vec<(u32, super::types::ModelMatrix)>,
     pub frame_dirty: Option<MeshRenderStateInner>,
+    /// Whether the pass's prepare ran since `frame_dirty` was last handed
+    /// over. When false, the next handoff merges instead of replacing so a
+    /// skipped or compose-only frame's dirty marks are not lost.
+    pub frame_dirty_consumed: bool,
     pub dirty_mesh_ids: HashSet<u32>,
     pub(super) last_mesh_cache_clear_generation: u64,
 }

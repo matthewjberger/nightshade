@@ -208,6 +208,17 @@ impl SkinnedMeshPass {
             if self.state().cached_cull_objects.is_empty() {
                 return;
             }
+            if !self.gpu_batching_enabled {
+                let commands = std::mem::take(&mut self.state_mut().cached_indirect_commands);
+                if !commands.is_empty() {
+                    queue.write_buffer(
+                        &self.gpu().indirect_commands_buffer,
+                        0,
+                        bytemuck::cast_slice(&commands),
+                    );
+                }
+                self.state_mut().cached_indirect_commands = commands;
+            }
             if bones_changed {
                 let palette = &configs.scene.render_skinning.bone_transforms;
                 let state = self.state_mut();
@@ -347,11 +358,13 @@ impl SkinnedMeshPass {
             }
 
             if objects.is_empty() {
+                self.gpu_batching_enabled = configs.scene.gpu_batching_enabled;
                 let materials_generation = configs.scene.render_materials.generation;
                 let skinned_objects_generation = configs.scene.skinned_objects_generation;
                 let state = self.state_mut();
                 state.cached_cull_objects = Vec::new();
                 state.cached_bounds_inputs = Vec::new();
+                state.cached_indirect_commands = Vec::new();
                 state.cached_materials_generation = materials_generation;
                 state.cached_skinned_objects_generation = skinned_objects_generation;
                 return;
@@ -549,6 +562,7 @@ impl SkinnedMeshPass {
                 0,
                 bytemuck::cast_slice(&commands),
             );
+            self.state_mut().cached_indirect_commands = commands;
 
             {
                 {

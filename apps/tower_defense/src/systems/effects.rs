@@ -2,7 +2,6 @@ use crate::ecs::{ENTITY_HANDLE, EffectType, EntityHandle, GameWorld, VISUAL_EFFE
 use crate::systems::despawn_entity;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
-use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn create_explosion_effect(game_world: &mut GameWorld, world: &mut World, position: Vec3) {
     for _ in 0..8 {
@@ -255,14 +254,15 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                             );
                         }
 
-                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()
-                            && let Some(material) = registry_entry_by_name_mut(
-                                &mut world.resources.assets.material_registry.registry,
+                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                            material_registry_mutate(
+                                &mut world.resources.assets.material_registry,
                                 &material_ref.name,
-                            )
-                        {
-                            let alpha = 1.0 - progress;
-                            material.base_color[3] = alpha * 0.8;
+                                |material| {
+                                    let alpha = 1.0 - progress;
+                                    material.base_color[3] = alpha * 0.8;
+                                },
+                            );
                         }
                     }
                     EffectType::PoisonBubble => {
@@ -270,15 +270,16 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                             transform.translation.y += delta_time * 0.5;
                         }
 
-                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned()
-                            && let Some(material) = registry_entry_by_name_mut(
-                                &mut world.resources.assets.material_registry.registry,
+                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                            material_registry_mutate(
+                                &mut world.resources.assets.material_registry,
                                 &material_ref.name,
-                            )
-                        {
-                            let progress = effect.age / effect.lifetime;
-                            let alpha = 1.0 - progress;
-                            material.base_color[3] = alpha * 0.6;
+                                |material| {
+                                    let progress = effect.age / effect.lifetime;
+                                    let alpha = 1.0 - progress;
+                                    material.base_color[3] = alpha * 0.6;
+                                },
+                            );
                         }
                     }
                 }

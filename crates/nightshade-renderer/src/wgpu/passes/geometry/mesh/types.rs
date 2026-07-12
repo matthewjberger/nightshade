@@ -364,16 +364,18 @@ impl MeshRenderState {
             || self.inner.full_rebuild_needed
     }
 
-    /// Returns entities whose transforms or materials changed this
-    /// frame. Used by the per-camera dirty-tracking path to decide
-    /// which viewports need to re-render based on frustum overlap with
-    /// the changed entities' bounding spheres.
+    /// Returns entities whose transforms, materials, or per-object state
+    /// (visibility, morph weights) changed this frame. Used by the
+    /// per-camera dirty-tracking path to decide which viewports need to
+    /// re-render based on frustum overlap with the changed entities'
+    /// bounding spheres.
     pub fn dirty_entities_for_culling(&self) -> impl Iterator<Item = Entity> + '_ {
         self.inner
             .transform_dirty
             .iter()
             .chain(self.inner.material_dirty.iter())
             .chain(self.inner.entities_added.iter())
+            .chain(self.inner.object_state_dirty.iter())
             .copied()
     }
 
@@ -407,5 +409,36 @@ impl MeshRenderState {
                 ..Default::default()
             },
         )
+    }
+
+    /// Merges a taken-but-never-consumed frame state back in, so dirty
+    /// marks captured for a frame that skipped rendering survive into the
+    /// next frame instead of being dropped.
+    pub fn restore_unconsumed(&mut self, unconsumed: MeshRenderStateInner) {
+        let newer = std::mem::replace(&mut self.inner, unconsumed);
+        self.inner.merge_newer(newer);
+    }
+}
+
+impl MeshRenderStateInner {
+    /// Folds a newer frame's dirty state into this one: sets union, flags
+    /// combine, and add/remove orders keep this state's entries first so
+    /// chronology is preserved.
+    pub fn merge_newer(&mut self, newer: MeshRenderStateInner) {
+        self.transform_dirty.extend(newer.transform_dirty);
+        self.material_dirty.extend(newer.material_dirty);
+        self.instanced_local_matrices_dirty
+            .extend(newer.instanced_local_matrices_dirty);
+        self.custom_data_overrides
+            .extend(newer.custom_data_overrides);
+        self.custom_data_dirty.extend(newer.custom_data_dirty);
+        self.object_state_dirty.extend(newer.object_state_dirty);
+        self.instanced_compute_dispatch_needed |= newer.instanced_compute_dispatch_needed;
+        self.instanced_meshes_changed |= newer.instanced_meshes_changed;
+        self.entities_added.extend(newer.entities_added);
+        self.entities_removed.extend(newer.entities_removed);
+        self.batches_invalidated |= newer.batches_invalidated;
+        self.full_rebuild_needed |= newer.full_rebuild_needed;
+        self.frame_initialized |= newer.frame_initialized;
     }
 }

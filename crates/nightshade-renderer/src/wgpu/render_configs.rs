@@ -157,6 +157,10 @@ pub struct FrameInputs {
 pub struct FrameOutputs {
     pub viewport_texture_sizes: Vec<(u32, u32)>,
     pub force_render_cleared: Vec<Entity>,
+    /// Whether the frame actually rendered. False when the surface was
+    /// occluded, timed out, or lost, so callers keep their previous
+    /// viewport state instead of applying this frame's empty outputs.
+    pub frame_executed: bool,
 }
 
 /// Everything the renderer consumes for one frame.

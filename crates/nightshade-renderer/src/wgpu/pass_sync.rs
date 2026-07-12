@@ -33,16 +33,26 @@ pub fn apply_frame_dirty_state(
         || !dirty_skinned.is_empty();
 
     if let Some(pass) = crate::wgpu::pass_access::shadow_depth_pass_mut(&mut renderer.graph) {
-        pass.shadow_scene_dirty = shadow_scene_dirty;
+        pass.shadow_scene_dirty |= shadow_scene_dirty;
     }
 
     if let Some(pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph) {
-        pass.frame_dirty = Some(frame_state);
         let dirty_ids: std::collections::HashSet<u32> = dirty_meshes
             .iter()
             .filter_map(|name| pass.mesh_id_for_name(name))
             .collect();
-        pass.dirty_mesh_ids = dirty_ids;
+        match pass.frame_dirty.take() {
+            Some(mut unconsumed) if !pass.frame_dirty_consumed => {
+                unconsumed.merge_newer(frame_state);
+                pass.frame_dirty = Some(unconsumed);
+                pass.dirty_mesh_ids.extend(dirty_ids);
+            }
+            _ => {
+                pass.frame_dirty = Some(frame_state);
+                pass.dirty_mesh_ids = dirty_ids;
+            }
+        }
+        pass.frame_dirty_consumed = false;
     }
 
     if let Some(pass) = crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph) {

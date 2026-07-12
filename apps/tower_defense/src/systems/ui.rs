@@ -1,6 +1,5 @@
 use crate::ecs::GameWorld;
 use nightshade::prelude::*;
-use nightshade::render::generational_registry::registry_entry_by_name_mut;
 
 pub fn ui_update_system(game_world: &mut GameWorld, world: &mut World) {
     if game_world.resources.wave_announce_timer > 0.0 {
@@ -17,12 +16,14 @@ pub fn tile_hover_system(game_world: &mut GameWorld, world: &mut World) {
         && let Some(&tile_entity) = game_world.resources.grid_tiles.get(&last_pos)
         && let Some(&original_color) = game_world.resources.tile_original_colors.get(&last_pos)
         && let Some(material_ref) = world.core.get_material_ref(tile_entity).cloned()
-        && let Some(material) = registry_entry_by_name_mut(
-            &mut world.resources.assets.material_registry.registry,
-            &material_ref.name,
-        )
     {
-        material.base_color = original_color.into();
+        material_registry_mutate(
+            &mut world.resources.assets.material_registry,
+            &material_ref.name,
+            |material| {
+                material.base_color = original_color.into();
+            },
+        );
     }
 
     if let Some(current_pos) = game_world.resources.mouse_grid_pos {
@@ -51,12 +52,14 @@ pub fn tile_hover_system(game_world: &mut GameWorld, world: &mut World) {
         if !is_start && !is_end && !is_path {
             if let Some(&tile_entity) = game_world.resources.grid_tiles.get(&current_pos)
                 && let Some(material_ref) = world.core.get_material_ref(tile_entity).cloned()
-                && let Some(material) = registry_entry_by_name_mut(
-                    &mut world.resources.assets.material_registry.registry,
-                    &material_ref.name,
-                )
             {
-                material.base_color = [1.0, 1.0, 0.0, 1.0];
+                material_registry_mutate(
+                    &mut world.resources.assets.material_registry,
+                    &material_ref.name,
+                    |material| {
+                        material.base_color = [1.0, 1.0, 0.0, 1.0];
+                    },
+                );
             }
             game_world.resources.last_hovered_tile = Some(current_pos);
         } else {

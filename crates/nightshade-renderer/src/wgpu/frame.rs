@@ -132,11 +132,6 @@ pub fn render_frame(
     #[cfg(feature = "assets")]
     crate::wgpu::ibl::sync_procedural_ibl(renderer, inputs);
 
-    let mesh_frame_state = inputs.frame.mesh_frame_state.take();
-    if let Some(frame_state) = mesh_frame_state {
-        pass_sync::apply_frame_dirty_state(renderer, frame_state, &mut inputs.mesh_cache);
-    }
-
     if let Some(lines_pass) = pass_sync::lines_pass_mut(&mut renderer.graph) {
         lines_pass.upload_lines(
             &renderer.device,
@@ -168,6 +163,14 @@ pub fn render_frame(
     let Some(surface_texture) = presentation::acquire_surface_frame(renderer) else {
         return Ok(());
     };
+    outputs.frame_executed = true;
+
+    // Taken only after a surface frame is secured: on a skipped frame the
+    // state stays in the inputs and the caller's restore merges it back, so
+    // dirty marks captured while occluded are not lost.
+    if let Some(frame_state) = inputs.frame.mesh_frame_state.take() {
+        pass_sync::apply_frame_dirty_state(renderer, frame_state, &mut inputs.mesh_cache);
+    }
 
     let active_camera_entities: std::collections::HashSet<freecs::Entity> = inputs
         .frame

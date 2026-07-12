@@ -3,7 +3,7 @@ use crate::ecs::material::resources::{material_registry_insert, material_registr
 #[cfg(feature = "physics")]
 use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
 use crate::ecs::world::{Entity, NAME, World};
-use crate::render::generational_registry::{registry_entry_by_name, registry_entry_by_name_mut};
+use crate::render::generational_registry::registry_entry_by_name;
 use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
 use crate::render::procedural_meshes::{
     create_cone_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
@@ -269,29 +269,11 @@ fn reload_material_command(
         texture_cache_add_reference(&mut world.resources.texture_cache, texture);
     }
 
-    if let Some(existing) = registry_entry_by_name_mut(
-        &mut world.resources.assets.material_registry.registry,
+    crate::ecs::material::resources::material_registry_mutate(
+        &mut world.resources.assets.material_registry,
         &name,
-    ) {
-        *existing = new_material;
-        let version = &mut world.resources.assets.material_registry.version;
-        *version = version.wrapping_add(1);
-        if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .name_to_index
-            .get(&name)
-        {
-            world
-                .resources
-                .assets
-                .material_registry
-                .dirty_indices
-                .push(index);
-        }
-    }
+        |existing| *existing = new_material,
+    );
 
     let entities_to_dirty: Vec<Entity> = world
         .core
@@ -853,12 +835,15 @@ pub fn set_material_with_textures(
     }
 
     if let Some(ref mat_ref) = material_ref {
-        if let Some(existing_mat) = registry_entry_by_name_mut(
-            &mut world.resources.assets.material_registry.registry,
+        crate::ecs::material::resources::material_registry_mutate(
+            &mut world.resources.assets.material_registry,
             &mat_ref.name,
-        ) {
-            *existing_mat = material;
-        }
+            |existing_mat| *existing_mat = material,
+        );
+        world
+            .resources
+            .mesh_render_state
+            .mark_material_dirty(entity);
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(

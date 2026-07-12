@@ -903,6 +903,7 @@ impl MeshPass {
         }
         self.current_world_id = incoming_world_id;
         self.frame_counter += 1;
+        self.frame_dirty_consumed = true;
         self.gpu_batching_enabled =
             configs.scene.gpu_batching_enabled && self.supports_multi_draw_count;
 
@@ -985,6 +986,7 @@ impl MeshPass {
         }
 
         if self.can_do_rebatch_only() {
+            self.sync_dynamic_object_state(configs, queue);
             self.rebatch_cached_entities(configs, device, queue);
             self.write_culling_uniforms(configs, queue);
             self.prepare_uniforms_and_lights(device, queue, configs);
@@ -992,6 +994,7 @@ impl MeshPass {
         }
 
         if self.can_do_material_reclass_only() {
+            self.sync_dynamic_object_state(configs, queue);
             self.material_reclass_update(configs, device, queue);
             self.write_culling_uniforms(configs, queue);
             self.prepare_uniforms_and_lights(device, queue, configs);
@@ -999,6 +1002,7 @@ impl MeshPass {
         }
 
         if self.can_do_instanced_tail_update(configs) {
+            self.sync_dynamic_object_state(configs, queue);
             self.instanced_tail_rebuild(configs, device, queue);
             self.write_culling_uniforms(configs, queue);
             self.prepare_uniforms_and_lights(device, queue, configs);

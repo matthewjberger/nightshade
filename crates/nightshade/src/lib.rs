@@ -662,7 +662,7 @@ pub mod prelude {
     pub use crate::ecs::loading::{
         load_texture_from_image_bytes, load_texture_pack_from_image_bytes,
     };
-    pub use crate::ecs::material::resources::material_registry_insert;
+    pub use crate::ecs::material::resources::{material_registry_insert, material_registry_mutate};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::navmesh::{NavMeshAgent, NavMeshAgentState};

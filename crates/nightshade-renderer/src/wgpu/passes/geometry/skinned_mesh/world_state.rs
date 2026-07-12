@@ -345,6 +345,11 @@ pub(super) struct SkinnedWorldRenderState {
     pub transparent_draw_groups: Vec<SkinnedDrawGroup>,
     pub cached_cull_objects: Vec<super::types::SkinnedCullObject>,
     pub cached_bounds_inputs: Vec<(usize, usize, f32)>,
+    /// The last-built indirect commands with zeroed instance counts. The CPU
+    /// batching path re-uploads these every frame so the cull shader's
+    /// `atomicAdd` never accumulates across frames; the GPU batching path
+    /// zeroes counts with its clear dispatch instead.
+    pub cached_indirect_commands: Vec<super::types::SkinnedDrawIndexedIndirect>,
     pub cached_materials_generation: u64,
     pub cached_skinned_objects_generation: u64,
 
@@ -368,6 +373,7 @@ impl SkinnedWorldRenderState {
             transparent_draw_groups: Vec::new(),
             cached_cull_objects: Vec::new(),
             cached_bounds_inputs: Vec::new(),
+            cached_indirect_commands: Vec::new(),
             cached_materials_generation: u64::MAX,
             cached_skinned_objects_generation: u64::MAX,
             last_used_frame: 0,

@@ -20,7 +20,7 @@ pub const CASCADE_SLOT_RESOLUTION: f32 = (CASCADE_ATLAS_SIZE / CASCADE_ATLAS_SLO
 /// camera pulls back instead of collapsing into the single 150..500 slab.
 pub const CASCADE_SPLIT_DISTANCES: [f32; NUM_SHADOW_CASCADES] = [10.0, 40.0, 90.0, 150.0];
 
-const CASCADE_REFERENCE_NEAR: f32 = 0.01;
+pub const CASCADE_REFERENCE_NEAR: f32 = 0.01;
 
 pub fn scale_cascade_splits(camera_near: f32) -> [f32; NUM_SHADOW_CASCADES] {
     // Shrink the cascades for very-near (tiny-scene) cameras, but never grow them

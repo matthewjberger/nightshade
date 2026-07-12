@@ -207,11 +207,18 @@ pub fn calculate_cascade_shadows(
             if let Some(camera_matrices) = camera_matrices {
                 let (fov, aspect, camera_near) = camera
                     .map(|camera| {
-                        (
-                            camera.projection.y_fov_rad,
-                            camera.projection.aspect,
-                            camera.projection.z_near,
-                        )
+                        // Orthographic cameras allow a zero or negative near
+                        // plane, which would collapse the cascade splits, so
+                        // the fit never goes below the reference near.
+                        let near = if camera.projection.orthographic.is_some() {
+                            camera
+                                .projection
+                                .z_near
+                                .max(crate::wgpu::passes::shadow_depth::CASCADE_REFERENCE_NEAR)
+                        } else {
+                            camera.projection.z_near
+                        };
+                        (camera.projection.y_fov_rad, camera.projection.aspect, near)
                     })
                     .unwrap_or((std::f32::consts::FRAC_PI_4, 1.78, 0.1));
 

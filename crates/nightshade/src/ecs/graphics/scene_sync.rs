@@ -18,6 +18,7 @@ pub struct RenderSceneSync {
     pub materials_dirty: bool,
     pub materials_initialized: bool,
     pub materials_version_seen: u64,
+    pub materials_names_version_seen: u64,
 }
 
 #[derive(Default)]
@@ -90,6 +91,26 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         }
         if mask & crate::ecs::world::CASTS_SHADOW != 0 {
             dirt.entity_lists = true;
+        }
+        if mask & crate::ecs::world::GLOBAL_TRANSFORM != 0
+            && let Some(entity_mask) = world.core.component_mask(entity)
+        {
+            if entity_mask & (crate::ecs::world::RENDER_MESH | crate::ecs::world::INSTANCED_MESH)
+                != 0
+            {
+                dirt.object_refresh.insert(entity);
+                dirt.instanced_refresh.insert(entity);
+                dirt.entity_lists = true;
+            }
+            if entity_mask & crate::ecs::world::SKIN != 0 {
+                dirt.entity_lists = true;
+                dirt.skinned_objects = true;
+            }
+            dirt.lights |= entity_mask & crate::ecs::world::LIGHT != 0;
+            dirt.decals |= entity_mask & crate::ecs::world::DECAL != 0;
+            dirt.water |= entity_mask & crate::ecs::world::WATER != 0;
+            dirt.cloth |= entity_mask & crate::ecs::world::CLOTH != 0;
+            dirt.texts |= entity_mask & crate::ecs::world::TEXT != 0;
         }
         if mask & crate::ecs::world::BOUNDING_VOLUME != 0 {
             dirt.bounds_refresh.insert(entity);

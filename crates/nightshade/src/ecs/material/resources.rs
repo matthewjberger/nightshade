@@ -37,6 +37,10 @@ pub struct MaterialRegistry {
     /// Registry indices mutated since the scene sync last drained them, so
     /// the resolved table refreshes only the entries that changed.
     pub dirty_indices: Vec<u32>,
+    /// Monotonic version bumped only when the set of registered names
+    /// changes, so the scene sync knows to re-bind entities whose material
+    /// name had no registry entry yet.
+    pub names_version: u64,
 }
 
 impl Default for MaterialRegistry {
@@ -50,6 +54,7 @@ impl Default for MaterialRegistry {
             content_hash_to_name: HashMap::new(),
             version: 0,
             dirty_indices: Vec::new(),
+            names_version: 0,
         };
 
         let default_materials = [
@@ -141,6 +146,9 @@ pub fn material_registry_insert(
     material: Material,
 ) -> MaterialId {
     registry.version = registry.version.wrapping_add(1);
+    if !registry.registry.name_to_index.contains_key(&name) {
+        registry.names_version = registry.names_version.wrapping_add(1);
+    }
     let new_texture_names = collect_material_texture_names(&material);
     if let Some(&existing_index) = registry.registry.name_to_index.get(&name)
         && let Some(existing_material) = registry.registry.entries[existing_index as usize].as_ref()
@@ -333,8 +341,57 @@ pub fn material_registry_remove_unused(registry: &mut MaterialRegistry) -> Vec<S
 
     if !removed.is_empty() {
         registry.version = registry.version.wrapping_add(1);
+        registry.names_version = registry.names_version.wrapping_add(1);
     }
     removed
+}
+
+/// Mutates a registered material in place through the registry's change
+/// tracking: the entry's texture reverse index and pending resolve queue are
+/// maintained when texture references change, and the registry version and
+/// dirty index are stamped so the renderer-facing table refreshes the entry.
+/// Raw `registry_entry_by_name_mut` writes bypass that tracking and never
+/// reach the renderer. Returns false when no material has the name.
+pub fn material_registry_mutate(
+    registry: &mut MaterialRegistry,
+    name: &str,
+    mutate: impl FnOnce(&mut Material),
+) -> bool {
+    let Some(&index) = registry.registry.name_to_index.get(name) else {
+        return false;
+    };
+    let Some(material) = registry
+        .registry
+        .entries
+        .get_mut(index as usize)
+        .and_then(|entry| entry.as_mut())
+    else {
+        return false;
+    };
+    let previous_texture_names = collect_material_texture_names(material);
+    mutate(material);
+    let new_texture_names = collect_material_texture_names(material);
+    if previous_texture_names != new_texture_names {
+        for previous_name in previous_texture_names {
+            if let Some(materials) = registry.texture_name_to_materials.get_mut(&previous_name) {
+                materials.remove(&index);
+                if materials.is_empty() {
+                    registry.texture_name_to_materials.remove(&previous_name);
+                }
+            }
+        }
+        for texture_name in new_texture_names {
+            registry
+                .texture_name_to_materials
+                .entry(texture_name)
+                .or_default()
+                .insert(index);
+        }
+        registry.pending_resolve.push(index);
+    }
+    registry.version = registry.version.wrapping_add(1);
+    registry.dirty_indices.push(index);
+    true
 }
 
 /// Iterates over all materials as (name, material) pairs.
