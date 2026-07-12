@@ -529,7 +529,7 @@ pub mod filesystem;
 pub mod ecs;
 pub mod logging;
 #[cfg(feature = "runtime")]
-pub mod render;
+pub use nightshade_renderer as render;
 pub mod render_driver;
 #[cfg(feature = "runtime")]
 pub mod run;

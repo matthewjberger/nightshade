@@ -50,6 +50,7 @@ core = [
 
 assets = [
     "core",
+    "nightshade-renderer/assets",
     "dep:gltf",
     "dep:half",
     "dep:image",
@@ -80,6 +81,7 @@ runtime = [
 
 engine = [
     "runtime",
+    "nightshade-renderer/engine",
     "assets",
     "scene_graph",
     "picking",
@@ -96,12 +98,12 @@ engine = [
 
 shell = []
 audio = ["dep:kira"]
-debug_render = []
-egui = ["dep:egui", "dep:egui_extras", "dep:egui-wgpu", "dep:egui-winit"]
+debug_render = ["nightshade-renderer/debug_render"]
+egui = ["dep:egui", "dep:egui_extras", "dep:egui-wgpu", "dep:egui-winit", "nightshade-renderer/egui"]
 gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
-screenshot = ["dep:image"]
+screenshot = ["dep:image", "nightshade-renderer/screenshot"]
 navmesh = []
 navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs"]
@@ -120,10 +122,10 @@ full = [
     "terrain",
 ]
 
-grass = []
-terrain = ["grass"]
+grass = ["nightshade-renderer/grass"]
+terrain = ["grass", "nightshade-renderer/terrain"]
 
-wgpu = ["dep:wgpu", "dep:naga_oil", "dep:nightshade-rendergraph", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
+wgpu = ["dep:wgpu", "dep:naga_oil", "dep:nightshade-rendergraph", "nightshade-renderer/wgpu", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
 tracing = ["dep:tracing-appender", "dep:chrono"]
 tracy = ["tracing", "dep:tracing-tracy"]
@@ -169,6 +171,7 @@ taffy = { workspace = true }
 
 wgpu = { workspace = true, optional = true }
 naga_oil = { workspace = true, optional = true }
+nightshade-renderer = { workspace = true }
 nightshade-rendergraph = { workspace = true, optional = true }
 
 egui = { workspace = true, optional = true }
