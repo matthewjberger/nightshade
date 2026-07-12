@@ -20,7 +20,7 @@ impl SkinnedMeshPass {
         self.frame_counter += 1;
         self.state_mut().last_used_frame = self.frame_counter;
 
-        self.sync_skinned_meshes(device, queue, &configs.mesh_cache);
+        let mesh_registry_changed = self.sync_skinned_meshes(device, queue, &configs.mesh_cache);
 
         let mut buffers_resized = false;
         let max_buffer_size = device.limits().max_buffer_size as usize;
@@ -197,6 +197,7 @@ impl SkinnedMeshPass {
 
         let statics_dirty = skinned_set_changed
             || buffers_resized
+            || mesh_registry_changed
             || self.gpu_batching_enabled != configs.scene.gpu_batching_enabled
             || self.state().cached_materials_generation
                 != configs.scene.render_materials.generation

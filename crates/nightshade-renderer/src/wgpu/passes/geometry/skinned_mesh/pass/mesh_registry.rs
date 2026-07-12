@@ -35,13 +35,18 @@ impl SkinnedMeshPass {
             .retain(|name, _| texture_cache.registry.name_to_index.contains_key(name));
     }
 
+    /// Returns true when the mesh registry changed structurally: the cache
+    /// generation reset, a mesh was registered, or a mesh was dropped. In-place
+    /// vertex rewrites with an unchanged layout return false.
     pub(in super::super) fn sync_skinned_meshes(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         mesh_cache: &crate::mesh_cache::MeshCache,
-    ) {
+    ) -> bool {
+        let mut registry_changed = false;
         if mesh_cache.clear_generation != self.last_mesh_cache_clear_generation {
+            registry_changed = true;
             self.last_mesh_cache_clear_generation = mesh_cache.clear_generation;
             self.skinned_meshes.clear();
             self.skinned_mesh_data.clear();
@@ -69,6 +74,7 @@ impl SkinnedMeshPass {
                     }
                 }
                 (Some(mesh_id), None) => {
+                    registry_changed = true;
                     if let Some(slot) = self.skinned_mesh_data.get_mut(mesh_id as usize) {
                         slot.vertex_count = 0;
                         slot.index_count = 0;
@@ -270,9 +276,11 @@ impl SkinnedMeshPass {
             });
 
             self.skinned_meshes.insert(name.clone(), mesh_id);
+            registry_changed = true;
 
             self.current_skinned_vertex_offset += skinned_vertices.len() as u32;
             self.current_skinned_index_offset += mesh.indices.len() as u32;
         }
+        registry_changed
     }
 }
