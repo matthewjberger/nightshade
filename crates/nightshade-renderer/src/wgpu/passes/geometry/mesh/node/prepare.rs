@@ -286,6 +286,8 @@ impl MeshPass {
             }
         }
         self.state_mut().cached_materials_data = materials.materials_data.clone();
+        self.state_mut().cached_render_materials_generation =
+            configs.scene.render_materials.generation;
         self.rebuild_instance_bind_group(device);
         materials
     }
@@ -943,6 +945,18 @@ impl MeshPass {
                 fd.full_rebuild_needed = true;
             }
             self.resize_full_rebuild_pending = false;
+        }
+
+        // Materials resolve in the loading drain after the scene sync snapshots
+        // the table, so a material registered and first built in the same frame
+        // converts against unresolved texture ids. When the table generation
+        // moves, re-convert and diff-upload it so those entries heal on the
+        // next frame instead of waiting for an unrelated rebuild.
+        if frame_initialized
+            && self.state().cached_render_materials_generation
+                != configs.scene.render_materials.generation
+        {
+            self.collect_and_upload_materials(configs, device, queue);
         }
 
         if frame_initialized && !has_any_changes {

@@ -516,6 +516,7 @@ pub(super) struct WorldRenderState {
 
     pub cached_name_to_material_id: HashMap<String, u32>,
     pub cached_material_map: HashMap<Entity, u32>,
+    pub cached_render_materials_generation: u64,
     pub cached_materials_data: Vec<MaterialData>,
     pub cached_custom_data: Vec<[f32; 4]>,
     pub combos: HashMap<(u32, u32, u32), u32>,
@@ -576,6 +577,7 @@ impl WorldRenderState {
 
             cached_name_to_material_id: HashMap::new(),
             cached_material_map: HashMap::new(),
+            cached_render_materials_generation: u64::MAX,
             cached_materials_data: Vec::new(),
             cached_custom_data: Vec::new(),
             combos: HashMap::new(),
