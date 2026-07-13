@@ -1,4 +1,4 @@
-use crate::ecs::{ENEMY, SandboxWorld, Screen, TitleHandles};
+use crate::ecs::{ENEMY, GAME, SandboxResources, Screen, TitleHandles};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
 use crate::systems::world::enemies;
@@ -94,12 +94,12 @@ pub fn build(tree: &mut UiTreeBuilder) -> TitleHandles {
     }
 }
 
-pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    if !matches!(sandbox_world.resources.screen.current, Screen::Title) {
+pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
+    if !matches!(sandbox_world.screen.current, Screen::Title) {
         return;
     }
-    let play = sandbox_world.resources.ui_handles.title.play_button;
-    let quit = sandbox_world.resources.ui_handles.title.quit_button;
+    let play = sandbox_world.ui_handles.title.play_button;
+    let quit = sandbox_world.ui_handles.title.quit_button;
     let mut clicked_play = false;
     let mut clicked_quit = false;
     for entity in ui_button_clicks(world) {
@@ -110,8 +110,12 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
         }
     }
     if clicked_play {
-        if sandbox_world.query_entities(ENEMY).next().is_none() {
-            enemies::spawn(sandbox_world, world);
+        if world.ecs.worlds[GAME]
+            .query_entities(ENEMY)
+            .next()
+            .is_none()
+        {
+            enemies::spawn(world);
         }
         lifecycle::enter(sandbox_world, world, Screen::InGame);
     }

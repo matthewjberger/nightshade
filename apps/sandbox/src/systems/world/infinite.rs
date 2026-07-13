@@ -1,4 +1,4 @@
-use crate::ecs::SandboxWorld;
+use crate::ecs::SandboxResources;
 use crate::systems::world::textures::{FLOOR_TEXTURE, prototype_material};
 use nightshade::prelude::*;
 
@@ -12,25 +12,24 @@ const PARKED_HEIGHT: f32 = -10_000.0;
 /// is imperceptible. Its top sits a hair below the level floor so the
 /// two never z-fight where they overlap. The slab is parked far below
 /// the world instead of despawned when the mode turns off.
-pub fn set_enabled(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: bool) {
-    if sandbox_world.resources.infinite_world.enabled == enabled {
+pub fn set_enabled(sandbox_world: &mut SandboxResources, world: &mut World, enabled: bool) {
+    if sandbox_world.infinite_world.enabled == enabled {
         return;
     }
-    sandbox_world.resources.infinite_world.enabled = enabled;
+    sandbox_world.infinite_world.enabled = enabled;
     apply_ground_height(sandbox_world, world);
 }
 
-pub fn set_suppressed(sandbox_world: &mut SandboxWorld, world: &mut World, suppressed: bool) {
-    if sandbox_world.resources.infinite_world.suppressed == suppressed {
+pub fn set_suppressed(sandbox_world: &mut SandboxResources, world: &mut World, suppressed: bool) {
+    if sandbox_world.infinite_world.suppressed == suppressed {
         return;
     }
-    sandbox_world.resources.infinite_world.suppressed = suppressed;
+    sandbox_world.infinite_world.suppressed = suppressed;
     apply_ground_height(sandbox_world, world);
 }
 
-fn apply_ground_height(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    let active = sandbox_world.resources.infinite_world.enabled
-        && !sandbox_world.resources.infinite_world.suppressed;
+fn apply_ground_height(sandbox_world: &mut SandboxResources, world: &mut World) {
+    let active = sandbox_world.infinite_world.enabled && !sandbox_world.infinite_world.suppressed;
     let ground = ensure_ground(sandbox_world, world);
     let height = if active {
         GROUND_CENTER_HEIGHT
@@ -48,20 +47,18 @@ fn apply_ground_height(sandbox_world: &mut SandboxWorld, world: &mut World) {
     }
 }
 
-pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
-    if !sandbox_world.resources.infinite_world.enabled
-        || sandbox_world.resources.infinite_world.suppressed
-    {
+pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+    if !sandbox_world.infinite_world.enabled || sandbox_world.infinite_world.suppressed {
         return;
     }
     recenter(sandbox_world, world);
 }
 
-fn recenter(sandbox_world: &SandboxWorld, world: &mut World) {
-    let Some(ground) = sandbox_world.resources.infinite_world.ground else {
+fn recenter(sandbox_world: &SandboxResources, world: &mut World) {
+    let Some(ground) = sandbox_world.infinite_world.ground else {
         return;
     };
-    let Some(player_entity) = sandbox_world.resources.player.player_entity else {
+    let Some(player_entity) = sandbox_world.player.player_entity else {
         return;
     };
     let Some(player_translation) = world.ecs.worlds[CORE]
@@ -85,8 +82,8 @@ fn recenter(sandbox_world: &SandboxWorld, world: &mut World) {
     if moved {}
 }
 
-fn ensure_ground(sandbox_world: &mut SandboxWorld, world: &mut World) -> Entity {
-    if let Some(ground) = sandbox_world.resources.infinite_world.ground {
+fn ensure_ground(sandbox_world: &mut SandboxResources, world: &mut World) -> Entity {
+    if let Some(ground) = sandbox_world.infinite_world.ground {
         return ground;
     }
     let mut material = prototype_material(FLOOR_TEXTURE, Vec3::new(0.55, 0.6, 0.7), 0.85, 0.05);
@@ -102,6 +99,6 @@ fn ensure_ground(sandbox_world: &mut SandboxWorld, world: &mut World) -> Entity 
     {
         name.0 = "InfiniteGround".to_string();
     }
-    sandbox_world.resources.infinite_world.ground = Some(entity);
+    sandbox_world.infinite_world.ground = Some(entity);
     entity
 }

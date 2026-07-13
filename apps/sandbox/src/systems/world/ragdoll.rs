@@ -1,4 +1,4 @@
-use crate::ecs::{RagdollLink, RagdollMode, SandboxWorld};
+use crate::ecs::{RagdollLink, RagdollMode, SandboxResources};
 use crate::systems::world::ik::{rotation_between, world_pose_of};
 use crate::systems::world::pose::{find_bone, joint_rotation, quat_to_rotation_vector};
 use nightshade::ecs::physics::joints::{SphericalJoint, create_spherical_joint};
@@ -48,8 +48,8 @@ const SETTLE_SPEED: f32 = 0.7;
 const SETTLE_SECONDS: f32 = 0.9;
 const HIPS_FEET_DROP: f32 = 0.55;
 
-pub fn set_mode(sandbox_world: &mut SandboxWorld, world: &mut World, mode: RagdollMode) {
-    let current = sandbox_world.resources.ragdoll.mode;
+pub fn set_mode(sandbox_world: &mut SandboxResources, world: &mut World, mode: RagdollMode) {
+    let current = sandbox_world.ragdoll.mode;
     if current == mode {
         return;
     }
@@ -57,30 +57,30 @@ pub fn set_mode(sandbox_world: &mut SandboxWorld, world: &mut World, mode: Ragdo
         teardown(sandbox_world, world);
         return;
     }
-    if sandbox_world.resources.ragdoll.links.is_empty() {
+    if sandbox_world.ragdoll.links.is_empty() {
         build(sandbox_world, world);
     }
-    if sandbox_world.resources.ragdoll.links.is_empty() {
+    if sandbox_world.ragdoll.links.is_empty() {
         return;
     }
     if mode == RagdollMode::Match {
         capture_match_targets(sandbox_world, world);
     }
-    let state = &mut sandbox_world.resources.ragdoll;
+    let state = &mut sandbox_world.ragdoll;
     state.mode = mode;
     state.settle_timer = 0.0;
 }
 
-pub fn activate_from_impact(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn activate_from_impact(sandbox_world: &mut SandboxResources, world: &mut World) {
     set_mode(sandbox_world, world, RagdollMode::Active);
-    sandbox_world.resources.ragdoll.auto_recover = true;
+    sandbox_world.ragdoll.auto_recover = true;
 }
 
-pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
+pub fn update(sandbox_world: &mut SandboxResources, world: &mut World, body: Entity) {
     let delta_time = world.resources.window.timing.delta_time;
-    sandbox_world.resources.ragdoll.flail_clock += delta_time;
+    sandbox_world.ragdoll.flail_clock += delta_time;
 
-    match sandbox_world.resources.ragdoll.mode {
+    match sandbox_world.ragdoll.mode {
         RagdollMode::Off => return,
         RagdollMode::Limp => {}
         RagdollMode::Match => drive_toward_captured_targets(sandbox_world, world),
@@ -92,7 +92,7 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity)
     let hips_velocity = hips_link(sandbox_world)
         .and_then(|link| physics_world_linear_velocity(&world.resources.physics, link.body))
         .unwrap_or_else(Vec3::zeros);
-    let state = &mut sandbox_world.resources.ragdoll;
+    let state = &mut sandbox_world.ragdoll;
     if state.auto_recover {
         if hips_velocity.norm() < SETTLE_SPEED {
             state.settle_timer += delta_time;
@@ -106,31 +106,33 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity)
     }
 }
 
-fn hips_link(sandbox_world: &SandboxWorld) -> Option<&RagdollLink> {
-    let hips = sandbox_world.resources.pose.hips?;
+fn hips_link(sandbox_world: &SandboxResources) -> Option<&RagdollLink> {
+    let hips = sandbox_world.pose.hips?;
     sandbox_world
-        .resources
         .ragdoll
         .links
         .iter()
         .find(|link| link.bone == hips)
 }
 
-fn bones_of_model(sandbox_world: &SandboxWorld, world: &World) -> Option<HashMap<String, Entity>> {
-    let model = sandbox_world.resources.character.model?;
+fn bones_of_model(
+    sandbox_world: &SandboxResources,
+    world: &World,
+) -> Option<HashMap<String, Entity>> {
+    let model = sandbox_world.character.model?;
     world.ecs.worlds[CORE]
         .get::<nightshade::ecs::animation::components::AnimationPlayer>(model)
         .map(|player| player.bone_name_to_entity.clone())
 }
 
-fn build(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    let Some(body) = sandbox_world.resources.character.body else {
+fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
+    let Some(body) = sandbox_world.character.body else {
         return;
     };
     let Some(bones) = bones_of_model(sandbox_world, world) else {
         return;
     };
-    let launch_velocity = sandbox_world.resources.character.velocity;
+    let launch_velocity = sandbox_world.character.velocity;
 
     let mut links = Vec::new();
     let mut link_by_suffix: HashMap<&str, usize> = HashMap::new();
@@ -265,10 +267,10 @@ fn build(sandbox_world: &mut SandboxWorld, world: &mut World) {
         );
     }
 
-    sandbox_world.resources.ragdoll.links = links;
+    sandbox_world.ragdoll.links = links;
 }
 
-fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
+fn teardown(sandbox_world: &mut SandboxResources, world: &mut World) {
     let hips_pose = hips_link(sandbox_world).and_then(|link| {
         world.ecs.worlds[CORE]
             .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
@@ -283,7 +285,6 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
     });
 
     let bodies: Vec<Entity> = sandbox_world
-        .resources
         .ragdoll
         .links
         .iter()
@@ -292,7 +293,7 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
     if !bodies.is_empty() {
         despawn_entities_with_cache_cleanup(world, &bodies);
     }
-    let state = &mut sandbox_world.resources.ragdoll;
+    let state = &mut sandbox_world.ragdoll;
     state.links.clear();
     state.mode = RagdollMode::Off;
     state.auto_recover = false;
@@ -300,7 +301,7 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
 
     if let Some((hips_position, hips_velocity)) = hips_pose {
         let feet = hips_position - Vec3::new(0.0, HIPS_FEET_DROP, 0.0);
-        let character = &mut sandbox_world.resources.character;
+        let character = &mut sandbox_world.character;
         character.velocity = hips_velocity;
         character.grounded = false;
         if let Some(body) = character.body
@@ -313,12 +314,11 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
     }
 }
 
-fn capture_match_targets(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    let Some(body) = sandbox_world.resources.character.body else {
+fn capture_match_targets(sandbox_world: &mut SandboxResources, world: &mut World) {
+    let Some(body) = sandbox_world.character.body else {
         return;
     };
     let targets: Vec<(Entity, nalgebra_glm::Quat)> = sandbox_world
-        .resources
         .ragdoll
         .links
         .iter()
@@ -326,15 +326,15 @@ fn capture_match_targets(sandbox_world: &mut SandboxWorld, world: &mut World) {
             world_pose_of(world, body, link.bone).map(|pose| (link.bone, pose.rotation))
         })
         .collect();
-    for link in &mut sandbox_world.resources.ragdoll.links {
+    for link in &mut sandbox_world.ragdoll.links {
         if let Some((_, rotation)) = targets.iter().find(|(bone, _)| *bone == link.bone) {
             link.target_world = *rotation;
         }
     }
 }
 
-fn drive_toward_captured_targets(sandbox_world: &SandboxWorld, world: &mut World) {
-    for link in &sandbox_world.resources.ragdoll.links {
+fn drive_toward_captured_targets(sandbox_world: &SandboxResources, world: &mut World) {
+    for link in &sandbox_world.ragdoll.links {
         let target = link.target_world;
         apply_match_torque(world, link, target);
     }
@@ -344,8 +344,8 @@ fn drive_toward_captured_targets(sandbox_world: &SandboxWorld, world: &mut World
 /// drive every limb toward it with joint torques. Fast flight flails
 /// between two poses, falling near the ground curls up, and fast
 /// horizontal travel puts the arms out front.
-fn drive_toward_pose(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
-    let pose = &sandbox_world.resources.pose;
+fn drive_toward_pose(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
+    let pose = &sandbox_world.pose;
     let velocity = hips_link(sandbox_world)
         .and_then(|link| physics_world_linear_velocity(&world.resources.physics, link.body))
         .unwrap_or_else(Vec3::zeros);
@@ -354,8 +354,7 @@ fn drive_toward_pose(sandbox_world: &SandboxWorld, world: &mut World, body: Enti
 
     let keyframe_index = if speed > FLAIL_SPEED {
         let phase =
-            (sandbox_world.resources.ragdoll.flail_clock * FLAIL_FREQUENCY * std::f32::consts::TAU)
-                .sin();
+            (sandbox_world.ragdoll.flail_clock * FLAIL_FREQUENCY * std::f32::consts::TAU).sin();
         if phase > 0.0 {
             pose.air_index
         } else {
@@ -376,18 +375,17 @@ fn drive_toward_pose(sandbox_world: &SandboxWorld, world: &mut World, body: Enti
         return;
     };
 
-    let Some(model) = sandbox_world.resources.character.model else {
+    let Some(model) = sandbox_world.character.model else {
         return;
     };
     let link_bones: Vec<Entity> = sandbox_world
-        .resources
         .ragdoll
         .links
         .iter()
         .map(|link| link.bone)
         .collect();
     let target_worlds = keyframe_world_rotations(world, body, model, &keyframe.joints, &link_bones);
-    for link in &sandbox_world.resources.ragdoll.links {
+    for link in &sandbox_world.ragdoll.links {
         if let Some(&target) = target_worlds.get(&link.bone) {
             apply_match_torque(world, link, target);
         }
@@ -450,11 +448,11 @@ fn keyframe_world_rotations(
 /// Copy the physics bodies back onto the skeleton: the character body
 /// follows the pelvis, the hips bone translates to the pelvis body,
 /// and every mapped bone takes its orientation from its proxy.
-fn sync_bones_from_bodies(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
-    let Some(model) = sandbox_world.resources.character.model else {
+fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
+    let Some(model) = sandbox_world.character.model else {
         return;
     };
-    let hips_bone = sandbox_world.resources.pose.hips;
+    let hips_bone = sandbox_world.pose.hips;
     let hips_position = hips_link(sandbox_world).and_then(|link| {
         world.ecs.worlds[CORE]
             .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
@@ -472,7 +470,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxWorld, world: &mut World, body:
     }
 
     let mut world_rotation_by_bone: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
-    for link in &sandbox_world.resources.ragdoll.links {
+    for link in &sandbox_world.ragdoll.links {
         if let Some(transform) =
             world.ecs.worlds[CORE]
                 .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)

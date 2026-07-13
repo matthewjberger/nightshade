@@ -1,4 +1,4 @@
-use crate::ecs::{PauseHandles, SandboxWorld, Screen};
+use crate::ecs::{PauseHandles, SandboxResources, Screen};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
 use crate::systems::world::{character, enemies, grass, infinite, player, rocks, terrain};
@@ -256,17 +256,17 @@ pub fn set_checkbox_value(world: &mut World, checkbox: Entity, value: bool) {
     }
 }
 
-pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    if !matches!(sandbox_world.resources.screen.current, Screen::Paused) {
+pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
+    if !matches!(sandbox_world.screen.current, Screen::Paused) {
         return;
     }
-    let resume = sandbox_world.resources.ui_handles.pause.resume_button;
-    let main_menu = sandbox_world.resources.ui_handles.pause.main_menu_button;
-    let quit = sandbox_world.resources.ui_handles.pause.quit_button;
-    let settings = sandbox_world.resources.ui_handles.pause.settings_button;
-    let back = sandbox_world.resources.ui_handles.pause.back_button;
-    let main_panel = sandbox_world.resources.ui_handles.pause.main_panel;
-    let settings_panel = sandbox_world.resources.ui_handles.pause.settings_panel;
+    let resume = sandbox_world.ui_handles.pause.resume_button;
+    let main_menu = sandbox_world.ui_handles.pause.main_menu_button;
+    let quit = sandbox_world.ui_handles.pause.quit_button;
+    let settings = sandbox_world.ui_handles.pause.settings_button;
+    let back = sandbox_world.ui_handles.pause.back_button;
+    let main_panel = sandbox_world.ui_handles.pause.main_panel;
+    let settings_panel = sandbox_world.ui_handles.pause.settings_panel;
     let mut clicked_resume = false;
     let mut clicked_main_menu = false;
     let mut clicked_quit = false;
@@ -293,62 +293,50 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
         ui_set_visible(world, settings_panel, false);
         ui_set_visible(world, main_panel, true);
     }
-    let checkbox = sandbox_world
-        .resources
-        .ui_handles
-        .pause
-        .infinite_world_checkbox;
+    let checkbox = sandbox_world.ui_handles.pause.infinite_world_checkbox;
     if let Some(value) = ui_checkbox_changed(world, checkbox) {
         infinite::set_enabled(sandbox_world, world, value);
         grass::sync_domain(sandbox_world, world);
     }
-    let grass_box = sandbox_world.resources.ui_handles.pause.grass_checkbox;
+    let grass_box = sandbox_world.ui_handles.pause.grass_checkbox;
     if let Some(value) = ui_checkbox_changed(world, grass_box) {
         grass::set_enabled(sandbox_world, world, value);
     }
-    let terrain_box = sandbox_world.resources.ui_handles.pause.terrain_checkbox;
+    let terrain_box = sandbox_world.ui_handles.pause.terrain_checkbox;
     if let Some(value) = ui_checkbox_changed(world, terrain_box) {
         terrain::set_enabled(sandbox_world, world, value);
     }
-    let third_person_box = sandbox_world
-        .resources
-        .ui_handles
-        .pause
-        .third_person_checkbox;
+    let third_person_box = sandbox_world.ui_handles.pause.third_person_checkbox;
     if let Some(value) = ui_checkbox_changed(world, third_person_box) {
         character::set_third_person(sandbox_world, world, value);
     }
-    let spheres_box = sandbox_world.resources.ui_handles.pause.spheres_checkbox;
+    let spheres_box = sandbox_world.ui_handles.pause.spheres_checkbox;
     if let Some(value) = ui_checkbox_changed(world, spheres_box) {
-        sandbox_world.resources.character.spheres_visible = value;
+        sandbox_world.character.spheres_visible = value;
     }
-    let stride_wheel_box = sandbox_world
-        .resources
-        .ui_handles
-        .pause
-        .stride_wheel_checkbox;
+    let stride_wheel_box = sandbox_world.ui_handles.pause.stride_wheel_checkbox;
     if let Some(value) = ui_checkbox_changed(world, stride_wheel_box) {
-        sandbox_world.resources.character.stride_wheel_visible = value;
+        sandbox_world.character.stride_wheel_visible = value;
     }
-    let skeleton_box = sandbox_world.resources.ui_handles.pause.skeleton_checkbox;
+    let skeleton_box = sandbox_world.ui_handles.pause.skeleton_checkbox;
     if let Some(value) = ui_checkbox_changed(world, skeleton_box) {
-        sandbox_world.resources.character.skeleton_visible = value;
+        sandbox_world.character.skeleton_visible = value;
     }
-    let fly_box = sandbox_world.resources.ui_handles.pause.fly_checkbox;
+    let fly_box = sandbox_world.ui_handles.pause.fly_checkbox;
     if let Some(value) = ui_checkbox_changed(world, fly_box) {
         player::set_fly(sandbox_world, world, value);
     }
-    let rocks_box = sandbox_world.resources.ui_handles.pause.rocks_checkbox;
+    let rocks_box = sandbox_world.ui_handles.pause.rocks_checkbox;
     if let Some(value) = ui_checkbox_changed(world, rocks_box) {
         rocks::set_enabled(sandbox_world, world, value);
     }
-    let prop_lod_box = sandbox_world.resources.ui_handles.pause.prop_lod_checkbox;
+    let prop_lod_box = sandbox_world.ui_handles.pause.prop_lod_checkbox;
     if let Some(value) = ui_checkbox_changed(world, prop_lod_box) {
         rocks::set_lod_enabled(sandbox_world, world, value);
     }
-    let fps_box = sandbox_world.resources.ui_handles.pause.show_fps_checkbox;
+    let fps_box = sandbox_world.ui_handles.pause.show_fps_checkbox;
     if let Some(value) = ui_checkbox_changed(world, fps_box) {
-        sandbox_world.resources.screen.show_fps = value;
+        sandbox_world.screen.show_fps = value;
     }
     if clicked_resume {
         ui_set_visible(world, settings_panel, false);
@@ -356,7 +344,7 @@ pub fn handle_input(sandbox_world: &mut SandboxWorld, world: &mut World) {
         lifecycle::enter(sandbox_world, world, Screen::InGame);
     } else if clicked_main_menu {
         player::reset(sandbox_world, world);
-        enemies::despawn(sandbox_world, world);
+        enemies::despawn(world);
         lifecycle::enter(sandbox_world, world, Screen::Title);
     } else if clicked_quit {
         world.resources.window.should_exit = true;

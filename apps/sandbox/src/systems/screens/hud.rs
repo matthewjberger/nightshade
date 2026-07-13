@@ -1,4 +1,4 @@
-use crate::ecs::{HudHandles, SandboxWorld};
+use crate::ecs::{HudHandles, SandboxResources};
 use crate::theme::*;
 use nightshade::prelude::*;
 
@@ -41,9 +41,9 @@ pub fn build(tree: &mut UiTreeBuilder) -> HudHandles {
     }
 }
 
-pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
-    let fps_label = sandbox_world.resources.ui_handles.hud.fps_label;
-    let show_fps = sandbox_world.resources.screen.show_fps;
+pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+    let fps_label = sandbox_world.ui_handles.hud.fps_label;
+    let show_fps = sandbox_world.screen.show_fps;
     ui_set_visible(world, fps_label, show_fps);
     if !show_fps {
         return;

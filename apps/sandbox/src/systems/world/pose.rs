@@ -1,4 +1,4 @@
-use crate::ecs::{GaitTrack, IkChain, PoseKeyframe, SandboxWorld, SoftJoint};
+use crate::ecs::{GaitTrack, IkChain, PoseKeyframe, SandboxResources, SoftJoint};
 use nightshade::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationSamplerOutput,
 };
@@ -436,7 +436,7 @@ fn bone_chain(
     })
 }
 
-pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: Entity) {
+pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World, model: Entity) {
     let Some(player) = world.ecs.worlds[CORE]
         .get::<nightshade::ecs::animation::components::AnimationPlayer>(model)
     else {
@@ -566,7 +566,7 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
         })
         .unwrap_or((Vec3::zeros(), Vec3::zeros()));
 
-    let pose = &mut sandbox_world.resources.pose;
+    let pose = &mut sandbox_world.pose;
     pose.keyframes = keyframes;
     pose.rest_rotations = rest_rotations;
     pose.gait_tracks = build_gait_tracks(&bones);
@@ -615,9 +615,9 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World, model: En
 /// layer wrote through a rotational spring-damper, so fast pose
 /// changes overshoot and settle instead of snapping. Hanging hands
 /// stiffen so the ledge grip stays planted.
-pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
-        for soft in &mut sandbox_world.resources.pose.soft_joints {
+pub fn apply_softness(sandbox_world: &mut SandboxResources, world: &mut World) {
+    if sandbox_world.ragdoll.mode != crate::ecs::RagdollMode::Off {
+        for soft in &mut sandbox_world.pose.soft_joints {
             soft.initialized = false;
         }
         return;
@@ -628,12 +628,8 @@ pub fn apply_softness(sandbox_world: &mut SandboxWorld, world: &mut World) {
         .timing
         .delta_time
         .min(SOFTNESS_MAX_STEP);
-    let rigid_blend = sandbox_world
-        .resources
-        .character
-        .hang_weight
-        .clamp(0.0, 1.0);
-    for soft in &mut sandbox_world.resources.pose.soft_joints {
+    let rigid_blend = sandbox_world.character.hang_weight.clamp(0.0, 1.0);
+    for soft in &mut sandbox_world.pose.soft_joints {
         let Some(target) = world.ecs.worlds[CORE]
             .get::<nightshade::ecs::transform::components::LocalTransform>(soft.entity)
             .map(|transform| transform.rotation)
@@ -717,10 +713,10 @@ fn hips_local_drop_vector(world: &World, model: Entity, hips: Entity) -> Vec3 {
     Vec3::zeros()
 }
 
-pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str) -> bool {
-    let model = sandbox_world.resources.character.model;
+pub fn set_pose(sandbox_world: &mut SandboxResources, world: &mut World, name: &str) -> bool {
+    let model = sandbox_world.character.model;
     if name == "clip" {
-        sandbox_world.resources.pose.active = None;
+        sandbox_world.pose.active = None;
         if let Some(model) = model
             && let Some(player) =
                 world.ecs.worlds[CORE]
@@ -732,7 +728,6 @@ pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str)
         return true;
     }
     let Some(index) = sandbox_world
-        .resources
         .pose
         .keyframes
         .iter()
@@ -740,7 +735,7 @@ pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str)
     else {
         return false;
     };
-    sandbox_world.resources.pose.active = Some(index);
+    sandbox_world.pose.active = Some(index);
     if let Some(model) = model
         && let Some(player) =
             world.ecs.worlds[CORE]
@@ -751,18 +746,18 @@ pub fn set_pose(sandbox_world: &mut SandboxWorld, world: &mut World, name: &str)
     true
 }
 
-pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
-    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
+pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+    if sandbox_world.ragdoll.mode != crate::ecs::RagdollMode::Off {
         return;
     }
-    let pose = &sandbox_world.resources.pose;
+    let pose = &sandbox_world.pose;
     let Some(active) = pose.active else {
         return;
     };
     let Some(keyframe) = pose.keyframes.get(active) else {
         return;
     };
-    let character = &sandbox_world.resources.character;
+    let character = &sandbox_world.character;
 
     let gait_weight = if keyframe.name == "idle" {
         character.gait_weight.clamp(0.0, 1.0)

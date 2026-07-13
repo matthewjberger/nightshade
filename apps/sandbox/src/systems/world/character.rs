@@ -1,4 +1,4 @@
-use crate::ecs::{CharacterState, RagdollMode, SandboxWorld};
+use crate::ecs::{CharacterState, RagdollMode, SandboxResources};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::input::queries::query_active_gamepad;
 use nightshade::ecs::lines::components::{Line, Lines};
@@ -94,7 +94,7 @@ const SKELETON_BONE_COLOR: Vec4 = Vec4::new(1.0, 0.4, 0.9, 1.0);
 const SKELETON_JOINT_COLOR: Vec4 = Vec4::new(0.3, 0.9, 1.0, 1.0);
 const SKELETON_JOINT_SIZE: f32 = 0.04;
 
-pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     let feet = spawn_feet_position(world);
 
     let body = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
@@ -150,7 +150,7 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
         visibility.visible = false;
     }
 
-    let state = &mut sandbox_world.resources.character;
+    let state = &mut sandbox_world.character;
     state.body = Some(body);
     state.camera = Some(camera);
     state.spheres = Some(spheres);
@@ -161,7 +161,7 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     spawn_model(sandbox_world, world, body);
 }
 
-fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity) {
+fn spawn_model(sandbox_world: &mut SandboxResources, world: &mut World, body: Entity) {
     const MODEL_BYTES: &[u8] = include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../assets/gltf/x_bot.glb"
@@ -214,13 +214,13 @@ fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity
         }
     }
 
-    sandbox_world.resources.character.model = Some(model);
+    sandbox_world.character.model = Some(model);
     crate::systems::world::pose::initialize(sandbox_world, world, model);
     crate::systems::world::pose::set_pose(sandbox_world, world, "idle");
 }
 
-fn set_model_visible(sandbox_world: &SandboxWorld, world: &mut World, visible: bool) {
-    let Some(model) = sandbox_world.resources.character.model else {
+fn set_model_visible(sandbox_world: &SandboxResources, world: &mut World, visible: bool) {
+    let Some(model) = sandbox_world.character.model else {
         return;
     };
     let mut stack = vec![model];
@@ -236,15 +236,15 @@ fn set_model_visible(sandbox_world: &SandboxWorld, world: &mut World, visible: b
     }
 }
 
-pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: bool) {
-    sandbox_world.resources.character.third_person = enabled;
-    let Some(body) = sandbox_world.resources.character.body else {
+pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World, enabled: bool) {
+    sandbox_world.character.third_person = enabled;
+    let Some(body) = sandbox_world.character.body else {
         return;
     };
-    let Some(player_entity) = sandbox_world.resources.player.player_entity else {
+    let Some(player_entity) = sandbox_world.player.player_entity else {
         return;
     };
-    let fly = sandbox_world.resources.player.fly;
+    let fly = sandbox_world.player.fly;
 
     if enabled {
         let feet = world.ecs.worlds[CORE]
@@ -260,7 +260,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
             transform.translation = feet;
         }
 
-        let state = &mut sandbox_world.resources.character;
+        let state = &mut sandbox_world.character;
         state.velocity = Vec3::zeros();
         state.grounded = false;
         state.jump_suppress_timer = 0.0;
@@ -272,7 +272,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
             controller.disable_gravity = true;
             controller.velocity = Vec3::zeros();
         }
-        if let Some(spheres) = sandbox_world.resources.character.spheres
+        if let Some(spheres) = sandbox_world.character.spheres
             && let Some(visibility) =
                 world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(spheres)
         {
@@ -280,7 +280,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         }
         set_model_visible(sandbox_world, world, true);
         if !fly {
-            world.resources.active_camera = sandbox_world.resources.character.camera;
+            world.resources.active_camera = sandbox_world.character.camera;
         }
     } else {
         if let Some(controller) = world.ecs.worlds[CORE]
@@ -291,13 +291,13 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
             controller.velocity = Vec3::zeros();
         }
         reset_physics_interpolation(world, player_entity);
-        if let Some(spheres) = sandbox_world.resources.character.spheres
+        if let Some(spheres) = sandbox_world.character.spheres
             && let Some(visibility) =
                 world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(spheres)
         {
             visibility.visible = false;
         }
-        if let Some(skeleton_lines) = sandbox_world.resources.character.skeleton_lines
+        if let Some(skeleton_lines) = sandbox_world.character.skeleton_lines
             && let Some(visibility) = world.ecs.worlds[CORE]
                 .get_mut::<nightshade::ecs::primitives::Visibility>(skeleton_lines)
         {
@@ -305,23 +305,23 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         }
         set_model_visible(sandbox_world, world, false);
         if !fly {
-            world.resources.active_camera = sandbox_world.resources.player.camera_entity;
+            world.resources.active_camera = sandbox_world.player.camera_entity;
         }
     }
 }
 
-pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    if !sandbox_world.resources.character.third_person {
+pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
+    if !sandbox_world.character.third_person {
         return;
     }
-    let Some(body) = sandbox_world.resources.character.body else {
+    let Some(body) = sandbox_world.character.body else {
         return;
     };
-    let Some(camera) = sandbox_world.resources.character.camera else {
+    let Some(camera) = sandbox_world.character.camera else {
         return;
     };
 
-    if sandbox_world.resources.ragdoll.mode != RagdollMode::Off {
+    if sandbox_world.ragdoll.mode != RagdollMode::Off {
         crate::systems::world::ragdoll::update(sandbox_world, world, body);
         sync_first_person_player(sandbox_world, world, body);
         third_person_camera_system(world);
@@ -331,8 +331,8 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
     }
 
     move_character(sandbox_world, world, body, camera);
-    if sandbox_world.resources.character.landing_impact_speed > RAGDOLL_IMPACT_SPEED {
-        sandbox_world.resources.character.landing_impact_speed = 0.0;
+    if sandbox_world.character.landing_impact_speed > RAGDOLL_IMPACT_SPEED {
+        sandbox_world.character.landing_impact_speed = 0.0;
         crate::systems::world::ragdoll::activate_from_impact(sandbox_world, world);
         sync_first_person_player(sandbox_world, world, body);
         third_person_camera_system(world);
@@ -353,8 +353,8 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
 /// short absorb at contact, and its height grows from a gentle walk to
 /// a weighty run. Flips rotate with a small anticipation wind up and
 /// ease out into the air pose.
-fn apply_model_motion(sandbox_world: &SandboxWorld, world: &mut World) {
-    let state = &sandbox_world.resources.character;
+fn apply_model_motion(sandbox_world: &SandboxResources, world: &mut World) {
+    let state = &sandbox_world.character;
     let Some(model) = state.model else {
         return;
     };
@@ -396,8 +396,8 @@ fn flip_angle(progress: f32) -> f32 {
     anticipation + std::f32::consts::TAU * eased
 }
 
-fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
-    let state = &sandbox_world.resources.character;
+fn draw_skeleton(sandbox_world: &SandboxResources, world: &mut World) {
+    let state = &sandbox_world.character;
     let Some(skeleton_lines) = state.skeleton_lines else {
         return;
     };
@@ -473,13 +473,13 @@ fn push_joint_cross(lines: &mut Vec<Line>, position: Vec3) {
     }
 }
 
-pub fn reset(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn reset(sandbox_world: &mut SandboxResources, world: &mut World) {
     let spawn = find_player_spawn(world).unwrap_or_else(default_spawn_position);
     teleport(sandbox_world, world, spawn);
 }
 
-pub fn teleport(sandbox_world: &mut SandboxWorld, world: &mut World, capsule_center: Vec3) {
-    let Some(body) = sandbox_world.resources.character.body else {
+pub fn teleport(sandbox_world: &mut SandboxResources, world: &mut World, capsule_center: Vec3) {
+    let Some(body) = sandbox_world.character.body else {
         return;
     };
     let feet = capsule_center - Vec3::new(0.0, FIRST_PERSON_CAPSULE_HALF_HEIGHT, 0.0);
@@ -490,7 +490,7 @@ pub fn teleport(sandbox_world: &mut SandboxWorld, world: &mut World, capsule_cen
         transform.translation = feet;
     }
 
-    let state = &mut sandbox_world.resources.character;
+    let state = &mut sandbox_world.character;
     state.velocity = Vec3::zeros();
     state.grounded = false;
     state.jump_suppress_timer = 0.0;
@@ -595,7 +595,7 @@ fn horizontal_camera_basis(world: &World, camera: Entity) -> (Vec3, Vec3) {
 }
 
 fn move_character(
-    sandbox_world: &mut SandboxWorld,
+    sandbox_world: &mut SandboxResources,
     world: &mut World,
     body: Entity,
     camera: Entity,
@@ -620,7 +620,7 @@ fn move_character(
         .map(|transform| transform.forward_vector())
         .unwrap_or_else(|| Vec3::new(0.0, 0.0, -1.0));
 
-    let state = &mut sandbox_world.resources.character;
+    let state = &mut sandbox_world.character;
     let mut velocity = state.velocity;
     let was_grounded = state.grounded;
 
@@ -999,8 +999,8 @@ fn sample_ground_distance(world: &World, probe_origin: Vec3) -> Option<f32> {
     nearest
 }
 
-fn sync_first_person_player(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
-    let Some(player_entity) = sandbox_world.resources.player.player_entity else {
+fn sync_first_person_player(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
+    let Some(player_entity) = sandbox_world.player.player_entity else {
         return;
     };
     let Some(feet) = world.ecs.worlds[CORE]
@@ -1025,8 +1025,8 @@ fn sync_first_person_player(sandbox_world: &SandboxWorld, world: &mut World, bod
     }
 }
 
-fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
-    let Some(spheres) = sandbox_world.resources.character.spheres else {
+fn draw_spheres(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
+    let Some(spheres) = sandbox_world.character.spheres else {
         return;
     };
     let Some(feet) = world.ecs.worlds[CORE]
@@ -1041,7 +1041,7 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
         return;
     };
     lines.lines.clear();
-    let state = &sandbox_world.resources.character;
+    let state = &sandbox_world.character;
     if state.spheres_visible {
         push_wire_capsule(
             &mut lines.lines,

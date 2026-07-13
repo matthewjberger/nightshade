@@ -1,9 +1,9 @@
-use crate::ecs::{SandboxWorld, Screen};
+use crate::ecs::{SandboxResources, Screen};
 use crate::systems::lifecycle;
 use crate::systems::world::player;
 use nightshade::prelude::*;
 
-pub fn handle_global(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn handle_global(sandbox_world: &mut SandboxResources, world: &mut World) {
     let escape = world.resources.input.keyboard.just_pressed(KeyCode::Escape);
     let start = world
         .resources
@@ -12,7 +12,7 @@ pub fn handle_global(sandbox_world: &mut SandboxWorld, world: &mut World) {
         .just_pressed_buttons
         .contains(&gilrs::Button::Start);
     let r = world.resources.input.keyboard.just_pressed(KeyCode::KeyR);
-    let screen = sandbox_world.resources.screen.current;
+    let screen = sandbox_world.screen.current;
 
     match screen {
         Screen::Title => {

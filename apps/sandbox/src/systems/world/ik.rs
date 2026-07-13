@@ -1,4 +1,4 @@
-use crate::ecs::{IkChain, SandboxWorld};
+use crate::ecs::{IkChain, SandboxResources};
 use nightshade::prelude::*;
 
 const ANKLE_CLEARANCE: f32 = 0.09;
@@ -8,11 +8,11 @@ const HAND_EDGE_FORWARD: f32 = 0.5;
 const HAND_EDGE_SPREAD: f32 = 0.22;
 const HAND_EDGE_LIFT: f32 = 0.03;
 
-pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
-    if sandbox_world.resources.ragdoll.mode != crate::ecs::RagdollMode::Off {
+pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+    if sandbox_world.ragdoll.mode != crate::ecs::RagdollMode::Off {
         return;
     }
-    let character = &sandbox_world.resources.character;
+    let character = &sandbox_world.character;
     if !character.third_person {
         return;
     }
@@ -31,7 +31,7 @@ pub fn update(sandbox_world: &SandboxWorld, world: &mut World) {
     if character.tuck_weight > 0.3 {
         return;
     }
-    for chain in sandbox_world.resources.pose.leg_chains.clone() {
+    for chain in sandbox_world.pose.leg_chains.clone() {
         solve_foot_to_ground(world, body, chain);
     }
 }
@@ -62,8 +62,8 @@ fn solve_foot_to_ground(world: &mut World, body: Entity, chain: IkChain) {
     solve_two_bone(world, body, chain, target);
 }
 
-fn solve_hands_to_ledge(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
-    let character = &sandbox_world.resources.character;
+fn solve_hands_to_ledge(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
+    let character = &sandbox_world.character;
     let Some(feet) = world.ecs.worlds[CORE]
         .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)
@@ -73,7 +73,7 @@ fn solve_hands_to_ledge(sandbox_world: &SandboxWorld, world: &mut World, body: E
     let wall_direction = -character.hang_normal;
     let hand_height = character.hang_edge_y + HAND_EDGE_LIFT;
     let hand_center = feet + wall_direction * HAND_EDGE_FORWARD;
-    let arm_chains = sandbox_world.resources.pose.arm_chains.clone();
+    let arm_chains = sandbox_world.pose.arm_chains.clone();
     for (chain_index, chain) in arm_chains.into_iter().enumerate() {
         let side = if chain_index == 0 { -1.0 } else { 1.0 };
         let target = Vec3::new(

@@ -1,17 +1,17 @@
-use crate::ecs::SandboxWorld;
+use crate::ecs::SandboxResources;
 use crate::systems::screens::pause;
 use crate::systems::shell::state::ShellAction;
 use crate::systems::world::{character, player};
 use nightshade::prelude::*;
 
 pub fn apply_shell_actions(
-    sandbox_world: &mut SandboxWorld,
+    sandbox_world: &mut SandboxResources,
     world: &mut World,
     action: ShellAction,
 ) {
     match action {
         ShellAction::TeleportPlayer(position) => {
-            if let Some(player_entity) = sandbox_world.resources.player.player_entity {
+            if let Some(player_entity) = sandbox_world.player.player_entity {
                 if let Some(transform) = world.ecs.worlds[CORE]
                     .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
                     player_entity,
@@ -26,10 +26,10 @@ pub fn apply_shell_actions(
             character::teleport(sandbox_world, world, position);
         }
         ShellAction::PrintPlayerPosition => {
-            let entity = if sandbox_world.resources.character.third_person {
-                sandbox_world.resources.character.body
+            let entity = if sandbox_world.character.third_person {
+                sandbox_world.character.body
             } else {
-                sandbox_world.resources.player.player_entity
+                sandbox_world.player.player_entity
             };
             if let Some(entity) = entity
                 && let Some(transform) =
@@ -49,44 +49,36 @@ pub fn apply_shell_actions(
             player::reset(sandbox_world, world);
         }
         ShellAction::SetFly(value) => {
-            let enabled = value.unwrap_or(!sandbox_world.resources.player.fly);
+            let enabled = value.unwrap_or(!sandbox_world.player.fly);
             player::set_fly(sandbox_world, world, enabled);
-            let checkbox = sandbox_world.resources.ui_handles.pause.fly_checkbox;
+            let checkbox = sandbox_world.ui_handles.pause.fly_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetThirdPerson(value) => {
-            let enabled = value.unwrap_or(!sandbox_world.resources.character.third_person);
+            let enabled = value.unwrap_or(!sandbox_world.character.third_person);
             character::set_third_person(sandbox_world, world, enabled);
-            let checkbox = sandbox_world
-                .resources
-                .ui_handles
-                .pause
-                .third_person_checkbox;
+            let checkbox = sandbox_world.ui_handles.pause.third_person_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetStrideWheel(value) => {
-            let state = &mut sandbox_world.resources.character;
+            let state = &mut sandbox_world.character;
             let enabled = value.unwrap_or(!state.stride_wheel_visible);
             state.stride_wheel_visible = enabled;
-            let checkbox = sandbox_world
-                .resources
-                .ui_handles
-                .pause
-                .stride_wheel_checkbox;
+            let checkbox = sandbox_world.ui_handles.pause.stride_wheel_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetSpheres(value) => {
-            let state = &mut sandbox_world.resources.character;
+            let state = &mut sandbox_world.character;
             let enabled = value.unwrap_or(!state.spheres_visible);
             state.spheres_visible = enabled;
-            let checkbox = sandbox_world.resources.ui_handles.pause.spheres_checkbox;
+            let checkbox = sandbox_world.ui_handles.pause.spheres_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetSkeleton(value) => {
-            let state = &mut sandbox_world.resources.character;
+            let state = &mut sandbox_world.character;
             let enabled = value.unwrap_or(!state.skeleton_visible);
             state.skeleton_visible = enabled;
-            let checkbox = sandbox_world.resources.ui_handles.pause.skeleton_checkbox;
+            let checkbox = sandbox_world.ui_handles.pause.skeleton_checkbox;
             pause::set_checkbox_value(world, checkbox, enabled);
         }
         ShellAction::SetRagdoll(mode) => {

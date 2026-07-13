@@ -1,5 +1,4 @@
-use crate::ecs::{ENEMY, ENGINE_ENTITY, Enemy, EngineEntity, SandboxWorld};
-use nightshade::ecs::sync::sync_engine_translation;
+use crate::ecs::{ENEMY, Enemy, GAME};
 use nightshade::ecs::world::commands::{spawn_entities, spawn_material};
 use nightshade::prelude::*;
 use nightshade::render::material::Material;
@@ -28,18 +27,16 @@ const PATROL_POINTS: &[(f32, f32)] = &[
     (-18.0, 0.0),
 ];
 
-pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn spawn(world: &mut World) {
     for index in 0..ENEMY_COUNT {
         let start_index = index as usize % PATROL_POINTS.len();
         let next_index = (start_index + 1) % PATROL_POINTS.len();
         let start = patrol_target(start_index);
         let next = patrol_target(next_index);
 
-        let (engine_entity, legs) = spawn_visual(world, start, index);
-        let game_entity = sandbox_world.spawn_entities(ENEMY | ENGINE_ENTITY, 1)[0];
-        sandbox_world.set_engine_entity(game_entity, EngineEntity(engine_entity));
-        sandbox_world.set_enemy(
-            game_entity,
+        let (sheep, legs) = spawn_visual(world, start, index);
+        world.ecs.worlds[GAME].set(
+            sheep,
             Enemy {
                 target: next,
                 speed: ENEMY_SPEED,
@@ -51,25 +48,24 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     }
 }
 
-pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn update(world: &mut World) {
     let delta = world.resources.window.timing.delta_time;
 
-    let snapshots: Vec<(freecs::Entity, Entity, Enemy, Vec3)> = sandbox_world
-        .query_entities(ENEMY | ENGINE_ENTITY)
-        .filter_map(|game_entity| {
-            let engine_entity = sandbox_world.get_engine_entity(game_entity)?.0;
-            let enemy = *sandbox_world.get_enemy(game_entity)?;
+    let snapshots: Vec<(Entity, Enemy, Vec3)> = world.ecs.worlds[GAME]
+        .query_ref::<&Enemy>()
+        .iter()
+        .filter_map(|(sheep, enemy)| {
             let position = world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::LocalTransform>(engine_entity)?
+                .get::<nightshade::ecs::transform::components::LocalTransform>(sheep)?
                 .translation;
-            Some((game_entity, engine_entity, enemy, position))
+            Some((sheep, *enemy, position))
         })
         .collect();
 
     let mut translations: Vec<(Entity, Vec3)> = Vec::with_capacity(snapshots.len());
-    let mut state_updates: Vec<(freecs::Entity, Enemy)> = Vec::with_capacity(snapshots.len());
+    let mut state_updates: Vec<(Entity, Enemy)> = Vec::with_capacity(snapshots.len());
 
-    for (game_entity, engine_entity, enemy, position) in snapshots {
+    for (sheep, enemy, position) in snapshots {
         let to_target = enemy.target - position;
         let distance = to_target.norm();
         let step = (enemy.speed * delta).min(distance.max(0.0));
@@ -90,10 +86,10 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
 
         if distance > f32::EPSILON {
             let yaw = to_target.x.atan2(to_target.z);
-            if let Some(transform) = world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
-                engine_entity,
-            ) {
+            if let Some(transform) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
+            {
                 transform.rotation = nalgebra_glm::quat_angle_axis(yaw, &Vec3::y());
             }
         }
@@ -119,32 +115,30 @@ pub fn update(sandbox_world: &mut SandboxWorld, world: &mut World) {
             }
         }
 
-        translations.push((engine_entity, new_position));
-        state_updates.push((game_entity, new_state));
+        translations.push((sheep, new_position));
+        state_updates.push((sheep, new_state));
     }
 
-    sync_engine_translation(translations, world);
-    for (game_entity, new_state) in state_updates {
-        if let Some(enemy) = sandbox_world.get_enemy_mut(game_entity) {
-            *enemy = new_state;
+    for (sheep, new_position) in translations {
+        if let Some(transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
+        {
+            transform.translation = new_position;
         }
+    }
+    for (sheep, new_state) in state_updates {
+        world.ecs.worlds[GAME].set(sheep, new_state);
     }
 }
 
-/// Tears down every enemy: drops the engine-side render entity for
-/// each one, then despawns the sandbox-side bookkeeping entity. Pairs
+/// Tears down every enemy. The render components and the enemy state
+/// share one entity, so a single recursive despawn removes both. Pairs
 /// with [`spawn`] so screen transitions can wipe the world.
-pub fn despawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
-    let engine_entities: Vec<Entity> = sandbox_world
-        .query_entities(ENEMY | ENGINE_ENTITY)
-        .filter_map(|game_entity| sandbox_world.get_engine_entity(game_entity).map(|e| e.0))
-        .collect();
-    for engine_entity in engine_entities {
-        despawn_recursive_immediate(world, engine_entity);
-    }
-    let game_entities: Vec<freecs::Entity> = sandbox_world.query_entities(ENEMY).collect();
-    if !game_entities.is_empty() {
-        sandbox_world.despawn_entities(&game_entities);
+pub fn despawn(world: &mut World) {
+    let sheep: Vec<Entity> = world.ecs.worlds[GAME].query_entities(ENEMY).collect();
+    for entity in sheep {
+        despawn_recursive_immediate(world, entity);
     }
 }
 

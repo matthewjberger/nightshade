@@ -1,11 +1,14 @@
-use crate::ecs::{SandboxWorld, Screen};
+use crate::ecs::{GAME, SandboxResources, Screen, register_sandbox_components};
 use crate::systems::screens::{hud, pause, title};
 use crate::systems::world::{
     character, enemies, grass, infinite, level, player, rocks, terrain, textures,
 };
 use nightshade::prelude::*;
 
-pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
+pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
+    let game_world_index = world.ecs.add_world(register_sandbox_components());
+    assert_eq!(game_world_index, GAME);
+
     world.resources.user_interface.enabled = true;
     world.resources.retained_ui.enabled = true;
     world.resources.render_settings.atmosphere = Atmosphere::DayNight;
@@ -19,21 +22,21 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
     player::spawn(sandbox_world, world);
     character::spawn(sandbox_world, world);
     character::set_third_person(sandbox_world, world, true);
-    enemies::spawn(sandbox_world, world);
+    enemies::spawn(world);
     infinite::set_enabled(sandbox_world, world, true);
     grass::set_enabled(sandbox_world, world, true);
     terrain::set_enabled(sandbox_world, world, true);
     rocks::initialize(sandbox_world, world);
-    sandbox_world.resources.screen.show_fps = true;
+    sandbox_world.screen.show_fps = true;
 
     let mut tree = UiTreeBuilder::new(world);
     let title_handles = title::build(&mut tree);
     let pause_handles = pause::build(&mut tree);
     let hud_handles = hud::build(&mut tree);
     tree.finish();
-    sandbox_world.resources.ui_handles.title = title_handles;
-    sandbox_world.resources.ui_handles.pause = pause_handles;
-    sandbox_world.resources.ui_handles.hud = hud_handles;
+    sandbox_world.ui_handles.title = title_handles;
+    sandbox_world.ui_handles.pause = pause_handles;
+    sandbox_world.ui_handles.hud = hud_handles;
 
     enter(sandbox_world, world, Screen::Title);
 }
@@ -42,10 +45,10 @@ pub fn initialize(sandbox_world: &mut SandboxWorld, world: &mut World) {
 /// physics/cursor/gamepad-nav booleans and the initial focused
 /// button all live in a single place. Each screen contributes a
 /// small config block and the body just applies it.
-pub fn enter(sandbox_world: &mut SandboxWorld, world: &mut World, screen: Screen) {
-    let config = screen_config(&sandbox_world.resources.ui_handles, screen);
+pub fn enter(sandbox_world: &mut SandboxResources, world: &mut World, screen: Screen) {
+    let config = screen_config(&sandbox_world.ui_handles, screen);
 
-    sandbox_world.resources.screen.current = screen;
+    sandbox_world.screen.current = screen;
     apply_visibility(sandbox_world, world);
 
     world.resources.physics.enabled = config.physics_enabled;
@@ -91,9 +94,9 @@ fn screen_config(handles: &crate::ecs::UiHandles, screen: Screen) -> ScreenConfi
     }
 }
 
-pub fn apply_visibility(sandbox_world: &SandboxWorld, world: &mut World) {
-    let handles = &sandbox_world.resources.ui_handles;
-    let screen = sandbox_world.resources.screen.current;
+pub fn apply_visibility(sandbox_world: &SandboxResources, world: &mut World) {
+    let handles = &sandbox_world.ui_handles;
+    let screen = sandbox_world.screen.current;
     ui_set_visible(world, handles.title.root, matches!(screen, Screen::Title));
     ui_set_visible(world, handles.pause.root, matches!(screen, Screen::Paused));
     ui_set_visible(
@@ -104,6 +107,6 @@ pub fn apply_visibility(sandbox_world: &SandboxWorld, world: &mut World) {
     ui_set_visible(
         world,
         handles.hud.crosshair,
-        matches!(screen, Screen::InGame) && !sandbox_world.resources.character.third_person,
+        matches!(screen, Screen::InGame) && !sandbox_world.character.third_person,
     );
 }
