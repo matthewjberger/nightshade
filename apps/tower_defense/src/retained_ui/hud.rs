@@ -1,4 +1,6 @@
-use crate::ecs::{GameState, GameWorld, TowerChipHandles, TowerType, UiAction, UiHandles};
+use crate::ecs::{
+    GameState, TowerChipHandles, TowerDefenseResources, TowerType, UiAction, UiHandles,
+};
 use crate::retained_ui::theme::*;
 use nightshade::prelude::*;
 
@@ -354,13 +356,13 @@ fn make_speed_button(tree: &mut UiTreeBuilder, glyph: &str) -> Entity {
     button
 }
 
-pub fn poll(game_world: &mut GameWorld, world: &mut World) {
-    let handles = &game_world.resources.ui_handles;
+pub fn poll(game_world: &mut TowerDefenseResources, world: &mut World) {
+    let handles = &game_world.ui_handles;
     let chip_targets: Vec<(Entity, TowerType)> = handles
         .tower_chips
         .iter()
         .enumerate()
-        .map(|(idx, chip)| (chip.root, TowerType::all()[idx]))
+        .map(|(index, chip)| (chip.root, TowerType::all()[index]))
         .collect();
     let speed_minus = handles.speed_minus;
     let speed_reset = handles.speed_reset;
@@ -386,51 +388,42 @@ pub fn poll(game_world: &mut GameWorld, world: &mut World) {
         }
     }
 
-    game_world.resources.ui_interaction.actions.extend(actions);
+    game_world.ui_interaction.actions.extend(actions);
 }
 
-pub fn update(game_world: &GameWorld, world: &mut World) {
-    let handles = &game_world.resources.ui_handles;
+pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
+    let handles = &game_world.ui_handles;
 
     ui_set_text(
         world,
         handles.money_value,
-        &format!("${}", game_world.resources.money),
+        &format!("${}", game_world.money),
     );
-    ui_set_text(
-        world,
-        handles.wave_value,
-        &format!("{}", game_world.resources.wave),
-    );
+    ui_set_text(world, handles.wave_value, &format!("{}", game_world.wave));
     ui_set_text(
         world,
         handles.lives_value,
-        &format!("x{}", game_world.resources.lives),
+        &format!("x{}", game_world.lives),
     );
     ui_set_text(
         world,
         handles.hp_value,
-        &format!(
-            "HP {}/{}",
-            game_world.resources.current_hp, game_world.resources.max_hp
-        ),
+        &format!("HP {}/{}", game_world.current_hp, game_world.max_hp),
     );
     ui_set_text(
         world,
         handles.speed_value,
-        &format!("{:.1}x", game_world.resources.game_speed),
+        &format!("{:.1}x", game_world.game_speed),
     );
 
-    let hp_ratio = (game_world.resources.current_hp as f32
-        / game_world.resources.max_hp.max(1) as f32)
-        .clamp(0.0, 1.0);
+    let hp_ratio = (game_world.current_hp as f32 / game_world.max_hp.max(1) as f32).clamp(0.0, 1.0);
 
-    let combined_ratio = if game_world.resources.lives == 0 {
+    let combined_ratio = if game_world.lives == 0 {
         0.0
     } else {
-        let total = game_world.resources.lives as f32 * game_world.resources.max_hp as f32;
-        let current = (game_world.resources.lives - 1) as f32 * game_world.resources.max_hp as f32
-            + game_world.resources.current_hp as f32;
+        let total = game_world.lives as f32 * game_world.max_hp as f32;
+        let current =
+            (game_world.lives - 1) as f32 * game_world.max_hp as f32 + game_world.current_hp as f32;
         (current / total).clamp(0.0, 1.0)
     };
 
@@ -457,9 +450,9 @@ pub fn update(game_world: &GameWorld, world: &mut World) {
         color.colors[UiBase::INDEX] = Some(bar_color);
     }
 
-    let lives_color = if game_world.resources.lives > 5 {
+    let lives_color = if game_world.lives > 5 {
         ACCENT_GREEN
-    } else if game_world.resources.lives > 2 {
+    } else if game_world.lives > 2 {
         ACCENT_GOLD
     } else {
         ACCENT_RED
@@ -470,16 +463,16 @@ pub fn update(game_world: &GameWorld, world: &mut World) {
         color.colors[UiBase::INDEX] = Some(lives_color);
     }
 
-    for (idx, chip) in handles.tower_chips.iter().enumerate() {
-        let tower_type = TowerType::all()[idx];
-        let is_selected = tower_type == game_world.resources.selected_tower_type;
+    for (index, chip) in handles.tower_chips.iter().enumerate() {
+        let tower_type = TowerType::all()[index];
+        let is_selected = tower_type == game_world.selected_tower_type;
         ui_set_selected(world, chip.root, is_selected);
     }
 
-    let announce_visible = game_world.resources.wave_announce_timer > 0.0;
+    let announce_visible = game_world.wave_announce_timer > 0.0;
     ui_set_visible(world, handles.announce_root, announce_visible);
     if announce_visible {
-        let wave_num = game_world.resources.wave;
+        let wave_num = game_world.wave;
         let label = if wave_num.is_multiple_of(5) {
             format!("BOSS WAVE {wave_num}")
         } else {
@@ -488,7 +481,7 @@ pub fn update(game_world: &GameWorld, world: &mut World) {
         ui_set_text(world, handles.announce_label, &label);
     }
 
-    let status_visible = game_world.resources.game_state == GameState::GameOver;
+    let status_visible = game_world.game_state == GameState::GameOver;
     ui_set_visible(world, handles.status_root, status_visible);
     if status_visible {
         ui_set_text(world, handles.status_label, "GAME OVER");

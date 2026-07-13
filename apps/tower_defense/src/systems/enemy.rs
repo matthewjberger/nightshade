@@ -1,23 +1,25 @@
-use crate::ecs::{
-    ENEMY, ENTITY_HANDLE, Enemy, EnemyType, EntityHandle, GameState, GameWorld, POSITION, Position,
-};
+use crate::ecs::{Enemy, EnemyType, GAME, GameState, Position, TowerDefenseResources};
 use crate::systems::{
     create_death_effect, create_poison_bubble_effect, despawn_entity, spawn_money_popup,
 };
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
-pub fn spawn_enemy(game_world: &mut GameWorld, world: &mut World, enemy_type: EnemyType) {
-    if game_world.resources.path.is_empty() {
+pub fn spawn_enemy(
+    game_world: &mut TowerDefenseResources,
+    world: &mut World,
+    enemy_type: EnemyType,
+) {
+    if game_world.path.is_empty() {
         return;
     }
 
-    let position = game_world.resources.path[0];
-    let wave = game_world.resources.wave;
+    let position = game_world.path[0];
+    let wave = game_world.wave;
     let base_y = enemy_type.y_offset();
     let color = enemy_type.color();
 
-    let engine_entity = match enemy_type {
+    let enemy_entity = match enemy_type {
         EnemyType::Normal => spawn_normal_enemy(world, position, base_y, color),
         EnemyType::Fast => spawn_fast_enemy(world, position, base_y, color),
         EnemyType::Tank => spawn_tank_enemy(world, position, base_y, color),
@@ -27,13 +29,9 @@ pub fn spawn_enemy(game_world: &mut GameWorld, world: &mut World, enemy_type: En
         EnemyType::Boss => spawn_boss_enemy(world, position, base_y, color),
     };
 
-    let game_entity = game_world.spawn_entities(ENTITY_HANDLE | POSITION | ENEMY, 1)[0];
-
-    game_world.set_entity_handle(game_entity, EntityHandle(engine_entity));
-    game_world.set_position(game_entity, Position(position));
-
-    game_world.set_enemy(
-        game_entity,
+    world.ecs.worlds[GAME].set(enemy_entity, Position(position));
+    world.ecs.worlds[GAME].set(
+        enemy_entity,
         Enemy {
             health: enemy_type.health(wave),
             shield_health: enemy_type.shield(),
@@ -48,7 +46,7 @@ pub fn spawn_enemy(game_world: &mut GameWorld, world: &mut World, enemy_type: En
         },
     );
 
-    game_world.resources.enemies_list.push(game_entity);
+    game_world.enemies_list.push(enemy_entity);
 }
 
 fn spawn_normal_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4) -> Entity {
@@ -786,27 +784,26 @@ fn spawn_child_cone_emissive(
     world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
-pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
-    let delta_time = world.resources.window.timing.delta_time * game_world.resources.game_speed;
-    let path = game_world.resources.path.clone();
+pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
+    let delta_time = world.resources.window.timing.delta_time * game_world.game_speed;
+    let path = game_world.path.clone();
     let mut enemies_to_remove = Vec::new();
 
-    for entity in game_world.resources.enemies_list.clone() {
-        if let Some(mut enemy) = game_world.get_enemy(entity).copied() {
+    for entity in game_world.enemies_list.clone() {
+        if let Some(mut enemy) = world.ecs.worlds[GAME].get::<Enemy>(entity).copied() {
             if enemy.path_index >= path.len() - 1 {
                 enemies_to_remove.push(entity);
 
-                if game_world.resources.current_hp > 0 {
-                    game_world.resources.current_hp =
-                        game_world.resources.current_hp.saturating_sub(1);
+                if game_world.current_hp > 0 {
+                    game_world.current_hp = game_world.current_hp.saturating_sub(1);
                 }
 
-                if game_world.resources.current_hp == 0 {
-                    game_world.resources.current_hp = game_world.resources.max_hp;
-                    game_world.resources.lives = game_world.resources.lives.saturating_sub(1);
+                if game_world.current_hp == 0 {
+                    game_world.current_hp = game_world.max_hp;
+                    game_world.lives = game_world.lives.saturating_sub(1);
 
-                    if game_world.resources.lives == 0 {
-                        game_world.resources.game_state = GameState::GameOver;
+                    if game_world.lives == 0 {
+                        game_world.game_state = GameState::GameOver;
                     }
                 }
                 continue;
@@ -824,7 +821,7 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
                 enemy.health -= enemy.poison_damage * delta_time;
                 enemy.poison_duration = (enemy.poison_duration - delta_time).max(0.0);
 
-                if let Some(pos) = game_world.get_position(entity) {
+                if let Some(pos) = world.ecs.worlds[GAME].get::<Position>(entity).copied() {
                     create_poison_bubble_effect(
                         game_world,
                         world,
@@ -833,23 +830,23 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
                 }
 
                 if enemy.health <= 0.0 {
-                    game_world.resources.money += enemy.value;
-                    let death_pos = if let Some(pos) = game_world.get_position(entity) {
-                        pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
-                    } else {
-                        nalgebra_glm::vec3(0.0, 0.0, 0.0)
-                    };
+                    game_world.money += enemy.value;
+                    let death_pos =
+                        if let Some(pos) = world.ecs.worlds[GAME].get::<Position>(entity) {
+                            pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
+                        } else {
+                            nalgebra_glm::vec3(0.0, 0.0, 0.0)
+                        };
 
-                    spawn_money_popup(game_world, world, death_pos, enemy.value as i32);
-                    create_death_effect(game_world, world, death_pos);
+                    spawn_money_popup(world, death_pos, enemy.value as i32);
+                    create_death_effect(world, death_pos);
 
-                    if let Some(idx) = game_world
-                        .resources
+                    if let Some(index) = game_world
                         .enemies_list
                         .iter()
-                        .position(|&e| e == entity)
+                        .position(|&candidate| candidate == entity)
                     {
-                        game_world.resources.enemies_list.remove(idx);
+                        game_world.enemies_list.remove(index);
                     }
                     enemies_to_remove.push(entity);
                     continue;
@@ -869,17 +866,16 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
                 if enemy.path_index >= path.len() - 1 {
                     enemies_to_remove.push(entity);
 
-                    if game_world.resources.current_hp > 0 {
-                        game_world.resources.current_hp =
-                            game_world.resources.current_hp.saturating_sub(1);
+                    if game_world.current_hp > 0 {
+                        game_world.current_hp = game_world.current_hp.saturating_sub(1);
                     }
 
-                    if game_world.resources.current_hp == 0 {
-                        game_world.resources.current_hp = game_world.resources.max_hp;
-                        game_world.resources.lives = game_world.resources.lives.saturating_sub(1);
+                    if game_world.current_hp == 0 {
+                        game_world.current_hp = game_world.max_hp;
+                        game_world.lives = game_world.lives.saturating_sub(1);
 
-                        if game_world.resources.lives == 0 {
-                            game_world.resources.game_state = GameState::GameOver;
+                        if game_world.lives == 0 {
+                            game_world.game_state = GameState::GameOver;
                         }
                     }
                     break;
@@ -892,14 +888,12 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
                 let new_position =
                     current_start + (current_end - current_start) * enemy.path_progress;
 
-                game_world.set_enemy(entity, enemy);
-                game_world.set_position(entity, Position(new_position));
+                world.ecs.worlds[GAME].set(entity, enemy);
+                world.ecs.worlds[GAME].set(entity, Position(new_position));
 
-                if let Some(handle) = game_world.get_entity_handle(entity)
-                    && let Some(transform) = world.ecs.worlds[CORE]
-                        .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
-                        handle.0,
-                    )
+                if let Some(transform) =
+                    world.ecs.worlds[CORE]
+                        .get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
                 {
                     let visual_position =
                         new_position + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0);
@@ -910,14 +904,13 @@ pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {
     }
 
     for entity in enemies_to_remove {
-        if let Some(idx) = game_world
-            .resources
+        if let Some(index) = game_world
             .enemies_list
             .iter()
-            .position(|&e| e == entity)
+            .position(|&candidate| candidate == entity)
         {
-            game_world.resources.enemies_list.remove(idx);
+            game_world.enemies_list.remove(index);
         }
-        despawn_entity(game_world, world, entity);
+        despawn_entity(world, entity);
     }
 }

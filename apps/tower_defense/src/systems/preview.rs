@@ -1,68 +1,63 @@
-use crate::ecs::{GameWorld, RANGE_INDICATOR};
+use crate::ecs::{GAME, RANGE_INDICATOR, RangeIndicator, TowerDefenseResources};
 use crate::systems::can_place_tower_at;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
-pub fn range_indicator_system(game_world: &mut GameWorld, world: &mut World) {
-    let entities: Vec<_> = game_world.query_entities(RANGE_INDICATOR).collect();
+pub fn range_indicator_system(game_world: &mut TowerDefenseResources, world: &mut World) {
+    let entities: Vec<Entity> = world.ecs.worlds[GAME]
+        .query_entities(RANGE_INDICATOR)
+        .collect();
+    let mut lines_to_hide: Vec<Entity> = Vec::new();
     for entity in entities {
-        if let Some(indicator) = game_world.get_range_indicator_mut(entity)
+        if let Some(indicator) = world.ecs.worlds[GAME].get_mut::<RangeIndicator>(entity)
             && indicator.visible
         {
             indicator.visible = false;
-            for &line_entity in &indicator.line_entities {
-                if let Some(visibility) =
-                    world.ecs.worlds[CORE]
-                        .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
-                {
-                    visibility.visible = false;
-                }
-            }
+            lines_to_hide.extend(indicator.line_entities.iter().copied());
+        }
+    }
+    for line_entity in lines_to_hide {
+        if let Some(visibility) =
+            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+        {
+            visibility.visible = false;
         }
     }
 
-    if let Some((grid_x, grid_z)) = game_world.resources.mouse_grid_pos
-        && let Some(&tower_entity) = game_world
-            .resources
-            .towers_by_position
-            .get(&(grid_x, grid_z))
+    if let Some((grid_x, grid_z)) = game_world.mouse_grid_pos
+        && let Some(&tower_entity) = game_world.towers_by_position.get(&(grid_x, grid_z))
     {
-        let entities: Vec<_> = game_world.query_entities(RANGE_INDICATOR).collect();
-        for entity in entities {
-            if let Some(indicator) = game_world.get_range_indicator_mut(entity)
-                && indicator.tower_entity == tower_entity
+        let mut lines_to_show: Vec<Entity> = Vec::new();
+        if let Some(indicator) = world.ecs.worlds[GAME].get_mut::<RangeIndicator>(tower_entity) {
+            indicator.visible = true;
+            lines_to_show.extend(indicator.line_entities.iter().copied());
+        }
+        for line_entity in lines_to_show {
+            if let Some(visibility) = world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
             {
-                indicator.visible = true;
-                for &line_entity in &indicator.line_entities {
-                    if let Some(visibility) =
-                        world.ecs.worlds[CORE]
-                            .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
-                    {
-                        visibility.visible = true;
-                    }
-                }
-                break;
+                visibility.visible = true;
             }
         }
     }
 }
 
-pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
-    if let Some(preview) = game_world.resources.preview_entity {
+pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &mut World) {
+    if let Some(preview) = game_world.preview_entity {
         queue_ecs_command(world, EcsCommand::DespawnRecursive { entity: preview });
-        game_world.resources.preview_entity = None;
+        game_world.preview_entity = None;
     }
 
-    for entity in &game_world.resources.preview_range_lines {
+    for entity in &game_world.preview_range_lines {
         queue_ecs_command(world, EcsCommand::DespawnRecursive { entity: *entity });
     }
-    game_world.resources.preview_range_lines.clear();
+    game_world.preview_range_lines.clear();
 
-    if let Some((grid_x, grid_z)) = game_world.resources.mouse_grid_pos
-        && can_place_tower_at(game_world, grid_x, grid_z)
+    if let Some((grid_x, grid_z)) = game_world.mouse_grid_pos
+        && can_place_tower_at(game_world, world, grid_x, grid_z)
     {
-        let tower_type = game_world.resources.selected_tower_type;
-        let can_afford = game_world.resources.money >= tower_type.cost();
+        let tower_type = game_world.selected_tower_type;
+        let can_afford = game_world.money >= tower_type.cost();
         let line_alpha = if can_afford { 0.5 } else { 0.2 };
 
         let position = nalgebra_glm::vec3(grid_x as f32, 0.0, grid_z as f32);
@@ -103,7 +98,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
         }
         world.ecs.worlds[CORE].set(preview, MaterialRef::new(material_name));
 
-        game_world.resources.preview_entity = Some(preview);
+        game_world.preview_entity = Some(preview);
 
         let range = tower_type.range();
         let segments = 32;
@@ -153,7 +148,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
 
             world.ecs.worlds[CORE].set(line_entity, Visibility { visible: true });
 
-            game_world.resources.preview_range_lines.push(line_entity);
+            game_world.preview_range_lines.push(line_entity);
         }
 
         let box_size = 0.5;
@@ -325,6 +320,6 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
         world.ecs.worlds[CORE].set(box_entity, Lines::new(box_lines));
         world.ecs.worlds[CORE].set(box_entity, Visibility { visible: true });
 
-        game_world.resources.preview_range_lines.push(box_entity);
+        game_world.preview_range_lines.push(box_entity);
     }
 }

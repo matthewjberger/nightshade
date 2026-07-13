@@ -1,4 +1,4 @@
-use crate::ecs::{GRID_CELL, GameWorld, GridCell};
+use crate::ecs::{GAME, GridCell, TowerDefenseResources};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
@@ -15,7 +15,7 @@ const GRID_HALF_EXTENT: i32 = 6;
 const PATH_TILE_COLOR: [f32; 4] = [0.5, 0.3, 0.1, 1.0];
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn load_or_build_level(game_world: &mut GameWorld, world: &mut World) {
+pub fn load_or_build_level(game_world: &mut TowerDefenseResources, world: &mut World) {
     use nightshade::ecs::scene::commands::{load_scene, spawn_scene};
     use std::path::Path;
 
@@ -47,7 +47,7 @@ pub fn load_or_build_level(game_world: &mut GameWorld, world: &mut World) {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn load_or_build_level(game_world: &mut GameWorld, world: &mut World) {
+pub fn load_or_build_level(game_world: &mut TowerDefenseResources, world: &mut World) {
     build_default_level(world);
     link_path_from_world(game_world, world);
     link_grid_from_world(game_world, world);
@@ -251,7 +251,7 @@ fn push_tag(world: &mut World, entity: Entity, tag: &str) {
         .push(tag.to_string());
 }
 
-fn link_path_from_world(game_world: &mut GameWorld, world: &World) {
+fn link_path_from_world(game_world: &mut TowerDefenseResources, world: &World) {
     let mut waypoints: Vec<(u32, Vec3)> = world
         .resources
         .entities
@@ -270,15 +270,15 @@ fn link_path_from_world(game_world: &mut GameWorld, world: &World) {
         })
         .collect();
     waypoints.sort_by_key(|(index, _)| *index);
-    game_world.resources.path = waypoints
+    game_world.path = waypoints
         .into_iter()
         .map(|(_, position)| position)
         .collect();
 }
 
-fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
-    game_world.resources.grid_tiles.clear();
-    game_world.resources.tile_original_colors.clear();
+fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut World) {
+    game_world.grid_tiles.clear();
+    game_world.tile_original_colors.clear();
 
     let tile_entries: Vec<(Entity, i32, i32, bool, Vec4)> = world
         .resources
@@ -303,15 +303,11 @@ fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
         .collect();
 
     for (entity, x, z, is_path, color) in tile_entries {
-        game_world.resources.grid_tiles.insert((x, z), entity);
-        game_world
-            .resources
-            .tile_original_colors
-            .insert((x, z), color);
+        game_world.grid_tiles.insert((x, z), entity);
+        game_world.tile_original_colors.insert((x, z), color);
 
-        let cell = game_world.spawn_entities(GRID_CELL, 1)[0];
-        game_world.set_grid_cell(
-            cell,
+        world.ecs.worlds[GAME].set(
+            entity,
             GridCell {
                 x,
                 z,

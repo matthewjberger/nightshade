@@ -1,31 +1,37 @@
-use crate::ecs::{GameWorld, Position, TowerType};
+use crate::ecs::{Enemy, GAME, Position, Projectile, TowerDefenseResources, TowerType};
 use crate::systems::{
     create_death_effect, create_explosion_effect, despawn_entity, spawn_money_popup,
 };
 use nightshade::prelude::*;
 
-pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World) {
-    let delta_time = world.resources.window.timing.delta_time * game_world.resources.game_speed;
+pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
+    let delta_time = world.resources.window.timing.delta_time * game_world.game_speed;
     let mut projectiles_to_remove = Vec::new();
 
-    for projectile_entity in game_world.resources.projectiles_list.clone() {
-        if let (Some(projectile), Some(proj_pos)) = (
-            game_world.get_projectile(projectile_entity).copied(),
-            game_world.get_position(projectile_entity).copied(),
+    for projectile_entity in game_world.projectiles_list.clone() {
+        if let (Some(projectile), Some(projectile_position)) = (
+            world.ecs.worlds[GAME]
+                .get::<Projectile>(projectile_entity)
+                .copied(),
+            world.ecs.worlds[GAME]
+                .get::<Position>(projectile_entity)
+                .copied(),
         ) {
-            let enemies_list = game_world.resources.enemies_list.clone();
-            if !enemies_list.contains(&projectile.target) {
+            if !game_world.enemies_list.contains(&projectile.target) {
                 projectiles_to_remove.push(projectile_entity);
                 continue;
             }
 
-            if let Some(target_pos) = game_world.get_position(projectile.target).copied() {
-                let target_visual_pos = if let Some(enemy) = game_world.get_enemy(projectile.target)
-                {
-                    target_pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
-                } else {
-                    target_pos.0
-                };
+            if let Some(target_pos) = world.ecs.worlds[GAME]
+                .get::<Position>(projectile.target)
+                .copied()
+            {
+                let target_visual_pos =
+                    if let Some(enemy) = world.ecs.worlds[GAME].get::<Enemy>(projectile.target) {
+                        target_pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
+                    } else {
+                        target_pos.0
+                    };
 
                 let new_pos = if projectile.arc_height > 0.0 {
                     let total_distance =
@@ -42,8 +48,8 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                         * (1.0 - new_flight_progress);
                     base_pos + nalgebra_glm::vec3(0.0, arc_offset, 0.0)
                 } else {
-                    let direction = (target_visual_pos - proj_pos.0).normalize();
-                    proj_pos.0 + direction * projectile.speed * delta_time
+                    let direction = (target_visual_pos - projectile_position.0).normalize();
+                    projectile_position.0 + direction * projectile.speed * delta_time
                 };
 
                 let distance = (target_visual_pos - new_pos).magnitude();
@@ -55,7 +61,10 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                         create_explosion_effect(game_world, world, target_visual_pos);
                     }
 
-                    if let Some(mut enemy) = game_world.get_enemy(projectile.target).copied() {
+                    if let Some(mut enemy) = world.ecs.worlds[GAME]
+                        .get::<Enemy>(projectile.target)
+                        .copied()
+                    {
                         let mut damage_remaining = projectile.damage;
 
                         if enemy.shield_health > 0.0 {
@@ -78,26 +87,20 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                         }
 
                         if enemy.health <= 0.0 {
-                            game_world.resources.money += enemy.value;
-                            spawn_money_popup(
-                                game_world,
-                                world,
-                                target_visual_pos,
-                                enemy.value as i32,
-                            );
-                            create_death_effect(game_world, world, target_visual_pos);
+                            game_world.money += enemy.value;
+                            spawn_money_popup(world, target_visual_pos, enemy.value as i32);
+                            create_death_effect(world, target_visual_pos);
 
-                            if let Some(idx) = game_world
-                                .resources
+                            if let Some(index) = game_world
                                 .enemies_list
                                 .iter()
-                                .position(|&e| e == projectile.target)
+                                .position(|&candidate| candidate == projectile.target)
                             {
-                                game_world.resources.enemies_list.remove(idx);
+                                game_world.enemies_list.remove(index);
                             }
-                            despawn_entity(game_world, world, projectile.target);
+                            despawn_entity(world, projectile.target);
                         } else {
-                            game_world.set_enemy(projectile.target, enemy);
+                            world.ecs.worlds[GAME].set(projectile.target, enemy);
                         }
                     }
 
@@ -111,18 +114,15 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                             (projectile.speed * delta_time) / total_distance;
                         updated_projectile.flight_progress =
                             updated_projectile.flight_progress.min(1.0);
-                        game_world.set_projectile(projectile_entity, updated_projectile);
+                        world.ecs.worlds[GAME].set(projectile_entity, updated_projectile);
                     }
 
-                    game_world.set_position(projectile_entity, Position(new_pos));
+                    world.ecs.worlds[GAME].set(projectile_entity, Position(new_pos));
 
-                    if let Some(handle) = game_world.get_entity_handle(projectile_entity)
-                        && let Some(transform) =
-                            world.ecs.worlds[CORE]
-                                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
-                                handle.0,
-                            )
-                    {
+                    if let Some(transform) = world.ecs.worlds[CORE]
+                        .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                        projectile_entity,
+                    ) {
                         transform.translation = new_pos;
                     }
                 }
@@ -131,14 +131,13 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
     }
 
     for entity in projectiles_to_remove {
-        if let Some(idx) = game_world
-            .resources
+        if let Some(index) = game_world
             .projectiles_list
             .iter()
-            .position(|&e| e == entity)
+            .position(|&candidate| candidate == entity)
         {
-            game_world.resources.projectiles_list.remove(idx);
+            game_world.projectiles_list.remove(index);
         }
-        despawn_entity(game_world, world, entity);
+        despawn_entity(world, entity);
     }
 }

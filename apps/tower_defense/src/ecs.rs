@@ -1,11 +1,11 @@
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
-pub use freecs::Entity;
+/// Index of the tower defense app's member world in `world.ecs.worlds`.
+pub const GAME: usize = 2;
 
-freecs::ecs! {
-    GameWorld {
-        entity_handle: EntityHandle => ENTITY_HANDLE,
+freecs::dynamic_schema! {
+    pub fn register_tower_defense_components {
         position: Position => POSITION,
         tower: Tower => TOWER,
         enemy: Enemy => ENEMY,
@@ -15,38 +15,40 @@ freecs::ecs! {
         range_indicator: RangeIndicator => RANGE_INDICATOR,
         money_popup: MoneyPopup => MONEY_POPUP,
     }
-    GameResources {
-        money: u32,
-        lives: u32,
-        wave: u32,
-        game_state: GameState,
-        selected_tower_type: TowerType,
-        preview_entity: Option<Entity>,
-        preview_range_lines: Vec<Entity>,
-        ui_handles: UiHandles,
-        ui_interaction: UiInteraction,
-        spawn_timer: f32,
-        enemies_to_spawn: Vec<EnemySpawnInfo>,
-        wave_delay: f32,
-        mouse_grid_pos: Option<(i32, i32)>,
-        camera_entity: Entity,
-        left_press: Option<Vec2>,
-        right_press: Option<Vec2>,
-        path: Vec<Vec3>,
-        towers_by_position: HashMap<(i32, i32), freecs::Entity>,
-        enemies_list: Vec<freecs::Entity>,
-        projectiles_list: Vec<freecs::Entity>,
-        effects_list: Vec<freecs::Entity>,
-        hover_tower_text: Option<Entity>,
-        grid_tiles: HashMap<(i32, i32), Entity>,
-        tile_original_colors: HashMap<(i32, i32), Vec4>,
-        last_hovered_tile: Option<(i32, i32)>,
-        wave_announce_timer: f32,
-        game_speed: f32,
-        current_hp: u32,
-        max_hp: u32,
-        auto_start_waves: bool,
-    }
+}
+
+#[derive(Default)]
+pub struct TowerDefenseResources {
+    pub money: u32,
+    pub lives: u32,
+    pub wave: u32,
+    pub game_state: GameState,
+    pub selected_tower_type: TowerType,
+    pub preview_entity: Option<Entity>,
+    pub preview_range_lines: Vec<Entity>,
+    pub ui_handles: UiHandles,
+    pub ui_interaction: UiInteraction,
+    pub spawn_timer: f32,
+    pub enemies_to_spawn: Vec<EnemySpawnInfo>,
+    pub wave_delay: f32,
+    pub mouse_grid_pos: Option<(i32, i32)>,
+    pub camera_entity: Entity,
+    pub left_press: Option<Vec2>,
+    pub right_press: Option<Vec2>,
+    pub path: Vec<Vec3>,
+    pub towers_by_position: HashMap<(i32, i32), Entity>,
+    pub enemies_list: Vec<Entity>,
+    pub projectiles_list: Vec<Entity>,
+    pub effects_list: Vec<Entity>,
+    pub hover_tower_text: Option<Entity>,
+    pub grid_tiles: HashMap<(i32, i32), Entity>,
+    pub tile_original_colors: HashMap<(i32, i32), Vec4>,
+    pub last_hovered_tile: Option<(i32, i32)>,
+    pub wave_announce_timer: f32,
+    pub game_speed: f32,
+    pub current_hp: u32,
+    pub max_hp: u32,
+    pub auto_start_waves: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -307,9 +309,6 @@ pub struct UiInteraction {
     pub actions: Vec<UiAction>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct EntityHandle(pub Entity);
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Position(pub Vec3);
 
@@ -317,7 +316,7 @@ pub struct Position(pub Vec3);
 pub struct Tower {
     pub tower_type: TowerType,
     pub cooldown: f32,
-    pub target: Option<freecs::Entity>,
+    pub target: Option<Entity>,
     pub fire_animation: f32,
     pub tracking_time: f32,
     pub target_line: Option<Entity>,
@@ -332,14 +331,12 @@ pub struct GridCell {
 
 #[derive(Debug, Clone, Default)]
 pub struct RangeIndicator {
-    pub tower_entity: freecs::Entity,
     pub line_entities: Vec<Entity>,
     pub visible: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct MoneyPopup {
-    pub text_entity: Entity,
     pub lifetime: f32,
 }
 
@@ -360,7 +357,7 @@ pub struct Enemy {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Projectile {
     pub damage: f32,
-    pub target: freecs::Entity,
+    pub target: Entity,
     pub speed: f32,
     pub tower_type: TowerType,
     pub start_position: Vec3,
