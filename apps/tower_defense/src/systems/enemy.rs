@@ -1,4 +1,4 @@
-use crate::ecs::{Enemy, EnemyType, GAME, GameState, Position, TowerDefenseResources};
+use crate::ecs::{Enemy, EnemyType, GameState, Position, TowerDefenseResources};
 use crate::systems::{
     create_death_effect, create_poison_bubble_effect, despawn_entity, spawn_money_popup,
 };
@@ -29,8 +29,8 @@ pub fn spawn_enemy(
         EnemyType::Boss => spawn_boss_enemy(world, position, base_y, color),
     };
 
-    world.ecs.worlds[GAME].set(enemy_entity, Position(position));
-    world.ecs.worlds[GAME].set(
+    world.set(enemy_entity, Position(position));
+    world.set(
         enemy_entity,
         Enemy {
             health: enemy_type.health(wave),
@@ -78,7 +78,7 @@ fn spawn_normal_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -137,7 +137,7 @@ fn spawn_fast_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -180,7 +180,7 @@ fn spawn_tank_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cube(
         world,
@@ -240,7 +240,7 @@ fn spawn_flying_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cone_rotated(
         world,
@@ -293,7 +293,7 @@ fn spawn_shielded_enemy(world: &mut World, position: Vec3, base_y: f32, color: V
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -346,7 +346,7 @@ fn spawn_healer_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere_emissive(
         world,
@@ -390,7 +390,7 @@ fn spawn_boss_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
             index,
         );
     }
-    world.ecs.worlds[CORE].set(main_entity, MaterialRef::new(material_name));
+    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cube(
         world,
@@ -447,8 +447,8 @@ fn spawn_child_sphere(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -456,8 +456,8 @@ fn spawn_child_sphere(
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Sphere"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Sphere"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -480,9 +480,9 @@ fn spawn_child_sphere(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Sphere"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Sphere"));
+    world.set(child, ChildOf(parent));
 }
 
 fn spawn_child_sphere_emissive(
@@ -504,8 +504,8 @@ fn spawn_child_sphere_emissive(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -513,8 +513,8 @@ fn spawn_child_sphere_emissive(
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Sphere"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Sphere"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -538,9 +538,9 @@ fn spawn_child_sphere_emissive(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Sphere"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Sphere"));
+    world.set(child, ChildOf(parent));
 }
 
 fn spawn_child_cube(
@@ -561,8 +561,8 @@ fn spawn_child_cube(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -570,8 +570,8 @@ fn spawn_child_cube(
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Cube"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Cube"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -594,9 +594,9 @@ fn spawn_child_cube(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cube"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Cube"));
+    world.set(child, ChildOf(parent));
 }
 
 fn spawn_child_cylinder(
@@ -618,8 +618,8 @@ fn spawn_child_cylinder(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -627,8 +627,8 @@ fn spawn_child_cylinder(
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Cylinder"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Cylinder"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     let alpha_mode = if blend {
         AlphaMode::Blend
@@ -663,9 +663,9 @@ fn spawn_child_cylinder(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cylinder"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Cylinder"));
+    world.set(child, ChildOf(parent));
 }
 
 fn spawn_child_cone_rotated(
@@ -687,8 +687,8 @@ fn spawn_child_cone_rotated(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -696,8 +696,8 @@ fn spawn_child_cone_rotated(
             rotation: nalgebra_glm::quat_angle_axis(rotation_z, &nalgebra_glm::vec3(0.0, 0.0, 1.0)),
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Cone"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Cone"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -721,9 +721,9 @@ fn spawn_child_cone_rotated(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cone"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Cone"));
+    world.set(child, ChildOf(parent));
 }
 
 fn spawn_child_cone_emissive(
@@ -745,8 +745,8 @@ fn spawn_child_cone_emissive(
             | PARENT,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(child, Name(name.to_string()));
-    world.ecs.worlds[CORE].set(
+    world.set(child, Name(name.to_string()));
+    world.set(
         child,
         LocalTransform {
             translation,
@@ -754,8 +754,8 @@ fn spawn_child_cone_emissive(
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(child, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(child, RenderMesh::new("Cone"));
+    world.set(child, GlobalTransform::default());
+    world.set(child, RenderMesh::new("Cone"));
     let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -779,9 +779,9 @@ fn spawn_child_cone_emissive(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
-    world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cone"));
-    world.ecs.worlds[CORE].set(child, ChildOf(parent));
+    world.set(child, MaterialRef::new(material_name));
+    world.set(child, BoundingVolume::from_mesh_type("Cone"));
+    world.set(child, ChildOf(parent));
 }
 
 pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
@@ -790,7 +790,7 @@ pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut
     let mut enemies_to_remove = Vec::new();
 
     for entity in game_world.enemies_list.clone() {
-        if let Some(mut enemy) = world.ecs.worlds[GAME].get::<Enemy>(entity).copied() {
+        if let Some(mut enemy) = world.get::<Enemy>(entity).copied() {
             if enemy.path_index >= path.len() - 1 {
                 enemies_to_remove.push(entity);
 
@@ -821,7 +821,7 @@ pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut
                 enemy.health -= enemy.poison_damage * delta_time;
                 enemy.poison_duration = (enemy.poison_duration - delta_time).max(0.0);
 
-                if let Some(pos) = world.ecs.worlds[GAME].get::<Position>(entity).copied() {
+                if let Some(pos) = world.get::<Position>(entity).copied() {
                     create_poison_bubble_effect(
                         game_world,
                         world,
@@ -831,12 +831,11 @@ pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut
 
                 if enemy.health <= 0.0 {
                     game_world.money += enemy.value;
-                    let death_pos =
-                        if let Some(pos) = world.ecs.worlds[GAME].get::<Position>(entity) {
-                            pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
-                        } else {
-                            nalgebra_glm::vec3(0.0, 0.0, 0.0)
-                        };
+                    let death_pos = if let Some(pos) = world.get::<Position>(entity) {
+                        pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
+                    } else {
+                        nalgebra_glm::vec3(0.0, 0.0, 0.0)
+                    };
 
                     spawn_money_popup(world, death_pos, enemy.value as i32);
                     create_death_effect(world, death_pos);
@@ -888,12 +887,11 @@ pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut
                 let new_position =
                     current_start + (current_end - current_start) * enemy.path_progress;
 
-                world.ecs.worlds[GAME].set(entity, enemy);
-                world.ecs.worlds[GAME].set(entity, Position(new_position));
+                world.set(entity, enemy);
+                world.set(entity, Position(new_position));
 
                 if let Some(transform) =
-                    world.ecs.worlds[CORE]
-                        .get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
+                    world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
                 {
                     let visual_position =
                         new_position + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0);

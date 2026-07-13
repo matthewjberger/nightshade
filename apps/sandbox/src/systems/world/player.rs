@@ -15,7 +15,7 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxResources, world: &mut World) {
     let Some(fly_camera) = sandbox_world.player.fly_camera else {
         return;
     };
-    let Some(translation) = world.ecs.worlds[CORE]
+    let Some(translation) = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(fly_camera)
         .map(|transform| transform.translation)
     else {
@@ -36,8 +36,7 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxResources, world: &mut World) {
     resolved = crate::systems::world::rocks::push_out_sphere(sandbox_world, resolved, 0.45);
     if (resolved - translation).norm_squared() > 0.0
         && let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(fly_camera)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(fly_camera)
     {
         transform.translation = resolved;
     }
@@ -53,8 +52,7 @@ pub fn set_fly(sandbox_world: &mut SandboxResources, world: &mut World, enabled:
     if enabled {
         let pose = gameplay_camera
             .and_then(|camera| {
-                world.ecs.worlds[CORE]
-                    .get::<nightshade::ecs::transform::components::GlobalTransform>(camera)
+                world.get::<nightshade::ecs::transform::components::GlobalTransform>(camera)
             })
             .map(|transform| {
                 (
@@ -70,8 +68,7 @@ pub fn set_fly(sandbox_world: &mut SandboxResources, world: &mut World, enabled:
         let fly_camera =
             nightshade::ecs::camera::commands::spawn_camera(world, position, "Fly Camera".into());
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(fly_camera)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(fly_camera)
         {
             transform.rotation = rotation;
         }
@@ -111,20 +108,18 @@ pub fn reset(sandbox_world: &mut SandboxResources, world: &mut World) {
     let spawn = find_player_spawn(world).unwrap_or_else(default_spawn_position);
 
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(player_entity)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(player_entity)
     {
         transform.translation = spawn;
     }
-    if let Some(controller) = world.ecs.worlds[CORE]
+    if let Some(controller) = world
         .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
         player_entity,
     ) {
         controller.velocity = Vec3::zeros();
     }
     if let Some(interpolation) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(player_entity)
+        world.get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(player_entity)
     {
         interpolation.previous_translation = spawn;
         interpolation.current_translation = spawn;

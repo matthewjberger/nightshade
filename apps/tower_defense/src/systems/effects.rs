@@ -46,9 +46,9 @@ pub fn create_explosion_effect(
                 index,
             );
         }
-        world.ecs.worlds[CORE].set(particle, MaterialRef::new(material_name));
+        world.set(particle, MaterialRef::new(material_name));
 
-        world.ecs.worlds[GAME].set(
+        world.set(
             particle,
             VisualEffect {
                 effect_type: EffectType::Explosion,
@@ -74,7 +74,7 @@ pub fn create_death_effect(world: &mut World, position: Vec3) {
     smoke_emitter.size_end = 0.8;
     smoke_emitter.velocity_spread = 0.6;
     smoke_emitter.shape = nightshade::render::particles::EmitterShape::Sphere { radius: 0.2 };
-    world.ecs.worlds[CORE].set(entity, smoke_emitter);
+    world.set(entity, smoke_emitter);
 }
 
 pub fn create_poison_bubble_effect(
@@ -118,9 +118,9 @@ pub fn create_poison_bubble_effect(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(particle, MaterialRef::new(material_name));
+    world.set(particle, MaterialRef::new(material_name));
 
-    world.ecs.worlds[GAME].set(
+    world.set(
         particle,
         VisualEffect {
             effect_type: EffectType::PoisonBubble,
@@ -161,9 +161,9 @@ pub fn create_muzzle_flash(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(flash, MaterialRef::new(material_name));
+    world.set(flash, MaterialRef::new(material_name));
 
-    world.ecs.worlds[GAME].set(
+    world.set(
         flash,
         VisualEffect {
             effect_type: EffectType::Explosion,
@@ -207,9 +207,9 @@ pub fn create_muzzle_flash(
                 index,
             );
         }
-        world.ecs.worlds[CORE].set(smoke, MaterialRef::new(material_name));
+        world.set(smoke, MaterialRef::new(material_name));
 
-        world.ecs.worlds[GAME].set(
+        world.set(
             smoke,
             VisualEffect {
                 effect_type: EffectType::Explosion,
@@ -232,7 +232,7 @@ pub fn update_visual_effects(
     let mut effects_to_remove = Vec::new();
 
     for entity in entities {
-        if let Some(mut effect) = world.ecs.worlds[GAME].get::<VisualEffect>(entity).copied() {
+        if let Some(mut effect) = world.get::<VisualEffect>(entity).copied() {
             effect.age += delta_time;
 
             if effect.age >= effect.lifetime {
@@ -240,14 +240,14 @@ pub fn update_visual_effects(
                 continue;
             }
 
-            world.ecs.worlds[GAME].set(entity, effect);
+            world.set(entity, effect);
 
             match effect.effect_type {
                 EffectType::Explosion => {
                     let progress = effect.age / effect.lifetime;
                     let scale_factor = 1.0 + progress * 2.0;
 
-                    if let Some(transform) = world.ecs.worlds[CORE]
+                    if let Some(transform) = world
                         .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
                         entity,
                     ) {
@@ -258,7 +258,7 @@ pub fn update_visual_effects(
                         );
                     }
 
-                    if let Some(material_ref) = world.ecs.worlds[CORE]
+                    if let Some(material_ref) = world
                         .get::<nightshade::ecs::material::components::MaterialRef>(entity)
                         .cloned()
                     {
@@ -273,14 +273,14 @@ pub fn update_visual_effects(
                     }
                 }
                 EffectType::PoisonBubble => {
-                    if let Some(transform) = world.ecs.worlds[CORE]
+                    if let Some(transform) = world
                         .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
                         entity,
                     ) {
                         transform.translation.y += delta_time * 0.5;
                     }
 
-                    if let Some(material_ref) = world.ecs.worlds[CORE]
+                    if let Some(material_ref) = world
                         .get::<nightshade::ecs::material::components::MaterialRef>(entity)
                         .cloned()
                     {

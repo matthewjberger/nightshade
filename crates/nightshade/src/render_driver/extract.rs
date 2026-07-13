@@ -1,4 +1,3 @@
-use crate::ecs::world::CORE;
 use crate::render::wgpu::WgpuRenderer;
 use crate::render::wgpu::pass_sync::rebind_glyph_atlas;
 
@@ -33,7 +32,7 @@ pub(crate) fn prepare_text_meshes(
         usize,
         crate::ecs::text::components::TextProperties,
     )> = Vec::new();
-    for (entity, text) in world.ecs.worlds[CORE]
+    for (entity, text) in world
         .query_ref::<&crate::ecs::text::components::Text>()
         .iter()
     {
@@ -56,9 +55,7 @@ pub(crate) fn prepare_text_meshes(
             },
             &properties,
         );
-        if let Some(text) =
-            world.ecs.worlds[CORE].get_mut::<crate::ecs::text::components::Text>(entity)
-        {
+        if let Some(text) = world.get_mut::<crate::ecs::text::components::Text>(entity) {
             text.cached_mesh = Some(mesh);
             text.dirty = false;
         }

@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, MoneyPopup};
+use crate::ecs::MoneyPopup;
 use nightshade::prelude::*;
 
 pub fn spawn_money_popup(world: &mut World, position: Vec3, amount: i32) {
@@ -21,21 +21,18 @@ pub fn spawn_money_popup(world: &mut World, position: Vec3, amount: i32) {
         1,
     )[0];
 
-    if let Some(name) =
-        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(text_entity)
-    {
+    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(text_entity) {
         *name = Name("Money Popup".to_string());
     }
 
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
     {
         transform.translation = position + nalgebra_glm::vec3(0.0, 1.5, 0.0);
     }
 
     if let Some(text_component) =
-        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::text::components::Text>(text_entity)
+        world.get_mut::<nightshade::ecs::text::components::Text>(text_entity)
     {
         text_component.text_index = text_index;
         text_component.properties = TextProperties {
@@ -49,11 +46,11 @@ pub fn spawn_money_popup(world: &mut World, position: Vec3, amount: i32) {
         text_component.dirty = true;
     }
 
-    world.ecs.worlds[GAME].set(text_entity, MoneyPopup { lifetime: 0.0 });
+    world.set(text_entity, MoneyPopup { lifetime: 0.0 });
 }
 
 pub fn update_money_popups(world: &mut World, delta_time: f32) {
-    let snapshots: Vec<(Entity, MoneyPopup)> = world.ecs.worlds[GAME]
+    let snapshots: Vec<(Entity, MoneyPopup)> = world
         .query_ref::<&MoneyPopup>()
         .iter()
         .map(|(entity, popup)| (entity, *popup))
@@ -68,17 +65,16 @@ pub fn update_money_popups(world: &mut World, delta_time: f32) {
             continue;
         }
 
-        world.ecs.worlds[GAME].set(text_entity, popup);
+        world.set(text_entity, popup);
 
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
         {
             transform.translation.y += delta_time * 0.5;
         }
 
         if let Some(text_component) =
-            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::text::components::Text>(text_entity)
+            world.get_mut::<nightshade::ecs::text::components::Text>(text_entity)
         {
             let alpha = (1.0 - (popup.lifetime / 1.5)).max(0.0);
             text_component.properties.color.w = alpha;

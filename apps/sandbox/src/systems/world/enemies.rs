@@ -35,7 +35,7 @@ pub fn spawn(world: &mut World) {
         let next = patrol_target(next_index);
 
         let (sheep, legs) = spawn_visual(world, start, index);
-        world.ecs.worlds[GAME].set(
+        world.set(
             sheep,
             Enemy {
                 target: next,
@@ -51,11 +51,11 @@ pub fn spawn(world: &mut World) {
 pub fn update(world: &mut World) {
     let delta = world.resources.window.timing.delta_time;
 
-    let snapshots: Vec<(Entity, Enemy, Vec3)> = world.ecs.worlds[GAME]
+    let snapshots: Vec<(Entity, Enemy, Vec3)> = world
         .query_ref::<&Enemy>()
         .iter()
         .filter_map(|(sheep, enemy)| {
-            let position = world.ecs.worlds[CORE]
+            let position = world
                 .get::<nightshade::ecs::transform::components::LocalTransform>(sheep)?
                 .translation;
             Some((sheep, *enemy, position))
@@ -87,8 +87,7 @@ pub fn update(world: &mut World) {
         if distance > f32::EPSILON {
             let yaw = to_target.x.atan2(to_target.z);
             if let Some(transform) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
+                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
             {
                 transform.rotation = nalgebra_glm::quat_angle_axis(yaw, &Vec3::y());
             }
@@ -103,8 +102,7 @@ pub fn update(world: &mut World) {
             let swing = (new_state.gait_phase + leg_phase).sin() * LEG_SWING;
             let (offset_x, offset_z) = LEG_OFFSETS[leg_index];
             if let Some(transform) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(*leg)
+                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(*leg)
             {
                 transform.rotation = nalgebra_glm::quat_angle_axis(swing, &Vec3::x());
                 transform.translation = Vec3::new(
@@ -121,14 +119,13 @@ pub fn update(world: &mut World) {
 
     for (sheep, new_position) in translations {
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
         {
             transform.translation = new_position;
         }
     }
     for (sheep, new_state) in state_updates {
-        world.ecs.worlds[GAME].set(sheep, new_state);
+        world.set(sheep, new_state);
     }
 }
 
@@ -149,12 +146,11 @@ fn patrol_target(index: usize) -> Vec3 {
 
 fn spawn_visual(world: &mut World, position: Vec3, index: u32) -> (Entity, [Entity; 4]) {
     let root = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(root) {
+    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(root) {
         name.0 = format!("Sheep {}", index);
     }
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(root)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(root)
     {
         transform.translation = position;
     }
@@ -230,22 +226,17 @@ fn spawn_sheep_part(
             | PARENT,
         1,
     )[0];
-    if let Some(part_name) =
-        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
-    {
+    if let Some(part_name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
         part_name.0 = name.clone();
     }
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
     {
         transform.translation = translation;
         transform.scale = scale;
     }
-    world.ecs.worlds[CORE].set(entity, ChildOf(root));
-    if let Some(mesh) =
-        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::mesh::components::RenderMesh>(entity)
-    {
+    world.set(entity, ChildOf(root));
+    if let Some(mesh) = world.get_mut::<nightshade::ecs::mesh::components::RenderMesh>(entity) {
         mesh.name = "Cube".to_string();
     }
     spawn_material(world, entity, name, material);

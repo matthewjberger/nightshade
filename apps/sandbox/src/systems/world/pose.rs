@@ -437,8 +437,7 @@ fn bone_chain(
 }
 
 pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World, model: Entity) {
-    let Some(player) = world.ecs.worlds[CORE]
-        .get::<nightshade::ecs::animation::components::AnimationPlayer>(model)
+    let Some(player) = world.get::<nightshade::ecs::animation::components::AnimationPlayer>(model)
     else {
         return;
     };
@@ -449,8 +448,7 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World, model
     let mut rest = Vec::new();
     for &entity in bones.values() {
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
+            world.get::<nightshade::ecs::transform::components::LocalTransform>(entity)
         {
             rest.push((entity, transform.rotation));
         }
@@ -555,7 +553,7 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World, model
     let hips = find_bone(&bones, "Hips");
     let (hips_rest_translation, hips_drop_local) = hips
         .map(|hips_entity| {
-            let rest_translation = world.ecs.worlds[CORE]
+            let rest_translation = world
                 .get::<nightshade::ecs::transform::components::LocalTransform>(hips_entity)
                 .map(|transform| transform.translation)
                 .unwrap_or_else(Vec3::zeros);
@@ -630,7 +628,7 @@ pub fn apply_softness(sandbox_world: &mut SandboxResources, world: &mut World) {
         .min(SOFTNESS_MAX_STEP);
     let rigid_blend = sandbox_world.character.hang_weight.clamp(0.0, 1.0);
     for soft in &mut sandbox_world.pose.soft_joints {
-        let Some(target) = world.ecs.worlds[CORE]
+        let Some(target) = world
             .get::<nightshade::ecs::transform::components::LocalTransform>(soft.entity)
             .map(|transform| transform.rotation)
         else {
@@ -657,8 +655,7 @@ pub fn apply_softness(sandbox_world: &mut SandboxResources, world: &mut World) {
             );
         }
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(soft.entity)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(soft.entity)
         {
             transform.rotation = soft.rotation;
         }
@@ -698,7 +695,7 @@ fn hips_local_drop_vector(world: &World, model: Entity, hips: Entity) -> Vec3 {
                 .map(|inverse| inverse * Vec3::new(0.0, -1.0, 0.0))
                 .unwrap_or_else(Vec3::zeros);
         }
-        let local_matrix = world.ecs.worlds[CORE]
+        let local_matrix = world
             .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
             .map(|transform| {
                 nalgebra_glm::quat_to_mat3(&transform.rotation)
@@ -719,8 +716,7 @@ pub fn set_pose(sandbox_world: &mut SandboxResources, world: &mut World, name: &
         sandbox_world.pose.active = None;
         if let Some(model) = model
             && let Some(player) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(model)
+                world.get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(model)
             && !player.clips.is_empty()
         {
             player.playing = true;
@@ -738,8 +734,7 @@ pub fn set_pose(sandbox_world: &mut SandboxResources, world: &mut World, name: &
     sandbox_world.pose.active = Some(index);
     if let Some(model) = model
         && let Some(player) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(model)
+            world.get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(model)
     {
         player.playing = false;
     }
@@ -879,8 +874,7 @@ pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
             continue;
         };
         let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(*entity)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(*entity)
         else {
             continue;
         };
@@ -896,8 +890,7 @@ pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
         let target_translation =
             pose.hips_rest_translation + pose.hips_drop_local * (CROUCH_HIPS_DROP * drop_weight);
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(hips)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(hips)
         {
             transform.translation =
                 transform.translation + (target_translation - transform.translation) * blend;
@@ -922,7 +915,7 @@ fn apply_deltas_to_targets(
             .get(&entity)
             .copied()
             .or_else(|| {
-                world.ecs.worlds[CORE]
+                world
                     .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
                     .map(|transform| transform.rotation)
             })
@@ -1036,7 +1029,7 @@ fn build_locals_from_model_deltas(
             .get(&entity)
             .copied()
             .or_else(|| {
-                world.ecs.worlds[CORE]
+                world
                     .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
                     .map(|transform| transform.rotation)
             })

@@ -66,8 +66,7 @@ pub fn find_player_spawn(world: &World) -> Option<Vec3> {
             continue;
         }
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::LocalTransform>(*entity)
+            world.get::<nightshade::ecs::transform::components::LocalTransform>(*entity)
         {
             return Some(transform.translation);
         }
@@ -190,9 +189,7 @@ fn spawn_static_block(
     material: nightshade::render::material::Material,
 ) -> Entity {
     let entity = spawn_static_physics_cube_with_material(world, position, size, material);
-    if let Some(entity_name) =
-        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
-    {
+    if let Some(entity_name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
         entity_name.0 = name.to_string();
     }
     ensure_guid(world, entity);
@@ -215,8 +212,7 @@ fn spawn_ramp(
         material,
     );
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
     {
         transform.rotation = nalgebra_glm::quat_angle_axis(angle, &Vec3::x());
     }
@@ -230,8 +226,7 @@ fn spawn_floor(world: &mut World) {
         Vec3::new(50.0, 1.0, 50.0),
         material,
     );
-    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
-    {
+    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
         name.0 = "Floor".to_string();
     }
     world
@@ -246,11 +241,10 @@ fn spawn_floor(world: &mut World) {
 
 fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
-    {
+    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
         name.0 = "PlayerSpawn".to_string();
     }
-    world.ecs.worlds[CORE].set(
+    world.set(
         entity,
         components::LocalTransform {
             translation: position,
@@ -258,7 +252,7 @@ fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
             scale: Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.ecs.worlds[CORE].set(entity, components::GlobalTransform::default());
+    world.set(entity, components::GlobalTransform::default());
     world
         .resources
         .entities

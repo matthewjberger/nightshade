@@ -117,9 +117,9 @@ impl State for PickingDemo {
                     index,
                 );
             }
-            world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
+            world.set(entity, MaterialRef::new(material_name));
 
-            let bounding_radius = world.ecs.worlds[CORE]
+            let bounding_radius = world
                 .get::<nightshade::render::bounding_volume::BoundingVolume>(entity)
                 .map(|bv| bv.sphere_radius)
                 .unwrap_or(1.0);
@@ -143,9 +143,9 @@ impl State for PickingDemo {
         world.resources.active_camera = Some(camera);
 
         let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
-        world.ecs.worlds[CORE].set(preview_entity, Lines::default());
-        world.ecs.worlds[CORE].set(preview_entity, Visibility { visible: true });
-        world.ecs.worlds[CORE].set(preview_entity, GlobalTransform::default());
+        world.set(preview_entity, Lines::default());
+        world.set(preview_entity, Visibility { visible: true });
+        world.set(preview_entity, GlobalTransform::default());
         self.preview_lines_entity = Some(preview_entity);
 
         self.handles = build_panel(world, self.mode, self.show_debug_volumes, self.spin_speed);
@@ -222,22 +222,21 @@ impl PickingDemo {
             nalgebra_glm::quat_angle_axis(self.spin_speed * delta, &Vec3::new(0.0, 1.0, 0.0));
         for mesh in &self.meshes {
             if let Some(transform) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(mesh.entity)
+                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(mesh.entity)
             {
                 transform.rotation = rotation * transform.rotation;
             }
         }
         for (mesh_entity, sphere_entity) in &self.debug_volumes {
             if let Some(global) =
-                world.ecs.worlds[CORE]
-                    .get::<nightshade::ecs::transform::components::GlobalTransform>(*mesh_entity)
+                world.get::<nightshade::ecs::transform::components::GlobalTransform>(*mesh_entity)
             {
                 let translation = Vec3::new(global.0[(0, 3)], global.0[(1, 3)], global.0[(2, 3)]);
-                if let Some(transform) = world.ecs.worlds[CORE]
+                if let Some(transform) = world
                     .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
-                    *sphere_entity,
-                ) {
+                        *sphere_entity,
+                    )
+                {
                     transform.translation = translation;
                 }
             }
@@ -246,8 +245,8 @@ impl PickingDemo {
 
     fn sync_debug_volume_visibility(&self, world: &mut World) {
         for (_, sphere_entity) in &self.debug_volumes {
-            if let Some(visibility) = world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::primitives::Visibility>(*sphere_entity)
+            if let Some(visibility) =
+                world.get_mut::<nightshade::ecs::primitives::Visibility>(*sphere_entity)
             {
                 visibility.visible = self.show_debug_volumes;
             }
@@ -293,7 +292,7 @@ impl PickingDemo {
                 }
                 _ => Lines::new(vec![]),
             };
-            world.ecs.worlds[CORE].set(preview_entity, lines);
+            world.set(preview_entity, lines);
         }
 
         if mouse_held {
@@ -307,7 +306,7 @@ impl PickingDemo {
             self.meshes
                 .iter()
                 .map(|mesh| {
-                    let mesh_position = world.ecs.worlds[CORE]
+                    let mesh_position = world
                         .get::<nightshade::ecs::transform::components::GlobalTransform>(mesh.entity)
                         .map(|t| Vec3::new(t.0[(0, 3)], t.0[(1, 3)], t.0[(2, 3)]))
                         .unwrap_or_else(Vec3::zeros);
@@ -322,7 +321,7 @@ impl PickingDemo {
 
     fn update_cpu_hover(&mut self, world: &mut World) {
         if let Some(preview_entity) = self.preview_lines_entity {
-            world.ecs.worlds[CORE].set(preview_entity, Lines::new(vec![]));
+            world.set(preview_entity, Lines::new(vec![]));
         }
 
         let mouse = world.resources.input.mouse;
@@ -468,8 +467,8 @@ fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32
         NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LINES | VISIBILITY,
         1,
     )[0];
-    world.ecs.worlds[CORE].set(entity, Name(format!("{name} Debug Volume")));
-    world.ecs.worlds[CORE].set(
+    world.set(entity, Name(format!("{name} Debug Volume")));
+    world.set(
         entity,
         LocalTransform {
             translation: position,
@@ -477,9 +476,9 @@ fn spawn_debug_sphere(world: &mut World, name: &str, position: Vec3, radius: f32
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(entity, GlobalTransform::default());
-    world.ecs.worlds[CORE].set(entity, Lines::new(lines));
-    world.ecs.worlds[CORE].set(entity, Visibility { visible: true });
+    world.set(entity, GlobalTransform::default());
+    world.set(entity, Lines::new(lines));
+    world.set(entity, Visibility { visible: true });
     entity
 }
 

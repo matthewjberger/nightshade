@@ -311,10 +311,12 @@ pub struct Resources {
     pub world_id: u64,
 }
 
-/// Index of the core member world in `world.ecs.worlds`.
-pub const CORE: usize = 0;
-/// Index of the retained-UI member world in `world.ecs.worlds`.
-pub const UI: usize = 1;
+freecs::dynamic_worlds! {
+    pub fn build_engine_ecs {
+        CORE => register_core_components,
+        UI => register_ui_components,
+    }
+}
 
 /// The engine's ECS: a [`freecs::dynamic::DynEcs`] group with the core and
 /// retained-UI member worlds over one shared entity allocator, plus the
@@ -330,13 +332,8 @@ pub struct World {
 
 impl Default for World {
     fn default() -> Self {
-        let mut ecs = freecs::dynamic::DynEcs::new();
-        let core_index = ecs.add_world(register_core_components());
-        assert_eq!(core_index, CORE);
-        let ui_index = ecs.add_world(register_ui_components());
-        assert_eq!(ui_index, UI);
         Self {
-            ecs,
+            ecs: build_engine_ecs(),
             resources: Resources::default(),
         }
     }

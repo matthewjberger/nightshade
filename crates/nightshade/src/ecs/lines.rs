@@ -18,7 +18,7 @@
 //! let debug_lines = spawn_entities(world, LINES, 1)[0];
 //!
 //! // Get the lines component and add lines
-//! if let Some(lines) = world.ecs.worlds[CORE].get_mut::<crate::ecs::lines::components::Lines>(debug_lines) {
+//! if let Some(lines) = world.get_mut::<crate::ecs::lines::components::Lines>(debug_lines) {
 //!     lines.push(Line {
 //!         start: Vec3::new(0.0, 0.0, 0.0),
 //!         end: Vec3::new(1.0, 1.0, 1.0),
@@ -33,7 +33,7 @@
 //!
 //! ```ignore
 //! fn draw_debug_shapes(world: &mut World, lines_entity: Entity) {
-//!     let Some(lines) = world.ecs.worlds[CORE].get_mut::<crate::ecs::lines::components::Lines>(lines_entity) else { return };
+//!     let Some(lines) = world.get_mut::<crate::ecs::lines::components::Lines>(lines_entity) else { return };
 //!
 //!     // Draw a box/cube wireframe
 //!     let min = Vec3::new(-1.0, 0.0, -1.0);
@@ -99,14 +99,14 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(lines) = world.ecs.worlds[CORE].get_mut::<crate::ecs::lines::components::Lines>(self.debug_lines) {
+//!     if let Some(lines) = world.get_mut::<crate::ecs::lines::components::Lines>(self.debug_lines) {
 //!         lines.clear();
 //!
 //!         // Draw current frame's debug info
 //!         for entity in world.ecs.worlds[CORE].query_entities(RIGID_BODY | LOCAL_TRANSFORM) {
-//!             if let Some(transform) = world.ecs.worlds[CORE].get::<crate::ecs::transform::components::LocalTransform>(entity) {
+//!             if let Some(transform) = world.get::<crate::ecs::transform::components::LocalTransform>(entity) {
 //!                 // Draw velocity vector
-//!                 if let Some(rb) = world.ecs.worlds[CORE].get::<crate::ecs::physics::components::RigidBodyComponent>(entity) {
+//!                 if let Some(rb) = world.get::<crate::ecs::physics::components::RigidBodyComponent>(entity) {
 //!                     lines.push(Line {
 //!                         start: transform.translation,
 //!                         end: transform.translation + Vec3::from(rb.linvel),

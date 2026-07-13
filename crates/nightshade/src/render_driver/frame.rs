@@ -3,7 +3,6 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
-use crate::ecs::world::CORE;
 use crate::render::generational_registry::registry_name_for;
 use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::render::wgpu::pass_sync;
@@ -88,7 +87,7 @@ pub(crate) fn sync_cloth_write_targets(
     world: &crate::ecs::world::World,
 ) {
     let mut cloths: Vec<pass_sync::ClothWriteBounds> = Vec::new();
-    for (_entity, (cloth, render_mesh)) in world.ecs.worlds[CORE]
+    for (_entity, (cloth, render_mesh)) in world
         .query_ref::<(
             &crate::ecs::cloth::components::Cloth,
             &crate::ecs::mesh::components::RenderMesh,

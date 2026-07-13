@@ -276,7 +276,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .map(|state| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
                 });
-            let current_flipped = world.ecs.worlds[CORE]
+            let current_flipped = world
                 .get::<crate::ecs::transform::components::GlobalTransform>(entity)
                 .map(|global| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
@@ -299,28 +299,26 @@ fn dynamic_object_state(
     entity: crate::ecs::world::Entity,
 ) -> crate::render::config::DynamicObjectState {
     let visible = u32::from(
-        world.ecs.worlds[CORE]
+        world
             .get::<crate::ecs::primitives::Visibility>(entity)
             .is_none_or(|v| v.visible),
     );
     let mut morph_weights = [0.0f32; 8];
-    if let Some(weights) =
-        world.ecs.worlds[CORE].get::<crate::ecs::morph::components::MorphWeights>(entity)
-    {
+    if let Some(weights) = world.get::<crate::ecs::morph::components::MorphWeights>(entity) {
         for (index, weight) in weights.weights.iter().take(8).enumerate() {
             morph_weights[index] = *weight;
         }
     }
-    let transform = world.ecs.worlds[CORE]
+    let transform = world
         .get::<crate::ecs::transform::components::GlobalTransform>(entity)
         .map(|global| global.0)
         .unwrap_or_else(nalgebra_glm::Mat4::identity);
-    let culling_mask = world.ecs.worlds[CORE]
+    let culling_mask = world
         .get::<crate::ecs::primitives::CullingMask>(entity)
         .copied()
         .unwrap_or_default()
         .0;
-    let render_layer_value = world.ecs.worlds[CORE]
+    let render_layer_value = world
         .get::<crate::render::render_layer::RenderLayer>(entity)
         .map(|layer| layer.0)
         .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
@@ -341,8 +339,7 @@ fn refill_instanced_object_data(
     entity: crate::ecs::world::Entity,
     data: &mut crate::render::config::InstancedObjectData,
 ) -> bool {
-    let Some(instanced_mesh) =
-        world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::InstancedMesh>(entity)
+    let Some(instanced_mesh) = world.get::<crate::ecs::mesh::components::InstancedMesh>(entity)
     else {
         return false;
     };
@@ -372,16 +369,16 @@ fn refill_instanced_object_data(
     );
     data.mesh_name.clear();
     data.mesh_name.push_str(&instanced_mesh.mesh_name);
-    data.render_layer = world.ecs.worlds[CORE]
+    data.render_layer = world
         .get::<crate::render::render_layer::RenderLayer>(entity)
         .map(|layer| layer.0)
         .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
     data.visible = u32::from(
-        world.ecs.worlds[CORE]
+        world
             .get::<crate::ecs::primitives::Visibility>(entity)
             .is_none_or(|v| v.visible),
     );
-    data.parent_transform = world.ecs.worlds[CORE]
+    data.parent_transform = world
         .get::<crate::ecs::transform::components::GlobalTransform>(entity)
         .map(|global| global.0)
         .unwrap_or_else(nalgebra_glm::Mat4::identity);
@@ -392,7 +389,7 @@ fn instanced_object_data(
     world: &World,
     entity: crate::ecs::world::Entity,
 ) -> Option<crate::render::config::InstancedObjectData> {
-    world.ecs.worlds[CORE]
+    world
         .get::<crate::ecs::mesh::components::InstancedMesh>(entity)
         .map(|instanced_mesh| {
             let world_models = instanced_mesh
@@ -411,16 +408,16 @@ fn instanced_object_data(
                 .iter()
                 .map(|data| data.tint)
                 .collect();
-            let render_layer = world.ecs.worlds[CORE]
+            let render_layer = world
                 .get::<crate::render::render_layer::RenderLayer>(entity)
                 .map(|layer| layer.0)
                 .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
             let visible = u32::from(
-                world.ecs.worlds[CORE]
+                world
                     .get::<crate::ecs::primitives::Visibility>(entity)
                     .is_none_or(|v| v.visible),
             );
-            let parent_transform = world.ecs.worlds[CORE]
+            let parent_transform = world
                 .get::<crate::ecs::transform::components::GlobalTransform>(entity)
                 .map(|global| global.0)
                 .unwrap_or_else(nalgebra_glm::Mat4::identity);
@@ -451,7 +448,7 @@ fn sync_objects_full(world: &mut World) {
     let mesh_names: Vec<(crate::ecs::world::Entity, String)> = entities
         .iter()
         .filter_map(|&entity| {
-            world.ecs.worlds[CORE]
+            world
                 .get::<crate::ecs::mesh::components::RenderMesh>(entity)
                 .map(|mesh| (entity, mesh.name.clone()))
         })
@@ -471,7 +468,7 @@ fn sync_objects_full(world: &mut World) {
     )> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::BOUNDING_VOLUME)
         .filter_map(|entity| {
-            world.ecs.worlds[CORE]
+            world
                 .get::<crate::render::bounding_volume::BoundingVolume>(entity)
                 .map(|volume| {
                     (
@@ -517,7 +514,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.mesh_name_refresh {
-        match world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity) {
+        match world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
             Some(mesh) => {
                 let name = mesh.name.clone();
                 world
@@ -565,7 +562,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.bounds_refresh {
-        match world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity) {
+        match world.get::<crate::render::bounding_volume::BoundingVolume>(entity) {
             Some(volume) => {
                 let bounds = crate::render::config::RenderBounds {
                     center: volume.obb.center,
@@ -647,9 +644,8 @@ fn sync_lights(world: &mut World) {
         std::collections::HashMap::new();
     for entity in light_entities {
         if let (Some(light), Some(transform)) = (
-            world.ecs.worlds[CORE].get::<crate::ecs::light::components::Light>(entity),
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity),
+            world.get::<crate::ecs::light::components::Light>(entity),
+            world.get::<crate::ecs::transform::components::GlobalTransform>(entity),
         ) {
             light_index.insert(entity, lights.len());
             lights.push(crate::render::config::RenderLight {
@@ -714,11 +710,10 @@ fn sync_decals(world: &mut World) {
     let decals: Vec<crate::render::config::RenderDecal> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::DECAL | crate::ecs::GLOBAL_TRANSFORM)
         .filter_map(|entity| {
-            let decal =
-                world.ecs.worlds[CORE].get::<crate::ecs::decal::components::Decal>(entity)?;
-            let transform = world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)?;
-            let visible = world.ecs.worlds[CORE]
+            let decal = world.get::<crate::ecs::decal::components::Decal>(entity)?;
+            let transform =
+                world.get::<crate::ecs::transform::components::GlobalTransform>(entity)?;
+            let visible = world
                 .get::<crate::ecs::primitives::Visibility>(entity)
                 .is_none_or(|visibility| visibility.visible);
             Some(crate::render::config::RenderDecal {
@@ -745,7 +740,7 @@ fn sync_emitters(world: &mut World) {
     let emitters: Vec<crate::render::config::RenderParticleEmitter> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::PARTICLE_EMITTER)
         .filter_map(|entity| {
-            world.ecs.worlds[CORE]
+            world
                 .get::<crate::render::particles::ParticleEmitter>(entity)
                 .map(|emitter| crate::render::config::RenderParticleEmitter {
                     entity,
@@ -758,7 +753,7 @@ fn sync_emitters(world: &mut World) {
 
 fn sync_water(world: &mut World) {
     let mut water_bodies: Vec<crate::render::config::RenderWater> = Vec::new();
-    for (_, (water, global_transform)) in world.ecs.worlds[CORE]
+    for (_, (water, global_transform)) in world
         .query_ref::<(
             &crate::ecs::water::components::Water,
             &crate::ecs::transform::components::GlobalTransform,
@@ -798,7 +793,7 @@ fn sync_water(world: &mut World) {
 
 fn sync_cloth(world: &mut World) {
     let mut cloth_bodies: Vec<crate::render::config::RenderCloth> = Vec::new();
-    for (entity, (cloth, global_transform, render_mesh)) in world.ecs.worlds[CORE]
+    for (entity, (cloth, global_transform, render_mesh)) in world
         .query_ref::<(
             &crate::ecs::cloth::components::Cloth,
             &crate::ecs::transform::components::GlobalTransform,
@@ -854,16 +849,16 @@ fn sync_texts(world: &mut World) {
     let texts: Vec<crate::render::config::RenderText> = text_entities
         .into_iter()
         .filter_map(|entity| {
-            if !world.ecs.worlds[CORE]
+            if !world
                 .get::<crate::ecs::primitives::Visibility>(entity)
                 .map(|visibility| visibility.visible)
                 .unwrap_or(false)
             {
                 return None;
             }
-            let text = world.ecs.worlds[CORE].get::<crate::ecs::text::components::Text>(entity)?;
+            let text = world.get::<crate::ecs::text::components::Text>(entity)?;
             text.cached_mesh.as_ref()?;
-            let transform = world.ecs.worlds[CORE]
+            let transform = world
                 .get::<crate::ecs::transform::components::GlobalTransform>(entity)?
                 .0;
             let char_count = world
@@ -878,7 +873,7 @@ fn sync_texts(world: &mut World) {
                         .count()
                 })
                 .unwrap_or(0);
-            let character_colors = world.ecs.worlds[CORE]
+            let character_colors = world
                 .get::<crate::ecs::text::components::TextCharacterColors>(entity)
                 .map(|colors| colors.colors.clone());
             Some(crate::render::config::RenderText {

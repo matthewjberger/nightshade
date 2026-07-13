@@ -19,9 +19,7 @@ pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::E
 pub fn query_ancestors(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
     let mut chain = vec![entity];
     let mut current = entity;
-    while let Some(ChildOf(parent)) =
-        world.ecs.worlds[CORE].get::<freecs::dynamic::ChildOf>(current)
-    {
+    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
         chain.push(*parent);
         current = *parent;
     }
@@ -36,7 +34,7 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
         if world.ecs.worlds[CORE].entity_has_components(current, PREFAB_SOURCE) {
             highest_prefab_root = Some(current);
         }
-        match world.ecs.worlds[CORE].get::<freecs::dynamic::ChildOf>(current) {
+        match world.get::<freecs::dynamic::ChildOf>(current) {
             Some(ChildOf(parent)) => current = *parent,
             _ => break,
         }
@@ -47,9 +45,7 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
 #[cfg(not(feature = "assets"))]
 pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity {
     let mut current = entity;
-    while let Some(ChildOf(parent)) =
-        world.ecs.worlds[CORE].get::<freecs::dynamic::ChildOf>(current)
-    {
+    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
         current = *parent;
     }
     current
@@ -65,9 +61,7 @@ pub fn chain_from_root_to_leaf(
     }
     let mut chain = vec![leaf];
     let mut current = leaf;
-    while let Some(ChildOf(parent)) =
-        world.ecs.worlds[CORE].get::<freecs::dynamic::ChildOf>(current)
-    {
+    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
         chain.push(*parent);
         if *parent == root {
             break;

@@ -16,7 +16,7 @@
 //! use nightshade::ecs::world::CAMERA;
 //!
 //! let entity = spawn_entities(world, CAMERA, 1)[0];
-//! world.ecs.worlds[CORE].set(entity, Camera {
+//! world.set(entity, Camera {
 //!     projection: Projection::Perspective(PerspectiveCamera {
 //!         y_fov_rad: 60.0_f32.to_radians(),
 //!         aspect_ratio: Some(16.0 / 9.0),
@@ -25,7 +25,7 @@
 //!     }),
 //!     smoothing: None,
 //! });
-//! world.ecs.worlds[CORE].set(entity, LocalTransform {
+//! world.set(entity, LocalTransform {
 //!     translation: Vec3::new(0.0, 5.0, 10.0),
 //!     ..Default::default()
 //! });
@@ -41,8 +41,8 @@
 //! use nightshade::ecs::world::PAN_ORBIT_CAMERA;
 //!
 //! let entity = spawn_entities(world, PAN_ORBIT_CAMERA, 1)[0];
-//! world.ecs.worlds[CORE].set(entity, Camera::default());
-//! world.ecs.worlds[CORE].set(entity, PanOrbitCamera::new(
+//! world.set(entity, Camera::default());
+//! world.set(entity, PanOrbitCamera::new(
 //!     Vec3::zeros(),  // Focus point
 //!     15.0,           // Distance from focus
 //! )
@@ -117,7 +117,7 @@
 //! ```ignore
 //! use nightshade::ecs::camera::{Camera, Projection, OrthographicCamera};
 //!
-//! world.ecs.worlds[CORE].set(entity, Camera {
+//! world.set(entity, Camera {
 //!     projection: Projection::Orthographic(OrthographicCamera {
 //!         x_mag: 10.0,
 //!         y_mag: 10.0,
@@ -131,7 +131,7 @@
 //! # Updating FOV at Runtime
 //!
 //! ```ignore
-//! if let Some(camera) = world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::Camera>(camera_entity) {
+//! if let Some(camera) = world.get_mut::<crate::ecs::camera::components::Camera>(camera_entity) {
 //!     if let Projection::Perspective(ref mut perspective) = camera.projection {
 //!         perspective.y_fov_rad = 90.0_f32.to_radians();
 //!     }
@@ -143,7 +143,7 @@
 //! Move the pan-orbit camera to look at a new target:
 //!
 //! ```ignore
-//! if let Some(pan_orbit) = world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::PanOrbitCamera>(camera_entity) {
+//! if let Some(pan_orbit) = world.get_mut::<crate::ecs::camera::components::PanOrbitCamera>(camera_entity) {
 //!     pan_orbit.target_focus = Vec3::new(10.0, 0.0, 5.0);
 //!     // Camera will smoothly interpolate to new focus
 //! }

@@ -46,7 +46,7 @@ pub fn can_place_tower_at(
         return false;
     }
 
-    for (_, cell) in world.ecs.worlds[GAME].query_ref::<&GridCell>().iter() {
+    for (_, cell) in world.query_ref::<&GridCell>().iter() {
         if cell.x == x && cell.z == z {
             return !cell.occupied;
         }
@@ -57,7 +57,7 @@ pub fn can_place_tower_at(
 pub fn mark_cell_occupied(world: &mut World, x: i32, z: i32) {
     let entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(GRID_CELL).collect();
     for entity in entities {
-        if let Some(cell) = world.ecs.worlds[GAME].get_mut::<GridCell>(entity)
+        if let Some(cell) = world.get_mut::<GridCell>(entity)
             && cell.x == x
             && cell.z == z
         {

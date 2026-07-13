@@ -64,7 +64,7 @@ fn solve_foot_to_ground(world: &mut World, body: Entity, chain: IkChain) {
 
 fn solve_hands_to_ledge(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
     let character = &sandbox_world.character;
-    let Some(feet) = world.ecs.worlds[CORE]
+    let Some(feet) = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)
     else {
@@ -92,8 +92,7 @@ pub struct WorldPose {
 }
 
 fn compose(parent: &WorldPose, entity: Entity, world: &World) -> Option<WorldPose> {
-    let local = world.ecs.worlds[CORE]
-        .get::<nightshade::ecs::transform::components::LocalTransform>(entity)?;
+    let local = world.get::<nightshade::ecs::transform::components::LocalTransform>(entity)?;
     Some(WorldPose {
         position: parent.position
             + nalgebra_glm::quat_rotate_vec3(
@@ -108,7 +107,7 @@ fn compose(parent: &WorldPose, entity: Entity, world: &World) -> Option<WorldPos
 fn ancestry(world: &World, body: Entity, entity: Entity) -> Vec<Entity> {
     let mut chain = vec![entity];
     let mut current = entity;
-    while let Some(parent) = world.ecs.worlds[CORE]
+    while let Some(parent) = world
         .get::<freecs::dynamic::ChildOf>(current)
         .map(|child_of| child_of.0)
     {
@@ -227,14 +226,14 @@ fn solve_two_bone(world: &mut World, body: Entity, chain: IkChain, target: Vec3)
     let new_root_local = nalgebra_glm::quat_inverse(&root_parent_rotation)
         * root_delta
         * root_parent_rotation
-        * world.ecs.worlds[CORE]
+        * world
             .get::<nightshade::ecs::transform::components::LocalTransform>(chain.root)
             .map(|transform| transform.rotation)
             .unwrap_or_else(nalgebra_glm::quat_identity);
     let new_middle_local = nalgebra_glm::quat_inverse(&root_pose.rotation)
         * middle_delta
         * root_pose.rotation
-        * world.ecs.worlds[CORE]
+        * world
             .get::<nightshade::ecs::transform::components::LocalTransform>(chain.middle)
             .map(|transform| transform.rotation)
             .unwrap_or_else(nalgebra_glm::quat_identity);
@@ -242,20 +241,17 @@ fn solve_two_bone(world: &mut World, body: Entity, chain: IkChain, target: Vec3)
     let new_end_local = nalgebra_glm::quat_inverse(&new_middle_world) * end_pose.rotation;
 
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.root)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.root)
     {
         transform.rotation = nalgebra_glm::quat_normalize(&new_root_local);
     }
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.middle)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.middle)
     {
         transform.rotation = nalgebra_glm::quat_normalize(&new_middle_local);
     }
     if let Some(transform) =
-        world.ecs.worlds[CORE]
-            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.end)
+        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(chain.end)
     {
         transform.rotation = nalgebra_glm::quat_normalize(&new_end_local);
     }

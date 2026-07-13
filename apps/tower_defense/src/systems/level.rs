@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, GridCell, TowerDefenseResources};
+use crate::ecs::{GridCell, TowerDefenseResources};
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
@@ -152,15 +152,15 @@ fn compute_path_cells(waypoints: &[Vec3]) -> std::collections::HashSet<(i32, i32
 
 fn spawn_waypoint(world: &mut World, index: u32, position: Vec3) {
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    world.ecs.worlds[CORE].set(entity, Name(format!("PathWaypoint_{index}")));
-    world.ecs.worlds[CORE].set(
+    world.set(entity, Name(format!("PathWaypoint_{index}")));
+    world.set(
         entity,
         LocalTransform {
             translation: position,
             ..Default::default()
         },
     );
-    world.ecs.worlds[CORE].set(entity, GlobalTransform::default());
+    world.set(entity, GlobalTransform::default());
     push_tag(world, entity, WAYPOINT_TAG);
 }
 
@@ -176,7 +176,7 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
         nalgebra_glm::vec3(x as f32, -0.5, z as f32),
         nalgebra_glm::vec3(0.9, 0.1, 0.9),
     );
-    world.ecs.worlds[CORE].set(entity, Name(format!("Tile_{x}_{z}")));
+    world.set(entity, Name(format!("Tile_{x}_{z}")));
     let material_name = format!("Tile_{x}_{z}_{}", entity.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -199,7 +199,7 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
             index,
         );
     }
-    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
+    world.set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, TILE_TAG);
 }
 
@@ -213,7 +213,7 @@ fn spawn_marker(
     emissive: [f32; 3],
 ) {
     let entity = spawn_mesh(world, "Cube", position, scale);
-    world.ecs.worlds[CORE].set(entity, Name(name.to_string()));
+    world.set(entity, Name(name.to_string()));
     let material_name = format!("{name}_{}", entity.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -237,7 +237,7 @@ fn spawn_marker(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
+    world.set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, tag);
 }
 
@@ -261,11 +261,10 @@ fn link_path_from_world(game_world: &mut TowerDefenseResources, world: &World) {
             if !tags.iter().any(|tag| tag == WAYPOINT_TAG) {
                 return None;
             }
-            let name = world.ecs.worlds[CORE].get::<nightshade::ecs::primitives::Name>(*entity)?;
+            let name = world.get::<nightshade::ecs::primitives::Name>(*entity)?;
             let index = name.0.strip_prefix("PathWaypoint_")?.parse::<u32>().ok()?;
             let transform =
-                world.ecs.worlds[CORE]
-                    .get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
+                world.get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
             Some((index, transform.translation))
         })
         .collect();
@@ -290,8 +289,7 @@ fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut Worl
                 return None;
             }
             let transform =
-                world.ecs.worlds[CORE]
-                    .get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
+                world.get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
             let x = transform.translation.x.round() as i32;
             let z = transform.translation.z.round() as i32;
             let color = tile_color(world, *entity);
@@ -306,7 +304,7 @@ fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut Worl
         game_world.grid_tiles.insert((x, z), entity);
         game_world.tile_original_colors.insert((x, z), color);
 
-        world.ecs.worlds[GAME].set(
+        world.set(
             entity,
             GridCell {
                 x,
@@ -320,7 +318,7 @@ fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut Worl
 fn tile_color(world: &World, entity: Entity) -> Vec4 {
     let fallback = nalgebra_glm::vec4(0.1, 0.3, 0.1, 1.0);
     let Some(material_ref) =
-        world.ecs.worlds[CORE].get::<nightshade::ecs::material::components::MaterialRef>(entity)
+        world.get::<nightshade::ecs::material::components::MaterialRef>(entity)
     else {
         return fallback;
     };

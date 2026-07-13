@@ -1,4 +1,3 @@
-use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use crate::ecs::world::components::MaterialRef;
 
@@ -12,7 +11,7 @@ use crate::ecs::world::components::MaterialRef;
 /// [`MaterialVariants`]: super::components::MaterialVariants
 pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> usize {
     let mut updates: Vec<(freecs::Entity, String)> = Vec::new();
-    for (entity, (variants, material_ref)) in world.ecs.worlds[CORE]
+    for (entity, (variants, material_ref)) in world
         .query_ref::<(
             &super::components::MaterialVariants,
             &super::components::MaterialRef,
@@ -30,7 +29,7 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
 
     let count = updates.len();
     for (entity, name) in updates {
-        world.ecs.worlds[CORE].set(entity, MaterialRef::new(name));
+        world.set(entity, MaterialRef::new(name));
     }
     if count > 0 {
         world.resources.mesh_render_state.request_full_rebuild();

@@ -6,8 +6,7 @@ use crate::systems::world::{
 use nightshade::prelude::*;
 
 pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
-    let game_world_index = world.ecs.add_world(register_sandbox_components());
-    assert_eq!(game_world_index, GAME);
+    world.ecs.add_world_at(GAME, register_sandbox_components());
 
     world.resources.user_interface.enabled = true;
     world.resources.retained_ui.enabled = true;

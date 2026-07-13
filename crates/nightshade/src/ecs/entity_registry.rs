@@ -17,10 +17,7 @@ pub struct EntityRegistry {
 /// `GUID` in the initial spawn bitflags to skip the archetype
 /// migration.
 pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives::Guid {
-    if let Some(existing) = world.ecs.worlds[CORE]
-        .get::<crate::ecs::primitives::Guid>(entity)
-        .copied()
-    {
+    if let Some(existing) = world.get::<crate::ecs::primitives::Guid>(entity).copied() {
         world
             .resources
             .entities
@@ -34,7 +31,7 @@ pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives:
     if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
         world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
-    world.ecs.worlds[CORE].set(entity, guid);
+    world.set(entity, guid);
     world.resources.entities.guid_index.insert(guid.0, entity);
     guid
 }
@@ -46,7 +43,7 @@ pub fn assign_guid(world: &mut World, entity: Entity, guid: crate::ecs::primitiv
     if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
         world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
-    world.ecs.worlds[CORE].set(entity, guid);
+    world.set(entity, guid);
     world.resources.entities.guid_index.insert(guid.0, entity);
     if guid.0 > world.resources.entities.next_guid {
         world.resources.entities.next_guid = guid.0;

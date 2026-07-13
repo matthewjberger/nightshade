@@ -13,14 +13,11 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
     let mut line_data = Vec::new();
 
     for entity in line_entities {
-        if let Some(visibility) =
-            world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
+        if let Some(visibility) = world.get::<crate::ecs::primitives::Visibility>(entity)
             && visibility.visible
-            && let Some(lines_component) =
-                world.ecs.worlds[CORE].get::<crate::ecs::lines::components::Lines>(entity)
+            && let Some(lines_component) = world.get::<crate::ecs::lines::components::Lines>(entity)
             && let Some(global_transform) =
-                world.ecs.worlds[CORE]
-                    .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+                world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
         {
             let transform = global_transform.0;
             let depth_mode: u32 = if lines_component.always_on_top { 1 } else { 0 };
@@ -63,28 +60,24 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
             continue;
         }
 
-        if let Some(visibility) =
-            world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
+        if let Some(visibility) = world.get::<crate::ecs::primitives::Visibility>(entity)
             && !visibility.visible
         {
             continue;
         }
 
-        if let Some(render_layer) =
-            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
+        if let Some(render_layer) = world.get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
         }
 
-        let Some(render_mesh) =
-            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+        let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity)
         else {
             continue;
         };
         let Some(global_transform) =
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+            world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
         else {
             continue;
         };
@@ -190,8 +183,7 @@ pub fn gather_bounding_volume_data(
             continue;
         }
 
-        if let Some(render_layer) =
-            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
+        if let Some(render_layer) = world.get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
@@ -204,13 +196,12 @@ pub fn gather_bounding_volume_data(
         }
 
         let Some(bounding_volume) =
-            world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity)
+            world.get::<crate::render::bounding_volume::BoundingVolume>(entity)
         else {
             continue;
         };
         let Some(global_transform) =
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+            world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
         else {
             continue;
         };
@@ -222,8 +213,7 @@ pub fn gather_bounding_volume_data(
         };
 
         if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN)
-            && let Some(render_mesh) =
-                world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+            && let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity)
             && let Some(mesh) = crate::render::generational_registry::registry_entry_by_name(
                 &mesh_cache.registry,
                 &render_mesh.name,
@@ -303,7 +293,7 @@ fn skinned_overlay_vertices(
 ) -> Option<Vec<(nalgebra_glm::Vec3, nalgebra_glm::Vec3)>> {
     use crate::ecs::world::{Vec3, Vec4};
 
-    let skin = world.ecs.worlds[CORE].get::<crate::ecs::skin::components::Skin>(entity)?;
+    let skin = world.get::<crate::ecs::skin::components::Skin>(entity)?;
     let skin_data = mesh.skin_data.as_ref()?;
     let joint_count = skin.joints.len().min(skin.inverse_bind_matrices.len());
     if joint_count == 0 {
@@ -312,7 +302,7 @@ fn skinned_overlay_vertices(
 
     let mut joint_matrices = Vec::with_capacity(joint_count);
     for joint_index in 0..joint_count {
-        let joint_global = world.ecs.worlds[CORE]
+        let joint_global = world
             .get::<crate::ecs::transform::components::GlobalTransform>(skin.joints[joint_index])
             .map(|transform| transform.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
@@ -322,7 +312,7 @@ fn skinned_overlay_vertices(
     let morph = mesh
         .morph_targets
         .as_ref()
-        .zip(world.ecs.worlds[CORE].get::<crate::ecs::morph::components::MorphWeights>(entity));
+        .zip(world.get::<crate::ecs::morph::components::MorphWeights>(entity));
 
     let mut output = Vec::with_capacity(skin_data.skinned_vertices.len());
     for (vertex_index, vertex) in skin_data.skinned_vertices.iter().enumerate() {
@@ -411,22 +401,19 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
             continue;
         }
 
-        if let Some(render_layer) =
-            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
+        if let Some(render_layer) = world.get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
         }
 
-        let Some(render_mesh) =
-            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+        let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity)
         else {
             continue;
         };
 
         let Some(global_transform) =
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+            world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
         else {
             continue;
         };
@@ -436,7 +423,7 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
 
         if !is_skinned
             && let Some(bounding_volume) =
-                world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity)
+                world.get::<crate::render::bounding_volume::BoundingVolume>(entity)
         {
             let world_center = global_transform.0
                 * nalgebra_glm::Vec4::new(

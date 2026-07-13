@@ -14,7 +14,7 @@ pub fn tile_hover_system(game_world: &mut TowerDefenseResources, world: &mut Wor
     if let Some(last_pos) = game_world.last_hovered_tile
         && let Some(&tile_entity) = game_world.grid_tiles.get(&last_pos)
         && let Some(&original_color) = game_world.tile_original_colors.get(&last_pos)
-        && let Some(material_ref) = world.ecs.worlds[CORE]
+        && let Some(material_ref) = world
             .get::<nightshade::ecs::material::components::MaterialRef>(tile_entity)
             .cloned()
     {
@@ -52,7 +52,7 @@ pub fn tile_hover_system(game_world: &mut TowerDefenseResources, world: &mut Wor
 
         if !is_start && !is_end && !is_path {
             if let Some(&tile_entity) = game_world.grid_tiles.get(&current_pos)
-                && let Some(material_ref) = world.ecs.worlds[CORE]
+                && let Some(material_ref) = world
                     .get::<nightshade::ecs::material::components::MaterialRef>(tile_entity)
                     .cloned()
             {

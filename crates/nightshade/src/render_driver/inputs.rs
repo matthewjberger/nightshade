@@ -14,7 +14,7 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
                 camera_position: matrices.camera_position,
             }
         });
-    let projection = match world.ecs.worlds[CORE]
+    let projection = match world
         .get::<crate::ecs::camera::components::Camera>(entity)
         .map(|c| &c.projection)
     {
@@ -40,17 +40,17 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         }
         None => CameraProjectionParams::default(),
     };
-    let shading = world.ecs.worlds[CORE]
+    let shading = world
         .get::<crate::ecs::camera::components::ViewportShading>(entity)
         .copied()
         .unwrap_or_default();
-    let post_process = world.ecs.worlds[CORE]
+    let post_process = world
         .get::<crate::ecs::camera::components::CameraPostProcess>(entity)
         .copied();
-    let culling_mask = world.ecs.worlds[CORE]
+    let culling_mask = world
         .get::<crate::ecs::primitives::CameraCullingMask>(entity)
         .copied();
-    let environment = world.ecs.worlds[CORE]
+    let environment = world
         .get::<crate::ecs::camera::components::CameraEnvironment>(entity)
         .copied();
     let effective_shading = crate::ecs::camera::components::effective_shading_for_camera(
@@ -65,15 +65,15 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         entity,
         matrices,
         projection,
-        constrained_aspect: world.ecs.worlds[CORE]
+        constrained_aspect: world
             .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
             .map(|constrained| constrained.0),
         effective_shading,
-        update_mode: world.ecs.worlds[CORE]
+        update_mode: world
             .get::<crate::render::config::ViewportUpdateMode>(entity)
             .copied()
             .unwrap_or_default(),
-        world_transform: world.ecs.worlds[CORE]
+        world_transform: world
             .get::<crate::ecs::transform::components::GlobalTransform>(entity)
             .map(|gt| gt.0),
     }

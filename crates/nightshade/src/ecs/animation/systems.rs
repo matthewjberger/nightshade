@@ -66,7 +66,7 @@ pub fn apply_animations(world: &mut World) {
     // rendered pose instead of the bind pose. Morph weights and non-joint node
     // targets are applied here as well.
     let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
-    for (_, player) in world.ecs.worlds[CORE]
+    for (_, player) in world
         .query_ref::<&crate::ecs::animation::components::AnimationPlayer>()
         .iter()
     {
@@ -146,8 +146,7 @@ pub fn apply_animations(world: &mut World) {
     for final_values in per_player_values {
         for (target_entity, values) in final_values {
             if let Some(transform) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<crate::ecs::transform::components::LocalTransform>(target_entity)
+                world.get_mut::<crate::ecs::transform::components::LocalTransform>(target_entity)
             {
                 if let Some(translation) = values.translation {
                     transform.translation = translation;
@@ -313,8 +312,7 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
     while let Some(current) = pending.pop() {
         if world.ecs.worlds[CORE].entity_has_components(current, MORPH_WEIGHTS)
             && let Some(morph_weights) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<crate::ecs::morph::components::MorphWeights>(current)
+                world.get_mut::<crate::ecs::morph::components::MorphWeights>(current)
         {
             morph_weights.weights = weights.to_vec();
         }

@@ -45,10 +45,10 @@ pub fn spawn_tower(
             index,
         );
     }
-    world.ecs.worlds[CORE].set(tower_entity, MaterialRef::new(material_name));
+    world.set(tower_entity, MaterialRef::new(material_name));
 
-    world.ecs.worlds[GAME].set(tower_entity, Position(position));
-    world.ecs.worlds[GAME].set(
+    world.set(tower_entity, Position(position));
+    world.set(
         tower_entity,
         Tower {
             tower_type,
@@ -72,7 +72,7 @@ fn spawn_range_indicator(world: &mut World, center: Vec3, range: f32, tower_enti
     let segments = 32;
     let mut line_entities = Vec::new();
 
-    let tower_color = if let Some(tower) = world.ecs.worlds[GAME].get::<Tower>(tower_entity) {
+    let tower_color = if let Some(tower) = world.get::<Tower>(tower_entity) {
         tower.tower_type.color()
     } else {
         nalgebra_glm::vec4(0.0, 1.0, 0.0, 1.0)
@@ -91,20 +91,20 @@ fn spawn_range_indicator(world: &mut World, center: Vec3, range: f32, tower_enti
             1,
         )[0];
 
-        world.ecs.worlds[CORE].set(
+        world.set(
             line_entity,
             Name(format!("Range Indicator Line {}", segment_index)),
         );
-        world.ecs.worlds[CORE].set(
+        world.set(
             line_entity,
             LocalTransform {
                 translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                 ..Default::default()
             },
         );
-        world.ecs.worlds[CORE].set(line_entity, GlobalTransform::default());
+        world.set(line_entity, GlobalTransform::default());
 
-        world.ecs.worlds[CORE].set(
+        world.set(
             line_entity,
             Lines::new(vec![Line {
                 start,
@@ -113,12 +113,12 @@ fn spawn_range_indicator(world: &mut World, center: Vec3, range: f32, tower_enti
             }]),
         );
 
-        world.ecs.worlds[CORE].set(line_entity, Visibility { visible: false });
+        world.set(line_entity, Visibility { visible: false });
 
         line_entities.push(line_entity);
     }
 
-    world.ecs.worlds[GAME].set(
+    world.set(
         tower_entity,
         RangeIndicator {
             line_entities,
@@ -128,7 +128,7 @@ fn spawn_range_indicator(world: &mut World, center: Vec3, range: f32, tower_enti
 }
 
 pub fn despawn_entity(world: &mut World, entity: Entity) {
-    let target_line = world.ecs.worlds[GAME]
+    let target_line = world
         .get::<Tower>(entity)
         .and_then(|tower| tower.target_line);
     if let Some(line_entity) = target_line {
@@ -140,7 +140,7 @@ pub fn despawn_entity(world: &mut World, entity: Entity) {
         );
     }
 
-    let line_entities = world.ecs.worlds[GAME]
+    let line_entities = world
         .get::<RangeIndicator>(entity)
         .map(|indicator| indicator.line_entities.clone());
     if let Some(line_entities) = line_entities {
@@ -159,7 +159,7 @@ pub fn sell_tower(
     grid_x: i32,
     grid_z: i32,
 ) {
-    if let Some(tower) = world.ecs.worlds[GAME].get::<Tower>(tower_entity).copied() {
+    if let Some(tower) = world.get::<Tower>(tower_entity).copied() {
         let refund = (tower.tower_type.cost() as f32 * 0.7) as u32;
         game_world.money += refund;
 
@@ -168,7 +168,7 @@ pub fn sell_tower(
 
         let cell_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(GRID_CELL).collect();
         for cell_entity in cell_entities {
-            if let Some(cell) = world.ecs.worlds[GAME].get_mut::<GridCell>(cell_entity)
+            if let Some(cell) = world.get_mut::<GridCell>(cell_entity)
                 && cell.x == grid_x
                 && cell.z == grid_z
             {
@@ -188,7 +188,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {
-        if let Some(mut tower) = world.ecs.worlds[GAME].get::<Tower>(tower_entity).copied() {
+        if let Some(mut tower) = world.get::<Tower>(tower_entity).copied() {
             let is_sniper = tower.tower_type == TowerType::Sniper;
 
             if is_sniper {
@@ -219,18 +219,13 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
             }
 
             if tower.target.is_none()
-                && let Some(tower_pos) = world.ecs.worlds[GAME]
-                    .get::<Position>(tower_entity)
-                    .copied()
+                && let Some(tower_pos) = world.get::<Position>(tower_entity).copied()
             {
                 let range = tower.tower_type.range();
                 let mut closest_enemy: Option<(Entity, f32)> = None;
 
                 for &enemy_entity in &game_world.enemies_list {
-                    if let Some(enemy_pos) = world.ecs.worlds[GAME]
-                        .get::<Position>(enemy_entity)
-                        .copied()
-                    {
+                    if let Some(enemy_pos) = world.get::<Position>(enemy_entity).copied() {
                         let distance = (enemy_pos.0 - tower_pos.0).magnitude();
                         if distance <= range {
                             if let Some((_, closest_dist)) = closest_enemy {
@@ -250,13 +245,10 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
             } else if is_sniper && tower.target.is_some() {
                 tower.tracking_time += delta_time;
 
-                if let (Some(target), Some(tower_pos)) = (
-                    tower.target,
-                    world.ecs.worlds[GAME]
-                        .get::<Position>(tower_entity)
-                        .copied(),
-                ) && game_world.enemies_list.contains(&target)
-                    && let Some(enemy_pos) = world.ecs.worlds[GAME].get::<Position>(target).copied()
+                if let (Some(target), Some(tower_pos)) =
+                    (tower.target, world.get::<Position>(tower_entity).copied())
+                    && game_world.enemies_list.contains(&target)
+                    && let Some(enemy_pos) = world.get::<Position>(target).copied()
                 {
                     if tower.target_line.is_none() {
                         let line_entity = spawn_entities(
@@ -269,8 +261,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
 
                     if let Some(line_entity) = tower.target_line {
                         if let Some(lines_comp) =
-                            world.ecs.worlds[CORE]
-                                .get_mut::<nightshade::ecs::lines::components::Lines>(line_entity)
+                            world.get_mut::<nightshade::ecs::lines::components::Lines>(line_entity)
                         {
                             lines_comp.lines.clear();
                             lines_comp.lines.push(Line {
@@ -281,8 +272,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
                         }
 
                         if let Some(visibility) =
-                            world.ecs.worlds[CORE]
-                                .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+                            world.get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
                         {
                             visibility.visible = true;
                         }
@@ -290,7 +280,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
                 }
             }
 
-            world.ecs.worlds[GAME].set(tower_entity, tower);
+            world.set(tower_entity, tower);
         }
     }
 }
@@ -300,7 +290,7 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {
-        if let Some(mut tower) = world.ecs.worlds[GAME].get::<Tower>(tower_entity).copied() {
+        if let Some(mut tower) = world.get::<Tower>(tower_entity).copied() {
             tower.cooldown = (tower.cooldown - delta_time).max(0.0);
 
             let mut needs_fire_animation_update = false;
@@ -323,10 +313,8 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
 
                 if can_fire
                     && game_world.enemies_list.contains(&target)
-                    && world.ecs.worlds[GAME].has::<Position>(target)
-                    && let Some(tower_pos) = world.ecs.worlds[GAME]
-                        .get::<Position>(tower_entity)
-                        .copied()
+                    && world.has::<Position>(target)
+                    && let Some(tower_pos) = world.get::<Position>(tower_entity).copied()
                 {
                     let projectile_entity = spawn_mesh(
                         world,
@@ -362,13 +350,13 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
                             index,
                         );
                     }
-                    world.ecs.worlds[CORE].set(projectile_entity, MaterialRef::new(material_name));
+                    world.set(projectile_entity, MaterialRef::new(material_name));
 
-                    world.ecs.worlds[GAME].set(
+                    world.set(
                         projectile_entity,
                         Position(tower_pos.0 + nalgebra_glm::vec3(0.0, 0.5, 0.0)),
                     );
-                    world.ecs.worlds[GAME].set(
+                    world.set(
                         projectile_entity,
                         Projectile {
                             damage: tower.tower_type.damage(),
@@ -403,15 +391,14 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
             }
 
             if needs_fire_animation_update {
-                if let Some(transform) = world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
-                    tower_entity,
-                ) {
+                if let Some(transform) = world
+                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(tower_entity)
+                {
                     transform.scale =
                         nalgebra_glm::vec3(0.4 * animation_scale, 0.8, 0.4 * animation_scale);
                 }
 
-                if let Some(material_ref) = world.ecs.worlds[CORE]
+                if let Some(material_ref) = world
                     .get::<nightshade::ecs::material::components::MaterialRef>(tower_entity)
                     .cloned()
                 {
@@ -434,7 +421,7 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
                 }
             }
 
-            world.ecs.worlds[GAME].set(tower_entity, tower);
+            world.set(tower_entity, tower);
         }
     }
 }

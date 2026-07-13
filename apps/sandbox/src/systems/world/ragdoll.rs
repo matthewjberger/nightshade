@@ -120,7 +120,7 @@ fn bones_of_model(
     world: &World,
 ) -> Option<HashMap<String, Entity>> {
     let model = sandbox_world.character.model?;
-    world.ecs.worlds[CORE]
+    world
         .get::<nightshade::ecs::animation::components::AnimationPlayer>(model)
         .map(|player| player.bone_name_to_entity.clone())
 }
@@ -170,21 +170,17 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
                 | PHYSICS_INTERPOLATION,
             1,
         )[0];
-        if let Some(name) =
-            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(proxy)
-        {
+        if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(proxy) {
             name.0 = format!("Ragdoll {suffix}");
         }
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(proxy)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(proxy)
         {
             transform.translation = center;
             transform.rotation = body_rotation;
         }
         if let Some(rigid_body) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::physics::components::RigidBodyComponent>(proxy)
+            world.get_mut::<nightshade::ecs::physics::components::RigidBodyComponent>(proxy)
         {
             *rigid_body = RigidBodyComponent::new_dynamic()
                 .with_translation(center.x, center.y, center.z)
@@ -198,8 +194,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
             rigid_body.linvel = [launch_velocity.x, launch_velocity.y, launch_velocity.z];
         }
         if let Some(collider) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::physics::components::ColliderComponent>(proxy)
+            world.get_mut::<nightshade::ecs::physics::components::ColliderComponent>(proxy)
         {
             let half_height = ((length * CAPSULE_FILL) * 0.5 - radius).max(0.02);
             *collider = ColliderComponent::new_capsule(half_height, *radius)
@@ -207,8 +202,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
                 .with_restitution(0.05);
         }
         if let Some(interpolation) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(proxy)
+            world.get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(proxy)
         {
             interpolation.previous_translation = center;
             interpolation.current_translation = center;
@@ -242,8 +236,8 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
         let parent_proxy = links[parent_index].body;
         let child_proxy = links[child_index].body;
         let anchor_local = |proxy: Entity, world: &World| -> Vec3 {
-            let transform = world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::LocalTransform>(proxy);
+            let transform =
+                world.get::<nightshade::ecs::transform::components::LocalTransform>(proxy);
             let rotation = transform
                 .map(|transform| transform.rotation)
                 .unwrap_or_else(nalgebra_glm::quat_identity);
@@ -272,7 +266,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
 
 fn teardown(sandbox_world: &mut SandboxResources, world: &mut World) {
     let hips_pose = hips_link(sandbox_world).and_then(|link| {
-        world.ecs.worlds[CORE]
+        world
             .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
             .map(|transform| transform.translation)
             .map(|position| {
@@ -306,8 +300,7 @@ fn teardown(sandbox_world: &mut SandboxResources, world: &mut World) {
         character.grounded = false;
         if let Some(body) = character.body
             && let Some(transform) =
-                world.ecs.worlds[CORE]
-                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
         {
             transform.translation = feet;
         }
@@ -393,7 +386,7 @@ fn drive_toward_pose(sandbox_world: &SandboxResources, world: &mut World, body: 
 }
 
 fn apply_match_torque(world: &mut World, link: &RagdollLink, target_world: nalgebra_glm::Quat) {
-    let Some(current_bone_world) = world.ecs.worlds[CORE]
+    let Some(current_bone_world) = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
         .map(|transform| transform.rotation * link.rotation_offset)
     else {
@@ -421,7 +414,7 @@ fn keyframe_world_rotations(
     keyframe_joints: &[(Entity, nalgebra_glm::Quat)],
     wanted: &[Entity],
 ) -> HashMap<Entity, nalgebra_glm::Quat> {
-    let body_rotation = world.ecs.worlds[CORE]
+    let body_rotation = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.rotation)
         .unwrap_or_else(nalgebra_glm::quat_identity);
@@ -429,7 +422,7 @@ fn keyframe_world_rotations(
     let mut stack = vec![(model, body_rotation)];
     while let Some((entity, parent_rotation)) = stack.pop() {
         let local = joint_rotation(keyframe_joints, entity).unwrap_or_else(|| {
-            world.ecs.worlds[CORE]
+            world
                 .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
                 .map(|transform| transform.rotation)
                 .unwrap_or_else(nalgebra_glm::quat_identity)
@@ -454,7 +447,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
     };
     let hips_bone = sandbox_world.pose.hips;
     let hips_position = hips_link(sandbox_world).and_then(|link| {
-        world.ecs.worlds[CORE]
+        world
             .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
             .map(|transform| transform.translation)
     });
@@ -462,8 +455,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
     if let Some(hips_position) = hips_position {
         let feet = hips_position - Vec3::new(0.0, HIPS_FEET_DROP, 0.0);
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
         {
             transform.translation = feet;
         }
@@ -472,8 +464,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
     let mut world_rotation_by_bone: HashMap<Entity, nalgebra_glm::Quat> = HashMap::new();
     for link in &sandbox_world.ragdoll.links {
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
+            world.get::<nightshade::ecs::transform::components::LocalTransform>(link.body)
         {
             world_rotation_by_bone.insert(link.bone, transform.rotation * link.rotation_offset);
         }
@@ -485,7 +476,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
         position: Vec3,
         scale: Vec3,
     }
-    let body_pose = world.ecs.worlds[CORE]
+    let body_pose = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| StackPose {
             rotation: transform.rotation,
@@ -499,7 +490,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
     let mut writes: Vec<(Entity, nalgebra_glm::Quat, Option<Vec3>)> = Vec::new();
     let mut stack = vec![(model, body_pose)];
     while let Some((entity, parent)) = stack.pop() {
-        let Some(local) = world.ecs.worlds[CORE]
+        let Some(local) = world
             .get::<nightshade::ecs::transform::components::LocalTransform>(entity)
             .map(|transform| (transform.rotation, transform.translation, transform.scale))
         else {
@@ -540,8 +531,7 @@ fn sync_bones_from_bodies(sandbox_world: &SandboxResources, world: &mut World, b
 
     for (entity, rotation, translation) in writes {
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
         {
             transform.rotation = rotation;
             if let Some(translation) = translation {

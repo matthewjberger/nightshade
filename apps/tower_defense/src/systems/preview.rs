@@ -9,7 +9,7 @@ pub fn range_indicator_system(game_world: &mut TowerDefenseResources, world: &mu
         .collect();
     let mut lines_to_hide: Vec<Entity> = Vec::new();
     for entity in entities {
-        if let Some(indicator) = world.ecs.worlds[GAME].get_mut::<RangeIndicator>(entity)
+        if let Some(indicator) = world.get_mut::<RangeIndicator>(entity)
             && indicator.visible
         {
             indicator.visible = false;
@@ -18,7 +18,7 @@ pub fn range_indicator_system(game_world: &mut TowerDefenseResources, world: &mu
     }
     for line_entity in lines_to_hide {
         if let Some(visibility) =
-            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+            world.get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
         {
             visibility.visible = false;
         }
@@ -28,13 +28,13 @@ pub fn range_indicator_system(game_world: &mut TowerDefenseResources, world: &mu
         && let Some(&tower_entity) = game_world.towers_by_position.get(&(grid_x, grid_z))
     {
         let mut lines_to_show: Vec<Entity> = Vec::new();
-        if let Some(indicator) = world.ecs.worlds[GAME].get_mut::<RangeIndicator>(tower_entity) {
+        if let Some(indicator) = world.get_mut::<RangeIndicator>(tower_entity) {
             indicator.visible = true;
             lines_to_show.extend(indicator.line_entities.iter().copied());
         }
         for line_entity in lines_to_show {
-            if let Some(visibility) = world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+            if let Some(visibility) =
+                world.get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
             {
                 visibility.visible = true;
             }
@@ -96,7 +96,7 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
                 index,
             );
         }
-        world.ecs.worlds[CORE].set(preview, MaterialRef::new(material_name));
+        world.set(preview, MaterialRef::new(material_name));
 
         game_world.preview_entity = Some(preview);
 
@@ -119,20 +119,20 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
                 1,
             )[0];
 
-            world.ecs.worlds[CORE].set(
+            world.set(
                 line_entity,
                 Name(format!("Preview Range Line {}", segment_index)),
             );
-            world.ecs.worlds[CORE].set(
+            world.set(
                 line_entity,
                 LocalTransform {
                     translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                     ..Default::default()
                 },
             );
-            world.ecs.worlds[CORE].set(line_entity, GlobalTransform::default());
+            world.set(line_entity, GlobalTransform::default());
 
-            world.ecs.worlds[CORE].set(
+            world.set(
                 line_entity,
                 Lines::new(vec![Line {
                     start,
@@ -146,7 +146,7 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
                 }]),
             );
 
-            world.ecs.worlds[CORE].set(line_entity, Visibility { visible: true });
+            world.set(line_entity, Visibility { visible: true });
 
             game_world.preview_range_lines.push(line_entity);
         }
@@ -308,17 +308,17 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
         } else {
             "Unaffordable Box"
         };
-        world.ecs.worlds[CORE].set(box_entity, Name(box_name.to_string()));
-        world.ecs.worlds[CORE].set(
+        world.set(box_entity, Name(box_name.to_string()));
+        world.set(
             box_entity,
             LocalTransform {
                 translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                 ..Default::default()
             },
         );
-        world.ecs.worlds[CORE].set(box_entity, GlobalTransform::default());
-        world.ecs.worlds[CORE].set(box_entity, Lines::new(box_lines));
-        world.ecs.worlds[CORE].set(box_entity, Visibility { visible: true });
+        world.set(box_entity, GlobalTransform::default());
+        world.set(box_entity, Lines::new(box_lines));
+        world.set(box_entity, Visibility { visible: true });
 
         game_world.preview_range_lines.push(box_entity);
     }

@@ -282,7 +282,8 @@ fn make_tower_chip(
         .with_cursor_icon(winit::window::CursorIcon::Pointer)
         .entity();
 
-    if let Some(color) = tree.world_mut().ecs.worlds[UI]
+    if let Some(color) = tree
+        .world_mut()
         .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(chip)
     {
         color.colors[UiSelected::INDEX] = if selected {
@@ -291,7 +292,8 @@ fn make_tower_chip(
             None
         };
     }
-    if let Some(weights) = tree.world_mut().ecs.worlds[UI]
+    if let Some(weights) = tree
+        .world_mut()
         .get_mut::<nightshade::ecs::ui::components::UiStateWeights>(chip)
     {
         weights.weights[UiSelected::INDEX] = if selected { 1.0 } else { 0.0 };
@@ -435,8 +437,8 @@ pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
         HP_RED
     };
 
-    if let Some(node) = world.ecs.worlds[UI]
-        .get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(handles.hp_fill)
+    if let Some(node) =
+        world.get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(handles.hp_fill)
     {
         node.base_layout = Some(UiLayoutType::Window(WindowLayout {
             position: Ab(vec2(0.0, 0.0)).into(),
@@ -444,8 +446,8 @@ pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
             anchor: Anchor::TopLeft,
         }));
     }
-    if let Some(color) = world.ecs.worlds[UI]
-        .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.hp_fill)
+    if let Some(color) =
+        world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.hp_fill)
     {
         color.colors[UiBase::INDEX] = Some(bar_color);
     }
@@ -457,8 +459,8 @@ pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
     } else {
         ACCENT_RED
     };
-    if let Some(color) = world.ecs.worlds[UI]
-        .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.lives_value)
+    if let Some(color) =
+        world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.lives_value)
     {
         color.colors[UiBase::INDEX] = Some(lives_color);
     }

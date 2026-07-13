@@ -24,7 +24,7 @@ pub fn sync_hierarchy_index(world: &mut World) {
 
 pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Entity>) {
     match new_parent {
-        Some(parent) => world.ecs.worlds[CORE].set(child, ChildOf(parent)),
+        Some(parent) => world.set(child, ChildOf(parent)),
         None => {
             world.ecs.worlds[CORE].remove_components(child, PARENT);
         }
@@ -97,7 +97,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     render_dirty_entities.clear();
 
     for entity in dirty_entities.iter().copied() {
-        let parent_is_dirty = world.ecs.worlds[CORE]
+        let parent_is_dirty = world
             .get::<freecs::dynamic::ChildOf>(entity)
             .map(|child_of| child_of.0)
             .is_some_and(|parent_entity| seen.contains(&parent_entity));
@@ -111,25 +111,22 @@ pub fn update_global_transforms_system(world: &mut World) {
             continue;
         }
 
-        let local_matrix = match world.ecs.worlds[CORE]
-            .get::<crate::ecs::transform::components::LocalTransform>(current)
-        {
-            Some(local_transform) => local_transform.as_matrix(),
-            None => nalgebra_glm::Mat4::identity(),
-        };
+        let local_matrix =
+            match world.get::<crate::ecs::transform::components::LocalTransform>(current) {
+                Some(local_transform) => local_transform.as_matrix(),
+                None => nalgebra_glm::Mat4::identity(),
+            };
 
-        let new_global_transform = match world.ecs.worlds[CORE]
+        let new_global_transform = match world
             .get::<freecs::dynamic::ChildOf>(current)
             .map(|child_of| child_of.0)
         {
             Some(parent_entity) => {
-                let mut parent_matrix = world.ecs.worlds[CORE]
+                let mut parent_matrix = world
                     .get::<crate::ecs::transform::components::GlobalTransform>(parent_entity)
                     .map(|global_transform| global_transform.0)
                     .unwrap_or_else(nalgebra_glm::Mat4::identity);
-                if world.ecs.worlds[CORE]
-                    .has::<crate::ecs::transform::components::IgnoreParentScale>(current)
-                {
+                if world.has::<crate::ecs::transform::components::IgnoreParentScale>(current) {
                     parent_matrix = remove_scale_from_matrix(parent_matrix);
                 }
                 parent_matrix * local_matrix
@@ -138,8 +135,7 @@ pub fn update_global_transforms_system(world: &mut World) {
         };
 
         if let Some(global_transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<crate::ecs::transform::components::GlobalTransform>(current)
+            world.get_mut::<crate::ecs::transform::components::GlobalTransform>(current)
         {
             *global_transform = GlobalTransform(new_global_transform);
         }

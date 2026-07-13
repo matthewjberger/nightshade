@@ -41,11 +41,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let mut bone_index = 0u32;
     let joint_entities = &mut cache.joint_entities;
     let skinned_entity_ids = &mut cache.skinned_entity_ids;
-    for (entity, skin) in world.ecs.worlds[CORE]
-        .query_ref::<&Skin>()
-        .with::<RenderMesh>()
-        .iter()
-    {
+    for (entity, skin) in world.query_ref::<&Skin>().with::<RenderMesh>().iter() {
         any = true;
         skinned_entity_ids.push(entity.id);
         for &joint_entity in &skin.joints {
@@ -70,11 +66,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let skin_data = &mut cache.skin_data;
     let inverse_bind_matrices = &mut cache.inverse_bind_matrices;
     let entity_skin_indices = &mut cache.entity_skin_indices;
-    for (entity, skin) in world.ecs.worlds[CORE]
-        .query_ref::<&Skin>()
-        .with::<RenderMesh>()
-        .iter()
-    {
+    for (entity, skin) in world.query_ref::<&Skin>().with::<RenderMesh>().iter() {
         {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             for joint in skin.joints.iter() {
@@ -148,7 +140,7 @@ pub fn skinning_cache_collect_bone_transforms_into(
     bone_transforms.resize(cache.joint_entities.len(), Mat4::identity());
 
     for (index, &joint_entity) in cache.joint_entities.iter().enumerate() {
-        let transform = world.ecs.worlds[CORE]
+        let transform = world
             .get::<crate::ecs::transform::components::GlobalTransform>(joint_entity)
             .map(|joint_global_transform| joint_global_transform.0)
             .unwrap_or_else(Mat4::identity);

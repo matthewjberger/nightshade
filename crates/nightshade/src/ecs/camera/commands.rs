@@ -18,20 +18,17 @@ pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
 
     let camera = cameras[0];
 
-    if let Some(camera_name) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::primitives::Name>(camera)
-    {
+    if let Some(camera_name) = world.get_mut::<crate::ecs::primitives::Name>(camera) {
         *camera_name = Name(name);
     }
 
     if let Some(local_transform) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
+        world.get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
     {
         local_transform.translation = position;
     }
 
-    if let Some(camera_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::Camera>(camera)
+    if let Some(camera_component) = world.get_mut::<crate::ecs::camera::components::Camera>(camera)
     {
         *camera_component = Camera {
             projection: Projection::Perspective(PerspectiveCamera {
@@ -76,9 +73,7 @@ pub fn spawn_pan_orbit_camera_with_config(
 
     let camera = cameras[0];
 
-    if let Some(camera_name) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::primitives::Name>(camera)
-    {
+    if let Some(camera_name) = world.get_mut::<crate::ecs::primitives::Name>(camera) {
         *camera_name = Name(name);
     }
 
@@ -86,14 +81,13 @@ pub fn spawn_pan_orbit_camera_with_config(
         compute_pan_orbit_transform(config.focus, config.yaw, config.pitch, config.radius);
 
     if let Some(local_transform) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
+        world.get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
     {
         local_transform.translation = position;
         local_transform.rotation = rotation;
     }
 
-    if let Some(camera_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::Camera>(camera)
+    if let Some(camera_component) = world.get_mut::<crate::ecs::camera::components::Camera>(camera)
     {
         *camera_component = Camera {
             projection: Projection::Perspective(PerspectiveCamera {
@@ -107,7 +101,7 @@ pub fn spawn_pan_orbit_camera_with_config(
     }
 
     if let Some(pan_orbit_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::PanOrbitCamera>(camera)
+        world.get_mut::<crate::ecs::camera::components::PanOrbitCamera>(camera)
     {
         *pan_orbit_component = config;
     }
@@ -126,9 +120,7 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
     );
     let camera = cameras[0];
 
-    if let Some(camera_name) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::primitives::Name>(camera)
-    {
+    if let Some(camera_name) = world.get_mut::<crate::ecs::primitives::Name>(camera) {
         *camera_name = Name("Ortho Camera".to_string());
     }
 
@@ -140,13 +132,12 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
     };
 
     if let Some(local_transform) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
+        world.get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
     {
         local_transform.translation = Vec3::new(position.x, position.y, ortho.z_far);
     }
 
-    if let Some(camera_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::Camera>(camera)
+    if let Some(camera_component) = world.get_mut::<crate::ecs::camera::components::Camera>(camera)
     {
         *camera_component = Camera {
             projection: Projection::Orthographic(ortho),
@@ -178,9 +169,7 @@ pub fn spawn_third_person_camera(
 
     let camera = cameras[0];
 
-    if let Some(camera_name) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::primitives::Name>(camera)
-    {
+    if let Some(camera_name) = world.get_mut::<crate::ecs::primitives::Name>(camera) {
         *camera_name = Name(name);
     }
 
@@ -188,7 +177,7 @@ pub fn spawn_third_person_camera(
         .with_target(follow_target)
         .with_yaw_pitch(yaw, pitch);
 
-    let focus = world.ecs.worlds[CORE]
+    let focus = world
         .get::<crate::ecs::transform::components::LocalTransform>(follow_target)
         .map(|t| t.translation + Vec3::new(0.0, tpc.height_offset, 0.0))
         .unwrap_or_default();
@@ -196,14 +185,13 @@ pub fn spawn_third_person_camera(
     let (position, rotation) = compute_third_person_transform(focus, yaw, pitch, distance);
 
     if let Some(local_transform) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
+        world.get_mut::<crate::ecs::transform::components::LocalTransform>(camera)
     {
         local_transform.translation = position;
         local_transform.rotation = rotation;
     }
 
-    if let Some(camera_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::Camera>(camera)
+    if let Some(camera_component) = world.get_mut::<crate::ecs::camera::components::Camera>(camera)
     {
         *camera_component = Camera {
             projection: Projection::Perspective(PerspectiveCamera {
@@ -217,7 +205,7 @@ pub fn spawn_third_person_camera(
     }
 
     if let Some(tpc_component) =
-        world.ecs.worlds[CORE].get_mut::<crate::ecs::camera::components::ThirdPersonCamera>(camera)
+        world.get_mut::<crate::ecs::camera::components::ThirdPersonCamera>(camera)
     {
         *tpc_component = tpc;
     }

@@ -50,10 +50,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     );
     player_clips.clear();
 
-    for (player_entity, player) in world.ecs.worlds[CORE]
-        .query_ref::<&AnimationPlayer>()
-        .iter()
-    {
+    for (player_entity, player) in world.query_ref::<&AnimationPlayer>().iter() {
         if !player.playing || player.play_all || player.get_current_clip().is_none() {
             continue;
         }
@@ -128,15 +125,13 @@ pub fn render_sync_animation_system(world: &mut World) {
         let root = skeleton
             .armature_parent
             .and_then(|parent| {
-                world.ecs.worlds[CORE]
-                    .get::<crate::ecs::transform::components::GlobalTransform>(parent)
+                world.get::<crate::ecs::transform::components::GlobalTransform>(parent)
             })
             .map(|global| global.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
         armature_roots.insert(skeleton.skin_entity, root);
         if let Some(player) =
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::animation::components::AnimationPlayer>(skeleton.player_entity)
+            world.get::<crate::ecs::animation::components::AnimationPlayer>(skeleton.player_entity)
         {
             for layer_index in 0..skeleton.layer_count as usize {
                 if let Some(layer) = player.layers.get(layer_index) {
@@ -158,10 +153,7 @@ pub fn render_sync_animation_system(world: &mut World) {
 
 fn collect_joint_to_player(world: &World) -> HashMap<Entity, Entity> {
     let mut joint_to_player: HashMap<Entity, Entity> = HashMap::new();
-    for (player_entity, player) in world.ecs.worlds[CORE]
-        .query_ref::<&AnimationPlayer>()
-        .iter()
-    {
+    for (player_entity, player) in world.query_ref::<&AnimationPlayer>().iter() {
         if !player.playing || player.play_all {
             continue;
         }
@@ -186,10 +178,7 @@ fn build_skeletons(
 ) -> Vec<SkinnedSkeletonData> {
     let mut joint_cur: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
     let mut joint_blend: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
-    for (_, player) in world.ecs.worlds[CORE]
-        .query_ref::<&AnimationPlayer>()
-        .iter()
-    {
+    for (_, player) in world.query_ref::<&AnimationPlayer>().iter() {
         if !player.playing || player.play_all {
             continue;
         }
@@ -218,9 +207,7 @@ fn build_skeletons(
 
     let mut skeletons: Vec<SkinnedSkeletonData> = Vec::new();
     for &skin_entity in skin_entities {
-        let Some(skin) =
-            world.ecs.worlds[CORE].get::<crate::ecs::skin::components::Skin>(skin_entity)
-        else {
+        let Some(skin) = world.get::<crate::ecs::skin::components::Skin>(skin_entity) else {
             continue;
         };
         let Some(&player_entity) = skin
@@ -257,11 +244,11 @@ fn build_skeletons(
         let mut joints_ordered: Vec<SkinnedJointData> = Vec::with_capacity(order.len());
         for &local in &order {
             let joint = skin.joints[local];
-            let rest = world.ecs.worlds[CORE]
+            let rest = world
                 .get::<crate::ecs::transform::components::LocalTransform>(joint)
                 .copied()
                 .unwrap_or_default();
-            let parent_local = world.ecs.worlds[CORE]
+            let parent_local = world
                 .get::<freecs::dynamic::ChildOf>(joint)
                 .map(|child_of| child_of.0)
                 .and_then(|parent| local_index_of.get(&parent).copied());
@@ -411,7 +398,7 @@ fn joint_depth(
 ) -> u32 {
     let mut depth = 0u32;
     let mut current = joints[local];
-    while let Some(parent) = world.ecs.worlds[CORE]
+    while let Some(parent) = world
         .get::<freecs::dynamic::ChildOf>(current)
         .map(|child_of| child_of.0)
     {
@@ -435,9 +422,7 @@ fn static_signature(
 ) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     for &skin_entity in skin_entities {
-        let Some(skin) =
-            world.ecs.worlds[CORE].get::<crate::ecs::skin::components::Skin>(skin_entity)
-        else {
+        let Some(skin) = world.get::<crate::ecs::skin::components::Skin>(skin_entity) else {
             continue;
         };
         let Some(&player_entity) = skin
@@ -455,8 +440,7 @@ fn static_signature(
             clips.hash(&mut hasher);
         }
         if let Some(player) =
-            world.ecs.worlds[CORE]
-                .get::<crate::ecs::animation::components::AnimationPlayer>(player_entity)
+            world.get::<crate::ecs::animation::components::AnimationPlayer>(player_entity)
         {
             player.layers.len().hash(&mut hasher);
             for layer in &player.layers {
@@ -472,7 +456,7 @@ fn static_signature(
 }
 
 fn skin_armature_parent(world: &World, skin_entity: Entity) -> Option<Entity> {
-    let skin = world.ecs.worlds[CORE].get::<crate::ecs::skin::components::Skin>(skin_entity)?;
+    let skin = world.get::<crate::ecs::skin::components::Skin>(skin_entity)?;
     let local_index_of: HashMap<Entity, usize> = skin
         .joints
         .iter()
@@ -480,13 +464,13 @@ fn skin_armature_parent(world: &World, skin_entity: Entity) -> Option<Entity> {
         .map(|(local, joint)| (*joint, local))
         .collect();
     skin.joints.iter().find_map(|joint| {
-        let parent = world.ecs.worlds[CORE]
+        let parent = world
             .get::<freecs::dynamic::ChildOf>(*joint)
             .map(|child_of| child_of.0)?;
         if local_index_of.contains_key(&parent) {
             return None;
         }
-        world.ecs.worlds[CORE]
+        world
             .get::<crate::ecs::transform::components::GlobalTransform>(parent)
             .map(|_global| parent)
     })

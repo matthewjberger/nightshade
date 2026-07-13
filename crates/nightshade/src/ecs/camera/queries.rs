@@ -1,4 +1,3 @@
-use crate::ecs::world::CORE;
 use crate::ecs::world::{Entity, Mat4, Vec3, Vec4, World};
 
 #[derive(Clone)]
@@ -14,9 +13,9 @@ pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
 }
 
 pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatrices> {
-    let camera = world.ecs.worlds[CORE].get::<crate::ecs::camera::components::Camera>(entity)?;
+    let camera = world.get::<crate::ecs::camera::components::Camera>(entity)?;
     let global_transform =
-        world.ecs.worlds[CORE].get::<crate::ecs::transform::components::GlobalTransform>(entity)?;
+        world.get::<crate::ecs::transform::components::GlobalTransform>(entity)?;
 
     let camera_position = global_transform.translation();
     let forward = global_transform.forward_vector();
@@ -25,7 +24,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 
     let projection = match &camera.projection {
         crate::ecs::world::components::Projection::Perspective(persp) => {
-            let constrained = world.ecs.worlds[CORE]
+            let constrained = world
                 .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
                 .map(|c| c.0);
             let aspect_ratio = constrained

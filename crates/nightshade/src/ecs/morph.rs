@@ -23,7 +23,7 @@
 //! Models with morph targets get a [`MorphWeights`] component:
 //!
 //! ```ignore
-//! if let Some(weights) = world.ecs.worlds[CORE].get_mut::<crate::ecs::morph::components::MorphWeights>(entity) {
+//! if let Some(weights) = world.get_mut::<crate::ecs::morph::components::MorphWeights>(entity) {
 //!     // Check how many targets exist
 //!     let count = weights.weight_count();
 //!
@@ -44,7 +44,7 @@
 //! fn run_systems(&mut self, world: &mut World) {
 //!     let dt = world.resources.window.timing.delta_time;
 //!
-//!     if let Some(weights) = world.ecs.worlds[CORE].get_mut::<crate::ecs::morph::components::MorphWeights>(face_entity) {
+//!     if let Some(weights) = world.get_mut::<crate::ecs::morph::components::MorphWeights>(face_entity) {
 //!         // Animate smile weight
 //!         let current = weights.get_weight(SMILE_INDEX);
 //!         let target = if happy { 1.0 } else { 0.0 };
@@ -75,7 +75,7 @@
 //! let entity = spawn_prefab_with_animations(world, &result.prefabs[0], &result.animations, Vec3::zeros());
 //!
 //! // Play facial animation
-//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
+//! if let Some(player) = world.get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     player.play(TALK_ANIMATION);
 //! }
 //! // Morph weights are updated automatically by animation system
@@ -87,7 +87,7 @@
 //!
 //! ```ignore
 //! let weights = MorphWeights::from_count(3, "my_mesh");  // 3 morph targets
-//! world.ecs.worlds[CORE].set(entity, weights);
+//! world.set(entity, weights);
 //! ```
 //!
 //! [`MorphWeights`]: components::MorphWeights

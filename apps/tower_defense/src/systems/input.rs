@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, Tower, TowerDefenseResources, TowerType, UiAction};
+use crate::ecs::{Tower, TowerDefenseResources, TowerType, UiAction};
 use crate::systems::{
     can_place_tower_at, get_grid_position_from_mouse, mark_cell_occupied, sell_tower,
     spawn_money_popup, spawn_tower,
@@ -16,7 +16,7 @@ pub fn input_system(game_world: &mut TowerDefenseResources, world: &mut World) {
 
     if let Some((grid_x, grid_z)) = game_world.mouse_grid_pos
         && let Some(&tower_entity) = game_world.towers_by_position.get(&(grid_x, grid_z))
-        && let Some(tower) = world.ecs.worlds[GAME].get::<Tower>(tower_entity).copied()
+        && let Some(tower) = world.get::<Tower>(tower_entity).copied()
     {
         let sell_value = (tower.tower_type.cost() as f32 * 0.7) as u32;
 
@@ -31,21 +31,18 @@ pub fn input_system(game_world: &mut TowerDefenseResources, world: &mut World) {
             1,
         )[0];
 
-        if let Some(name) =
-            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(text_entity)
-        {
+        if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(text_entity) {
             *name = Name("Hover Tower Text".to_string());
         }
 
         if let Some(transform) =
-            world.ecs.worlds[CORE]
-                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
         {
             transform.translation = nalgebra_glm::vec3(grid_x as f32, 2.0, grid_z as f32);
         }
 
         if let Some(text_component) =
-            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::text::components::Text>(text_entity)
+            world.get_mut::<nightshade::ecs::text::components::Text>(text_entity)
         {
             text_component.text_index = text_index;
             text_component.properties = TextProperties {

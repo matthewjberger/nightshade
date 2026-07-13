@@ -1,4 +1,4 @@
-use crate::ecs::{Enemy, GAME, Position, Projectile, TowerDefenseResources, TowerType};
+use crate::ecs::{Enemy, Position, Projectile, TowerDefenseResources, TowerType};
 use crate::systems::{
     create_death_effect, create_explosion_effect, despawn_entity, spawn_money_popup,
 };
@@ -10,28 +10,20 @@ pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world:
 
     for projectile_entity in game_world.projectiles_list.clone() {
         if let (Some(projectile), Some(projectile_position)) = (
-            world.ecs.worlds[GAME]
-                .get::<Projectile>(projectile_entity)
-                .copied(),
-            world.ecs.worlds[GAME]
-                .get::<Position>(projectile_entity)
-                .copied(),
+            world.get::<Projectile>(projectile_entity).copied(),
+            world.get::<Position>(projectile_entity).copied(),
         ) {
             if !game_world.enemies_list.contains(&projectile.target) {
                 projectiles_to_remove.push(projectile_entity);
                 continue;
             }
 
-            if let Some(target_pos) = world.ecs.worlds[GAME]
-                .get::<Position>(projectile.target)
-                .copied()
-            {
-                let target_visual_pos =
-                    if let Some(enemy) = world.ecs.worlds[GAME].get::<Enemy>(projectile.target) {
-                        target_pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
-                    } else {
-                        target_pos.0
-                    };
+            if let Some(target_pos) = world.get::<Position>(projectile.target).copied() {
+                let target_visual_pos = if let Some(enemy) = world.get::<Enemy>(projectile.target) {
+                    target_pos.0 + nalgebra_glm::vec3(0.0, enemy.enemy_type.y_offset(), 0.0)
+                } else {
+                    target_pos.0
+                };
 
                 let new_pos = if projectile.arc_height > 0.0 {
                     let total_distance =
@@ -61,10 +53,7 @@ pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world:
                         create_explosion_effect(game_world, world, target_visual_pos);
                     }
 
-                    if let Some(mut enemy) = world.ecs.worlds[GAME]
-                        .get::<Enemy>(projectile.target)
-                        .copied()
-                    {
+                    if let Some(mut enemy) = world.get::<Enemy>(projectile.target).copied() {
                         let mut damage_remaining = projectile.damage;
 
                         if enemy.shield_health > 0.0 {
@@ -100,7 +89,7 @@ pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world:
                             }
                             despawn_entity(world, projectile.target);
                         } else {
-                            world.ecs.worlds[GAME].set(projectile.target, enemy);
+                            world.set(projectile.target, enemy);
                         }
                     }
 
@@ -114,12 +103,12 @@ pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world:
                             (projectile.speed * delta_time) / total_distance;
                         updated_projectile.flight_progress =
                             updated_projectile.flight_progress.min(1.0);
-                        world.ecs.worlds[GAME].set(projectile_entity, updated_projectile);
+                        world.set(projectile_entity, updated_projectile);
                     }
 
-                    world.ecs.worlds[GAME].set(projectile_entity, Position(new_pos));
+                    world.set(projectile_entity, Position(new_pos));
 
-                    if let Some(transform) = world.ecs.worlds[CORE]
+                    if let Some(transform) = world
                         .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
                         projectile_entity,
                     ) {
