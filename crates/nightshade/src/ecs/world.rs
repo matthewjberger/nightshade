@@ -131,38 +131,8 @@ pub mod animation_systems {
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
-/// Declares one member world's schema: the mask constants (bits assigned in
-/// declaration order, which is the registration order and therefore the
-/// snapshot schema) and the registration function that builds the
-/// [`freecs::dynamic::ComponentRegistry`] in that exact order. Every
-/// component registers on every build configuration so masks stay identical
-/// across feature sets.
-macro_rules! world_schema {
-    (@consts $bit:expr;) => {};
-    (@consts $bit:expr; $const:ident $(, $rest:ident)*) => {
-        pub const $const: u64 = $bit;
-        world_schema!(@consts $bit << 1; $($rest),*);
-    };
-    (
-        $register_fn:ident {
-            $($field:ident: $ty:ty => $const:ident,)+
-        }
-    ) => {
-        world_schema!(@consts 1u64; $($const),+);
-
-        fn $register_fn() -> freecs::dynamic::ComponentRegistry {
-            let mut registry = freecs::dynamic::ComponentRegistry::new();
-            $(
-                let key = registry.register::<$ty>();
-                assert_eq!(key.mask, $const);
-            )+
-            registry
-        }
-    };
-}
-
-world_schema! {
-    register_core_components {
+freecs::dynamic_schema! {
+    fn register_core_components {
             animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
@@ -219,8 +189,8 @@ world_schema! {
     }
 }
 
-world_schema! {
-    register_ui_components {
+freecs::dynamic_schema! {
+    fn register_ui_components {
             ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,
             ui_button: crate::ecs::ui::components::UiButtonData => UI_BUTTON,
             ui_canvas: crate::ecs::ui::components::UiCanvasData => UI_CANVAS,
