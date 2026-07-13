@@ -356,4 +356,10 @@ impl std::ops::DerefMut for World {
     }
 }
 
+impl freecs::dynamic::ResourceHost for World {
+    fn resource_map_mut(&mut self) -> &mut freecs::dynamic::ResourceMap {
+        &mut self.ecs.resources
+    }
+}
+
 pub use crate::ecs::input::resources::DroppedFile;

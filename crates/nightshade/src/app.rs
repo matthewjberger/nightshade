@@ -38,6 +38,7 @@
 
 use crate::ecs::world::World;
 use crate::state::{RenderResources, State};
+use freecs::dynamic::ResourceHostExt;
 
 /// A unit of app composition. Engine capabilities and games alike
 /// implement this and register their worlds, resources, systems, and
@@ -262,44 +263,18 @@ impl App {
 /// Temporarily removes a group resource so a system can hold it alongside
 /// full `&mut World` access, then puts it back. The safe equivalent of a
 /// resource scope: systems keep the plain `(game, world)` signature with
-/// no aliasing and no `unsafe`. The resource is reinserted even if `body`
-/// unwinds.
+/// no aliasing and no `unsafe`. Delegates to the freecs host scope through
+/// the engine `World`'s `ResourceHost` impl: the resource is absent inside
+/// the closure and is reinserted even if `body` unwinds. Systems that want
+/// several resources at once can import `freecs::dynamic::ResourceHostExt`
+/// and call `world.resources_scope` instead of nesting.
 ///
 /// Panics if the resource was never inserted or is already scoped.
 pub fn game_scope<T: Send + Sync + 'static, R>(
     world: &mut World,
     body: impl FnOnce(&mut T, &mut World) -> R,
 ) -> R {
-    let value = world.ecs.remove_resource::<T>().unwrap_or_else(|| {
-        panic!(
-            "game_scope: resource {} is not inserted",
-            std::any::type_name::<T>()
-        )
-    });
-    let mut scope = ScopedResource {
-        world,
-        value: Some(value),
-    };
-    body(
-        scope
-            .value
-            .as_mut()
-            .expect("game_scope: scoped resource missing"),
-        scope.world,
-    )
-}
-
-struct ScopedResource<'world, T: Send + Sync + 'static> {
-    world: &'world mut World,
-    value: Option<T>,
-}
-
-impl<T: Send + Sync + 'static> Drop for ScopedResource<'_, T> {
-    fn drop(&mut self) {
-        if let Some(value) = self.value.take() {
-            self.world.ecs.insert_resource(value);
-        }
-    }
+    world.resource_scope(|world, value| body(value, world))
 }
 
 /// The [`State`] adapter that drives an [`App`]'s schedules through the
