@@ -15,6 +15,18 @@ nightshade-renderer = "0.50.0"
 - **GPU-driven drawing.** Object transforms, materials, and instance data live in persistent per-world GPU buffers updated by deltas. Frustum and hi-z occlusion culling, LOD selection, batch table construction, and indirect draw argument population run in compute. Draw submission is multi-draw indirect, with the draw count itself sourced from the GPU on hardware with `MULTI_DRAW_INDIRECT_COUNT`. Bindless material textures are used where the device supports them.
 - **Composable passes.** The built-in pipeline is a set of `PassNode<RenderInputs>` implementations on a rendergraph: depth prepass, cascaded and atlas shadows, clustered forward PBR meshes and skinned meshes, sky and IBL, water, particles, decals, SSAO, SSGI, SSR, bloom, TAA, depth of field, post-processing, text, retained UI, and debug overlays. Callers add their own passes to the same graph.
 
+## Driving it
+
+The default frame driver is `wgpu::frame::render_frame(renderer, &mut inputs, &mut outputs)`. It owns the whole per-frame sequence: render command drain, IBL capture, dirty-state handoff to the passes, surface acquisition with occlusion and loss handling, per-camera dispatch with viewport caching, UI composite, and present.
+
+A host drives it with three steps per frame:
+
+1. Compose a `RenderInputs`. Persistent state (`scene: RendererState`, the mesh and texture caches, materials) lives on your side and moves in by value each frame; keep it current with deltas rather than rebuilding it. Frame data (`frame: FrameInputs`) carries the cameras to dispatch, drained commands, dirty spheres, and debug lines for this frame.
+2. Call `render_frame`. On a skipped frame (occluded or lost surface) the unconsumed dirty state stays in the inputs.
+3. Apply `FrameOutputs` (viewport texture sizes, cleared force-render flags, `frame_executed`) and take the persistent state back out of the inputs for the next frame.
+
+`RenderInputs` deliberately has no `Default`: every field is load-bearing and the move-in/move-out cycle is the contract. Build one compose function against the struct and the compiler walks you through the fields.
+
 ## What it renders
 
 - Clustered forward PBR with the metallic-roughness workflow and the glTF KHR material extension set
