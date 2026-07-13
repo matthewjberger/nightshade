@@ -188,7 +188,10 @@ pub fn register_material(
         );
     }
     world.set(entity, MaterialRef::new(name));
-    world.resources.mesh_render_state.mark_entity_added(entity);
+    world
+        .resources
+        .mesh_render_state
+        .mark_entity_added(render_entity(entity));
 }
 
 #[cfg(feature = "physics")]
@@ -271,13 +274,13 @@ fn reload_material_command(
     for entity in referencing_entities {
         texture_cache_acquire(
             &mut world.resources.texture_cache,
-            TextureOwner::EntityMaterial(entity),
+            TextureOwner::EntityMaterial(render_entity(entity)),
             new_textures.clone(),
         );
         world
             .resources
             .mesh_render_state
-            .mark_material_dirty(entity);
+            .mark_material_dirty(render_entity(entity));
     }
 }
 
@@ -305,7 +308,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             world
                 .resources
                 .mesh_render_state
-                .mark_entity_removed(entity);
+                .mark_entity_removed(render_entity(entity));
         }
 
         if let Some(instanced_mesh) =
@@ -328,7 +331,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_instanced_meshes_changed();
         }
 
-        texture_cache_release_entity(&mut world.resources.texture_cache, entity);
+        texture_cache_release_entity(&mut world.resources.texture_cache, render_entity(entity));
 
         if let Some(material_ref) =
             world.get::<crate::ecs::material::components::MaterialRef>(entity)
@@ -538,7 +541,10 @@ pub fn spawn_mesh_at(
         components::CastsShadow,
         crate::ecs::primitives::Visibility { visible: true },
     ));
-    world.resources.mesh_render_state.mark_entity_added(entity);
+    world
+        .resources
+        .mesh_render_state
+        .mark_entity_added(render_entity(entity));
 
     entity
 }
@@ -692,7 +698,7 @@ pub fn set_material_with_textures(
     let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
     texture_cache_acquire(
         &mut world.resources.texture_cache,
-        TextureOwner::EntityMaterial(entity),
+        TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
 
@@ -705,7 +711,7 @@ pub fn set_material_with_textures(
         world
             .resources
             .mesh_render_state
-            .mark_material_dirty(entity);
+            .mark_material_dirty(render_entity(entity));
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(
@@ -1006,7 +1012,7 @@ pub fn spawn_instanced_mesh_with_material(
     .unwrap_or_default();
     texture_cache_acquire(
         &mut world.resources.texture_cache,
-        TextureOwner::EntityMaterial(entity),
+        TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
 

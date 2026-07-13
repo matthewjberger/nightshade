@@ -32,7 +32,10 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         },
     );
     world.set(entity, RenderMesh::new(mesh_name));
-    world.resources.mesh_render_state.mark_entity_added(entity);
+    world
+        .resources
+        .mesh_render_state
+        .mark_entity_added(render_entity(entity));
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,

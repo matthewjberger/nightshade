@@ -4,6 +4,7 @@ use crate::render::wgpu::render_configs::{
     CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
     LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
 };
+use crate::render_driver::{render_entity, scene_entity};
 
 fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
     let matrices =
@@ -62,7 +63,7 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         environment.as_ref(),
     );
     CameraFrameInputs {
-        entity,
+        entity: render_entity(entity),
         matrices,
         projection,
         constrained_aspect: world
@@ -227,7 +228,14 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .requires_full_invalidation();
     let mesh_frame_state = Some(world.resources.mesh_render_state.take_frame_state());
     let mouse_position = world.resources.input.mouse.position;
-    let force_render_cameras = world.resources.window.force_render_cameras.clone();
+    let force_render_cameras = world
+        .resources
+        .window
+        .force_render_cameras
+        .iter()
+        .copied()
+        .map(render_entity)
+        .collect();
 
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
@@ -244,18 +252,26 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         pending_particle_textures: std::mem::take(&mut resources.loading.pending_particle_textures),
         ui: UiFrameInputs {
             rects: std::mem::take(&mut retained.frame.rects),
-            rect_entities: std::mem::take(&mut retained.frame.rect_entities),
+            rect_entities: std::mem::take(&mut retained.frame.rect_entities)
+                .into_iter()
+                .map(|entity| entity.map(render_entity))
+                .collect(),
             images: std::mem::take(&mut retained.frame.ui_images),
             text_meshes: std::mem::take(&mut retained.frame.text_meshes),
             render_slots: std::mem::take(&mut retained.render_slots),
             background_color: retained.background_color,
         },
         view: ViewInputs {
-            active_camera: resources.active_camera,
+            active_camera: resources.active_camera.map(render_entity),
             uptime_milliseconds: resources.window.timing.uptime_milliseconds,
             delta_time: resources.window.timing.delta_time,
             viewport_size: resources.window.cached_viewport_size,
-            camera_tile_rects: resources.window.camera_tile_rects.clone(),
+            camera_tile_rects: resources
+                .window
+                .camera_tile_rects
+                .iter()
+                .map(|(entity, rect)| (render_entity(*entity), *rect))
+                .collect(),
             camera_tile_render_iteration: resources.window.camera_tile_render_iteration,
             active_viewport_rect: resources.window.active_viewport_rect,
         },
@@ -305,7 +321,12 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     resources.loading.pending_particle_textures = pending;
     let retained = &mut resources.retained_ui;
     retained.frame.rects = inputs.ui.rects;
-    retained.frame.rect_entities = inputs.ui.rect_entities;
+    retained.frame.rect_entities = inputs
+        .ui
+        .rect_entities
+        .into_iter()
+        .map(|entity| entity.map(scene_entity))
+        .collect();
     retained.frame.ui_images = inputs.ui.images;
     retained.frame.text_meshes = inputs.ui.text_meshes;
     retained.render_slots = inputs.ui.render_slots;
@@ -323,7 +344,10 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     for entity in outputs.force_render_cleared {
-        resources.window.force_render_cameras.remove(&entity);
+        resources
+            .window
+            .force_render_cameras
+            .remove(&scene_entity(entity));
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {
         resources.mesh_render_state.restore_unconsumed(unconsumed);

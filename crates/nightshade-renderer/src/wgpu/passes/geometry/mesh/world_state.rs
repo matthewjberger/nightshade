@@ -1,4 +1,4 @@
-use freecs::Entity;
+use crate::entity::RenderEntity;
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
@@ -475,8 +475,8 @@ impl WorldGpuBuffers {
 
 pub(super) struct WorldRenderState {
     pub gpu_registry: GpuEntityRegistry,
-    pub entity_to_transform_index: HashMap<Entity, u32>,
-    pub cached_entities: Vec<Entity>,
+    pub entity_to_transform_index: HashMap<RenderEntity, u32>,
+    pub cached_entities: Vec<RenderEntity>,
     pub cached_transforms: Vec<ModelMatrix>,
     pub cached_objects: Vec<ObjectData>,
 
@@ -490,7 +490,7 @@ pub(super) struct WorldRenderState {
     pub instanced_opaque_double_sided_batches: Vec<BatchRange>,
     pub instanced_transparent_batches: Vec<BatchRange>,
     pub regular_object_count: u32,
-    pub instanced_transform_ranges: HashMap<Entity, (u32, u32)>,
+    pub instanced_transform_ranges: HashMap<RenderEntity, (u32, u32)>,
     pub instanced_compute_dirty: bool,
 
     pub object_count: u32,
@@ -515,7 +515,7 @@ pub(super) struct WorldRenderState {
     pub ibl_dirty: bool,
 
     pub cached_name_to_material_id: HashMap<String, u32>,
-    pub cached_material_map: HashMap<Entity, u32>,
+    pub cached_material_map: HashMap<RenderEntity, u32>,
     pub cached_render_materials_generation: u64,
     pub cached_materials_data: Vec<MaterialData>,
     pub cached_custom_data: Vec<[f32; 4]>,

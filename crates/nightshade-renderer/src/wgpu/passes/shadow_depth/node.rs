@@ -135,7 +135,7 @@ const CUBEMAP_FACE_DIRECTIONS: [(nalgebra_glm::Vec3, nalgebra_glm::Vec3); POINT_
 
 fn caster_visible(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: &freecs::Entity,
+    entity: &crate::entity::RenderEntity,
 ) -> bool {
     configs
         .scene
@@ -729,7 +729,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
         self.point_light_shadow_data.clear();
 
         let mut point_light_candidates: Vec<(
-            freecs::Entity,
+            crate::entity::RenderEntity,
             f32,
             crate::config::RenderLightData,
             nalgebra_glm::Mat4,

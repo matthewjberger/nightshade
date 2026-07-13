@@ -81,7 +81,7 @@ runtime = [
 
 engine = [
     "runtime",
-    "nightshade-renderer/engine",
+    "nightshade-renderer/browser_yield",
     "assets",
     "scene_graph",
     "picking",

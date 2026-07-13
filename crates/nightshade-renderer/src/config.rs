@@ -620,7 +620,7 @@ pub struct DayNightState {
     pub hour: f32,
     pub speed: f32,
     pub auto_cycle: bool,
-    pub sun_entity: Option<freecs::Entity>,
+    pub sun_entity: Option<crate::entity::RenderEntity>,
     /// Hours the renderer bakes image based lighting snapshots at when the
     /// day/night hour starts changing, so lighting blends smoothly between them.
     pub ibl_snapshot_hours: Vec<f32>,
@@ -1093,14 +1093,14 @@ pub struct DebugDraw {
 /// in `RenderInputs::editor_selection`.
 #[derive(Clone, Default)]
 pub struct EditorSelection {
-    /// Entity to highlight with bounding volume.
-    pub bounding_volume_selected_entity: Option<freecs::Entity>,
+    /// RenderEntity to highlight with bounding volume.
+    pub bounding_volume_selected_entity: Option<crate::entity::RenderEntity>,
     /// Additional entities to include in the selection outline. The
     /// outline pass renders these alongside `bounding_volume_selected_entity`
     /// and their descendants.
-    pub selected_entities: Vec<freecs::Entity>,
+    pub selected_entities: Vec<crate::entity::RenderEntity>,
     /// When set, frustum culling uses this camera's frustum instead of the active camera's.
-    pub culling_camera_override: Option<freecs::Entity>,
+    pub culling_camera_override: Option<crate::entity::RenderEntity>,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1193,7 +1193,7 @@ pub struct RenderLighting {
     pub num_directional_lights: u32,
     pub directional_light_direction: [f32; 4],
     pub has_directional_light: bool,
-    pub entity_to_lights_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub entity_to_lights_index: std::collections::HashMap<crate::entity::RenderEntity, usize>,
     pub cascade_view_projections: [[[f32; 4]; 4]; crate::wgpu::passes::NUM_SHADOW_CASCADES],
     pub cascade_diameters: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
     pub cascade_split_distances: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
@@ -1203,7 +1203,7 @@ pub struct RenderLighting {
     pub directional_light_size: f32,
     pub shadows_enabled: f32,
     pub area_lights_data: Vec<crate::wgpu::passes::geometry::projection::AreaLightData>,
-    pub area_entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub area_entity_to_index: std::collections::HashMap<crate::entity::RenderEntity, usize>,
     pub sun_direction: nalgebra_glm::Vec3,
     pub sun_color: nalgebra_glm::Vec3,
 }
@@ -1265,12 +1265,12 @@ pub struct SkinnedJointData {
 /// depth-ordered joints, and how many animation layers the player exposes.
 #[derive(Clone)]
 pub struct SkinnedSkeletonData {
-    pub skin_entity: freecs::Entity,
-    pub player_entity: freecs::Entity,
+    pub skin_entity: crate::entity::RenderEntity,
+    pub player_entity: crate::entity::RenderEntity,
     /// The entity above the skeleton's root joints, captured at build time so
     /// the per-frame armature-root refresh is one transform read instead of a
     /// joint-parent walk.
-    pub armature_parent: Option<freecs::Entity>,
+    pub armature_parent: Option<crate::entity::RenderEntity>,
     pub joint_count: u32,
     pub layer_count: u32,
     pub joints_ordered: Vec<SkinnedJointData>,
@@ -1301,9 +1301,9 @@ pub struct RenderSkinning {
 pub struct SkinnedAnimationSnapshot {
     pub signature: u64,
     pub skeletons: Vec<SkinnedSkeletonData>,
-    pub player_runtime: std::collections::HashMap<freecs::Entity, [f32; 3]>,
-    pub layer_runtime: std::collections::HashMap<(freecs::Entity, usize), [f32; 2]>,
-    pub armature_roots: std::collections::HashMap<freecs::Entity, nalgebra_glm::Mat4>,
+    pub player_runtime: std::collections::HashMap<crate::entity::RenderEntity, [f32; 3]>,
+    pub layer_runtime: std::collections::HashMap<(crate::entity::RenderEntity, usize), [f32; 2]>,
+    pub armature_roots: std::collections::HashMap<crate::entity::RenderEntity, nalgebra_glm::Mat4>,
 }
 
 /// A resolved material for the renderer: the engine-side material data plus its
@@ -1323,8 +1323,8 @@ pub struct RenderMaterialEntry {
 pub struct RenderMaterials {
     pub entries: Vec<RenderMaterialEntry>,
     pub name_to_id: std::collections::HashMap<String, u32>,
-    pub entity_to_id: std::collections::HashMap<freecs::Entity, u32>,
-    pub entity_to_name: std::collections::HashMap<freecs::Entity, String>,
+    pub entity_to_id: std::collections::HashMap<crate::entity::RenderEntity, u32>,
+    pub entity_to_name: std::collections::HashMap<crate::entity::RenderEntity, String>,
     pub transparent_ids: std::collections::HashSet<u32>,
     pub mask_ids: std::collections::HashSet<u32>,
     pub double_sided_ids: std::collections::HashSet<u32>,
@@ -1386,7 +1386,7 @@ pub struct RenderLightData {
 
 #[derive(Clone)]
 pub struct RenderLight {
-    pub entity: freecs::Entity,
+    pub entity: crate::entity::RenderEntity,
     pub light: RenderLightData,
     pub transform: nalgebra_glm::Mat4,
 }
@@ -1397,7 +1397,7 @@ pub struct RenderLight {
 #[derive(Clone, Default)]
 pub struct RenderLights {
     pub lights: Vec<RenderLight>,
-    pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub entity_to_index: std::collections::HashMap<crate::entity::RenderEntity, usize>,
 }
 
 /// A projected decal's render parameters snapshotted once per frame from the
@@ -1493,7 +1493,7 @@ pub struct RenderClothData {
 /// frame so the cloth pass reads it here instead of walking the ECS.
 #[derive(Clone)]
 pub struct RenderCloth {
-    pub entity: freecs::Entity,
+    pub entity: crate::entity::RenderEntity,
     pub cloth: RenderClothData,
     pub transform: nalgebra_glm::Mat4,
     pub mesh_name: String,
@@ -1504,7 +1504,7 @@ pub struct RenderCloth {
 /// query order, disabled ones included, so an emitter's index is stable.
 #[derive(Clone)]
 pub struct RenderParticleEmitter {
-    pub entity: freecs::Entity,
+    pub entity: crate::entity::RenderEntity,
     pub emitter: crate::particles::ParticleEmitter,
 }
 
@@ -1513,9 +1513,9 @@ pub struct RenderParticleEmitter {
 /// walking the ECS for each `CASTS_SHADOW` archetype.
 #[derive(Clone, Default)]
 pub struct RenderShadowCasters {
-    pub meshes: Vec<freecs::Entity>,
-    pub instanced: Vec<freecs::Entity>,
-    pub skinned: Vec<freecs::Entity>,
+    pub meshes: Vec<crate::entity::RenderEntity>,
+    pub instanced: Vec<crate::entity::RenderEntity>,
+    pub skinned: Vec<crate::entity::RenderEntity>,
 }
 
 /// One visible 3D text entity snapshotted once per frame, with its world
@@ -1599,15 +1599,17 @@ pub struct RendererState {
     /// Per-entity dynamic render state (visibility and morph weights) extracted
     /// once per frame, so the mesh pass reads it here instead of scanning the
     /// ECS per tracked object. A step toward world-free geometry passes.
-    pub render_dynamic_objects: std::collections::HashMap<freecs::Entity, DynamicObjectState>,
+    pub render_dynamic_objects:
+        std::collections::HashMap<crate::entity::RenderEntity, DynamicObjectState>,
     /// Scene materials resolved once per frame by the engine. Render passes read
     /// materials here instead of walking the material registry themselves.
     pub render_materials: RenderMaterials,
     /// Per-entity mesh name, extracted once per frame so the mesh pass resolves
     /// geometry from its own registry without reading the `RenderMesh` component.
-    pub render_object_meshes: std::collections::HashMap<freecs::Entity, String>,
+    pub render_object_meshes: std::collections::HashMap<crate::entity::RenderEntity, String>,
     /// Per-entity expanded instanced-mesh data, extracted once per frame.
-    pub render_instanced_objects: std::collections::HashMap<freecs::Entity, InstancedObjectData>,
+    pub render_instanced_objects:
+        std::collections::HashMap<crate::entity::RenderEntity, InstancedObjectData>,
     /// The scene's lights collected once per frame in query order. The lighting,
     /// shadow, and projection passes read lights here instead of scanning the ECS.
     pub render_lights: RenderLights,
@@ -1630,17 +1632,17 @@ pub struct RendererState {
     pub render_selection_outline_ids: Vec<u32>,
     /// Per-entity bounding volumes collected once per frame, so culling, the
     /// wireframe pass, and shadow bounds read them here instead of the ECS.
-    pub render_bounds: std::collections::HashMap<freecs::Entity, RenderBounds>,
+    pub render_bounds: std::collections::HashMap<crate::entity::RenderEntity, RenderBounds>,
     /// Shadow-casting entities collected once per frame, split by draw kind, so
     /// the shadow pass enumerates occluders here instead of walking the ECS.
     pub render_shadow_casters: RenderShadowCasters,
     /// Skinned-mesh entities collected once per frame in query order, so the
     /// skinned-mesh pass enumerates draws here instead of walking the ECS.
-    pub render_skinned_meshes: Vec<freecs::Entity>,
+    pub render_skinned_meshes: Vec<crate::entity::RenderEntity>,
     /// Regular (non-skinned) render-mesh entities collected once per frame in
     /// query order, so the mesh pass builds its scene from this list instead of
     /// querying `RENDER_MESH` and filtering `SKIN` against the ECS.
-    pub render_regular_mesh_entities: Vec<freecs::Entity>,
+    pub render_regular_mesh_entities: Vec<crate::entity::RenderEntity>,
     /// View-projection of the frozen culling-override camera when the editor
     /// pins culling to a specific camera, so the mesh pass derives cull frustum
     /// planes here instead of querying that camera's matrices from the ECS.

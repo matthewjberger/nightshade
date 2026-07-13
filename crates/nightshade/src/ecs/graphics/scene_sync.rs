@@ -8,6 +8,7 @@
 
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
+use crate::render_driver::{render_entity, scene_entity};
 use std::collections::{HashMap, HashSet};
 
 /// Cursors and gates for the persistent scene sync.
@@ -148,7 +149,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             world
                 .resources
                 .mesh_render_state
-                .mark_material_dirty(entity);
+                .mark_material_dirty(render_entity(entity));
         }
     }
 
@@ -211,7 +212,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             world
                 .resources
                 .mesh_render_state
-                .mark_material_dirty(entity);
+                .mark_material_dirty(render_entity(entity));
         }
     }
     world.resources.render_scene_sync.data_cursor = world.ecs.worlds[CORE].current_tick();
@@ -260,12 +261,14 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     }
 
     for &entity in &world.resources.mesh_render_state.inner.transform_dirty {
-        let mask = world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0);
+        let mask = world.ecs.worlds[CORE]
+            .component_mask(scene_entity(entity))
+            .unwrap_or(0);
         if mask & crate::ecs::world::RENDER_MESH != 0 {
-            dirt.object_refresh.insert(entity);
+            dirt.object_refresh.insert(scene_entity(entity));
         }
         if mask & crate::ecs::world::INSTANCED_MESH != 0 {
-            dirt.instanced_refresh.insert(entity);
+            dirt.instanced_refresh.insert(scene_entity(entity));
         }
         if mask & crate::ecs::world::SKIN != 0 {
             let previous_flipped = world
@@ -277,7 +280,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
                 });
             let current_flipped = world
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+                .get::<crate::ecs::transform::components::GlobalTransform>(scene_entity(entity))
                 .map(|global| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
                 });
@@ -484,16 +487,32 @@ fn sync_objects_full(world: &mut World) {
 
     let dynamic = &mut world.resources.renderer_state.render_dynamic_objects;
     dynamic.clear();
-    dynamic.extend(states);
+    dynamic.extend(
+        states
+            .into_iter()
+            .map(|(entity, state)| (render_entity(entity), state)),
+    );
     let mesh_map = &mut world.resources.renderer_state.render_object_meshes;
     mesh_map.clear();
-    mesh_map.extend(mesh_names);
+    mesh_map.extend(
+        mesh_names
+            .into_iter()
+            .map(|(entity, name)| (render_entity(entity), name)),
+    );
     let instanced_map = &mut world.resources.renderer_state.render_instanced_objects;
     instanced_map.clear();
-    instanced_map.extend(instanced);
+    instanced_map.extend(
+        instanced
+            .into_iter()
+            .map(|(entity, data)| (render_entity(entity), data)),
+    );
     let render_bounds = &mut world.resources.renderer_state.render_bounds;
     render_bounds.clear();
-    render_bounds.extend(bounds);
+    render_bounds.extend(
+        bounds
+            .into_iter()
+            .map(|(entity, entity_bounds)| (render_entity(entity), entity_bounds)),
+    );
 }
 
 fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
@@ -504,13 +523,13 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                 .resources
                 .renderer_state
                 .render_dynamic_objects
-                .insert(entity, state);
+                .insert(render_entity(entity), state);
         } else {
             world
                 .resources
                 .renderer_state
                 .render_dynamic_objects
-                .remove(&entity);
+                .remove(&render_entity(entity));
         }
     }
     for &entity in &dirt.mesh_name_refresh {
@@ -521,14 +540,14 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                     .resources
                     .renderer_state
                     .render_object_meshes
-                    .insert(entity, name);
+                    .insert(render_entity(entity), name);
             }
             None => {
                 world
                     .resources
                     .renderer_state
                     .render_object_meshes
-                    .remove(&entity);
+                    .remove(&render_entity(entity));
             }
         }
     }
@@ -537,7 +556,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
             .resources
             .renderer_state
             .render_instanced_objects
-            .get_mut(&entity)
+            .get_mut(&render_entity(entity))
         {
             let mut data = std::mem::take(existing);
             if refill_instanced_object_data(world, entity, &mut data) {
@@ -545,20 +564,20 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                     .resources
                     .renderer_state
                     .render_instanced_objects
-                    .insert(entity, data);
+                    .insert(render_entity(entity), data);
             } else {
                 world
                     .resources
                     .renderer_state
                     .render_instanced_objects
-                    .remove(&entity);
+                    .remove(&render_entity(entity));
             }
         } else if let Some(data) = instanced_object_data(world, entity) {
             world
                 .resources
                 .renderer_state
                 .render_instanced_objects
-                .insert(entity, data);
+                .insert(render_entity(entity), data);
         }
     }
     for &entity in &dirt.bounds_refresh {
@@ -572,10 +591,14 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                     .resources
                     .renderer_state
                     .render_bounds
-                    .insert(entity, bounds);
+                    .insert(render_entity(entity), bounds);
             }
             None => {
-                world.resources.renderer_state.render_bounds.remove(&entity);
+                world
+                    .resources
+                    .renderer_state
+                    .render_bounds
+                    .remove(&render_entity(entity));
             }
         }
     }
@@ -584,7 +607,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
             world
                 .resources
                 .mesh_render_state
-                .mark_object_state_dirty(entity);
+                .mark_object_state_dirty(render_entity(entity));
         }
     }
 }
@@ -626,12 +649,16 @@ fn sync_entity_lists(world: &mut World) {
         )
         .collect();
 
-    world.resources.renderer_state.render_regular_mesh_entities = regular_mesh_entities;
+    world.resources.renderer_state.render_regular_mesh_entities = regular_mesh_entities
+        .into_iter()
+        .map(render_entity)
+        .collect();
     let shadow_casters = &mut world.resources.renderer_state.render_shadow_casters;
-    shadow_casters.meshes = shadow_meshes;
-    shadow_casters.instanced = shadow_instanced;
-    shadow_casters.skinned = shadow_skinned;
-    world.resources.renderer_state.render_skinned_meshes = skinned_meshes;
+    shadow_casters.meshes = shadow_meshes.into_iter().map(render_entity).collect();
+    shadow_casters.instanced = shadow_instanced.into_iter().map(render_entity).collect();
+    shadow_casters.skinned = shadow_skinned.into_iter().map(render_entity).collect();
+    world.resources.renderer_state.render_skinned_meshes =
+        skinned_meshes.into_iter().map(render_entity).collect();
 }
 
 fn sync_lights(world: &mut World) {
@@ -649,7 +676,7 @@ fn sync_lights(world: &mut World) {
         ) {
             light_index.insert(entity, lights.len());
             lights.push(crate::render::config::RenderLight {
-                entity,
+                entity: render_entity(entity),
                 light: crate::render::config::RenderLightData {
                     light_type: match light.light_type {
                         crate::ecs::light::components::LightType::Directional => {
@@ -703,7 +730,10 @@ fn sync_lights(world: &mut World) {
     }
     let render_lights = &mut world.resources.renderer_state.render_lights;
     render_lights.lights = lights;
-    render_lights.entity_to_index = light_index;
+    render_lights.entity_to_index = light_index
+        .into_iter()
+        .map(|(entity, index)| (render_entity(entity), index))
+        .collect();
 }
 
 fn sync_decals(world: &mut World) {
@@ -743,7 +773,7 @@ fn sync_emitters(world: &mut World) {
             world
                 .get::<crate::render::particles::ParticleEmitter>(entity)
                 .map(|emitter| crate::render::config::RenderParticleEmitter {
-                    entity,
+                    entity: render_entity(entity),
                     emitter: emitter.clone(),
                 })
         })
@@ -803,7 +833,7 @@ fn sync_cloth(world: &mut World) {
     {
         {
             cloth_bodies.push(crate::render::config::RenderCloth {
-                entity,
+                entity: render_entity(entity),
                 cloth: crate::render::config::RenderClothData {
                     columns: cloth.columns,
                     rows: cloth.rows,
@@ -905,11 +935,11 @@ fn sync_selection_and_culling_camera(world: &mut World) {
             .editor_selection
             .bounding_volume_selected_entity
         {
-            seeds.push(primary);
+            seeds.push(scene_entity(primary));
         }
         for entity in &world.resources.editor_selection.selected_entities {
-            if !seeds.contains(entity) {
-                seeds.push(*entity);
+            if !seeds.contains(&scene_entity(*entity)) {
+                seeds.push(scene_entity(*entity));
             }
         }
         let mut ids: Vec<u32> = Vec::with_capacity(seeds.len() * 4);
@@ -929,7 +959,9 @@ fn sync_selection_and_culling_camera(world: &mut World) {
         .resources
         .editor_selection
         .culling_camera_override
-        .and_then(|camera| crate::ecs::camera::queries::query_camera_matrices(world, camera))
+        .and_then(|camera| {
+            crate::ecs::camera::queries::query_camera_matrices(world, scene_entity(camera))
+        })
         .map(|matrices| matrices.projection * matrices.view);
     world
         .resources

@@ -129,7 +129,7 @@ pub struct CascadeData {
 
 #[derive(Debug, Clone)]
 pub struct SpotlightShadowSlot {
-    pub entity: freecs::Entity,
+    pub entity: crate::entity::RenderEntity,
     pub view_projection: nalgebra_glm::Mat4,
     pub slot_index: u32,
     pub bias: f32,
@@ -151,7 +151,7 @@ pub struct SpotlightShadowData {
 
 #[derive(Debug, Clone)]
 pub struct PointLightShadowSlot {
-    pub entity: freecs::Entity,
+    pub entity: crate::entity::RenderEntity,
     pub position: nalgebra_glm::Vec3,
     pub range: f32,
     pub slot_index: u32,
@@ -164,7 +164,7 @@ pub struct PointLightShadowSlot {
 /// slot is reused untouched across frames while both stay equal.
 #[derive(Clone, Copy, Default)]
 pub struct ShadowSlotCache {
-    pub occupant: Option<freecs::Entity>,
+    pub occupant: Option<crate::entity::RenderEntity>,
     pub hash: u64,
 }
 

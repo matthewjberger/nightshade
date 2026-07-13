@@ -3,6 +3,7 @@ use crate::ecs::world::World;
 use crate::render::wgpu::passes::geometry::lines::{
     GpuBoundingVolumeData, GpuLineData, GpuNormalData, extract_frustum_planes,
 };
+use crate::render_driver::render_entity;
 
 pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineData> {
     let line_entities = world.ecs.worlds[CORE].query_entities(
@@ -189,7 +190,7 @@ pub fn gather_bounding_volume_data(
             continue;
         }
 
-        let is_selected = selected_entity == Some(entity);
+        let is_selected = selected_entity == Some(render_entity(entity));
 
         if !show_bounding_volumes && !is_selected {
             continue;

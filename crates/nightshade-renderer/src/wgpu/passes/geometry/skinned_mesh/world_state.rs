@@ -340,7 +340,7 @@ pub(super) struct SkinnedDrawGroup {
 }
 
 pub(super) struct SkinnedWorldRenderState {
-    pub skinned_entities: Vec<freecs::Entity>,
+    pub skinned_entities: Vec<crate::entity::RenderEntity>,
     pub opaque_draw_groups: Vec<SkinnedDrawGroup>,
     pub transparent_draw_groups: Vec<SkinnedDrawGroup>,
     pub cached_cull_objects: Vec<super::types::SkinnedCullObject>,

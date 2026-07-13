@@ -4,13 +4,13 @@
 //! it to the render graph costs nothing, and the graph and passes are
 //! monomorphized on this concrete type with no engine coupling.
 
-use freecs::Entity;
+use crate::entity::RenderEntity;
 use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
 pub struct UiFrameInputs {
     pub rects: Vec<crate::ui_data::UiRect>,
-    pub rect_entities: Vec<Option<Entity>>,
+    pub rect_entities: Vec<Option<RenderEntity>>,
     pub images: Vec<crate::ui_data::UiImage>,
     pub text_meshes: Vec<crate::ui_data::UiTextInstance>,
     pub render_slots: crate::ui_data::RenderSlotAllocator,
@@ -21,11 +21,11 @@ pub struct UiFrameInputs {
 /// timing, and the viewport layout the compose pass targets. The renderer
 /// updates this between camera dispatches within a frame.
 pub struct ViewInputs {
-    pub active_camera: Option<Entity>,
+    pub active_camera: Option<RenderEntity>,
     pub uptime_milliseconds: u64,
     pub delta_time: f32,
     pub viewport_size: Option<(u32, u32)>,
-    pub camera_tile_rects: HashMap<Entity, crate::config::ViewportRect>,
+    pub camera_tile_rects: HashMap<RenderEntity, crate::config::ViewportRect>,
     pub camera_tile_render_iteration: u32,
     pub active_viewport_rect: Option<crate::config::ViewportRect>,
 }
@@ -67,7 +67,7 @@ impl Default for CameraProjectionParams {
 /// transform for dirtiness checks.
 #[derive(Clone)]
 pub struct CameraFrameInputs {
-    pub entity: Entity,
+    pub entity: RenderEntity,
     pub matrices: Option<CameraMatricesInputs>,
     pub projection: CameraProjectionParams,
     pub constrained_aspect: Option<f32>,
@@ -145,7 +145,7 @@ pub struct FrameInputs {
     pub mouse_position: nalgebra_glm::Vec2,
     /// Cameras whose next render is forced; the renderer reports which ones
     /// it cleared through [`FrameOutputs`].
-    pub force_render_cameras: std::collections::HashSet<Entity>,
+    pub force_render_cameras: std::collections::HashSet<RenderEntity>,
     /// Debug line geometry gathered for this frame.
     pub debug_lines: LinesFrameInputs,
 }
@@ -156,7 +156,7 @@ pub struct FrameInputs {
 #[derive(Default)]
 pub struct FrameOutputs {
     pub viewport_texture_sizes: Vec<(u32, u32)>,
-    pub force_render_cleared: Vec<Entity>,
+    pub force_render_cleared: Vec<RenderEntity>,
     /// Whether the frame actually rendered. False when the surface was
     /// occluded, timed out, or lost, so callers keep their previous
     /// viewport state instead of applying this frame's empty outputs.

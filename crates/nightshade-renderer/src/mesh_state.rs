@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use freecs::Entity;
+use crate::entity::RenderEntity;
 
 #[derive(Debug, Default)]
 pub struct MeshRenderState {
@@ -12,19 +12,19 @@ pub struct MeshRenderState {
 
 #[derive(Debug, Default)]
 pub struct MeshRenderStateInner {
-    pub transform_dirty: HashSet<Entity>,
-    pub material_dirty: HashSet<Entity>,
-    pub instanced_local_matrices_dirty: HashSet<Entity>,
-    pub custom_data_overrides: HashMap<Entity, [f32; 4]>,
-    pub custom_data_dirty: HashSet<Entity>,
+    pub transform_dirty: HashSet<RenderEntity>,
+    pub material_dirty: HashSet<RenderEntity>,
+    pub instanced_local_matrices_dirty: HashSet<RenderEntity>,
+    pub custom_data_overrides: HashMap<RenderEntity, [f32; 4]>,
+    pub custom_data_dirty: HashSet<RenderEntity>,
     /// Entities whose non-structural per-object state (visibility, morph
     /// weights) changed this frame. The pass refreshes exactly these slots
     /// instead of scanning every registered object.
-    pub object_state_dirty: HashSet<Entity>,
+    pub object_state_dirty: HashSet<RenderEntity>,
     pub instanced_compute_dispatch_needed: bool,
     pub instanced_meshes_changed: bool,
-    pub entities_added: Vec<Entity>,
-    pub entities_removed: Vec<Entity>,
+    pub entities_added: Vec<RenderEntity>,
+    pub entities_removed: Vec<RenderEntity>,
     pub batches_invalidated: bool,
     pub full_rebuild_needed: bool,
     pub frame_initialized: bool,
@@ -51,15 +51,15 @@ impl MeshRenderState {
         }
     }
 
-    pub fn mark_transform_dirty(&mut self, entity: Entity) {
+    pub fn mark_transform_dirty(&mut self, entity: RenderEntity) {
         self.inner.transform_dirty.insert(entity);
     }
 
-    pub fn mark_object_state_dirty(&mut self, entity: Entity) {
+    pub fn mark_object_state_dirty(&mut self, entity: RenderEntity) {
         self.inner.object_state_dirty.insert(entity);
     }
 
-    pub fn mark_instanced_local_matrices_dirty(&mut self, entity: Entity) {
+    pub fn mark_instanced_local_matrices_dirty(&mut self, entity: RenderEntity) {
         self.inner.instanced_local_matrices_dirty.insert(entity);
     }
 
@@ -71,7 +71,7 @@ impl MeshRenderState {
         self.inner.instanced_meshes_changed = true;
     }
 
-    pub fn set_entity_custom_data(&mut self, entity: Entity, data: [f32; 4]) {
+    pub fn set_entity_custom_data(&mut self, entity: RenderEntity, data: [f32; 4]) {
         let old_alpha = self
             .inner
             .custom_data_overrides
@@ -84,7 +84,7 @@ impl MeshRenderState {
         self.inner.custom_data_dirty.insert(entity);
     }
 
-    pub fn mark_entity_fade_complete(&mut self, entity: Entity) {
+    pub fn mark_entity_fade_complete(&mut self, entity: RenderEntity) {
         self.inner
             .custom_data_overrides
             .insert(entity, [1.0, 1.0, 1.0, 1.0]);
@@ -96,17 +96,17 @@ impl MeshRenderState {
         self.inner.full_rebuild_needed = true;
     }
 
-    pub fn mark_material_dirty(&mut self, entity: Entity) {
+    pub fn mark_material_dirty(&mut self, entity: RenderEntity) {
         self.inner.material_dirty.insert(entity);
         self.inner.batches_invalidated = true;
     }
 
-    pub fn mark_entity_added(&mut self, entity: Entity) {
+    pub fn mark_entity_added(&mut self, entity: RenderEntity) {
         self.inner.entities_added.push(entity);
         self.inner.batches_invalidated = true;
     }
 
-    pub fn mark_entity_removed(&mut self, entity: Entity) {
+    pub fn mark_entity_removed(&mut self, entity: RenderEntity) {
         self.inner.entities_removed.push(entity);
         self.inner.batches_invalidated = true;
         self.inner.transform_dirty.remove(&entity);
@@ -127,7 +127,7 @@ impl MeshRenderState {
     /// per-camera dirty-tracking path to decide which viewports need to
     /// re-render based on frustum overlap with the changed entities'
     /// bounding spheres.
-    pub fn dirty_entities_for_culling(&self) -> impl Iterator<Item = Entity> + '_ {
+    pub fn dirty_entities_for_culling(&self) -> impl Iterator<Item = RenderEntity> + '_ {
         self.inner
             .transform_dirty
             .iter()

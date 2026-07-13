@@ -5,6 +5,7 @@ use crate::ecs::animation::components::{
 use crate::ecs::world::CORE;
 use crate::ecs::world::{ANIMATION_PLAYER, Entity, SKIN, World};
 use crate::render::config::{SkinnedChannelData, SkinnedJointData, SkinnedSkeletonData};
+use crate::render_driver::{render_entity, scene_entity};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -55,7 +56,7 @@ pub fn render_sync_animation_system(world: &mut World) {
             continue;
         }
         player_runtime.insert(
-            player_entity,
+            render_entity(player_entity),
             [player.time, player.blend_from_time, player.blend_factor],
         );
         player_clips.insert(
@@ -125,14 +126,15 @@ pub fn render_sync_animation_system(world: &mut World) {
         let root = skeleton
             .armature_parent
             .and_then(|parent| {
-                world.get::<crate::ecs::transform::components::GlobalTransform>(parent)
+                world
+                    .get::<crate::ecs::transform::components::GlobalTransform>(scene_entity(parent))
             })
             .map(|global| global.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
         armature_roots.insert(skeleton.skin_entity, root);
-        if let Some(player) =
-            world.get::<crate::ecs::animation::components::AnimationPlayer>(skeleton.player_entity)
-        {
+        if let Some(player) = world.get::<crate::ecs::animation::components::AnimationPlayer>(
+            scene_entity(skeleton.player_entity),
+        ) {
             for layer_index in 0..skeleton.layer_count as usize {
                 if let Some(layer) = player.layers.get(layer_index) {
                     layer_runtime.insert(
@@ -277,9 +279,9 @@ fn build_skeletons(
         }
 
         skeletons.push(SkinnedSkeletonData {
-            skin_entity,
-            player_entity,
-            armature_parent: skin_armature_parent(world, skin_entity),
+            skin_entity: render_entity(skin_entity),
+            player_entity: render_entity(player_entity),
+            armature_parent: skin_armature_parent(world, skin_entity).map(render_entity),
             joint_count: skin.joints.len() as u32,
             layer_count,
             joints_ordered,

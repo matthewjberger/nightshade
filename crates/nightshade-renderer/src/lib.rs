@@ -321,6 +321,7 @@ pub mod asset_id;
 pub mod bounding_volume;
 pub mod config;
 pub mod core;
+pub mod entity;
 pub mod generational_registry;
 pub mod geometry;
 #[cfg(feature = "grass")]

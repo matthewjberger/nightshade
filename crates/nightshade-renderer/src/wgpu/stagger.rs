@@ -5,7 +5,7 @@
 /// compositor also lives; without these breaks the renderer's startup
 /// compiles arrive as multi-second batches that freeze the whole browser.
 /// A no-op outside wasm.
-#[cfg(all(target_arch = "wasm32", feature = "engine"))]
+#[cfg(all(target_arch = "wasm32", feature = "browser_yield"))]
 pub async fn yield_to_event_loop(queue: &wgpu::Queue) {
     use wasm_bindgen::JsCast;
 
@@ -29,7 +29,7 @@ pub async fn yield_to_event_loop(queue: &wgpu::Queue) {
     let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
 }
 
-#[cfg(not(all(target_arch = "wasm32", feature = "engine")))]
+#[cfg(not(all(target_arch = "wasm32", feature = "browser_yield")))]
 pub async fn yield_to_event_loop(_queue: &wgpu::Queue) {}
 
 /// Waits until the GPU process has executed every command queued so far,
@@ -38,7 +38,7 @@ pub async fn yield_to_event_loop(_queue: &wgpu::Queue) {}
 /// batches drain merges everything into one giant browser-freezing task; this
 /// lets the renderer hand control back only once startup is digested.
 /// A no-op outside wasm.
-#[cfg(all(target_arch = "wasm32", feature = "engine"))]
+#[cfg(all(target_arch = "wasm32", feature = "browser_yield"))]
 pub async fn drain_queued_work(queue: &wgpu::Queue) {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -54,5 +54,5 @@ pub async fn drain_queued_work(queue: &wgpu::Queue) {
     }
 }
 
-#[cfg(not(all(target_arch = "wasm32", feature = "engine")))]
+#[cfg(not(all(target_arch = "wasm32", feature = "browser_yield")))]
 pub async fn drain_queued_work(_queue: &wgpu::Queue) {}

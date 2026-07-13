@@ -1,6 +1,6 @@
 use crate::config::{SkinnedAnimationSnapshot, SkinnedChannelData};
+use crate::entity::RenderEntity;
 use crate::skinning::SkinningCache;
-use freecs::Entity;
 use wgpu::util::DeviceExt;
 
 #[repr(C)]
@@ -56,8 +56,8 @@ struct GpuAnimSkeleton {
 }
 
 struct SkeletonLayout {
-    skin_entity: Entity,
-    player_entity: Entity,
+    skin_entity: RenderEntity,
+    player_entity: RenderEntity,
     bone_start: u32,
     bone_count: u32,
 }
@@ -99,7 +99,7 @@ pub(super) struct SkinnedAnimationGpu {
     values_buffer: wgpu::Buffer,
     bone_layers_buffer: wgpu::Buffer,
     layer_runtime_buffer: wgpu::Buffer,
-    runtime_slots: Vec<(Entity, usize)>,
+    runtime_slots: Vec<(RenderEntity, usize)>,
     layouts: Vec<SkeletonLayout>,
     cached_static_signature: u64,
     bone_transforms_generation: u64,

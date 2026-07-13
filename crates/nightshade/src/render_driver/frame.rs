@@ -8,6 +8,7 @@ use crate::render::wgpu::pass_sync;
 use crate::render::wgpu::presentation;
 use crate::render::wgpu::render_configs::FrameOutputs;
 use crate::render::wgpu::texture_uploads;
+use crate::render_driver::scene_entity;
 
 /// Renders one frame: the pre-frame steps that need both the world and the
 /// renderer run first, then the frame inputs are composed, the renderer's
@@ -150,7 +151,7 @@ pub(crate) fn poll_depth_pick_readback(
 
     if let Some(camera_entity) = renderer.depth_pick.camera
         && let Some(matrices) =
-            crate::ecs::camera::queries::query_camera_matrices(world, camera_entity)
+            crate::ecs::camera::queries::query_camera_matrices(world, scene_entity(camera_entity))
     {
         let (texture_width, texture_height) = renderer.depth_pick.texture_size;
         let inverse_view_proj = (matrices.projection * matrices.view)

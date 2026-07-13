@@ -9,11 +9,11 @@ use std::collections::HashMap;
 
 use super::cascade::reverse_z_perspective;
 use super::types::{MAX_SPOTLIGHT_SHADOWS, SPOTLIGHT_ATLAS_SLOTS_PER_ROW, SpotlightShadowData};
+use crate::entity::RenderEntity;
 use crate::wgpu::passes::geometry::projection::{
     atlas_shadow_fov, light_casts_atlas_shadow, transform_forward,
 };
 use crate::wgpu::render_configs::CameraFrameInputs;
-use freecs::Entity;
 
 pub fn sphere_in_frustum(center: nalgebra_glm::Vec3, radius: f32, planes: &[[f32; 4]; 6]) -> bool {
     for plane in planes {
@@ -69,7 +69,7 @@ pub fn full_frustum_planes(view_projection: &[[f32; 4]; 4]) -> [[f32; 4]; 6] {
 /// into this slot, and the mesh pass samples it through the matching
 /// [`SpotlightShadowData`] entry.
 pub struct SpotlightAtlasSlot {
-    pub entity: Entity,
+    pub entity: RenderEntity,
     pub view_projection: nalgebra_glm::Mat4,
     pub atlas_x_pixels: u32,
     pub atlas_y_pixels: u32,
@@ -82,7 +82,7 @@ pub struct SpotlightAtlasSlot {
 pub struct SpotlightAtlasAssignment {
     pub slots: Vec<SpotlightAtlasSlot>,
     pub data: Vec<SpotlightShadowData>,
-    pub entity_to_index: HashMap<Entity, i32>,
+    pub entity_to_index: HashMap<RenderEntity, i32>,
     pub default_slot_size: u32,
 }
 
@@ -117,7 +117,7 @@ pub fn assign_spotlight_atlas(
     };
 
     let mut spotlight_candidates: Vec<(
-        Entity,
+        RenderEntity,
         f32,
         crate::config::RenderLightData,
         nalgebra_glm::Mat4,

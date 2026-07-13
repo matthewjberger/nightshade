@@ -193,7 +193,7 @@ fn run_frame(
         pass_sync::apply_frame_dirty_state(renderer, frame_state, &mut inputs.mesh_cache);
     }
 
-    let active_camera_entities: std::collections::HashSet<freecs::Entity> = inputs
+    let active_camera_entities: std::collections::HashSet<crate::entity::RenderEntity> = inputs
         .frame
         .cameras
         .iter()

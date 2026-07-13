@@ -62,7 +62,7 @@ pub(crate) fn prepare_text_meshes(
     }
 
     let mut frame_text = std::mem::take(&mut world.resources.retained_ui.frame.text_meshes);
-    let mut active_entities: std::collections::HashSet<freecs::Entity> =
+    let mut active_entities: std::collections::HashSet<crate::render::entity::RenderEntity> =
         std::collections::HashSet::new();
     for instance in &mut frame_text {
         let signature = compute_ui_text_signature(instance);
@@ -106,7 +106,7 @@ pub(crate) fn prepare_text_meshes(
             active_entities.insert(entity);
         }
     }
-    let stale: Vec<freecs::Entity> = renderer
+    let stale: Vec<crate::render::entity::RenderEntity> = renderer
         .frame_state
         .text_mesh_signatures
         .keys()

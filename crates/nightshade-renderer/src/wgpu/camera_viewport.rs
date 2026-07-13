@@ -1,7 +1,7 @@
 impl super::WgpuRenderer {
     pub fn ensure_camera_viewport(
         &mut self,
-        camera_entity: freecs::Entity,
+        camera_entity: crate::entity::RenderEntity,
         width: u32,
         height: u32,
     ) {

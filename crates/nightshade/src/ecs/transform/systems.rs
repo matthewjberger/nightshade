@@ -160,7 +160,7 @@ pub fn update_global_transforms_system(world: &mut World) {
         world
             .resources
             .mesh_render_state
-            .mark_transform_dirty(entity);
+            .mark_transform_dirty(render_entity(entity));
     }
 
     seen.clear();

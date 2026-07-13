@@ -12,7 +12,7 @@ use crate::wgpu::passes::geometry::material_gpu::{
 };
 pub(in super::super) struct MaterialCollection {
     pub(in super::super) materials_data: Vec<MaterialData>,
-    pub(in super::super) material_map: HashMap<freecs::Entity, u32>,
+    pub(in super::super) material_map: HashMap<crate::entity::RenderEntity, u32>,
     pub(in super::super) name_to_material_id: HashMap<String, u32>,
     pub(in super::super) transparent_material_ids: std::collections::HashSet<u32>,
     pub(in super::super) double_sided_material_ids: std::collections::HashSet<u32>,
@@ -23,7 +23,7 @@ struct BatchAccumulator {
     transforms: Vec<ModelMatrix>,
     custom_data: Vec<[f32; 4]>,
     objects: Vec<ObjectData>,
-    entities: Vec<freecs::Entity>,
+    entities: Vec<crate::entity::RenderEntity>,
 }
 
 struct EntityClass {
@@ -37,7 +37,7 @@ struct EntityClass {
 
 fn classify_entity(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: freecs::Entity,
+    entity: crate::entity::RenderEntity,
 ) -> EntityClass {
     let render_materials = &configs.scene.render_materials;
     let material_id = render_materials
@@ -120,7 +120,7 @@ impl MeshPass {
     fn build_world_objects(
         &self,
         configs: &crate::wgpu::render_configs::RenderInputs,
-        mesh_entities: &[freecs::Entity],
+        mesh_entities: &[crate::entity::RenderEntity],
         materials: &mut MaterialCollection,
         accum: &mut BatchAccumulator,
         combos: &mut HashMap<(u32, u32, u32), u32>,
@@ -303,7 +303,7 @@ impl MeshPass {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        let dirty: Vec<freecs::Entity> = self
+        let dirty: Vec<crate::entity::RenderEntity> = self
             .frame_dirty
             .as_mut()
             .map(|fd| std::mem::take(&mut fd.material_dirty).into_iter().collect())
@@ -388,13 +388,16 @@ impl MeshPass {
     fn build_instanced_objects(
         &mut self,
         configs: &crate::wgpu::render_configs::RenderInputs,
-        material_map: &HashMap<freecs::Entity, u32>,
+        material_map: &HashMap<crate::entity::RenderEntity, u32>,
         transforms: &mut Vec<ModelMatrix>,
         custom_data: &mut Vec<[f32; 4]>,
         objects: &mut Vec<ObjectData>,
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
-        let instanced_data: Vec<(freecs::Entity, crate::config::InstancedObjectData)> = {
+        let instanced_data: Vec<(
+            crate::entity::RenderEntity,
+            crate::config::InstancedObjectData,
+        )> = {
             let mut list: Vec<_> = configs
                 .scene
                 .render_instanced_objects
@@ -505,7 +508,7 @@ impl MeshPass {
         let materials = self.collect_and_upload_materials(configs, device, queue);
 
         let regular = self.state().regular_object_count as usize;
-        let regular_entities: Vec<freecs::Entity> = {
+        let regular_entities: Vec<crate::entity::RenderEntity> = {
             let state = self.state();
             state
                 .cached_entities

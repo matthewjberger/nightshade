@@ -371,7 +371,10 @@ impl PickingDemo {
         world
             .resources
             .editor_selection
-            .bounding_volume_selected_entity = self.highlighted_entity.or(self.selected_entity);
+            .bounding_volume_selected_entity = self
+            .highlighted_entity
+            .or(self.selected_entity)
+            .map(render_entity);
     }
 
     fn sync_panel(&self, world: &mut World) {
