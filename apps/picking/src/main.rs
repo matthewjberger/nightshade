@@ -7,7 +7,10 @@ use nightshade::ecs::material::material_registry_insert;
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(PickingDemo::default())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(PickingPlugin)
+        .run()
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,108 +83,123 @@ const PANEL_RECT: Rect = Rect {
     max: Vec2::new(360.0, 320.0),
 };
 
-impl State for PickingDemo {
-    fn initialize(&mut self, world: &mut World) {
-        world.resources.window.title = "Picking Demo".to_string();
-        world.resources.user_interface.enabled = true;
-        world.resources.retained_ui.enabled = true;
-        world.resources.debug_draw.show_grid = true;
-        world.resources.render_settings.atmosphere = Atmosphere::Sky;
-        world.resources.debug_draw.selection_outline_enabled = true;
-        self.show_debug_volumes = true;
-        self.spin_speed = 1.0;
+struct PickingPlugin;
 
-        spawn_sun(world);
+impl Plugin for PickingPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.resources.window.title = "Picking Demo".to_string();
+        app.insert_resource(PickingDemo::default());
+        app.add_startup_system("picking_initialize", |world| {
+            game_scope::<PickingDemo, _>(world, initialize);
+        });
+        app.add_system("update", "picking_update", |world| {
+            game_scope::<PickingDemo, _>(world, update);
+        });
+    }
+}
 
-        for (mesh_type, position, color) in MESH_LAYOUT {
-            let entity = spawn_mesh(world, mesh_type, position, Vec3::new(1.0, 1.0, 1.0));
-            let material_name = format!("{}_{}", mesh_type, entity.id);
-            material_registry_insert(
-                &mut world.resources.assets.material_registry,
-                material_name.clone(),
-                Material {
-                    base_color: color.into(),
-                    ..Default::default()
-                },
-            );
-            if let Some(&index) = world
-                .resources
-                .assets
-                .material_registry
-                .registry
-                .name_to_index
-                .get(&material_name)
-            {
-                registry_add_reference(
-                    &mut world.resources.assets.material_registry.registry,
-                    index,
-                );
-            }
-            world.set(entity, MaterialRef::new(material_name));
+fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
+    world.resources.debug_draw.show_grid = true;
+    world.resources.render_settings.atmosphere = Atmosphere::Sky;
+    world.resources.debug_draw.selection_outline_enabled = true;
+    picking_demo.show_debug_volumes = true;
+    picking_demo.spin_speed = 1.0;
 
-            let bounding_radius = world
-                .get::<nightshade::render::bounding_volume::BoundingVolume>(entity)
-                .map(|bv| bv.sphere_radius)
-                .unwrap_or(1.0);
-            let sphere_entity = spawn_debug_sphere(world, mesh_type, position, bounding_radius);
-            self.debug_volumes.push((entity, sphere_entity));
+    spawn_sun(world);
 
-            self.meshes.push(DemoMesh {
-                entity,
-                label: mesh_type,
-            });
-        }
-
-        let camera = spawn_pan_orbit_camera(
-            world,
-            Vec3::new(0.0, 0.0, 0.0),
-            12.0,
-            0.0,
-            0.4,
-            "Picking Demo Camera".to_string(),
+    for (mesh_type, position, color) in MESH_LAYOUT {
+        let entity = spawn_mesh(world, mesh_type, position, Vec3::new(1.0, 1.0, 1.0));
+        let material_name = format!("{}_{}", mesh_type, entity.id);
+        material_registry_insert(
+            &mut world.resources.assets.material_registry,
+            material_name.clone(),
+            Material {
+                base_color: color.into(),
+                ..Default::default()
+            },
         );
-        world.resources.active_camera = Some(camera);
+        if let Some(&index) = world
+            .resources
+            .assets
+            .material_registry
+            .registry
+            .name_to_index
+            .get(&material_name)
+        {
+            registry_add_reference(
+                &mut world.resources.assets.material_registry.registry,
+                index,
+            );
+        }
+        world.set(entity, MaterialRef::new(material_name));
 
-        let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
-        world.set(preview_entity, Lines::default());
-        world.set(preview_entity, Visibility { visible: true });
-        world.set(preview_entity, GlobalTransform::default());
-        self.preview_lines_entity = Some(preview_entity);
+        let bounding_radius = world
+            .get::<nightshade::render::bounding_volume::BoundingVolume>(entity)
+            .map(|bv| bv.sphere_radius)
+            .unwrap_or(1.0);
+        let sphere_entity = spawn_debug_sphere(world, mesh_type, position, bounding_radius);
+        picking_demo.debug_volumes.push((entity, sphere_entity));
 
-        self.handles = build_panel(world, self.mode, self.show_debug_volumes, self.spin_speed);
+        picking_demo.meshes.push(DemoMesh {
+            entity,
+            label: mesh_type,
+        });
     }
 
-    fn run_systems(&mut self, world: &mut World) {
-        pan_orbit_camera_system(world);
+    let camera = spawn_pan_orbit_camera(
+        world,
+        Vec3::new(0.0, 0.0, 0.0),
+        12.0,
+        0.0,
+        0.4,
+        "Picking Demo Camera".to_string(),
+    );
+    world.resources.active_camera = Some(camera);
 
-        self.poll_panel(world);
-        self.tick_rotation(world);
-        self.sync_debug_volume_visibility(world);
+    let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
+    world.set(preview_entity, Lines::default());
+    world.set(preview_entity, Visibility { visible: true });
+    world.set(preview_entity, GlobalTransform::default());
+    picking_demo.preview_lines_entity = Some(preview_entity);
 
-        match self.mode {
-            PickingMode::GpuHover => self.update_gpu_hover(world),
-            PickingMode::CpuHover => self.update_cpu_hover(world),
-        }
+    picking_demo.handles = build_panel(
+        world,
+        picking_demo.mode,
+        picking_demo.show_debug_volumes,
+        picking_demo.spin_speed,
+    );
+}
 
-        self.handle_click(world);
-        self.sync_outline(world);
-        self.sync_panel(world);
+fn update(picking_demo: &mut PickingDemo, world: &mut World) {
+    pan_orbit_camera_system(world);
 
-        let events = std::mem::take(&mut world.resources.input.events);
-        for event in events {
-            if let AppEvent::Keyboard {
-                key,
-                state: KeyState::Pressed,
-            } = event
-            {
-                match key {
-                    KeyCode::Escape => world.resources.window.should_exit = true,
-                    KeyCode::F1 => {
-                        let panel = self.handles.panel;
-                        ui_set_visible(world, panel, !ui_node_visible(world, panel));
-                    }
-                    _ => {}
+    picking_demo.poll_panel(world);
+    picking_demo.tick_rotation(world);
+    picking_demo.sync_debug_volume_visibility(world);
+
+    match picking_demo.mode {
+        PickingMode::GpuHover => picking_demo.update_gpu_hover(world),
+        PickingMode::CpuHover => picking_demo.update_cpu_hover(world),
+    }
+
+    picking_demo.handle_click(world);
+    picking_demo.sync_outline(world);
+    picking_demo.sync_panel(world);
+
+    let events = std::mem::take(&mut world.resources.input.events);
+    for event in events {
+        if let AppEvent::Keyboard {
+            key,
+            state: KeyState::Pressed,
+        } = event
+        {
+            match key {
+                KeyCode::Escape => world.resources.window.should_exit = true,
+                KeyCode::F1 => {
+                    let panel = picking_demo.handles.panel;
+                    ui_set_visible(world, panel, !ui_node_visible(world, panel));
                 }
+                _ => {}
             }
         }
     }

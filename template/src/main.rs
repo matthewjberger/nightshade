@@ -1,7 +1,9 @@
-use nightshade::prelude::*;
-use template_core::Template;
+use nightshade::prelude::{App, DefaultPlugins};
+use template_core::TemplatePlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(Template::default())?;
-    Ok(())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(TemplatePlugin)
+        .run()
 }

@@ -23,8 +23,10 @@ const LAST_NAMES: &[&str] = &[
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(NavMeshDemo::default())?;
-    Ok(())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(NavMeshPlugin)
+        .run()
 }
 
 struct FoxData {
@@ -165,52 +167,61 @@ impl Default for NavMeshDemo {
     }
 }
 
-impl State for NavMeshDemo {
-    fn initialize(&mut self, world: &mut World) {
-        world.resources.window.title = "NavMesh Pathfinding".to_string();
-        world.resources.user_interface.enabled = true;
-        world.resources.retained_ui.enabled = true;
-        world.resources.render_settings.atmosphere = Atmosphere::Hdr;
-        world.resources.debug_draw.show_grid = false;
+struct NavMeshPlugin;
 
-        load_hdr_skybox(world, HDR_SKYBOX.to_vec());
+impl Plugin for NavMeshPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.resources.window.title = "NavMesh Pathfinding".to_string();
+        app.insert_resource(NavMeshDemo::default());
+        app.add_startup_system("navmesh_initialize", |world| {
+            game_scope::<NavMeshDemo, _>(world, initialize);
+        });
+        app.add_system("update", "navmesh_update", |world| {
+            game_scope::<NavMeshDemo, _>(world, update);
+        });
+    }
+}
 
-        let sun = spawn_sun(world);
-        if let Some(light) = world.get_mut::<nightshade::ecs::light::components::Light>(sun) {
-            light.cast_shadows = true;
-            light.intensity = 5.0;
-        }
+fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
+    world.resources.render_settings.atmosphere = Atmosphere::Hdr;
+    world.resources.debug_draw.show_grid = false;
 
-        let focus = nalgebra_glm::vec3(0.0, 2.0, 0.0);
-        let camera =
-            spawn_pan_orbit_camera(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
-        world.resources.active_camera = Some(camera);
-        self.camera_entity = Some(camera);
+    load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 
-        self.spawn_terrain(world);
-        self.spawn_trees(world);
-        self.build_navmesh(world);
-        self.load_fox_model(world);
-        self.spawn_initial_foxes(world);
-
-        set_navmesh_debug_draw(world, self.show_navmesh);
-
-        self.build_ui(world);
+    let sun = spawn_sun(world);
+    if let Some(light) = world.get_mut::<nightshade::ecs::light::components::Light>(sun) {
+        light.cast_shadows = true;
+        light.intensity = 5.0;
     }
 
-    fn run_systems(&mut self, world: &mut World) {
-        escape_key_exit_system(world);
-        if !self.follow_mode {
-            pan_orbit_camera_system(world);
-        }
-        self.poll_ui_events(world);
-        self.handle_mouse_input(world);
-        self.update_wander_mode(world);
-        self.sync_foxes_to_agents(world);
-        self.update_fox_animations(world);
-        self.update_follow_camera(world);
-        self.update_ui_labels(world);
+    let focus = nalgebra_glm::vec3(0.0, 2.0, 0.0);
+    let camera = spawn_pan_orbit_camera(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
+    world.resources.active_camera = Some(camera);
+    navmesh_demo.camera_entity = Some(camera);
+
+    navmesh_demo.spawn_terrain(world);
+    navmesh_demo.spawn_trees(world);
+    navmesh_demo.build_navmesh(world);
+    navmesh_demo.load_fox_model(world);
+    navmesh_demo.spawn_initial_foxes(world);
+
+    set_navmesh_debug_draw(world, navmesh_demo.show_navmesh);
+
+    navmesh_demo.build_ui(world);
+}
+
+fn update(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
+    escape_key_exit_system(world);
+    if !navmesh_demo.follow_mode {
+        pan_orbit_camera_system(world);
     }
+    navmesh_demo.poll_ui_events(world);
+    navmesh_demo.handle_mouse_input(world);
+    navmesh_demo.update_wander_mode(world);
+    navmesh_demo.sync_foxes_to_agents(world);
+    navmesh_demo.update_fox_animations(world);
+    navmesh_demo.update_follow_camera(world);
+    navmesh_demo.update_ui_labels(world);
 }
 
 impl NavMeshDemo {

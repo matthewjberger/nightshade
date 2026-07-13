@@ -3,7 +3,10 @@ use nightshade::prelude::*;
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(FireworksDemo::default())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(FireworksPlugin)
+        .run()
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -142,178 +145,188 @@ struct Stats {
     emitters: usize,
 }
 
-impl State for FireworksDemo {
-    fn initialize(&mut self, world: &mut World) {
-        world.resources.window.title = "Fireworks".to_string();
-        world.resources.user_interface.enabled = true;
-        world.resources.render_settings.atmosphere = Atmosphere::Space;
-        world.resources.debug_draw.show_grid = true;
-        world.resources.render_settings.clear_color = [0.01, 0.01, 0.02, 1.0];
-        world.resources.render_settings.bloom_enabled = true;
-        world.resources.render_settings.bloom_intensity = 0.05;
+struct FireworksPlugin;
 
-        let camera = spawn_entities(
-            world,
-            LOCAL_TRANSFORM | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
-            1,
-        )[0];
+impl Plugin for FireworksPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.resources.window.title = "Fireworks".to_string();
+        app.insert_resource(FireworksDemo::default());
+        app.add_startup_system("fireworks_initialize", |world| {
+            game_scope::<FireworksDemo, _>(world, initialize);
+        });
+        app.add_system("update", "fireworks_update", |world| {
+            game_scope::<FireworksDemo, _>(world, update);
+        });
+    }
+}
 
-        world.set(
-            camera,
-            LocalTransform {
-                translation: Vec3::new(0.0, 50.0, 150.0),
-                rotation: Quat::identity(),
-                scale: Vec3::new(1.0, 1.0, 1.0),
-            },
-        );
-        world.set(camera, GlobalTransform::default());
-        world.set(
-            camera,
-            Camera {
-                projection: Projection::Perspective(PerspectiveCamera {
-                    aspect_ratio: None,
-                    y_fov_rad: 60.0_f32.to_radians(),
-                    z_near: 0.1,
-                    z_far: Some(2000.0),
-                }),
-                smoothing: Some(Smoothing::default()),
-            },
-        );
-        world.set(
-            camera,
-            PanOrbitCamera {
-                focus: Vec3::new(0.0, 40.0, 0.0),
-                target_focus: Vec3::new(0.0, 40.0, 0.0),
-                radius: 150.0,
-                target_radius: 150.0,
-                pitch: 0.2,
-                target_pitch: 0.2,
-                yaw: 0.0,
-                target_yaw: 0.0,
-                ..Default::default()
-            },
-        );
-        world.resources.active_camera = Some(camera);
+fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
+    world.resources.render_settings.atmosphere = Atmosphere::Space;
+    world.resources.debug_draw.show_grid = true;
+    world.resources.render_settings.clear_color = [0.01, 0.01, 0.02, 1.0];
+    world.resources.render_settings.bloom_enabled = true;
+    world.resources.render_settings.bloom_intensity = 0.05;
 
-        self.auto_launch = true;
-        self.launch_interval = 0.3;
-        self.show_fire = true;
-        self.show_smoke = true;
-        self.next_launch_time = 0.0;
-        self.salvo_mode = false;
-        self.salvo_count = 5;
+    let camera = spawn_entities(
+        world,
+        LOCAL_TRANSFORM | GLOBAL_TRANSFORM | CAMERA | PAN_ORBIT_CAMERA,
+        1,
+    )[0];
 
-        if self.show_fire {
-            self.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
-            self.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
-            self.spawn_fire_effect(world, Vec3::new(-25.0, 0.0, 10.0));
-            self.spawn_fire_effect(world, Vec3::new(25.0, 0.0, 10.0));
-        }
+    world.set(
+        camera,
+        LocalTransform {
+            translation: Vec3::new(0.0, 50.0, 150.0),
+            rotation: Quat::identity(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+        },
+    );
+    world.set(camera, GlobalTransform::default());
+    world.set(
+        camera,
+        Camera {
+            projection: Projection::Perspective(PerspectiveCamera {
+                aspect_ratio: None,
+                y_fov_rad: 60.0_f32.to_radians(),
+                z_near: 0.1,
+                z_far: Some(2000.0),
+            }),
+            smoothing: Some(Smoothing::default()),
+        },
+    );
+    world.set(
+        camera,
+        PanOrbitCamera {
+            focus: Vec3::new(0.0, 40.0, 0.0),
+            target_focus: Vec3::new(0.0, 40.0, 0.0),
+            radius: 150.0,
+            target_radius: 150.0,
+            pitch: 0.2,
+            target_pitch: 0.2,
+            yaw: 0.0,
+            target_yaw: 0.0,
+            ..Default::default()
+        },
+    );
+    world.resources.active_camera = Some(camera);
 
-        if self.show_smoke {
-            self.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
-            self.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
-        }
+    fireworks.auto_launch = true;
+    fireworks.launch_interval = 0.3;
+    fireworks.show_fire = true;
+    fireworks.show_smoke = true;
+    fireworks.next_launch_time = 0.0;
+    fireworks.salvo_mode = false;
+    fireworks.salvo_count = 5;
 
-        Self::load_all_particle_textures(world);
-        self.spawn_all_sprite_effects(world);
-
-        spawn_ui_text_with_properties(
-            world,
-            "GPU Particle System - Fireworks\nMouse: Orbit | Scroll: Zoom | Space: Launch | 1-4: Salvo | ESC: Exit",
-            Vec2::zeros(),
-            TextProperties {
-                font_size: 18.0,
-                color: vec4(1.0, 1.0, 1.0, 0.9),
-                alignment: TextAlignment::Center,
-                outline_width: 0.01,
-                outline_color: vec4(0.0, 0.0, 0.0, 1.0),
-                ..Default::default()
-            },
-        );
-
-        world.resources.retained_ui.enabled = true;
-        self.build_ui(world);
+    if fireworks.show_fire {
+        fireworks.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
+        fireworks.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
+        fireworks.spawn_fire_effect(world, Vec3::new(-25.0, 0.0, 10.0));
+        fireworks.spawn_fire_effect(world, Vec3::new(25.0, 0.0, 10.0));
     }
 
-    fn run_systems(&mut self, world: &mut World) {
-        escape_key_exit_system(world);
-        self.poll_ui_events(world);
-        self.update_ui_state(world);
+    if fireworks.show_smoke {
+        fireworks.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
+        fireworks.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
+    }
 
-        camera_controllers_system(world);
+    FireworksDemo::load_all_particle_textures(world);
+    fireworks.spawn_all_sprite_effects(world);
 
-        let delta_time = world.resources.window.timing.delta_time;
-        let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+    spawn_ui_text_with_properties(
+        world,
+        "GPU Particle System - Fireworks\nMouse: Orbit | Scroll: Zoom | Space: Launch | 1-4: Salvo | ESC: Exit",
+        Vec2::zeros(),
+        TextProperties {
+            font_size: 18.0,
+            color: vec4(1.0, 1.0, 1.0, 0.9),
+            alignment: TextAlignment::Center,
+            outline_width: 0.01,
+            outline_color: vec4(0.0, 0.0, 0.0, 1.0),
+            ..Default::default()
+        },
+    );
 
-        if self.show_active {
-            self.update_fireworks_show(world, uptime);
-        } else if self.auto_launch && uptime >= self.next_launch_time {
-            if self.salvo_mode {
-                self.launch_salvo(world);
-            } else {
-                self.launch_firework(world);
-            }
-            self.next_launch_time = uptime + self.launch_interval;
+    fireworks.build_ui(world);
+}
+
+fn update(fireworks: &mut FireworksDemo, world: &mut World) {
+    escape_key_exit_system(world);
+    fireworks.poll_ui_events(world);
+    fireworks.update_ui_state(world);
+
+    camera_controllers_system(world);
+
+    let delta_time = world.resources.window.timing.delta_time;
+    let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+
+    if fireworks.show_active {
+        fireworks.update_fireworks_show(world, uptime);
+    } else if fireworks.auto_launch && uptime >= fireworks.next_launch_time {
+        if fireworks.salvo_mode {
+            fireworks.launch_salvo(world);
+        } else {
+            fireworks.launch_firework(world);
         }
+        fireworks.next_launch_time = uptime + fireworks.launch_interval;
+    }
 
-        self.update_shells(world, delta_time);
-        self.update_sub_shells(world, delta_time);
-        self.cleanup_expired_effects(world, delta_time);
+    fireworks.update_shells(world, delta_time);
+    fireworks.update_sub_shells(world, delta_time);
+    fireworks.cleanup_expired_effects(world, delta_time);
 
-        let events = std::mem::take(&mut world.resources.input.events);
-        for event in events {
-            let AppEvent::Keyboard {
-                key,
-                state: KeyState::Pressed,
-            } = event
-            else {
-                continue;
-            };
-            match key {
-                KeyCode::Space => {
-                    self.launch_firework(world);
-                }
-                KeyCode::Digit1 => {
-                    for _ in 0..3 {
-                        self.launch_firework(world);
-                    }
-                }
-                KeyCode::Digit2 => {
-                    for _ in 0..5 {
-                        self.launch_firework(world);
-                    }
-                }
-                KeyCode::Digit3 => {
-                    for _ in 0..10 {
-                        self.launch_firework(world);
-                    }
-                }
-                KeyCode::Digit4 => {
-                    self.launch_finale(world);
-                }
-                KeyCode::Digit5 => {
-                    self.salvo_mode = !self.salvo_mode;
-                }
-                KeyCode::KeyA => {
-                    self.auto_launch = !self.auto_launch;
-                }
-                KeyCode::KeyF => {
-                    self.show_fire = !self.show_fire;
-                    if self.show_fire {
-                        self.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
-                        self.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
-                    }
-                }
-                KeyCode::KeyS => {
-                    self.show_smoke = !self.show_smoke;
-                    if self.show_smoke {
-                        self.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
-                        self.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
-                    }
-                }
-                _ => {}
+    let events = std::mem::take(&mut world.resources.input.events);
+    for event in events {
+        let AppEvent::Keyboard {
+            key,
+            state: KeyState::Pressed,
+        } = event
+        else {
+            continue;
+        };
+        match key {
+            KeyCode::Space => {
+                fireworks.launch_firework(world);
             }
+            KeyCode::Digit1 => {
+                for _ in 0..3 {
+                    fireworks.launch_firework(world);
+                }
+            }
+            KeyCode::Digit2 => {
+                for _ in 0..5 {
+                    fireworks.launch_firework(world);
+                }
+            }
+            KeyCode::Digit3 => {
+                for _ in 0..10 {
+                    fireworks.launch_firework(world);
+                }
+            }
+            KeyCode::Digit4 => {
+                fireworks.launch_finale(world);
+            }
+            KeyCode::Digit5 => {
+                fireworks.salvo_mode = !fireworks.salvo_mode;
+            }
+            KeyCode::KeyA => {
+                fireworks.auto_launch = !fireworks.auto_launch;
+            }
+            KeyCode::KeyF => {
+                fireworks.show_fire = !fireworks.show_fire;
+                if fireworks.show_fire {
+                    fireworks.spawn_fire_effect(world, Vec3::new(-35.0, 0.0, 0.0));
+                    fireworks.spawn_fire_effect(world, Vec3::new(35.0, 0.0, 0.0));
+                }
+            }
+            KeyCode::KeyS => {
+                fireworks.show_smoke = !fireworks.show_smoke;
+                if fireworks.show_smoke {
+                    fireworks.spawn_smoke_effect(world, Vec3::new(-30.0, 3.0, 5.0));
+                    fireworks.spawn_smoke_effect(world, Vec3::new(30.0, 3.0, 5.0));
+                }
+            }
+            _ => {}
         }
     }
 }
