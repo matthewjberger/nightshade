@@ -61,7 +61,7 @@
 //! let prefab = &result.prefabs[0];
 //! let entity = spawn_prefab_with_animations(world, prefab, &result.animations, Vec3::zeros());
 //!
-//! if let Some(player) = world.core.get_animation_player_mut(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     player.play(0);
 //!     player.looping = true;
 //! }
@@ -229,8 +229,8 @@
 //!
 //! // 3D spatial audio: play it through an AudioSource component
 //! let source = spawn_entities(world, AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.core.set_audio_source(source, AudioSource::new("shot").with_spatial(true).playing());
-//! world.core.set_local_transform(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
+//! world.ecs.worlds[CORE].set(source, AudioSource::new("shot").with_spatial(true).playing());
+//! world.ecs.worlds[CORE].set(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
 //! ```
 //!
 //! ### Physics (`physics` feature)
@@ -241,14 +241,14 @@
 //!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
 //!     1
 //! )[0];
-//! world.core.set_rigid_body(entity, RigidBodyComponent::new_dynamic());
-//! world.core.set_collider(entity, ColliderComponent::cuboid(1.0, 1.0, 1.0));
-//! world.core.set_local_transform(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
+//! world.ecs.worlds[CORE].set(entity, RigidBodyComponent::new_dynamic());
+//! world.ecs.worlds[CORE].set(entity, ColliderComponent::cuboid(1.0, 1.0, 1.0));
+//! world.ecs.worlds[CORE].set(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
 //!
 //! // Static floor
 //! let floor = spawn_entities(world, RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-//! world.core.set_rigid_body(floor, RigidBodyComponent::new_static());
-//! world.core.set_collider(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
+//! world.ecs.worlds[CORE].set(floor, RigidBodyComponent::new_static());
+//! world.ecs.worlds[CORE].set(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
@@ -395,7 +395,7 @@
 //! let debug = spawn_entities(world, LINES, 1)[0];
 //!
 //! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(lines) = world.core.get_lines_mut(self.debug) {
+//!     if let Some(lines) = world.ecs.worlds[CORE].get_mut::<crate::ecs::lines::components::Lines>(self.debug) {
 //!         lines.clear();
 //!
 //!         // Draw a line
@@ -421,7 +421,7 @@
 //!     1
 //! )[0];
 //!
-//! world.core.set_particle_emitter(emitter, ParticleEmitter {
+//! world.ecs.worlds[CORE].set(emitter, ParticleEmitter {
 //!     spawn_rate: 100.0,
 //!     particle_lifetime_min: 1.5,
 //!     particle_lifetime_max: 2.0,
@@ -432,7 +432,7 @@
 //!     ..Default::default()
 //! });
 //!
-//! world.core.set_local_transform(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
+//! world.ecs.worlds[CORE].set(emitter, LocalTransform::from_translation(Vec3::new(0.0, 0.0, 0.0)));
 //!
 //! // Runs automatically via frame schedule
 //! ```
@@ -445,7 +445,7 @@
 //!     1
 //! )[0];
 //!
-//! world.core.set_decal(decal, Decal {
+//! world.ecs.worlds[CORE].set(decal, Decal {
 //!     texture: Some("decal_texture".to_string()),
 //!     size: Vec2::new(2.0, 2.0),
 //!     depth: 1.0,  // projection depth
@@ -453,7 +453,7 @@
 //! });
 //!
 //! // Position and orient decal (projects along -Y)
-//! world.core.set_local_transform(decal, LocalTransform {
+//! world.ecs.worlds[CORE].set(decal, LocalTransform {
 //!     translation: hit_position + hit_normal * 0.01,
 //!     rotation: UnitQuaternion::face_towards(&(-hit_normal), &Vec3::x()),
 //!     ..Default::default()

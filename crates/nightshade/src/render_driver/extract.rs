@@ -1,3 +1,4 @@
+use crate::ecs::world::CORE;
 use crate::render::wgpu::WgpuRenderer;
 use crate::render::wgpu::pass_sync::rebind_glyph_atlas;
 
@@ -32,16 +33,14 @@ pub(crate) fn prepare_text_meshes(
         usize,
         crate::ecs::text::components::TextProperties,
     )> = Vec::new();
-    world
-        .core
-        .query()
-        .with(crate::ecs::world::TEXT)
-        .iter(|entity, table, idx| {
-            let text = &table.text[idx];
-            if text.dirty {
-                dirty_entries.push((entity, text.text_index, text.properties.clone()));
-            }
-        });
+    for (entity, (text,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&crate::ecs::text::components::Text,)>()
+        .iter()
+    {
+        if text.dirty {
+            dirty_entries.push((entity, text.text_index, text.properties.clone()));
+        }
+    }
     for (entity, text_index, properties) in dirty_entries {
         let text_content = match world.resources.text.cache.get_text(text_index) {
             Some(t) => t.to_string(),
@@ -57,7 +56,9 @@ pub(crate) fn prepare_text_meshes(
             },
             &properties,
         );
-        if let Some(text) = world.core.get_text_mut(entity) {
+        if let Some(text) =
+            world.ecs.worlds[CORE].get_mut::<crate::ecs::text::components::Text>(entity)
+        {
             text.cached_mesh = Some(mesh);
             text.dirty = false;
         }

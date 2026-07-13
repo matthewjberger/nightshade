@@ -15,7 +15,9 @@ pub fn tile_hover_system(game_world: &mut GameWorld, world: &mut World) {
     if let Some(last_pos) = game_world.resources.last_hovered_tile
         && let Some(&tile_entity) = game_world.resources.grid_tiles.get(&last_pos)
         && let Some(&original_color) = game_world.resources.tile_original_colors.get(&last_pos)
-        && let Some(material_ref) = world.core.get_material_ref(tile_entity).cloned()
+        && let Some(material_ref) = world.ecs.worlds[CORE]
+            .get::<nightshade::ecs::material::components::MaterialRef>(tile_entity)
+            .cloned()
     {
         material_registry_mutate(
             &mut world.resources.assets.material_registry,
@@ -51,7 +53,9 @@ pub fn tile_hover_system(game_world: &mut GameWorld, world: &mut World) {
 
         if !is_start && !is_end && !is_path {
             if let Some(&tile_entity) = game_world.resources.grid_tiles.get(&current_pos)
-                && let Some(material_ref) = world.core.get_material_ref(tile_entity).cloned()
+                && let Some(material_ref) = world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::material::components::MaterialRef>(tile_entity)
+                    .cloned()
             {
                 material_registry_mutate(
                     &mut world.resources.assets.material_registry,

@@ -12,7 +12,9 @@ pub fn run_systems(world: &mut World) {
 }
 
 pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Parent>) {
-    let old_parent_entity = world.core.get_parent(child).and_then(|p| p.0);
+    let old_parent_entity = world.ecs.worlds[CORE]
+        .get::<crate::ecs::transform::components::Parent>(child)
+        .and_then(|p| p.0);
 
     if let Some(old_parent_entity) = old_parent_entity
         && let Some(children) = world
@@ -25,7 +27,7 @@ pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Optio
     }
 
     if let Some(new_parent) = new_parent {
-        world.core.set_parent(child, new_parent);
+        world.ecs.worlds[CORE].set(child, new_parent);
         if let Some(parent_entity) = new_parent.0 {
             world
                 .resources
@@ -36,7 +38,7 @@ pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Optio
                 .push(child);
         }
     } else {
-        world.core.remove_parent(child);
+        world.ecs.worlds[CORE].remove_components(child, PARENT);
     }
 
     world.resources.transform_state.children_cache_valid = false;
@@ -46,11 +48,11 @@ pub fn validate_and_rebuild_children_cache(world: &mut World) {
     world.resources.transform_state.children_cache.clear();
 
     let children_cache = &mut world.resources.transform_state.children_cache;
-    world.core.query().with(PARENT).iter(|child, table, idx| {
-        if let Some(parent_entity) = table.parent[idx].0 {
+    for (child, (parent,)) in world.ecs.worlds[CORE].query_ref::<(&Parent,)>().iter() {
+        if let Some(parent_entity) = parent.0 {
             children_cache.entry(parent_entity).or_default().push(child);
         }
-    });
+    }
 
     for children in world.resources.transform_state.children_cache.values_mut() {
         children.sort_by_key(|entity| entity.id);
@@ -76,28 +78,21 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     let mut hierarchy_changed = false;
     if initial_pass {
-        let dirty_ref = &mut dirty_entities;
-        world
-            .core
-            .query()
-            .with(LOCAL_TRANSFORM | GLOBAL_TRANSFORM)
-            .iter(|entity, _, _| {
-                dirty_ref.push(entity);
-            });
+        dirty_entities
+            .extend(world.ecs.worlds[CORE].query_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM));
         world.resources.transform_state.initial_pass_done = true;
     } else {
         let since_tick = world.resources.transform_state.last_consumed_tick;
         dirty_entities.extend(
-            world
-                .core
-                .query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
+            world.ecs.worlds[CORE].query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
         );
         let local_changed_count = dirty_entities.len();
-        dirty_entities.extend(world.core.query_entities_changed_since(PARENT, since_tick));
+        dirty_entities
+            .extend(world.ecs.worlds[CORE].query_entities_changed_since(PARENT, since_tick));
         hierarchy_changed = dirty_entities.len() > local_changed_count;
     }
-    world.resources.transform_state.last_consumed_tick = world.core.current_tick();
-    world.core.increment_tick();
+    world.resources.transform_state.last_consumed_tick = world.ecs.worlds[CORE].current_tick();
+    world.ecs.worlds[CORE].increment_tick();
 
     if hierarchy_changed || !world.resources.transform_state.children_cache_valid {
         validate_and_rebuild_children_cache(world);
@@ -139,9 +134,8 @@ pub fn update_global_transforms_system(world: &mut World) {
     render_dirty_entities.clear();
 
     for entity in dirty_entities.iter().copied() {
-        let parent_is_dirty = world
-            .core
-            .get_parent(entity)
+        let parent_is_dirty = world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::Parent>(entity)
             .and_then(|parent| parent.0)
             .is_some_and(|parent_entity| seen.contains(&parent_entity));
         if !parent_is_dirty {
@@ -154,20 +148,25 @@ pub fn update_global_transforms_system(world: &mut World) {
             continue;
         }
 
-        let local_matrix = match world.core.get_local_transform(current) {
+        let local_matrix = match world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::LocalTransform>(current)
+        {
             Some(local_transform) => local_transform.as_matrix(),
             None => nalgebra_glm::Mat4::identity(),
         };
 
-        let new_global_transform = match world.core.get_parent(current).and_then(|parent| parent.0)
+        let new_global_transform = match world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::Parent>(current)
+            .and_then(|parent| parent.0)
         {
             Some(parent_entity) => {
-                let mut parent_matrix = world
-                    .core
-                    .get_global_transform(parent_entity)
+                let mut parent_matrix = world.ecs.worlds[CORE]
+                    .get::<crate::ecs::transform::components::GlobalTransform>(parent_entity)
                     .map(|global_transform| global_transform.0)
                     .unwrap_or_else(nalgebra_glm::Mat4::identity);
-                if world.core.entity_has_ignore_parent_scale(current) {
+                if world.ecs.worlds[CORE]
+                    .has::<crate::ecs::transform::components::IgnoreParentScale>(current)
+                {
                     parent_matrix = remove_scale_from_matrix(parent_matrix);
                 }
                 parent_matrix * local_matrix
@@ -175,7 +174,10 @@ pub fn update_global_transforms_system(world: &mut World) {
             None => local_matrix,
         };
 
-        if let Some(global_transform) = world.core.get_global_transform_mut(current) {
+        if let Some(global_transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<crate::ecs::transform::components::GlobalTransform>(current)
+        {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
@@ -186,7 +188,7 @@ pub fn update_global_transforms_system(world: &mut World) {
             | crate::ecs::world::TEXT
             | crate::ecs::world::WATER
             | crate::ecs::world::CLOTH;
-        if world.core.component_mask(current).unwrap_or(0) & render_relevant != 0 {
+        if world.ecs.worlds[CORE].component_mask(current).unwrap_or(0) & render_relevant != 0 {
             render_dirty_entities.push(current);
         }
 

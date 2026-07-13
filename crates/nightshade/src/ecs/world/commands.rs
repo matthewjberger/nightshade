@@ -71,7 +71,7 @@ pub struct CommandQueues {
 pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<Entity> {
     let entities = world.spawn_count(count);
     for &entity in &entities {
-        world.core.add_components(entity, core_mask);
+        world.ecs.worlds[CORE].add_components(entity, core_mask);
     }
     entities
 }
@@ -80,7 +80,7 @@ pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<En
 pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<Entity> {
     let entities = world.spawn_count(count);
     for &entity in &entities {
-        world.ui.add_components(entity, ui_mask);
+        world.ecs.worlds[UI].add_components(entity, ui_mask);
     }
     entities
 }
@@ -195,14 +195,18 @@ pub fn register_material(
             index,
         );
     }
-    world.core.set_material_ref(entity, MaterialRef::new(name));
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(name));
     world.resources.mesh_render_state.mark_entity_added(entity);
 }
 
 #[cfg(feature = "physics")]
 pub fn spawn_physics_body(world: &mut World, entity: Entity) {
-    let rigid_body_comp = world.core.get_rigid_body(entity).cloned();
-    let collider_comp = world.core.get_collider(entity).cloned();
+    let rigid_body_comp = world.ecs.worlds[CORE]
+        .get::<crate::ecs::physics::components::RigidBodyComponent>(entity)
+        .cloned();
+    let collider_comp = world.ecs.worlds[CORE]
+        .get::<crate::ecs::physics::components::ColliderComponent>(entity)
+        .cloned();
 
     if let Some(rigid_body_comp) = rigid_body_comp {
         let rapier_body = rigid_body_comp.to_rapier_rigid_body();
@@ -217,7 +221,10 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
             );
         }
 
-        if let Some(rigid_body_mut) = world.core.get_rigid_body_mut(entity) {
+        if let Some(rigid_body_mut) =
+            world.ecs.worlds[CORE]
+                .get_mut::<crate::ecs::physics::components::RigidBodyComponent>(entity)
+        {
             rigid_body_mut.handle = Some(
                 crate::ecs::physics::types::rigid_body_handle_from_rapier(rapier_handle),
             );
@@ -275,13 +282,11 @@ fn reload_material_command(
         |existing| *existing = new_material,
     );
 
-    let entities_to_dirty: Vec<Entity> = world
-        .core
+    let entities_to_dirty: Vec<Entity> = world.ecs.worlds[CORE]
         .query_entities(MATERIAL_REF)
         .filter(|&entity| {
-            world
-                .core
-                .get_material_ref(entity)
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::material::components::MaterialRef>(entity)
                 .is_some_and(|mat_ref| mat_ref.name == name)
         })
         .collect();
@@ -329,11 +334,15 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             .children_cache
             .remove(&entity);
         world.resources.entities.tags.remove(&entity);
-        if let Some(guid) = world.core.get_guid(entity).copied() {
+        if let Some(guid) = world.ecs.worlds[CORE]
+            .get::<crate::ecs::primitives::Guid>(entity)
+            .copied()
+        {
             world.resources.entities.guid_index.remove(&guid.0);
         }
 
-        if let Some(parent_component) = world.core.get_parent(entity)
+        if let Some(parent_component) =
+            world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(entity)
             && let Some(parent_entity) = parent_component.0
             && let Some(children) = world
                 .resources
@@ -345,7 +354,9 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             has_parent_entities = true;
         }
 
-        if let Some(render_mesh) = world.core.get_render_mesh(entity) {
+        if let Some(render_mesh) =
+            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+        {
             if !is_runtime {
                 let mesh_name = render_mesh.name.clone();
                 if let Some(&index) = world
@@ -368,7 +379,9 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_entity_removed(entity);
         }
 
-        if let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) {
+        if let Some(instanced_mesh) =
+            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::InstancedMesh>(entity)
+        {
             if !is_runtime {
                 let mesh_name = instanced_mesh.mesh_name.clone();
                 if let Some(&index) = world
@@ -391,7 +404,10 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_instanced_meshes_changed();
         }
 
-        if !is_runtime && let Some(material_ref) = world.core.get_material_ref(entity) {
+        if !is_runtime
+            && let Some(material_ref) =
+                world.ecs.worlds[CORE].get::<crate::ecs::material::components::MaterialRef>(entity)
+        {
             let material_name = material_ref.name.clone();
             let texture_names: Vec<String> = registry_entry_by_name(
                 &world.resources.assets.material_registry.registry,
@@ -442,8 +458,8 @@ pub(crate) fn setup_entity_transforms(
     entity: Entity,
     local_transform: crate::ecs::world::components::LocalTransform,
 ) {
-    world.core.set_local_transform(entity, local_transform);
-    world.core.set_global_transform(
+    world.ecs.worlds[CORE].set(entity, local_transform);
+    world.ecs.worlds[CORE].set(
         entity,
         crate::ecs::world::components::GlobalTransform::default(),
     );
@@ -455,9 +471,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
 
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
 
-    world
-        .core
-        .set_name(entity, components::Name("Sun".to_string()));
+    world.ecs.worlds[CORE].set(entity, components::Name("Sun".to_string()));
     setup_entity_transforms(
         world,
         entity,
@@ -473,7 +487,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.core.set_light(
+    world.ecs.worlds[CORE].set(
         entity,
         components::Light {
             light_type: components::LightType::Directional,
@@ -501,9 +515,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
 
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
 
-    world
-        .core
-        .set_name(entity, components::Name("Sun".to_string()));
+    world.ecs.worlds[CORE].set(entity, components::Name("Sun".to_string()));
     setup_entity_transforms(
         world,
         entity,
@@ -516,7 +528,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world.core.set_light(
+    world.ecs.worlds[CORE].set(
         entity,
         components::Light {
             light_type: components::LightType::Directional,
@@ -543,9 +555,7 @@ pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name:
     use crate::ecs::world::{GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, NAME};
 
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
-    world
-        .core
-        .set_name(entity, components::Name(name.to_string()));
+    world.ecs.worlds[CORE].set(entity, components::Name(name.to_string()));
     setup_entity_transforms(
         world,
         entity,
@@ -583,9 +593,7 @@ pub fn spawn_mesh_at(
         1,
     )[0];
 
-    world
-        .core
-        .set_name(entity, components::Name(mesh_name.to_string()));
+    world.ecs.worlds[CORE].set(entity, components::Name(mesh_name.to_string()));
     setup_entity_transforms(
         world,
         entity,
@@ -635,7 +643,7 @@ pub fn spawn_mesh_at(
         registry_add_reference(&mut world.resources.assets.mesh_cache.registry, index);
     }
 
-    world.core.set_render_mesh(entity, render_mesh);
+    world.ecs.worlds[CORE].set(entity, render_mesh);
     world.resources.mesh_render_state.mark_entity_added(entity);
 
     if let Some(&index) = world
@@ -651,17 +659,17 @@ pub fn spawn_mesh_at(
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, components::MaterialRef::new("Default"));
+    world.ecs.worlds[CORE].set(entity, components::MaterialRef::new("Default"));
 
-    world.core.set_bounding_volume(
+    world.ecs.worlds[CORE].set(
         entity,
         components::BoundingVolume::from_mesh_type(mesh_name),
     );
-    world.core.set_casts_shadow(entity, components::CastsShadow);
+    world.ecs.worlds[CORE].set(entity, components::CastsShadow);
 
-    if let Some(visibility) = world.core.get_visibility_mut(entity) {
+    if let Some(visibility) =
+        world.ecs.worlds[CORE].get_mut::<crate::ecs::primitives::Visibility>(entity)
+    {
         visibility.visible = true;
     }
 
@@ -766,10 +774,8 @@ fn spawn_3d_text_impl(
         1,
     )[0];
 
-    world
-        .core
-        .set_name(entity, components::Name(text.to_string()));
-    world.core.set_local_transform(
+    world.ecs.worlds[CORE].set(entity, components::Name(text.to_string()));
+    world.ecs.worlds[CORE].set(
         entity,
         components::LocalTransform {
             translation: position,
@@ -777,10 +783,8 @@ fn spawn_3d_text_impl(
             scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
         },
     );
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
-    world.core.set_text(
+    world.ecs.worlds[CORE].set(entity, components::GlobalTransform::default());
+    world.ecs.worlds[CORE].set(
         entity,
         components::Text {
             text_index,
@@ -790,9 +794,7 @@ fn spawn_3d_text_impl(
             billboard,
         },
     );
-    world
-        .core
-        .set_visibility(entity, components::Visibility { visible: true });
+    world.ecs.worlds[CORE].set(entity, components::Visibility { visible: true });
 
     entity
 }
@@ -816,7 +818,9 @@ pub fn set_material_with_textures(
     entity: Entity,
     material: crate::render::material::Material,
 ) {
-    let material_ref = world.core.get_material_ref(entity).cloned();
+    let material_ref = world.ecs.worlds[CORE]
+        .get::<crate::ecs::material::components::MaterialRef>(entity)
+        .cloned();
 
     if let Some(ref mat_ref) = material_ref {
         let old_textures: Vec<String> = registry_entry_by_name(
@@ -864,7 +868,7 @@ pub fn set_material_with_textures(
                 index,
             );
         }
-        world.core.set_material_ref(
+        world.ecs.worlds[CORE].set(
             entity,
             crate::ecs::material::components::MaterialRef::new(material_name),
         );
@@ -1045,10 +1049,8 @@ pub fn spawn_instanced_mesh(
         1,
     )[0];
 
-    world
-        .core
-        .set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
-    world.core.set_local_transform(
+    world.ecs.worlds[CORE].set(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.ecs.worlds[CORE].set(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
@@ -1056,11 +1058,9 @@ pub fn spawn_instanced_mesh(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
+    world.ecs.worlds[CORE].set(entity, components::GlobalTransform::default());
 
-    world.core.set_instanced_mesh(
+    world.ecs.worlds[CORE].set(
         entity,
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
@@ -1078,14 +1078,10 @@ pub fn spawn_instanced_mesh(
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, components::MaterialRef::new("Default"));
+    world.ecs.worlds[CORE].set(entity, components::MaterialRef::new("Default"));
 
-    world
-        .core
-        .set_visibility(entity, components::Visibility { visible: true });
-    world.core.set_casts_shadow(entity, components::CastsShadow);
+    world.ecs.worlds[CORE].set(entity, components::Visibility { visible: true });
+    world.ecs.worlds[CORE].set(entity, components::CastsShadow);
 
     entity
 }
@@ -1114,10 +1110,8 @@ pub fn spawn_instanced_mesh_with_material(
         1,
     )[0];
 
-    world
-        .core
-        .set_name(entity, components::Name(format!("Instanced {}", mesh_name)));
-    world.core.set_local_transform(
+    world.ecs.worlds[CORE].set(entity, components::Name(format!("Instanced {}", mesh_name)));
+    world.ecs.worlds[CORE].set(
         entity,
         components::LocalTransform {
             translation: nalgebra_glm::Vec3::new(0.0, 0.0, 0.0),
@@ -1125,11 +1119,9 @@ pub fn spawn_instanced_mesh_with_material(
             rotation: nalgebra_glm::Quat::identity(),
         },
     );
-    world
-        .core
-        .set_global_transform(entity, components::GlobalTransform::default());
+    world.ecs.worlds[CORE].set(entity, components::GlobalTransform::default());
 
-    world.core.set_instanced_mesh(
+    world.ecs.worlds[CORE].set(
         entity,
         crate::ecs::mesh::components::InstancedMesh::with_instances(mesh_name, instances),
     );
@@ -1158,23 +1150,20 @@ pub fn spawn_instanced_mesh_with_material(
         texture_cache_add_reference(&mut world.resources.texture_cache, texture);
     }
 
-    world
-        .core
-        .set_material_ref(entity, components::MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(entity, components::MaterialRef::new(material_name));
 
-    world
-        .core
-        .set_visibility(entity, components::Visibility { visible: true });
-    world.core.set_casts_shadow(entity, components::CastsShadow);
+    world.ecs.worlds[CORE].set(entity, components::Visibility { visible: true });
+    world.ecs.worlds[CORE].set(entity, components::CastsShadow);
 
     entity
 }
 
 pub fn find_entity_by_name(world: &World, name: &str) -> Option<Entity> {
-    world
-        .core
-        .query_entities(NAME)
-        .find(|&entity| world.core.get_name(entity).is_some_and(|n| n.0 == name))
+    world.ecs.worlds[CORE].query_entities(NAME).find(|&entity| {
+        world.ecs.worlds[CORE]
+            .get::<crate::ecs::primitives::Name>(entity)
+            .is_some_and(|n| n.0 == name)
+    })
 }
 
 /// Register `material` in the registry under `name` and attach it to `entity` via [`MaterialRef`].
@@ -1202,7 +1191,7 @@ pub fn spawn_material(
             index,
         );
     }
-    world.core.set_material_ref(entity, MaterialRef::new(name));
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(name));
 }
 
 #[cfg(test)]

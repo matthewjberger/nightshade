@@ -176,7 +176,9 @@ impl State for NavMeshDemo {
         load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 
         let sun = spawn_sun(world);
-        if let Some(light) = world.core.get_light_mut(sun) {
+        if let Some(light) =
+            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::light::components::Light>(sun)
+        {
             light.cast_shadows = true;
             light.intensity = 5.0;
         }
@@ -219,7 +221,9 @@ impl NavMeshDemo {
         let panel =
             tree_builder.add_docked_panel_right("navmesh_demo", "NavMesh Demo Controls", 320.0);
         let content = panel_content(tree_builder.world_mut(), panel);
-        if let Some(node) = tree_builder.world_mut().ui.get_ui_layout_node_mut(content) {
+        if let Some(node) = tree_builder.world_mut().ecs.worlds[UI]
+            .get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(content)
+        {
             node.flow_layout = Some(FlowLayout {
                 direction: FlowDirection::Vertical,
                 padding: 0.0,
@@ -391,7 +395,9 @@ impl NavMeshDemo {
             self.used_names.clear();
             self.followed_fox_index = None;
             self.follow_mode = false;
-            if let Some(data) = world.ui.get_ui_checkbox_mut(self.ui.follow_mode) {
+            if let Some(data) = world.ecs.worlds[UI]
+                .get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(self.ui.follow_mode)
+            {
                 data.value = false;
             }
             self.last_following_index = None;
@@ -436,7 +442,10 @@ impl NavMeshDemo {
                     self.ui.following_label,
                     &format!("Following: {}", fox.full_name),
                 );
-                if let Some(node_color) = world.ui.get_ui_node_color_mut(self.ui.following_label) {
+                if let Some(node_color) = world.ecs.worlds[UI]
+                    .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(
+                    self.ui.following_label,
+                ) {
                     node_color.colors[UiBase::INDEX] = Some(fox.name_color);
                 }
             } else {
@@ -526,7 +535,7 @@ impl NavMeshDemo {
                     | BOUNDING_VOLUME,
                 1,
             )[0];
-            world.core.set_local_transform(
+            world.ecs.worlds[CORE].set(
                 trunk,
                 LocalTransform {
                     translation: Vec3::new(x, terrain_y + trunk_height / 2.0, z),
@@ -534,11 +543,9 @@ impl NavMeshDemo {
                     scale: Vec3::new(trunk_radius * 2.0, trunk_height, trunk_radius * 2.0),
                 },
             );
-            world.core.set_render_mesh(trunk, RenderMesh::new("Cube"));
-            world
-                .core
-                .set_material_ref(trunk, MaterialRef::new(trunk_material_name));
-            world.core.set_casts_shadow(trunk, CastsShadow);
+            world.ecs.worlds[CORE].set(trunk, RenderMesh::new("Cube"));
+            world.ecs.worlds[CORE].set(trunk, MaterialRef::new(trunk_material_name));
+            world.ecs.worlds[CORE].set(trunk, CastsShadow);
 
             let green_variation = (index as f32 * 0.02) % 0.12;
             let tier_radii = [2.0 * tree_scale, 1.5 * tree_scale, 0.9 * tree_scale];
@@ -586,7 +593,7 @@ impl NavMeshDemo {
                         | BOUNDING_VOLUME,
                     1,
                 )[0];
-                world.core.set_local_transform(
+                world.ecs.worlds[CORE].set(
                     cone,
                     LocalTransform {
                         translation: Vec3::new(x, y_pos, z),
@@ -594,11 +601,9 @@ impl NavMeshDemo {
                         scale: Vec3::new(radius, height, radius),
                     },
                 );
-                world.core.set_render_mesh(cone, RenderMesh::new("Cone"));
-                world
-                    .core
-                    .set_material_ref(cone, MaterialRef::new(cone_material_name));
-                world.core.set_casts_shadow(cone, CastsShadow);
+                world.ecs.worlds[CORE].set(cone, RenderMesh::new("Cone"));
+                world.ecs.worlds[CORE].set(cone, MaterialRef::new(cone_material_name));
+                world.ecs.worlds[CORE].set(cone, CastsShadow);
             }
         }
     }
@@ -783,11 +788,17 @@ impl NavMeshDemo {
         let agent_entity =
             spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM | NAVMESH_AGENT, 1)[0];
 
-        if let Some(transform) = world.core.get_local_transform_mut(agent_entity) {
+        if let Some(transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(agent_entity)
+        {
             transform.translation = position;
         }
 
-        if let Some(agent) = world.core.get_navmesh_agent_mut(agent_entity) {
+        if let Some(agent) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::navmesh::components::NavMeshAgent>(agent_entity)
+        {
             agent.movement_speed = self.agent_speed;
         }
 
@@ -799,13 +810,19 @@ impl NavMeshDemo {
             Vec3::zeros(),
         );
 
-        if let Some(transform) = world.core.get_local_transform_mut(fox_entity) {
+        if let Some(transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(fox_entity)
+        {
             transform.translation = position;
             transform.scale = Vec3::new(FOX_SCALE, FOX_SCALE, FOX_SCALE);
         }
 
         let initial_animation = self.animation_indices.survey;
-        if let Some(player) = world.core.get_animation_player_mut(fox_entity) {
+        if let Some(player) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(fox_entity)
+        {
             if let Some(survey_index) = initial_animation {
                 player.play(survey_index);
                 player.speed = 0.5;
@@ -895,9 +912,8 @@ impl NavMeshDemo {
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {
-            let agent_pos = world
-                .core
-                .get_local_transform(fox.agent_entity)
+            let agent_pos = world.ecs.worlds[CORE]
+                .get::<nightshade::ecs::transform::components::LocalTransform>(fox.agent_entity)
                 .map(|t| t.translation)
                 .unwrap_or(Vec3::zeros());
 
@@ -905,7 +921,8 @@ impl NavMeshDemo {
                 terrain::sample_terrain_height(agent_pos.x, agent_pos.z, &terrain_config);
             let fox_pos = Vec3::new(agent_pos.x, terrain_y, agent_pos.z);
 
-            let agent = world.core.get_navmesh_agent(fox.agent_entity);
+            let agent = world.ecs.worlds[CORE]
+                .get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let is_moving = agent
                 .map(|a| a.state == NavMeshAgentState::Moving)
                 .unwrap_or(false);
@@ -932,13 +949,19 @@ impl NavMeshDemo {
 
             fox.was_moving = is_moving;
 
-            if let Some(transform) = world.core.get_local_transform_mut(fox.entity) {
+            if let Some(transform) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(fox.entity)
+            {
                 transform.translation = fox_pos;
                 transform.rotation =
                     nalgebra_glm::quat_angle_axis(fox.current_rotation, &Vec3::y());
             }
 
-            if let Some(transform) = world.core.get_local_transform_mut(fox.name_entity) {
+            if let Some(transform) = world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                fox.name_entity,
+            ) {
                 transform.translation = fox_pos + nalgebra_glm::vec3(0.0, 1.5, 0.0);
             }
         }
@@ -949,7 +972,8 @@ impl NavMeshDemo {
         const WALK_DISTANCE_THRESHOLD: f32 = 2.0;
 
         for fox in &mut self.foxes {
-            let agent = world.core.get_navmesh_agent(fox.agent_entity);
+            let agent = world.ecs.worlds[CORE]
+                .get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let (is_moving, distance) = agent
                 .map(|a| {
                     (
@@ -971,13 +995,19 @@ impl NavMeshDemo {
 
             if target_animation != fox.current_animation {
                 if let Some(anim_index) = target_animation
-                    && let Some(player) = world.core.get_animation_player_mut(fox.entity)
+                    && let Some(player) = world.ecs.worlds[CORE]
+                        .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(
+                        fox.entity,
+                    )
                 {
                     player.blend_to(anim_index, 0.3);
                     player.speed = target_speed;
                     fox.current_animation = Some(anim_index);
                 }
-            } else if let Some(player) = world.core.get_animation_player_mut(fox.entity) {
+            } else if let Some(player) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(fox.entity)
+            {
                 player.speed = target_speed;
             }
         }
@@ -991,7 +1021,8 @@ impl NavMeshDemo {
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &self.foxes {
-            let agent = world.core.get_navmesh_agent(fox.agent_entity);
+            let agent = world.ecs.worlds[CORE]
+                .get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let needs_destination = agent
                 .map(|a| {
                     a.state == NavMeshAgentState::Idle
@@ -1022,7 +1053,9 @@ impl NavMeshDemo {
         let Some(fox) = self.foxes.get(followed_index) else {
             self.followed_fox_index = None;
             self.follow_mode = false;
-            if let Some(data) = world.ui.get_ui_checkbox_mut(self.ui.follow_mode) {
+            if let Some(data) = world.ecs.worlds[UI]
+                .get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(self.ui.follow_mode)
+            {
                 data.value = false;
             }
             return;
@@ -1032,9 +1065,8 @@ impl NavMeshDemo {
             return;
         };
 
-        let fox_pos = world
-            .core
-            .get_local_transform(fox.entity)
+        let fox_pos = world.ecs.worlds[CORE]
+            .get::<nightshade::ecs::transform::components::LocalTransform>(fox.entity)
             .map(|t| t.translation)
             .unwrap_or(Vec3::zeros());
 
@@ -1044,7 +1076,10 @@ impl NavMeshDemo {
         let camera_pos = fox_pos + rotated_offset;
         let look_target = fox_pos + nalgebra_glm::vec3(0.0, 1.0, 0.0);
 
-        if let Some(transform) = world.core.get_local_transform_mut(camera_entity) {
+        if let Some(transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(camera_entity)
+        {
             transform.translation = camera_pos;
             let direction = nalgebra_glm::normalize(&(look_target - camera_pos));
             let up = Vec3::y();

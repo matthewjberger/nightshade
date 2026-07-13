@@ -26,15 +26,22 @@ pub fn spawn_money_popup(
         1,
     )[0];
 
-    if let Some(name) = world.core.get_name_mut(text_entity) {
+    if let Some(name) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(text_entity)
+    {
         *name = Name("Money Popup".to_string());
     }
 
-    if let Some(transform) = world.core.get_local_transform_mut(text_entity) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
+    {
         transform.translation = position + nalgebra_glm::vec3(0.0, 1.5, 0.0);
     }
 
-    if let Some(text_component) = world.core.get_text_mut(text_entity) {
+    if let Some(text_component) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::text::components::Text>(text_entity)
+    {
         text_component.text_index = text_index;
         text_component.properties = TextProperties {
             font_size: 36.0,
@@ -72,11 +79,17 @@ pub fn update_money_popups(game_world: &mut GameWorld, world: &mut World, delta_
 
             game_world.set_money_popup(entity, popup);
 
-            if let Some(transform) = world.core.get_local_transform_mut(popup.text_entity) {
+            if let Some(transform) = world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                popup.text_entity,
+            ) {
                 transform.translation.y += delta_time * 0.5;
             }
 
-            if let Some(text_component) = world.core.get_text_mut(popup.text_entity) {
+            if let Some(text_component) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<nightshade::ecs::text::components::Text>(popup.text_entity)
+            {
                 let alpha = (1.0 - (popup.lifetime / 1.5)).max(0.0);
                 text_component.properties.color.w = alpha;
                 text_component.dirty = true;
@@ -85,7 +98,10 @@ pub fn update_money_popups(game_world: &mut GameWorld, world: &mut World, delta_
     }
 
     for (entity, text_entity) in popups_to_remove {
-        if world.core.get_text(text_entity).is_some() {
+        if world.ecs.worlds[CORE]
+            .get::<nightshade::ecs::text::components::Text>(text_entity)
+            .is_some()
+        {
             queue_ecs_command(
                 world,
                 EcsCommand::DespawnRecursive {

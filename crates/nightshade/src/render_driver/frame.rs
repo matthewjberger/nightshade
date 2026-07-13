@@ -3,6 +3,7 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
+use crate::ecs::world::CORE;
 use crate::render::generational_registry::registry_name_for;
 use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::render::wgpu::pass_sync;
@@ -86,26 +87,25 @@ pub(crate) fn sync_cloth_write_targets(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &crate::ecs::world::World,
 ) {
-    use crate::ecs::world::{CLOTH, RENDER_MESH};
-
     let mut cloths: Vec<pass_sync::ClothWriteBounds> = Vec::new();
-    world
-        .core
-        .query()
-        .with(CLOTH | RENDER_MESH)
-        .iter(|_entity, table, index| {
-            let cloth = &table.cloth[index];
-            let bounds = crate::ecs::cloth::systems::cloth_bounding_volume(cloth);
-            cloths.push(pass_sync::ClothWriteBounds {
-                mesh_name: table.render_mesh[index].name.clone(),
-                center: [
-                    bounds.obb.center.x,
-                    bounds.obb.center.y,
-                    bounds.obb.center.z,
-                ],
-                sphere_radius: bounds.sphere_radius,
-            });
+    for (_entity, (cloth, render_mesh)) in world.ecs.worlds[CORE]
+        .query_ref::<(
+            &crate::ecs::cloth::components::Cloth,
+            &crate::ecs::mesh::components::RenderMesh,
+        )>()
+        .iter()
+    {
+        let bounds = crate::ecs::cloth::systems::cloth_bounding_volume(cloth);
+        cloths.push(pass_sync::ClothWriteBounds {
+            mesh_name: render_mesh.name.clone(),
+            center: [
+                bounds.obb.center.x,
+                bounds.obb.center.y,
+                bounds.obb.center.z,
+            ],
+            sphere_radius: bounds.sphere_radius,
         });
+    }
     pass_sync::set_cloth_write_targets(renderer, &cloths);
 }
 

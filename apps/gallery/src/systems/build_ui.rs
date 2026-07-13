@@ -422,7 +422,8 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             let count = gallery.resources.state.submit_count;
             let message = format!("Submitted {count} time(s)");
             if let Some(UiNodeContent::Text { text_slot, .. }) =
-                world.ui.get_ui_node_content(log_entity)
+                world.ecs.worlds[UI]
+                    .get::<nightshade::ecs::ui::components::UiNodeContent>(log_entity)
             {
                 let slot = *text_slot;
                 world.resources.text.cache.set_text(slot, &message);
@@ -443,9 +444,8 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     if let Some(virtual_list) = ui_named_entity(world, "virtual_list") {
-        let visible_start = world
-            .ui
-            .get_ui_virtual_list(virtual_list)
+        let visible_start = world.ecs.worlds[UI]
+            .get::<nightshade::ecs::ui::components::UiVirtualListData>(virtual_list)
             .map(|data| data.visible_start)
             .unwrap_or(0);
         for (pool_index, text_entity) in gallery
@@ -476,7 +476,9 @@ fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool
         .theme_state
         .active_theme()
         .clone();
-    if let Some(color) = world.ui.get_ui_node_color_mut(label) {
+    if let Some(color) =
+        world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiNodeColor>(label)
+    {
         color.colors[UiBase::INDEX] = Some(if active {
             theme.text_color
         } else {
@@ -488,7 +490,9 @@ fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool
 fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
     use nightshade::ecs::ui::layout_types::{UiLayoutType, WindowLayout};
     use nightshade::ecs::ui::units::{Ab, UiValue};
-    let Some(node) = world.ui.get_ui_layout_node_mut(slider) else {
+    let Some(node) =
+        world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(slider)
+    else {
         return;
     };
     let Some(layout) = node.base_layout.as_mut() else {
@@ -1331,7 +1335,7 @@ fn build_tiles_screen(tree: &mut UiTreeBuilder) -> Entity {
                     .entity();
                 tree.in_parent(inner, |tree| {
                     let tile_container = tree.add_tile_container(vec2(0.0, 0.0));
-                    if let Some(node) = tree.world_mut().ui.get_ui_layout_node_mut(tile_container)
+                    if let Some(node) = tree.world_mut().ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(tile_container)
                         && let Some(nightshade::ecs::ui::layout_types::UiLayoutType::Window(
                             window,
                         )) = node.base_layout.as_mut()
@@ -1452,10 +1456,8 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                     let vl = fill_child(t, 220.0, |t| t.add_virtual_list(28.0, 8));
                     virtual_list = vl;
                     ui_virtual_list_set_count(t.world_mut(), vl, 64);
-                    let pool_containers: Vec<Entity> = t
-                        .world_mut()
-                        .ui
-                        .get_ui_virtual_list(vl)
+                    let pool_containers: Vec<Entity> = t.world_mut().ecs.worlds[UI]
+                        .get::<nightshade::ecs::ui::components::UiVirtualListData>(vl)
                         .map(|d| d.pool_items.iter().map(|p| p.container_entity).collect())
                         .unwrap_or_default();
                     text_nodes.clear();

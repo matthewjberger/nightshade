@@ -131,9 +131,38 @@ pub mod animation_systems {
 pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
-freecs::ecs! {
-    World {
-        Core {
+/// Declares one member world's schema: the mask constants (bits assigned in
+/// declaration order, which is the registration order and therefore the
+/// snapshot schema) and the registration function that builds the
+/// [`freecs::dynamic::ComponentRegistry`] in that exact order. Every
+/// component registers on every build configuration so masks stay identical
+/// across feature sets.
+macro_rules! world_schema {
+    (@consts $bit:expr;) => {};
+    (@consts $bit:expr; $const:ident $(, $rest:ident)*) => {
+        pub const $const: u64 = $bit;
+        world_schema!(@consts $bit << 1; $($rest),*);
+    };
+    (
+        $register_fn:ident {
+            $($field:ident: $ty:ty => $const:ident,)+
+        }
+    ) => {
+        world_schema!(@consts 1u64; $($const),+);
+
+        fn $register_fn() -> freecs::dynamic::ComponentRegistry {
+            let mut registry = freecs::dynamic::ComponentRegistry::new();
+            $(
+                let key = registry.register::<$ty>();
+                assert_eq!(key.mask, $const);
+            )+
+            registry
+        }
+    };
+}
+
+world_schema! {
+    register_core_components {
             animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
@@ -187,8 +216,11 @@ freecs::ecs! {
             lightning_bolt: crate::ecs::vfx::components::LightningBolt => LIGHTNING_BOLT,
             trail: crate::ecs::vfx::components::Trail => TRAIL,
             vfx_animator: crate::ecs::vfx::components::VfxAnimator => VFX_ANIMATOR,
-        }
-        Ui {
+    }
+}
+
+world_schema! {
+    register_ui_components {
             ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,
             ui_button: crate::ecs::ui::components::UiButtonData => UI_BUTTON,
             ui_canvas: crate::ecs::ui::components::UiCanvasData => UI_CANVAS,
@@ -239,67 +271,117 @@ freecs::ecs! {
             ui_tree_node: crate::ecs::ui::components::UiTreeNodeData => UI_TREE_NODE,
             ui_tree_view: crate::ecs::ui::components::UiTreeViewData => UI_TREE_VIEW,
             ui_virtual_list: crate::ecs::ui::components::UiVirtualListData => UI_VIRTUAL_LIST,
+    }
+}
+
+#[derive(Default)]
+pub struct Resources {
+    pub active_camera: Option<freecs::Entity>,
+    #[cfg(all(
+        feature = "assets",
+        feature = "file_watcher",
+        not(target_arch = "wasm32")
+    ))]
+    pub asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
+    pub assets: crate::ecs::asset_state::AssetState,
+    #[cfg(feature = "audio")]
+    pub audio: crate::ecs::audio::resources::AudioEngine,
+    pub cleanup: crate::ecs::world::cleanup::CleanupState,
+    pub cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
+    pub commands: crate::ecs::world::commands::CommandQueues,
+    pub cutscene: crate::ecs::cutscene::resources::CutsceneDirector,
+    pub component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
+    pub entities: crate::ecs::entity_registry::EntityRegistry,
+    pub event_bus: crate::ecs::event_bus::resources::EventBus,
+    #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+    pub file_watcher: crate::ecs::file_watcher::FileWatcher,
+    pub gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+    #[cfg(feature = "grass")]
+    pub grass: crate::render::grass_config::GrassSettings,
+    pub render_settings: crate::render::config::RenderSettings,
+    pub debug_draw: crate::render::config::DebugDraw,
+    pub editor_selection: crate::render::config::EditorSelection,
+    pub renderer_state: crate::render::config::RendererState,
+    pub ibl_views: crate::render::config::IblViews,
+    pub input: crate::ecs::input::resources::Input,
+    pub is_runtime: bool,
+    pub loading: crate::ecs::loading::LoadingState,
+    pub mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
+    pub monitors: crate::ecs::window::resources::Monitors,
+    #[cfg(feature = "navmesh")]
+    pub navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
+    #[cfg(feature = "physics")]
+    pub physics: crate::ecs::physics::resources::PhysicsWorld,
+    #[cfg(feature = "physics")]
+    pub picking_world: crate::ecs::picking::resources::PickingWorld,
+    pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
+    #[cfg(feature = "egui")]
+    pub egui: crate::ecs::ui::egui_state::EguiState,
+    pub events: crate::ecs::event::Events,
+    pub schedules: crate::schedule::Schedules,
+    pub global_scripts: crate::ecs::script::components::GlobalScripts,
+    pub scratch: crate::ecs::world::scratch::Scratch,
+    pub shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
+    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+    pub steam: crate::steam::SteamResources,
+    #[cfg(feature = "terrain")]
+    pub terrain: crate::render::terrain_config::TerrainSettings,
+    #[cfg(feature = "terrain")]
+    pub terrain_render: crate::render::terrain_config::TerrainRenderState,
+    pub text: crate::ecs::text::resources::TextState,
+    pub texture_cache: crate::render::wgpu::texture_cache::TextureCache,
+    pub transform_state: crate::ecs::transform::resources::TransformState,
+    pub render_scene_sync: crate::ecs::graphics::scene_sync::RenderSceneSync,
+    pub tweens: crate::ecs::tween::Tweens,
+    pub ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
+    pub user_interface: crate::ecs::ui::UserInterface,
+    pub wind: crate::render::wind::Wind,
+    pub window: crate::ecs::window::resources::Window,
+    pub world_id: u64,
+}
+
+/// Index of the core member world in `world.ecs.worlds`.
+pub const CORE: usize = 0;
+/// Index of the retained-UI member world in `world.ecs.worlds`.
+pub const UI: usize = 1;
+
+/// The engine's ECS: a [`freecs::dynamic::DynEcs`] group with the core and
+/// retained-UI member worlds over one shared entity allocator, plus the
+/// engine's resources. The group keeps the lifecycle log (handle allocation
+/// and death anywhere); each member world keeps its own row-level structural
+/// log. Member access is `world.ecs.worlds[CORE]` / `world.ecs.worlds[UI]`;
+/// group operations (spawning, despawn broadcast, liveness) are available
+/// directly on `World` through deref.
+pub struct World {
+    pub ecs: freecs::dynamic::DynEcs,
+    pub resources: Resources,
+}
+
+impl Default for World {
+    fn default() -> Self {
+        let mut ecs = freecs::dynamic::DynEcs::new();
+        let core_index = ecs.add_world(register_core_components());
+        assert_eq!(core_index, CORE);
+        let ui_index = ecs.add_world(register_ui_components());
+        assert_eq!(ui_index, UI);
+        Self {
+            ecs,
+            resources: Resources::default(),
         }
     }
-    Resources {
-        active_camera: Option<freecs::Entity>,
-       #[cfg(all(feature = "assets", feature = "file_watcher", not(target_arch = "wasm32")))]
-        asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
-        assets: crate::ecs::asset_state::AssetState,
-        #[cfg(feature = "audio")]
-        audio: crate::ecs::audio::resources::AudioEngine,
-        cleanup: crate::ecs::world::cleanup::CleanupState,
-        cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
-        commands: crate::ecs::world::commands::CommandQueues,
-        cutscene: crate::ecs::cutscene::resources::CutsceneDirector,
-        component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
-        entities: crate::ecs::entity_registry::EntityRegistry,
-        event_bus: crate::ecs::event_bus::resources::EventBus,
-        #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-        file_watcher: crate::ecs::file_watcher::FileWatcher,
-        gpu_picking: crate::ecs::gpu_picking::GpuPicking,
-        #[cfg(feature = "grass")]
-        grass: crate::render::grass_config::GrassSettings,
-        render_settings: crate::render::config::RenderSettings,
-        debug_draw: crate::render::config::DebugDraw,
-        editor_selection: crate::render::config::EditorSelection,
-        renderer_state: crate::render::config::RendererState,
-        ibl_views: crate::render::config::IblViews,
-        input: crate::ecs::input::resources::Input,
-        is_runtime: bool,
-        loading: crate::ecs::loading::LoadingState,
-        mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
-        monitors: crate::ecs::window::resources::Monitors,
-        #[cfg(feature = "navmesh")]
-        navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
-        #[cfg(feature = "physics")]
-        physics: crate::ecs::physics::resources::PhysicsWorld,
-        #[cfg(feature = "physics")]
-        picking_world: crate::ecs::picking::resources::PickingWorld,
-        retained_ui: crate::ecs::ui::resources::RetainedUiState,
-        #[cfg(feature = "egui")]
-        egui: crate::ecs::ui::egui_state::EguiState,
-        events: crate::ecs::event::Events,
-        schedules: crate::schedule::Schedules,
-        global_scripts: crate::ecs::script::components::GlobalScripts,
-        scratch: crate::ecs::world::scratch::Scratch,
-        shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
-        #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-        steam: crate::steam::SteamResources,
-        #[cfg(feature = "terrain")]
-        terrain: crate::render::terrain_config::TerrainSettings,
-        #[cfg(feature = "terrain")]
-        terrain_render: crate::render::terrain_config::TerrainRenderState,
-        text: crate::ecs::text::resources::TextState,
-        texture_cache: crate::render::wgpu::texture_cache::TextureCache,
-        transform_state: crate::ecs::transform::resources::TransformState,
-        render_scene_sync: crate::ecs::graphics::scene_sync::RenderSceneSync,
-        tweens: crate::ecs::tween::Tweens,
-        ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
-        user_interface: crate::ecs::ui::UserInterface,
-        wind: crate::render::wind::Wind,
-        window: crate::ecs::window::resources::Window,
-        world_id: u64,
+}
+
+impl std::ops::Deref for World {
+    type Target = freecs::dynamic::DynEcs;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ecs
+    }
+}
+
+impl std::ops::DerefMut for World {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ecs
     }
 }
 

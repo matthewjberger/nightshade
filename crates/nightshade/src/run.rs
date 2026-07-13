@@ -462,7 +462,7 @@ pub fn run_frame_body(
     state: &mut dyn State,
     renderer: &mut crate::render::wgpu::WgpuRenderer,
 ) -> Option<Box<dyn State>> {
-    world.core.increment_tick();
+    world.ecs.worlds[CORE].increment_tick();
 
     #[cfg(feature = "gamepad")]
     crate::ecs::input::systems::gamepad_input_system(world);

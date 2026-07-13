@@ -186,11 +186,12 @@ pub fn spawn_terrain(
         1,
     )[0];
 
-    if let Some(name) = world.core.get_name_mut(entity) {
+    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
+    {
         name.0 = "Terrain".to_string();
     }
 
-    world.core.set_local_transform(
+    world.ecs.worlds[CORE].set(
         entity,
         LocalTransform {
             translation: position,
@@ -199,7 +200,9 @@ pub fn spawn_terrain(
         },
     );
 
-    if let Some(render_mesh) = world.core.get_render_mesh_mut(entity) {
+    if let Some(render_mesh) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::mesh::components::RenderMesh>(entity)
+    {
         *render_mesh = RenderMesh::new(&mesh_name);
     }
 
@@ -209,12 +212,18 @@ pub fn spawn_terrain(
         config.resolution_z as usize,
     );
 
-    if let Some(rigid_body) = world.core.get_rigid_body_mut(entity) {
+    if let Some(rigid_body) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::physics::components::RigidBodyComponent>(entity)
+    {
         *rigid_body =
             RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z);
     }
 
-    if let Some(collider) = world.core.get_collider_mut(entity) {
+    if let Some(collider) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::physics::components::ColliderComponent>(entity)
+    {
         *collider = ColliderComponent {
             handle: None,
             shape: ColliderShape::HeightField {
@@ -232,7 +241,9 @@ pub fn spawn_terrain(
         };
     }
 
-    if let Some(bv) = world.core.get_bounding_volume_mut(entity) {
+    if let Some(bv) = world.ecs.worlds[CORE]
+        .get_mut::<nightshade::render::bounding_volume::BoundingVolume>(entity)
+    {
         let half_width = config.width / 2.0;
         let half_depth = config.depth / 2.0;
         let half_height = (max_height - min_height) / 2.0;
@@ -251,10 +262,8 @@ pub fn spawn_terrain(
         };
     }
 
-    world.core.set_casts_shadow(entity, CastsShadow);
-    world
-        .core
-        .set_visibility(entity, Visibility { visible: true });
+    world.ecs.worlds[CORE].set(entity, CastsShadow);
+    world.ecs.worlds[CORE].set(entity, Visibility { visible: true });
 
     let material_name = format!("TerrainMaterial_{}", entity.id);
     material_registry_insert(
@@ -275,9 +284,7 @@ pub fn spawn_terrain(
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
 
     entity
 }

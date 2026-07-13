@@ -37,7 +37,10 @@ fn apply_ground_height(sandbox_world: &mut SandboxWorld, world: &mut World) {
     } else {
         PARKED_HEIGHT
     };
-    if let Some(transform) = world.core.get_local_transform_mut(ground) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(ground)
+    {
         transform.translation.y = height;
     }
     if active {
@@ -61,9 +64,8 @@ fn recenter(sandbox_world: &SandboxWorld, world: &mut World) {
     let Some(player_entity) = sandbox_world.resources.player.player_entity else {
         return;
     };
-    let Some(player_translation) = world
-        .core
-        .get_local_transform(player_entity)
+    let Some(player_translation) = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(player_entity)
         .map(|transform| transform.translation)
     else {
         return;
@@ -71,7 +73,9 @@ fn recenter(sandbox_world: &SandboxWorld, world: &mut World) {
     let snapped_x = (player_translation.x / TEXTURE_PERIOD).round() * TEXTURE_PERIOD;
     let snapped_z = (player_translation.z / TEXTURE_PERIOD).round() * TEXTURE_PERIOD;
     let mut moved = false;
-    if let Some(transform) = world.core.get_local_transform_mut(ground)
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(ground)
         && (transform.translation.x != snapped_x || transform.translation.z != snapped_z)
     {
         transform.translation.x = snapped_x;
@@ -94,7 +98,8 @@ fn ensure_ground(sandbox_world: &mut SandboxWorld, world: &mut World) -> Entity 
         Vec3::new(GROUND_SIZE, 1.0, GROUND_SIZE),
         material,
     );
-    if let Some(name) = world.core.get_name_mut(entity) {
+    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(entity)
+    {
         name.0 = "InfiniteGround".to_string();
     }
     sandbox_world.resources.infinite_world.ground = Some(entity);

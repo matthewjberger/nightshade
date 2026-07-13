@@ -42,9 +42,7 @@ pub fn create_explosion_effect(game_world: &mut GameWorld, world: &mut World, po
                 index,
             );
         }
-        world
-            .core
-            .set_material_ref(particle, MaterialRef::new(material_name));
+        world.ecs.worlds[CORE].set(particle, MaterialRef::new(material_name));
 
         let game_entity = game_world.spawn_entities(ENTITY_HANDLE | VISUAL_EFFECT, 1)[0];
         game_world.set_entity_handle(game_entity, EntityHandle(particle));
@@ -74,7 +72,7 @@ pub fn create_death_effect(_game_world: &mut GameWorld, world: &mut World, posit
     smoke_emitter.size_end = 0.8;
     smoke_emitter.velocity_spread = 0.6;
     smoke_emitter.shape = nightshade::render::particles::EmitterShape::Sphere { radius: 0.2 };
-    world.core.set_particle_emitter(entity, smoke_emitter);
+    world.ecs.worlds[CORE].set(entity, smoke_emitter);
 }
 
 pub fn create_poison_bubble_effect(game_world: &mut GameWorld, world: &mut World, position: Vec3) {
@@ -114,9 +112,7 @@ pub fn create_poison_bubble_effect(game_world: &mut GameWorld, world: &mut World
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(particle, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(particle, MaterialRef::new(material_name));
 
     let game_entity = game_world.spawn_entities(ENTITY_HANDLE | VISUAL_EFFECT, 1)[0];
     game_world.set_entity_handle(game_entity, EntityHandle(particle));
@@ -157,9 +153,7 @@ pub fn create_muzzle_flash(game_world: &mut GameWorld, world: &mut World, positi
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(flash, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(flash, MaterialRef::new(material_name));
 
     let game_entity = game_world.spawn_entities(ENTITY_HANDLE | VISUAL_EFFECT, 1)[0];
     game_world.set_entity_handle(game_entity, EntityHandle(flash));
@@ -207,9 +201,7 @@ pub fn create_muzzle_flash(game_world: &mut GameWorld, world: &mut World, positi
                 index,
             );
         }
-        world
-            .core
-            .set_material_ref(smoke, MaterialRef::new(material_name));
+        world.ecs.worlds[CORE].set(smoke, MaterialRef::new(material_name));
 
         let smoke_entity = game_world.spawn_entities(ENTITY_HANDLE | VISUAL_EFFECT, 1)[0];
         game_world.set_entity_handle(smoke_entity, EntityHandle(smoke));
@@ -246,7 +238,12 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                         let progress = effect.age / effect.lifetime;
                         let scale_factor = 1.0 + progress * 2.0;
 
-                        if let Some(transform) = world.core.get_local_transform_mut(handle.0) {
+                        if let Some(transform) =
+                            world.ecs.worlds[CORE]
+                                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                                handle.0,
+                            )
+                        {
                             transform.scale = nalgebra_glm::vec3(
                                 0.15 * scale_factor,
                                 0.15 * scale_factor,
@@ -254,7 +251,10 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                             );
                         }
 
-                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                        if let Some(material_ref) = world.ecs.worlds[CORE]
+                            .get::<nightshade::ecs::material::components::MaterialRef>(handle.0)
+                            .cloned()
+                        {
                             material_registry_mutate(
                                 &mut world.resources.assets.material_registry,
                                 &material_ref.name,
@@ -266,11 +266,19 @@ pub fn update_visual_effects(game_world: &mut GameWorld, world: &mut World, delt
                         }
                     }
                     EffectType::PoisonBubble => {
-                        if let Some(transform) = world.core.get_local_transform_mut(handle.0) {
+                        if let Some(transform) =
+                            world.ecs.worlds[CORE]
+                                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                                handle.0,
+                            )
+                        {
                             transform.translation.y += delta_time * 0.5;
                         }
 
-                        if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                        if let Some(material_ref) = world.ecs.worlds[CORE]
+                            .get::<nightshade::ecs::material::components::MaterialRef>(handle.0)
+                            .cloned()
+                        {
                             material_registry_mutate(
                                 &mut world.resources.assets.material_registry,
                                 &material_ref.name,

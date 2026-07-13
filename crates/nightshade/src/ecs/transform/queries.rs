@@ -1,16 +1,15 @@
 #[cfg(feature = "assets")]
+use crate::ecs::world::CORE;
 use crate::ecs::world::PREFAB_SOURCE;
 use crate::ecs::world::{PARENT, World, components::Parent};
 use std::collections::HashMap;
 
 pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
-    world
-        .core
+    world.ecs.worlds[CORE]
         .query_entities(PARENT)
         .filter(|child_entity| {
-            world
-                .core
-                .get_parent(*child_entity)
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::Parent>(*child_entity)
                 .is_some_and(|Parent(parent)| parent == &Some(entity))
         })
         .collect()
@@ -18,8 +17,10 @@ pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Enti
 
 pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
     let mut children_by_parent: HashMap<u32, Vec<freecs::Entity>> = HashMap::new();
-    for child in world.core.query_entities(PARENT) {
-        if let Some(Parent(Some(parent))) = world.core.get_parent(child) {
+    for child in world.ecs.worlds[CORE].query_entities(PARENT) {
+        if let Some(Parent(Some(parent))) =
+            world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(child)
+        {
             children_by_parent.entry(parent.id).or_default().push(child);
         }
     }
@@ -41,7 +42,9 @@ pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::E
 pub fn query_ancestors(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
     let mut chain = vec![entity];
     let mut current = entity;
-    while let Some(Parent(Some(parent))) = world.core.get_parent(current) {
+    while let Some(Parent(Some(parent))) =
+        world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(current)
+    {
         chain.push(*parent);
         current = *parent;
     }
@@ -53,10 +56,10 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
     let mut current = entity;
     let mut highest_prefab_root: Option<freecs::Entity> = None;
     loop {
-        if world.core.entity_has_components(current, PREFAB_SOURCE) {
+        if world.ecs.worlds[CORE].entity_has_components(current, PREFAB_SOURCE) {
             highest_prefab_root = Some(current);
         }
-        match world.core.get_parent(current) {
+        match world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(current) {
             Some(Parent(Some(parent))) => current = *parent,
             _ => break,
         }
@@ -67,7 +70,9 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
 #[cfg(not(feature = "assets"))]
 pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity {
     let mut current = entity;
-    while let Some(Parent(Some(parent))) = world.core.get_parent(current) {
+    while let Some(Parent(Some(parent))) =
+        world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(current)
+    {
         current = *parent;
     }
     current
@@ -83,7 +88,9 @@ pub fn chain_from_root_to_leaf(
     }
     let mut chain = vec![leaf];
     let mut current = leaf;
-    while let Some(Parent(Some(parent))) = world.core.get_parent(current) {
+    while let Some(Parent(Some(parent))) =
+        world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(current)
+    {
         chain.push(*parent);
         if *parent == root {
             break;

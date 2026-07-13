@@ -12,41 +12,39 @@ pub fn update_animation_players(world: &mut World) {
     let delta_time = world.resources.window.timing.delta_time;
     let mut finished: Vec<Entity> = Vec::new();
     let mut markers: Vec<(Entity, String)> = Vec::new();
-    world
-        .core
-        .query_mut()
-        .with(ANIMATION_PLAYER)
-        .iter(|entity, table, idx| {
-            let player = &mut table.animation_player[idx];
-            let was_playing = player.playing;
-            let old_time = player.time;
-            let looping = player.looping;
-            let current_clip = player.current_clip;
-            player.update(delta_time);
-            if was_playing && !player.playing {
-                finished.push(entity);
-            }
-            if !was_playing {
-                return;
-            }
-            let new_time = player.time;
-            if let Some(index) = current_clip
-                && let Some(clip) = player.clips.get(index)
-                && !clip.events.is_empty()
-            {
-                let wrapped = new_time < old_time && looping && clip.duration > 0.0;
-                for marker in &clip.events {
-                    let crossed = if wrapped {
-                        marker.time > old_time || marker.time <= new_time
-                    } else {
-                        marker.time > old_time && marker.time <= new_time
-                    };
-                    if crossed {
-                        markers.push((entity, marker.name.clone()));
-                    }
+    let player_key =
+        world.ecs.worlds[CORE].register::<crate::ecs::animation::components::AnimationPlayer>();
+    world.ecs.worlds[CORE].for_each_mut(ANIMATION_PLAYER, 0, |entity, table, idx| {
+        let player = &mut table.column_mut(player_key)[idx];
+        let was_playing = player.playing;
+        let old_time = player.time;
+        let looping = player.looping;
+        let current_clip = player.current_clip;
+        player.update(delta_time);
+        if was_playing && !player.playing {
+            finished.push(entity);
+        }
+        if !was_playing {
+            return;
+        }
+        let new_time = player.time;
+        if let Some(index) = current_clip
+            && let Some(clip) = player.clips.get(index)
+            && !clip.events.is_empty()
+        {
+            let wrapped = new_time < old_time && looping && clip.duration > 0.0;
+            for marker in &clip.events {
+                let crossed = if wrapped {
+                    marker.time > old_time || marker.time <= new_time
+                } else {
+                    marker.time > old_time && marker.time <= new_time
+                };
+                if crossed {
+                    markers.push((entity, marker.name.clone()));
                 }
             }
-        });
+        }
+    });
     for entity in finished {
         crate::ecs::event::emit_event(
             world,
@@ -68,14 +66,13 @@ pub fn apply_animations(world: &mut World) {
     // rendered pose instead of the bind pose. Morph weights and non-joint node
     // targets are applied here as well.
     let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
-    world
-        .core
-        .query()
-        .with(ANIMATION_PLAYER)
-        .iter(|_, table, idx| {
-            let player = &table.animation_player[idx];
+    for (_, (player,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&crate::ecs::animation::components::AnimationPlayer,)>()
+        .iter()
+    {
+        {
             if !player.playing {
-                return;
+                continue;
             }
             let node_mapping = &player.node_index_to_entity;
             let bone_name_mapping = &player.bone_name_to_entity;
@@ -143,11 +140,15 @@ pub fn apply_animations(world: &mut World) {
             if !final_values.is_empty() {
                 per_player_values.push(final_values);
             }
-        });
+        }
+    }
 
     for final_values in per_player_values {
         for (target_entity, values) in final_values {
-            if let Some(transform) = world.core.get_local_transform_mut(target_entity) {
+            if let Some(transform) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<crate::ecs::transform::components::LocalTransform>(target_entity)
+            {
                 if let Some(translation) = values.translation {
                     transform.translation = translation;
                 }
@@ -310,8 +311,10 @@ struct AnimationAccumulator {
 fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity, weights: &[f32]) {
     let mut pending = vec![entity];
     while let Some(current) = pending.pop() {
-        if world.core.entity_has_components(current, MORPH_WEIGHTS)
-            && let Some(morph_weights) = world.core.get_morph_weights_mut(current)
+        if world.ecs.worlds[CORE].entity_has_components(current, MORPH_WEIGHTS)
+            && let Some(morph_weights) =
+                world.ecs.worlds[CORE]
+                    .get_mut::<crate::ecs::morph::components::MorphWeights>(current)
         {
             morph_weights.weights = weights.to_vec();
         }

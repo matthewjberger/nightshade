@@ -11,7 +11,10 @@ pub fn range_indicator_system(game_world: &mut GameWorld, world: &mut World) {
         {
             indicator.visible = false;
             for &line_entity in &indicator.line_entities {
-                if let Some(visibility) = world.core.get_visibility_mut(line_entity) {
+                if let Some(visibility) =
+                    world.ecs.worlds[CORE]
+                        .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+                {
                     visibility.visible = false;
                 }
             }
@@ -31,7 +34,10 @@ pub fn range_indicator_system(game_world: &mut GameWorld, world: &mut World) {
             {
                 indicator.visible = true;
                 for &line_entity in &indicator.line_entities {
-                    if let Some(visibility) = world.core.get_visibility_mut(line_entity) {
+                    if let Some(visibility) =
+                        world.ecs.worlds[CORE]
+                            .get_mut::<nightshade::ecs::primitives::Visibility>(line_entity)
+                    {
                         visibility.visible = true;
                     }
                 }
@@ -95,9 +101,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
                 index,
             );
         }
-        world
-            .core
-            .set_material_ref(preview, MaterialRef::new(material_name));
+        world.ecs.worlds[CORE].set(preview, MaterialRef::new(material_name));
 
         game_world.resources.preview_entity = Some(preview);
 
@@ -120,22 +124,20 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
                 1,
             )[0];
 
-            world.core.set_name(
+            world.ecs.worlds[CORE].set(
                 line_entity,
                 Name(format!("Preview Range Line {}", segment_index)),
             );
-            world.core.set_local_transform(
+            world.ecs.worlds[CORE].set(
                 line_entity,
                 LocalTransform {
                     translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                     ..Default::default()
                 },
             );
-            world
-                .core
-                .set_global_transform(line_entity, GlobalTransform::default());
+            world.ecs.worlds[CORE].set(line_entity, GlobalTransform::default());
 
-            world.core.set_lines(
+            world.ecs.worlds[CORE].set(
                 line_entity,
                 Lines::new(vec![Line {
                     start,
@@ -149,9 +151,7 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
                 }]),
             );
 
-            world
-                .core
-                .set_visibility(line_entity, Visibility { visible: true });
+            world.ecs.worlds[CORE].set(line_entity, Visibility { visible: true });
 
             game_world.resources.preview_range_lines.push(line_entity);
         }
@@ -313,21 +313,17 @@ pub fn placement_preview_system(game_world: &mut GameWorld, world: &mut World) {
         } else {
             "Unaffordable Box"
         };
-        world.core.set_name(box_entity, Name(box_name.to_string()));
-        world.core.set_local_transform(
+        world.ecs.worlds[CORE].set(box_entity, Name(box_name.to_string()));
+        world.ecs.worlds[CORE].set(
             box_entity,
             LocalTransform {
                 translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                 ..Default::default()
             },
         );
-        world
-            .core
-            .set_global_transform(box_entity, GlobalTransform::default());
-        world.core.set_lines(box_entity, Lines::new(box_lines));
-        world
-            .core
-            .set_visibility(box_entity, Visibility { visible: true });
+        world.ecs.worlds[CORE].set(box_entity, GlobalTransform::default());
+        world.ecs.worlds[CORE].set(box_entity, Lines::new(box_lines));
+        world.ecs.worlds[CORE].set(box_entity, Visibility { visible: true });
 
         game_world.resources.preview_range_lines.push(box_entity);
     }

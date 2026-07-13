@@ -6,6 +6,7 @@
 //! when something in its domain actually changed; a gap in the structural
 //! log (the log overflowed) falls back to one full resync.
 
+use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use std::collections::{HashMap, HashSet};
 
@@ -59,8 +60,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         dirt.full = true;
     }
 
-    let changes: Vec<freecs::StructuralChange> = world
-        .core
+    let changes: Vec<freecs::StructuralChange> = world.ecs.worlds[CORE]
         .structural_changes_since(world.resources.render_scene_sync.structural_cursor)
         .to_vec();
     if let Some(first) = changes.first()
@@ -71,7 +71,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     }
     if let Some(last) = changes.last() {
         world.resources.render_scene_sync.structural_cursor = last.sequence;
-        world.core.trim_structural_log(last.sequence);
+        world.ecs.worlds[CORE].trim_structural_log(last.sequence);
     }
 
     for change in &changes {
@@ -98,7 +98,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             dirt.entity_lists = true;
         }
         if mask & crate::ecs::world::GLOBAL_TRANSFORM != 0
-            && let Some(entity_mask) = world.core.component_mask(entity)
+            && let Some(entity_mask) = world.ecs.worlds[CORE].component_mask(entity)
         {
             if entity_mask & (crate::ecs::world::RENDER_MESH | crate::ecs::world::INSTANCED_MESH)
                 != 0
@@ -153,71 +153,56 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     }
 
     let since = world.resources.render_scene_sync.data_cursor;
-    let visibility_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let visibility_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::VISIBILITY, since)
         .collect();
-    let morph_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let morph_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::MORPH_WEIGHTS, since)
         .collect();
-    let layer_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let layer_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::RENDER_LAYER, since)
         .collect();
-    let culling_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let culling_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::CULLING_MASK, since)
         .collect();
-    let mesh_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let mesh_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::RENDER_MESH, since)
         .collect();
-    let instanced_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let instanced_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::INSTANCED_MESH, since)
         .collect();
-    let bounds_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let bounds_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::BOUNDING_VOLUME, since)
         .collect();
-    dirt.lights |= world
-        .core
+    dirt.lights |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::LIGHT, since)
         .next()
         .is_some();
-    dirt.decals |= world
-        .core
+    dirt.decals |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::DECAL, since)
         .next()
         .is_some();
-    dirt.emitters |= world
-        .core
+    dirt.emitters |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::PARTICLE_EMITTER, since)
         .next()
         .is_some();
-    dirt.water |= world
-        .core
+    dirt.water |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::WATER, since)
         .next()
         .is_some();
-    dirt.cloth |= world
-        .core
+    dirt.cloth |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::CLOTH, since)
         .next()
         .is_some();
-    dirt.texts |= world
-        .core
+    dirt.texts |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::TEXT, since)
         .next()
         .is_some();
-    dirt.texts |= world
-        .core
+    dirt.texts |= world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::TEXT_CHARACTER_COLORS, since)
         .next()
         .is_some();
-    let material_ref_changed: Vec<crate::ecs::world::Entity> = world
-        .core
+    let material_ref_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::MATERIAL_REF, since)
         .collect();
     if !material_ref_changed.is_empty() {
@@ -229,14 +214,14 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .mark_material_dirty(entity);
         }
     }
-    world.resources.render_scene_sync.data_cursor = world.core.current_tick();
-    world.core.increment_tick();
+    world.resources.render_scene_sync.data_cursor = world.ecs.worlds[CORE].current_tick();
+    world.ecs.worlds[CORE].increment_tick();
 
     for entity in visibility_changed {
         dirt.object_refresh.insert(entity);
         dirt.instanced_refresh.insert(entity);
         dirt.object_state_dirty.push(entity);
-        let mask = world.core.component_mask(entity).unwrap_or(0);
+        let mask = world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0);
         dirt.skinned_objects |= mask & crate::ecs::world::SKIN != 0;
         dirt.lights |= mask & crate::ecs::world::LIGHT != 0;
         dirt.decals |= mask & crate::ecs::world::DECAL != 0;
@@ -246,8 +231,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     for entity in morph_changed {
         dirt.object_refresh.insert(entity);
         dirt.object_state_dirty.push(entity);
-        dirt.skinned_objects |=
-            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
+        dirt.skinned_objects |= world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0)
+            & crate::ecs::world::SKIN
+            != 0;
     }
     for entity in layer_changed {
         dirt.object_refresh.insert(entity);
@@ -259,20 +245,22 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     for entity in mesh_changed {
         dirt.object_refresh.insert(entity);
         dirt.mesh_name_refresh.insert(entity);
-        dirt.skinned_objects |=
-            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
+        dirt.skinned_objects |= world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0)
+            & crate::ecs::world::SKIN
+            != 0;
     }
     for entity in instanced_changed {
         dirt.instanced_refresh.insert(entity);
     }
     for entity in bounds_changed {
         dirt.bounds_refresh.insert(entity);
-        dirt.skinned_objects |=
-            world.core.component_mask(entity).unwrap_or(0) & crate::ecs::world::SKIN != 0;
+        dirt.skinned_objects |= world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0)
+            & crate::ecs::world::SKIN
+            != 0;
     }
 
     for &entity in &world.resources.mesh_render_state.inner.transform_dirty {
-        let mask = world.core.component_mask(entity).unwrap_or(0);
+        let mask = world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0);
         if mask & crate::ecs::world::RENDER_MESH != 0 {
             dirt.object_refresh.insert(entity);
         }
@@ -288,9 +276,11 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .map(|state| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
                 });
-            let current_flipped = world.core.get_global_transform(entity).map(|global| {
-                nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
-            });
+            let current_flipped = world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+                .map(|global| {
+                    nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
+                });
             dirt.skinned_objects |= previous_flipped != current_flipped;
         }
         dirt.lights |= mask & crate::ecs::world::LIGHT != 0;
@@ -308,27 +298,30 @@ fn dynamic_object_state(
     world: &World,
     entity: crate::ecs::world::Entity,
 ) -> crate::render::config::DynamicObjectState {
-    let visible = u32::from(world.core.get_visibility(entity).is_none_or(|v| v.visible));
+    let visible = u32::from(
+        world.ecs.worlds[CORE]
+            .get::<crate::ecs::primitives::Visibility>(entity)
+            .is_none_or(|v| v.visible),
+    );
     let mut morph_weights = [0.0f32; 8];
-    if let Some(weights) = world.core.get_morph_weights(entity) {
+    if let Some(weights) =
+        world.ecs.worlds[CORE].get::<crate::ecs::morph::components::MorphWeights>(entity)
+    {
         for (index, weight) in weights.weights.iter().take(8).enumerate() {
             morph_weights[index] = *weight;
         }
     }
-    let transform = world
-        .core
-        .get_global_transform(entity)
+    let transform = world.ecs.worlds[CORE]
+        .get::<crate::ecs::transform::components::GlobalTransform>(entity)
         .map(|global| global.0)
         .unwrap_or_else(nalgebra_glm::Mat4::identity);
-    let culling_mask = world
-        .core
-        .get_culling_mask(entity)
+    let culling_mask = world.ecs.worlds[CORE]
+        .get::<crate::ecs::primitives::CullingMask>(entity)
         .copied()
         .unwrap_or_default()
         .0;
-    let render_layer_value = world
-        .core
-        .get_render_layer(entity)
+    let render_layer_value = world.ecs.worlds[CORE]
+        .get::<crate::render::render_layer::RenderLayer>(entity)
         .map(|layer| layer.0)
         .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
     let is_overlay =
@@ -348,7 +341,9 @@ fn refill_instanced_object_data(
     entity: crate::ecs::world::Entity,
     data: &mut crate::render::config::InstancedObjectData,
 ) -> bool {
-    let Some(instanced_mesh) = world.core.get_instanced_mesh(entity) else {
+    let Some(instanced_mesh) =
+        world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::InstancedMesh>(entity)
+    else {
         return false;
     };
     data.world_models.clear();
@@ -377,15 +372,17 @@ fn refill_instanced_object_data(
     );
     data.mesh_name.clear();
     data.mesh_name.push_str(&instanced_mesh.mesh_name);
-    data.render_layer = world
-        .core
-        .get_render_layer(entity)
+    data.render_layer = world.ecs.worlds[CORE]
+        .get::<crate::render::render_layer::RenderLayer>(entity)
         .map(|layer| layer.0)
         .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
-    data.visible = u32::from(world.core.get_visibility(entity).is_none_or(|v| v.visible));
-    data.parent_transform = world
-        .core
-        .get_global_transform(entity)
+    data.visible = u32::from(
+        world.ecs.worlds[CORE]
+            .get::<crate::ecs::primitives::Visibility>(entity)
+            .is_none_or(|v| v.visible),
+    );
+    data.parent_transform = world.ecs.worlds[CORE]
+        .get::<crate::ecs::transform::components::GlobalTransform>(entity)
         .map(|global| global.0)
         .unwrap_or_else(nalgebra_glm::Mat4::identity);
     true
@@ -395,50 +392,53 @@ fn instanced_object_data(
     world: &World,
     entity: crate::ecs::world::Entity,
 ) -> Option<crate::render::config::InstancedObjectData> {
-    world.core.get_instanced_mesh(entity).map(|instanced_mesh| {
-        let world_models = instanced_mesh
-            .cached_model_matrices()
-            .iter()
-            .map(|matrix| matrix.model)
-            .collect();
-        let world_normals = instanced_mesh
-            .cached_model_matrices()
-            .iter()
-            .map(|matrix| matrix.normal_matrix)
-            .collect();
-        let local_matrices = instanced_mesh.cached_local_matrices().to_vec();
-        let custom_tints = instanced_mesh
-            .custom_data_slice()
-            .iter()
-            .map(|data| data.tint)
-            .collect();
-        let render_layer = world
-            .core
-            .get_render_layer(entity)
-            .map(|layer| layer.0)
-            .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
-        let visible = u32::from(world.core.get_visibility(entity).is_none_or(|v| v.visible));
-        let parent_transform = world
-            .core
-            .get_global_transform(entity)
-            .map(|global| global.0)
-            .unwrap_or_else(nalgebra_glm::Mat4::identity);
-        crate::render::config::InstancedObjectData {
-            world_models,
-            world_normals,
-            local_matrices,
-            custom_tints,
-            mesh_name: instanced_mesh.mesh_name.clone(),
-            render_layer,
-            visible,
-            parent_transform,
-        }
-    })
+    world.ecs.worlds[CORE]
+        .get::<crate::ecs::mesh::components::InstancedMesh>(entity)
+        .map(|instanced_mesh| {
+            let world_models = instanced_mesh
+                .cached_model_matrices()
+                .iter()
+                .map(|matrix| matrix.model)
+                .collect();
+            let world_normals = instanced_mesh
+                .cached_model_matrices()
+                .iter()
+                .map(|matrix| matrix.normal_matrix)
+                .collect();
+            let local_matrices = instanced_mesh.cached_local_matrices().to_vec();
+            let custom_tints = instanced_mesh
+                .custom_data_slice()
+                .iter()
+                .map(|data| data.tint)
+                .collect();
+            let render_layer = world.ecs.worlds[CORE]
+                .get::<crate::render::render_layer::RenderLayer>(entity)
+                .map(|layer| layer.0)
+                .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
+            let visible = u32::from(
+                world.ecs.worlds[CORE]
+                    .get::<crate::ecs::primitives::Visibility>(entity)
+                    .is_none_or(|v| v.visible),
+            );
+            let parent_transform = world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+                .map(|global| global.0)
+                .unwrap_or_else(nalgebra_glm::Mat4::identity);
+            crate::render::config::InstancedObjectData {
+                world_models,
+                world_normals,
+                local_matrices,
+                custom_tints,
+                mesh_name: instanced_mesh.mesh_name.clone(),
+                render_layer,
+                visible,
+                parent_transform,
+            }
+        })
 }
 
 fn sync_objects_full(world: &mut World) {
-    let entities: Vec<crate::ecs::world::Entity> = world
-        .core
+    let entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH)
         .collect();
     let states: Vec<(
@@ -451,17 +451,15 @@ fn sync_objects_full(world: &mut World) {
     let mesh_names: Vec<(crate::ecs::world::Entity, String)> = entities
         .iter()
         .filter_map(|&entity| {
-            world
-                .core
-                .get_render_mesh(entity)
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::mesh::components::RenderMesh>(entity)
                 .map(|mesh| (entity, mesh.name.clone()))
         })
         .collect();
     let instanced: Vec<(
         crate::ecs::world::Entity,
         crate::render::config::InstancedObjectData,
-    )> = world
-        .core
+    )> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::INSTANCED_MESH)
         .collect::<Vec<_>>()
         .into_iter()
@@ -470,19 +468,20 @@ fn sync_objects_full(world: &mut World) {
     let bounds: Vec<(
         crate::ecs::world::Entity,
         crate::render::config::RenderBounds,
-    )> = world
-        .core
+    )> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::BOUNDING_VOLUME)
         .filter_map(|entity| {
-            world.core.get_bounding_volume(entity).map(|volume| {
-                (
-                    entity,
-                    crate::render::config::RenderBounds {
-                        center: volume.obb.center,
-                        sphere_radius: volume.sphere_radius,
-                    },
-                )
-            })
+            world.ecs.worlds[CORE]
+                .get::<crate::render::bounding_volume::BoundingVolume>(entity)
+                .map(|volume| {
+                    (
+                        entity,
+                        crate::render::config::RenderBounds {
+                            center: volume.obb.center,
+                            sphere_radius: volume.sphere_radius,
+                        },
+                    )
+                })
         })
         .collect();
 
@@ -502,10 +501,7 @@ fn sync_objects_full(world: &mut World) {
 
 fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
     for &entity in &dirt.object_refresh {
-        if world
-            .core
-            .entity_has_components(entity, crate::ecs::world::RENDER_MESH)
-        {
+        if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
             let state = dynamic_object_state(world, entity);
             world
                 .resources
@@ -521,7 +517,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.mesh_name_refresh {
-        match world.core.get_render_mesh(entity) {
+        match world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity) {
             Some(mesh) => {
                 let name = mesh.name.clone();
                 world
@@ -569,7 +565,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.bounds_refresh {
-        match world.core.get_bounding_volume(entity) {
+        match world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity) {
             Some(volume) => {
                 let bounds = crate::render::config::RenderBounds {
                     center: volume.obb.center,
@@ -587,10 +583,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.object_state_dirty {
-        if world
-            .core
-            .entity_has_components(entity, crate::ecs::world::RENDER_MESH)
-        {
+        if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
             world
                 .resources
                 .mesh_render_state
@@ -600,33 +593,27 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
 }
 
 fn sync_entity_lists(world: &mut World) {
-    let regular_mesh_entities: Vec<crate::ecs::world::Entity> = world
-        .core
+    let regular_mesh_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH)
         .filter(|&entity| {
-            !world
-                .core
-                .entity_has_components(entity, crate::ecs::world::SKIN)
+            !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN)
         })
         .collect();
-    let shadow_meshes: Vec<crate::ecs::world::Entity> = world
-        .core
+    let shadow_meshes: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::RENDER_MESH
                 | crate::ecs::world::GLOBAL_TRANSFORM
                 | crate::ecs::world::CASTS_SHADOW,
         )
         .collect();
-    let shadow_instanced: Vec<crate::ecs::world::Entity> = world
-        .core
+    let shadow_instanced: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::INSTANCED_MESH
                 | crate::ecs::world::GLOBAL_TRANSFORM
                 | crate::ecs::world::CASTS_SHADOW,
         )
         .collect();
-    let shadow_skinned: Vec<crate::ecs::world::Entity> = world
-        .core
+    let shadow_skinned: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::SKIN
                 | crate::ecs::world::RENDER_MESH
@@ -634,8 +621,7 @@ fn sync_entity_lists(world: &mut World) {
                 | crate::ecs::world::CASTS_SHADOW,
         )
         .collect();
-    let skinned_meshes: Vec<crate::ecs::world::Entity> = world
-        .core
+    let skinned_meshes: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::SKIN
                 | crate::ecs::world::RENDER_MESH
@@ -652,8 +638,7 @@ fn sync_entity_lists(world: &mut World) {
 }
 
 fn sync_lights(world: &mut World) {
-    let light_entities: Vec<crate::ecs::world::Entity> = world
-        .core
+    let light_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::LIGHT | crate::ecs::world::GLOBAL_TRANSFORM)
         .collect();
     let mut lights: Vec<crate::render::config::RenderLight> =
@@ -662,8 +647,9 @@ fn sync_lights(world: &mut World) {
         std::collections::HashMap::new();
     for entity in light_entities {
         if let (Some(light), Some(transform)) = (
-            world.core.get_light(entity),
-            world.core.get_global_transform(entity),
+            world.ecs.worlds[CORE].get::<crate::ecs::light::components::Light>(entity),
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity),
         ) {
             light_index.insert(entity, lights.len());
             lights.push(crate::render::config::RenderLight {
@@ -725,15 +711,15 @@ fn sync_lights(world: &mut World) {
 }
 
 fn sync_decals(world: &mut World) {
-    let decals: Vec<crate::render::config::RenderDecal> = world
-        .core
+    let decals: Vec<crate::render::config::RenderDecal> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::DECAL | crate::ecs::GLOBAL_TRANSFORM)
         .filter_map(|entity| {
-            let decal = world.core.get_decal(entity)?;
-            let transform = world.core.get_global_transform(entity)?;
-            let visible = world
-                .core
-                .get_visibility(entity)
+            let decal =
+                world.ecs.worlds[CORE].get::<crate::ecs::decal::components::Decal>(entity)?;
+            let transform = world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)?;
+            let visible = world.ecs.worlds[CORE]
+                .get::<crate::ecs::primitives::Visibility>(entity)
                 .is_none_or(|visibility| visibility.visible);
             Some(crate::render::config::RenderDecal {
                 decal: crate::render::config::RenderDecalData {
@@ -756,16 +742,15 @@ fn sync_decals(world: &mut World) {
 }
 
 fn sync_emitters(world: &mut World) {
-    let emitters: Vec<crate::render::config::RenderParticleEmitter> = world
-        .core
+    let emitters: Vec<crate::render::config::RenderParticleEmitter> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::PARTICLE_EMITTER)
         .filter_map(|entity| {
-            world.core.get_particle_emitter(entity).map(|emitter| {
-                crate::render::config::RenderParticleEmitter {
+            world.ecs.worlds[CORE]
+                .get::<crate::render::particles::ParticleEmitter>(entity)
+                .map(|emitter| crate::render::config::RenderParticleEmitter {
                     entity,
                     emitter: emitter.clone(),
-                }
-            })
+                })
         })
         .collect();
     world.resources.renderer_state.render_particle_emitters = emitters;
@@ -773,12 +758,14 @@ fn sync_emitters(world: &mut World) {
 
 fn sync_water(world: &mut World) {
     let mut water_bodies: Vec<crate::render::config::RenderWater> = Vec::new();
-    world
-        .core
-        .query()
-        .with(crate::ecs::world::WATER | crate::ecs::world::GLOBAL_TRANSFORM)
-        .iter(|_, table, index| {
-            let water = &table.water[index];
+    for (_, (water, global_transform)) in world.ecs.worlds[CORE]
+        .query_ref::<(
+            &crate::ecs::water::components::Water,
+            &crate::ecs::transform::components::GlobalTransform,
+        )>()
+        .iter()
+    {
+        {
             if water.enabled {
                 water_bodies.push(crate::render::config::RenderWater {
                     water: crate::render::config::RenderWaterData {
@@ -801,25 +788,25 @@ fn sync_water(world: &mut World) {
                         refraction_strength: water.refraction_strength,
                         specular_strength: water.specular_strength,
                     },
-                    transform: table.global_transform[index].0,
+                    transform: global_transform.0,
                 });
             }
-        });
+        }
+    }
     world.resources.renderer_state.render_water = water_bodies;
 }
 
 fn sync_cloth(world: &mut World) {
     let mut cloth_bodies: Vec<crate::render::config::RenderCloth> = Vec::new();
-    world
-        .core
-        .query()
-        .with(
-            crate::ecs::world::CLOTH
-                | crate::ecs::world::GLOBAL_TRANSFORM
-                | crate::ecs::world::RENDER_MESH,
-        )
-        .iter(|entity, table, index| {
-            let cloth = &table.cloth[index];
+    for (entity, (cloth, global_transform, render_mesh)) in world.ecs.worlds[CORE]
+        .query_ref::<(
+            &crate::ecs::cloth::components::Cloth,
+            &crate::ecs::transform::components::GlobalTransform,
+            &crate::ecs::mesh::components::RenderMesh,
+        )>()
+        .iter()
+    {
+        {
             cloth_bodies.push(crate::render::config::RenderCloth {
                 entity,
                 cloth: crate::render::config::RenderClothData {
@@ -848,16 +835,16 @@ fn sync_cloth(world: &mut World) {
                     texture_tiling: cloth.texture_tiling,
                     reset_epoch: cloth.reset_epoch,
                 },
-                transform: table.global_transform[index].0,
-                mesh_name: table.render_mesh[index].name.clone(),
+                transform: global_transform.0,
+                mesh_name: render_mesh.name.clone(),
             });
-        });
+        }
+    }
     world.resources.renderer_state.render_cloth = cloth_bodies;
 }
 
 fn sync_texts(world: &mut World) {
-    let text_entities: Vec<crate::ecs::world::Entity> = world
-        .core
+    let text_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::TEXT
                 | crate::ecs::world::VISIBILITY
@@ -867,17 +854,18 @@ fn sync_texts(world: &mut World) {
     let texts: Vec<crate::render::config::RenderText> = text_entities
         .into_iter()
         .filter_map(|entity| {
-            if !world
-                .core
-                .get_visibility(entity)
+            if !world.ecs.worlds[CORE]
+                .get::<crate::ecs::primitives::Visibility>(entity)
                 .map(|visibility| visibility.visible)
                 .unwrap_or(false)
             {
                 return None;
             }
-            let text = world.core.get_text(entity)?;
+            let text = world.ecs.worlds[CORE].get::<crate::ecs::text::components::Text>(entity)?;
             text.cached_mesh.as_ref()?;
-            let transform = world.core.get_global_transform(entity)?.0;
+            let transform = world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)?
+                .0;
             let char_count = world
                 .resources
                 .text
@@ -890,9 +878,8 @@ fn sync_texts(world: &mut World) {
                         .count()
                 })
                 .unwrap_or(0);
-            let character_colors = world
-                .core
-                .get_text_character_colors(entity)
+            let character_colors = world.ecs.worlds[CORE]
+                .get::<crate::ecs::text::components::TextCharacterColors>(entity)
                 .map(|colors| colors.colors.clone());
             Some(crate::render::config::RenderText {
                 mesh: text.cached_mesh.clone()?,

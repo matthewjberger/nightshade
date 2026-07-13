@@ -1,3 +1,4 @@
+use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use crate::render::wgpu::render_configs::{
     CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
@@ -13,7 +14,10 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
                 camera_position: matrices.camera_position,
             }
         });
-    let projection = match world.core.get_camera(entity).map(|c| &c.projection) {
+    let projection = match world.ecs.worlds[CORE]
+        .get::<crate::ecs::camera::components::Camera>(entity)
+        .map(|c| &c.projection)
+    {
         Some(crate::ecs::camera::components::Projection::Perspective(persp)) => {
             CameraProjectionParams {
                 z_near: persp.z_near,
@@ -36,14 +40,19 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         }
         None => CameraProjectionParams::default(),
     };
-    let shading = world
-        .core
-        .get_viewport_shading(entity)
+    let shading = world.ecs.worlds[CORE]
+        .get::<crate::ecs::camera::components::ViewportShading>(entity)
         .copied()
         .unwrap_or_default();
-    let post_process = world.core.get_camera_post_process(entity).copied();
-    let culling_mask = world.core.get_camera_culling_mask(entity).copied();
-    let environment = world.core.get_camera_environment(entity).copied();
+    let post_process = world.ecs.worlds[CORE]
+        .get::<crate::ecs::camera::components::CameraPostProcess>(entity)
+        .copied();
+    let culling_mask = world.ecs.worlds[CORE]
+        .get::<crate::ecs::primitives::CameraCullingMask>(entity)
+        .copied();
+    let environment = world.ecs.worlds[CORE]
+        .get::<crate::ecs::camera::components::CameraEnvironment>(entity)
+        .copied();
     let effective_shading = crate::ecs::camera::components::effective_shading_for_camera(
         &world.resources.render_settings,
         &world.resources.debug_draw,
@@ -56,17 +65,17 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         entity,
         matrices,
         projection,
-        constrained_aspect: world
-            .core
-            .get_constrained_aspect(entity)
+        constrained_aspect: world.ecs.worlds[CORE]
+            .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
             .map(|constrained| constrained.0),
         effective_shading,
-        update_mode: world
-            .core
-            .get_viewport_update_mode(entity)
+        update_mode: world.ecs.worlds[CORE]
+            .get::<crate::render::config::ViewportUpdateMode>(entity)
             .copied()
             .unwrap_or_default(),
-        world_transform: world.core.get_global_transform(entity).map(|gt| gt.0),
+        world_transform: world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+            .map(|gt| gt.0),
     }
 }
 
@@ -171,8 +180,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .gpu_picking
         .take_pending_request()
         .map(|request| (request.screen_x, request.screen_y));
-    let has_skinned_meshes = world
-        .core
+    let has_skinned_meshes = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::SKIN)
         .next()
         .is_some();

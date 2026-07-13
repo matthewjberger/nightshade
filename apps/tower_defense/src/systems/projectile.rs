@@ -117,7 +117,11 @@ pub fn projectile_movement_system(game_world: &mut GameWorld, world: &mut World)
                     game_world.set_position(projectile_entity, Position(new_pos));
 
                     if let Some(handle) = game_world.get_entity_handle(projectile_entity)
-                        && let Some(transform) = world.core.get_local_transform_mut(handle.0)
+                        && let Some(transform) =
+                            world.ecs.worlds[CORE]
+                                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                                handle.0,
+                            )
                     {
                         transform.translation = new_pos;
                     }

@@ -223,7 +223,7 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
             .with_transition::<UiFocused>(14.0, 8.0)
             .entity();
     });
-    tree.world_mut().ui.set_ui_checkbox(
+    tree.world_mut().ecs.worlds[UI].set(
         row,
         UiCheckboxData {
             value: initial_value,
@@ -231,7 +231,9 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
             inner_entity: inner,
         },
     );
-    if let Some(interaction) = tree.world_mut().ui.get_ui_node_interaction_mut(row) {
+    if let Some(interaction) = tree.world_mut().ecs.worlds[UI]
+        .get_mut::<nightshade::ecs::ui::components::UiNodeInteraction>(row)
+    {
         interaction.accessible_role = Some(AccessibleRole::Checkbox);
     }
     row
@@ -241,11 +243,12 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
 /// marking it changed, keeping the menu in sync when the same setting
 /// is driven from elsewhere, like the developer shell.
 pub fn set_checkbox_value(world: &mut World, checkbox: Entity, value: bool) {
-    let inner_entity = world
-        .ui
-        .get_ui_checkbox(checkbox)
+    let inner_entity = world.ecs.worlds[UI]
+        .get::<nightshade::ecs::ui::components::UiCheckboxData>(checkbox)
         .map(|data| data.inner_entity);
-    if let Some(data) = world.ui.get_ui_checkbox_mut(checkbox) {
+    if let Some(data) =
+        world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(checkbox)
+    {
         data.value = value;
     }
     if let Some(inner_entity) = inner_entity {

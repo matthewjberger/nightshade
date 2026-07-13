@@ -43,7 +43,9 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         let time = uptime_ms as f32 / 1000.0;
         let pulse_alpha = (time * 2.0).sin() * 0.5 + 0.5;
         let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
-        if let Some(color_comp) = world.ui.get_ui_node_color_mut(pulse) {
+        if let Some(color_comp) =
+            world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiNodeColor>(pulse)
+        {
             color_comp.colors[0] = Some(pulse_color);
         }
     }
@@ -62,13 +64,16 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     if let Some(entity) = ui_named_entity(world, "effects_pulse") {
         let pulse_alpha = (time * 2.5).sin() * 0.5 + 0.5;
         let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
-        if let Some(color_comp) = world.ui.get_ui_node_color_mut(entity) {
+        if let Some(color_comp) =
+            world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
+        {
             color_comp.colors[0] = Some(pulse_color);
         }
     }
 
     if let Some(entity) = ui_named_entity(world, "effects_blend")
-        && let Some(color_comp) = world.ui.get_ui_node_color_mut(entity)
+        && let Some(color_comp) =
+            world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
     {
         color_comp.colors[0] = Some(blended);
     }
@@ -93,10 +98,14 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         let g = (hue * 6.0 + 2.0).sin().abs();
         let b = (hue * 6.0 + 4.0).sin().abs();
         let color = vec4(r, g, b, 1.0);
-        if let Some(color_comp) = world.ui.get_ui_node_color_mut(entity) {
+        if let Some(color_comp) =
+            world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
+        {
             color_comp.colors[0] = Some(color);
         }
-        if let Some(node) = world.ui.get_ui_layout_node_mut(entity) {
+        if let Some(node) =
+            world.ecs.worlds[UI].get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(entity)
+        {
             let radius = 8.0;
             let offset_x = radius * angle.cos();
             let offset_y = radius * angle.sin();

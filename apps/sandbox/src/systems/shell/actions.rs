@@ -12,10 +12,13 @@ pub fn apply_shell_actions(
     match action {
         ShellAction::TeleportPlayer(position) => {
             if let Some(player_entity) = sandbox_world.resources.player.player_entity {
-                if let Some(transform) = world.core.get_local_transform_mut(player_entity) {
+                if let Some(transform) = world.ecs.worlds[CORE]
+                    .get_mut::<nightshade::ecs::transform::components::LocalTransform>(
+                    player_entity,
+                ) {
                     transform.translation = position;
                 }
-                if let Some(controller) = world.core.get_character_controller_mut(player_entity) {
+                if let Some(controller) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(player_entity) {
                     controller.velocity = Vec3::zeros();
                 }
                 reset_physics_interpolation(world, player_entity);
@@ -29,7 +32,9 @@ pub fn apply_shell_actions(
                 sandbox_world.resources.player.player_entity
             };
             if let Some(entity) = entity
-                && let Some(transform) = world.core.get_global_transform(entity)
+                && let Some(transform) =
+                    world.ecs.worlds[CORE]
+                        .get::<nightshade::ecs::transform::components::GlobalTransform>(entity)
             {
                 let position = transform.translation();
                 tracing::info!(

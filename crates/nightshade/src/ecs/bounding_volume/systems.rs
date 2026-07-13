@@ -1,5 +1,6 @@
 use crate::ecs::mesh::components::InstancedMesh;
-use crate::ecs::world::{BOUNDING_VOLUME, Entity, INSTANCED_MESH, RENDER_MESH, World};
+use crate::ecs::world::CORE;
+use crate::ecs::world::{Entity, World};
 use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
 use crate::render::generational_registry::registry_entry_by_name;
 use crate::render::mesh_cache::MeshCache;
@@ -48,29 +49,28 @@ pub fn ensure_bounding_volumes(world: &mut World) {
     let mut pending: Vec<(Entity, BoundingVolume)> = Vec::new();
 
     let mesh_cache = &world.resources.assets.mesh_cache;
-    world
-        .core
-        .query()
-        .with(RENDER_MESH)
-        .without(BOUNDING_VOLUME)
-        .iter(|entity, table, idx| {
-            let mesh_name = &table.render_mesh[idx].name;
-            pending.push((entity, resolve_bounding_volume(mesh_cache, mesh_name)));
-        });
-    world
-        .core
-        .query()
-        .with(INSTANCED_MESH)
-        .without(BOUNDING_VOLUME)
-        .iter(|entity, table, idx| {
-            pending.push((
-                entity,
-                instanced_bounding_volume(mesh_cache, &table.instanced_mesh[idx]),
-            ));
-        });
+    for (entity, (render_mesh,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&crate::ecs::mesh::components::RenderMesh,)>()
+        .without::<BoundingVolume>()
+        .iter()
+    {
+        pending.push((
+            entity,
+            resolve_bounding_volume(mesh_cache, &render_mesh.name),
+        ));
+    }
+    for (entity, (instanced_mesh,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&InstancedMesh,)>()
+        .without::<BoundingVolume>()
+        .iter()
+    {
+        pending.push((
+            entity,
+            instanced_bounding_volume(mesh_cache, instanced_mesh),
+        ));
+    }
 
     for (entity, bv) in pending {
-        world.core.add_components(entity, BOUNDING_VOLUME);
-        world.core.set_bounding_volume(entity, bv);
+        world.ecs.worlds[CORE].set(entity, bv);
     }
 }

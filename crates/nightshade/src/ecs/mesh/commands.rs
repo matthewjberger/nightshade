@@ -21,7 +21,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         1,
     )[0];
 
-    world.core.set_name(entity, Name(mesh_name.to_string()));
+    world.ecs.worlds[CORE].set(entity, Name(mesh_name.to_string()));
     crate::ecs::world::commands::setup_entity_transforms(
         world,
         entity,
@@ -31,9 +31,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             rotation: Quat::identity(),
         },
     );
-    world
-        .core
-        .set_render_mesh(entity, RenderMesh::new(mesh_name));
+    world.ecs.worlds[CORE].set(entity, RenderMesh::new(mesh_name));
     world.resources.mesh_render_state.mark_entity_added(entity);
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
@@ -54,13 +52,9 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, MaterialRef::new(material_name));
-    world
-        .core
-        .set_bounding_volume(entity, BoundingVolume::from_mesh_type(mesh_name));
-    world.core.set_casts_shadow(entity, CastsShadow);
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(entity, BoundingVolume::from_mesh_type(mesh_name));
+    world.ecs.worlds[CORE].set(entity, CastsShadow);
 
     entity
 }

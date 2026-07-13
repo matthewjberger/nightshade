@@ -1,3 +1,4 @@
+use crate::ecs::world::CORE;
 use crate::ecs::{
     camera::components::Projection,
     world::{Entity, Vec2, Vec3, Vec4, World},
@@ -28,8 +29,11 @@ impl PickingRay {
 
         let camera_entity = world.resources.active_camera?;
 
-        let camera = world.core.get_camera(camera_entity)?;
-        let global_transform = world.core.get_global_transform(camera_entity)?;
+        let camera =
+            world.ecs.worlds[CORE].get::<crate::ecs::camera::components::Camera>(camera_entity)?;
+        let global_transform =
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(camera_entity)?;
 
         let ndc_x = (2.0 * local_pos.x) / viewport_width - 1.0;
         let ndc_y = 1.0 - (2.0 * local_pos.y) / viewport_height;
@@ -119,22 +123,25 @@ pub fn pick_entities(
 
     let mut results = Vec::new();
 
-    for entity in world
-        .core
-        .query_entities(crate::ecs::world::BOUNDING_VOLUME)
-    {
-        let bounding_volume = match world.core.get_bounding_volume(entity) {
+    for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::BOUNDING_VOLUME) {
+        let bounding_volume = match world.ecs.worlds[CORE]
+            .get::<crate::render::bounding_volume::BoundingVolume>(entity)
+        {
             Some(bv) => bv,
             None => continue,
         };
 
-        let global_transform = match world.core.get_global_transform(entity) {
+        let global_transform = match world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::GlobalTransform>(
+            entity,
+        ) {
             Some(gt) => gt,
             None => continue,
         };
 
         if options.ignore_invisible
-            && let Some(visible) = world.core.get_visibility(entity)
+            && let Some(visible) =
+                world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
             && !visible.visible
         {
             continue;
@@ -192,12 +199,16 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
         None => return Vec::new(),
     };
 
-    let camera = match world.core.get_camera(camera_entity) {
-        Some(cam) => cam,
-        None => return Vec::new(),
-    };
+    let camera =
+        match world.ecs.worlds[CORE].get::<crate::ecs::camera::components::Camera>(camera_entity) {
+            Some(cam) => cam,
+            None => return Vec::new(),
+        };
 
-    let global_transform = match world.core.get_global_transform(camera_entity) {
+    let global_transform = match world.ecs.worlds[CORE]
+        .get::<crate::ecs::transform::components::GlobalTransform>(
+        camera_entity,
+    ) {
         Some(gt) => gt,
         None => return Vec::new(),
     };
@@ -219,12 +230,17 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
     let mut visible_entities = Vec::new();
 
     for &entity in entities {
-        let bounding_volume = match world.core.get_bounding_volume(entity) {
+        let bounding_volume = match world.ecs.worlds[CORE]
+            .get::<crate::render::bounding_volume::BoundingVolume>(entity)
+        {
             Some(bv) => bv,
             None => continue,
         };
 
-        let global_transform = match world.core.get_global_transform(entity) {
+        let global_transform = match world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::GlobalTransform>(
+            entity,
+        ) {
             Some(gt) => gt,
             None => continue,
         };
@@ -282,7 +298,8 @@ pub fn pick_entities_trimesh(
         };
 
         if options.ignore_invisible
-            && let Some(visible) = world.core.get_visibility(entity)
+            && let Some(visible) =
+                world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
             && !visible.visible
         {
             continue;

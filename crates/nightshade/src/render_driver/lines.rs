@@ -1,10 +1,11 @@
+use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use crate::render::wgpu::passes::geometry::lines::{
     GpuBoundingVolumeData, GpuLineData, GpuNormalData, extract_frustum_planes,
 };
 
 pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineData> {
-    let line_entities = world.core.query_entities(
+    let line_entities = world.ecs.worlds[CORE].query_entities(
         crate::ecs::world::LINES
             | crate::ecs::world::GLOBAL_TRANSFORM
             | crate::ecs::world::VISIBILITY,
@@ -12,10 +13,14 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
     let mut line_data = Vec::new();
 
     for entity in line_entities {
-        if let Some(visibility) = world.core.get_visibility(entity)
+        if let Some(visibility) =
+            world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
             && visibility.visible
-            && let Some(lines_component) = world.core.get_lines(entity)
-            && let Some(global_transform) = world.core.get_global_transform(entity)
+            && let Some(lines_component) =
+                world.ecs.worlds[CORE].get::<crate::ecs::lines::components::Lines>(entity)
+            && let Some(global_transform) =
+                world.ecs.worlds[CORE]
+                    .get::<crate::ecs::transform::components::GlobalTransform>(entity)
         {
             let transform = global_transform.0;
             let depth_mode: u32 = if lines_component.always_on_top { 1 } else { 0 };
@@ -51,30 +56,36 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
     let camera_entity = world.resources.active_camera;
     let mesh_cache = &world.resources.assets.mesh_cache;
 
-    for entity in world
-        .core
+    for entity in world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH | crate::ecs::world::GLOBAL_TRANSFORM)
     {
         if Some(entity) == camera_entity {
             continue;
         }
 
-        if let Some(visibility) = world.core.get_visibility(entity)
+        if let Some(visibility) =
+            world.ecs.worlds[CORE].get::<crate::ecs::primitives::Visibility>(entity)
             && !visibility.visible
         {
             continue;
         }
 
-        if let Some(render_layer) = world.core.get_render_layer(entity)
+        if let Some(render_layer) =
+            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
         }
 
-        let Some(render_mesh) = world.core.get_render_mesh(entity) else {
+        let Some(render_mesh) =
+            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+        else {
             continue;
         };
-        let Some(global_transform) = world.core.get_global_transform(entity) else {
+        let Some(global_transform) =
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+        else {
             continue;
         };
 
@@ -174,15 +185,13 @@ pub fn gather_bounding_volume_data(
     let mesh_cache = &world.resources.assets.mesh_cache;
     let mut bv_data = Vec::new();
 
-    for entity in world
-        .core
-        .query_entities(crate::ecs::world::BOUNDING_VOLUME)
-    {
+    for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::BOUNDING_VOLUME) {
         if Some(entity) == camera_entity {
             continue;
         }
 
-        if let Some(render_layer) = world.core.get_render_layer(entity)
+        if let Some(render_layer) =
+            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
@@ -194,10 +203,15 @@ pub fn gather_bounding_volume_data(
             continue;
         }
 
-        let Some(bounding_volume) = world.core.get_bounding_volume(entity) else {
+        let Some(bounding_volume) =
+            world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity)
+        else {
             continue;
         };
-        let Some(global_transform) = world.core.get_global_transform(entity) else {
+        let Some(global_transform) =
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+        else {
             continue;
         };
 
@@ -207,10 +221,9 @@ pub fn gather_bounding_volume_data(
             [0.0, 1.0, 1.0, 1.0]
         };
 
-        if world
-            .core
-            .entity_has_components(entity, crate::ecs::world::SKIN)
-            && let Some(render_mesh) = world.core.get_render_mesh(entity)
+        if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN)
+            && let Some(render_mesh) =
+                world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
             && let Some(mesh) = crate::render::generational_registry::registry_entry_by_name(
                 &mesh_cache.registry,
                 &render_mesh.name,
@@ -290,7 +303,7 @@ fn skinned_overlay_vertices(
 ) -> Option<Vec<(nalgebra_glm::Vec3, nalgebra_glm::Vec3)>> {
     use crate::ecs::world::{Vec3, Vec4};
 
-    let skin = world.core.get_skin(entity)?;
+    let skin = world.ecs.worlds[CORE].get::<crate::ecs::skin::components::Skin>(entity)?;
     let skin_data = mesh.skin_data.as_ref()?;
     let joint_count = skin.joints.len().min(skin.inverse_bind_matrices.len());
     if joint_count == 0 {
@@ -299,9 +312,8 @@ fn skinned_overlay_vertices(
 
     let mut joint_matrices = Vec::with_capacity(joint_count);
     for joint_index in 0..joint_count {
-        let joint_global = world
-            .core
-            .get_global_transform(skin.joints[joint_index])
+        let joint_global = world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::GlobalTransform>(skin.joints[joint_index])
             .map(|transform| transform.0)
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
         joint_matrices.push(joint_global * skin.inverse_bind_matrices[joint_index]);
@@ -310,7 +322,7 @@ fn skinned_overlay_vertices(
     let morph = mesh
         .morph_targets
         .as_ref()
-        .zip(world.core.get_morph_weights(entity));
+        .zip(world.ecs.worlds[CORE].get::<crate::ecs::morph::components::MorphWeights>(entity));
 
     let mut output = Vec::with_capacity(skin_data.skinned_vertices.len());
     for (vertex_index, vertex) in skin_data.skinned_vertices.iter().enumerate() {
@@ -392,33 +404,40 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
     let mesh_cache = &world.resources.assets.mesh_cache;
     let mut normal_data = Vec::new();
 
-    for entity in world
-        .core
+    for entity in world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH | crate::ecs::world::GLOBAL_TRANSFORM)
     {
         if Some(entity) == camera_entity {
             continue;
         }
 
-        if let Some(render_layer) = world.core.get_render_layer(entity)
+        if let Some(render_layer) =
+            world.ecs.worlds[CORE].get::<crate::render::render_layer::RenderLayer>(entity)
             && render_layer.0 == crate::render::render_layer::RenderLayer::OVERLAY
         {
             continue;
         }
 
-        let Some(render_mesh) = world.core.get_render_mesh(entity) else {
+        let Some(render_mesh) =
+            world.ecs.worlds[CORE].get::<crate::ecs::mesh::components::RenderMesh>(entity)
+        else {
             continue;
         };
 
-        let Some(global_transform) = world.core.get_global_transform(entity) else {
+        let Some(global_transform) =
+            world.ecs.worlds[CORE]
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+        else {
             continue;
         };
 
-        let is_skinned = world
-            .core
-            .entity_has_components(entity, crate::ecs::world::SKIN);
+        let is_skinned =
+            world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN);
 
-        if !is_skinned && let Some(bounding_volume) = world.core.get_bounding_volume(entity) {
+        if !is_skinned
+            && let Some(bounding_volume) =
+                world.ecs.worlds[CORE].get::<crate::render::bounding_volume::BoundingVolume>(entity)
+        {
             let world_center = global_transform.0
                 * nalgebra_glm::Vec4::new(
                     bounding_volume.obb.center.x,

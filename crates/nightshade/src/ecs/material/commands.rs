@@ -1,5 +1,6 @@
+use crate::ecs::world::CORE;
+use crate::ecs::world::World;
 use crate::ecs::world::components::MaterialRef;
-use crate::ecs::world::{MATERIAL_REF, MATERIAL_VARIANTS, World};
 
 /// Switches every entity with [`MaterialVariants`] to the material that
 /// covers the supplied variant name, or back to its default if
@@ -11,25 +12,25 @@ use crate::ecs::world::{MATERIAL_REF, MATERIAL_VARIANTS, World};
 /// [`MaterialVariants`]: super::components::MaterialVariants
 pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> usize {
     let mut updates: Vec<(freecs::Entity, String)> = Vec::new();
-    world
-        .core
-        .query()
-        .with(MATERIAL_VARIANTS | MATERIAL_REF)
-        .iter(|entity, table, idx| {
-            let variants = &table.material_variants[idx];
-            let target_name = match variant_name {
-                None => variants.default_material_name.clone(),
-                Some(name) => variants.material_for_variant(name).to_string(),
-            };
-            let current_name = &table.material_ref[idx].name;
-            if current_name != &target_name {
-                updates.push((entity, target_name));
-            }
-        });
+    for (entity, (variants, material_ref)) in world.ecs.worlds[CORE]
+        .query_ref::<(
+            &super::components::MaterialVariants,
+            &super::components::MaterialRef,
+        )>()
+        .iter()
+    {
+        let target_name = match variant_name {
+            None => variants.default_material_name.clone(),
+            Some(name) => variants.material_for_variant(name).to_string(),
+        };
+        if material_ref.name != target_name {
+            updates.push((entity, target_name));
+        }
+    }
 
     let count = updates.len();
     for (entity, name) in updates {
-        world.core.set_material_ref(entity, MaterialRef::new(name));
+        world.ecs.worlds[CORE].set(entity, MaterialRef::new(name));
     }
     if count > 0 {
         world.resources.mesh_render_state.request_full_rebuild();

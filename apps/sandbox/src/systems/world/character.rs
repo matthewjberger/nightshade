@@ -98,10 +98,13 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
     let feet = spawn_feet_position(world);
 
     let body = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.core.get_name_mut(body) {
+    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(body) {
         name.0 = "Character".to_string();
     }
-    if let Some(transform) = world.core.get_local_transform_mut(body) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+    {
         transform.translation = feet;
     }
 
@@ -119,11 +122,14 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
         NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
         1,
     )[0];
-    if let Some(name) = world.core.get_name_mut(spheres) {
+    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(spheres)
+    {
         name.0 = "Character Spheres".to_string();
     }
-    world.core.set_lines(spheres, Lines::new(Vec::new()));
-    if let Some(visibility) = world.core.get_visibility_mut(spheres) {
+    world.ecs.worlds[CORE].set(spheres, Lines::new(Vec::new()));
+    if let Some(visibility) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(spheres)
+    {
         visibility.visible = false;
     }
 
@@ -132,13 +138,15 @@ pub fn spawn(sandbox_world: &mut SandboxWorld, world: &mut World) {
         NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
         1,
     )[0];
-    if let Some(name) = world.core.get_name_mut(skeleton_lines) {
+    if let Some(name) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(skeleton_lines)
+    {
         name.0 = "Character Skeleton".to_string();
     }
-    world
-        .core
-        .set_lines(skeleton_lines, Lines::new_always_on_top(Vec::new()));
-    if let Some(visibility) = world.core.get_visibility_mut(skeleton_lines) {
+    world.ecs.worlds[CORE].set(skeleton_lines, Lines::new_always_on_top(Vec::new()));
+    if let Some(visibility) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(skeleton_lines)
+    {
         visibility.visible = false;
     }
 
@@ -176,22 +184,25 @@ fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity
         &result.skins,
         Vec3::zeros(),
     );
-    if let Some(name) = world.core.get_name_mut(model) {
+    if let Some(name) = world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Name>(model) {
         name.0 = "Character Model".to_string();
     }
-    world
-        .core
-        .add_components(model, nightshade::ecs::world::PARENT);
-    world.core.set_parent(
+    world.ecs.worlds[CORE].add_components(model, nightshade::ecs::world::PARENT);
+    world.ecs.worlds[CORE].set(
         model,
         nightshade::ecs::transform::components::Parent(Some(body)),
     );
     world.resources.transform_state.children_cache_valid = false;
-    if let Some(transform) = world.core.get_local_transform_mut(model) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(model)
+    {
         transform.translation = Vec3::zeros();
     }
 
-    if let Some(player) = world.core.get_animation_player_mut(model) {
+    if let Some(player) = world.ecs.worlds[CORE]
+        .get_mut::<nightshade::ecs::animation::components::AnimationPlayer>(model)
+    {
         let idle_clip = player
             .clips
             .iter()
@@ -218,7 +229,9 @@ fn set_model_visible(sandbox_world: &SandboxWorld, world: &mut World, visible: b
     };
     let mut stack = vec![model];
     while let Some(entity) = stack.pop() {
-        if let Some(visibility) = world.core.get_visibility_mut(entity) {
+        if let Some(visibility) =
+            world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(entity)
+        {
             visibility.visible = visible;
         }
         stack.extend(nightshade::ecs::transform::queries::query_children(
@@ -238,14 +251,16 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
     let fly = sandbox_world.resources.player.fly;
 
     if enabled {
-        let feet = world
-            .core
-            .get_local_transform(player_entity)
+        let feet = world.ecs.worlds[CORE]
+            .get::<nightshade::ecs::transform::components::LocalTransform>(player_entity)
             .map(|transform| {
                 transform.translation - Vec3::new(0.0, FIRST_PERSON_CAPSULE_HALF_HEIGHT, 0.0)
             })
             .unwrap_or_else(|| spawn_feet_position(world));
-        if let Some(transform) = world.core.get_local_transform_mut(body) {
+        if let Some(transform) =
+            world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+        {
             transform.translation = feet;
         }
 
@@ -254,12 +269,16 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
         state.grounded = false;
         state.jump_suppress_timer = 0.0;
 
-        if let Some(controller) = world.core.get_character_controller_mut(player_entity) {
+        if let Some(controller) = world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
+            player_entity,
+        ) {
             controller.disable_gravity = true;
             controller.velocity = Vec3::zeros();
         }
         if let Some(spheres) = sandbox_world.resources.character.spheres
-            && let Some(visibility) = world.core.get_visibility_mut(spheres)
+            && let Some(visibility) =
+                world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(spheres)
         {
             visibility.visible = true;
         }
@@ -268,18 +287,23 @@ pub fn set_third_person(sandbox_world: &mut SandboxWorld, world: &mut World, ena
             world.resources.active_camera = sandbox_world.resources.character.camera;
         }
     } else {
-        if let Some(controller) = world.core.get_character_controller_mut(player_entity) {
+        if let Some(controller) = world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
+            player_entity,
+        ) {
             controller.disable_gravity = false;
             controller.velocity = Vec3::zeros();
         }
         reset_physics_interpolation(world, player_entity);
         if let Some(spheres) = sandbox_world.resources.character.spheres
-            && let Some(visibility) = world.core.get_visibility_mut(spheres)
+            && let Some(visibility) =
+                world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(spheres)
         {
             visibility.visible = false;
         }
         if let Some(skeleton_lines) = sandbox_world.resources.character.skeleton_lines
-            && let Some(visibility) = world.core.get_visibility_mut(skeleton_lines)
+            && let Some(visibility) = world.ecs.worlds[CORE]
+                .get_mut::<nightshade::ecs::primitives::Visibility>(skeleton_lines)
         {
             visibility.visible = false;
         }
@@ -357,7 +381,10 @@ fn apply_model_motion(sandbox_world: &SandboxWorld, world: &mut World) {
         translation += pivot - nalgebra_glm::quat_rotate_vec3(&rotation, &pivot);
     }
 
-    if let Some(transform) = world.core.get_local_transform_mut(model) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(model)
+    {
         transform.translation = translation;
         transform.rotation = rotation;
     }
@@ -378,33 +405,38 @@ fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
     let Some(skeleton_lines) = state.skeleton_lines else {
         return;
     };
-    if let Some(visibility) = world.core.get_visibility_mut(skeleton_lines) {
+    if let Some(visibility) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::primitives::Visibility>(skeleton_lines)
+    {
         visibility.visible = state.skeleton_visible;
     }
     if !state.skeleton_visible {
         return;
     }
 
-    let skin_owners: Vec<Entity> = world
-        .core
+    let skin_owners: Vec<Entity> = world.ecs.worlds[CORE]
         .query_entities(nightshade::ecs::world::SKIN)
         .collect();
     let mut bone_lines = Vec::new();
     for owner in skin_owners {
-        let Some(skin) = world.core.get_skin(owner) else {
+        let Some(skin) =
+            world.ecs.worlds[CORE].get::<nightshade::ecs::skin::components::Skin>(owner)
+        else {
             continue;
         };
         let joint_set: std::collections::HashSet<Entity> = skin.joints.iter().copied().collect();
         for &joint_entity in &skin.joints {
-            let Some(joint_transform) = world.core.get_global_transform(joint_entity) else {
+            let Some(joint_transform) =
+                world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::transform::components::GlobalTransform>(joint_entity)
+            else {
                 continue;
             };
             let joint_position = joint_transform.translation();
             push_joint_cross(&mut bone_lines, joint_position);
 
-            let Some(parent) = world
-                .core
-                .get_parent(joint_entity)
+            let Some(parent) = world.ecs.worlds[CORE]
+                .get::<nightshade::ecs::transform::components::Parent>(joint_entity)
                 .and_then(|parent| parent.0)
             else {
                 continue;
@@ -412,7 +444,10 @@ fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
             if !joint_set.contains(&parent) {
                 continue;
             }
-            let Some(parent_transform) = world.core.get_global_transform(parent) else {
+            let Some(parent_transform) =
+                world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::transform::components::GlobalTransform>(parent)
+            else {
                 continue;
             };
             bone_lines.push(Line {
@@ -423,7 +458,9 @@ fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
         }
     }
 
-    if let Some(lines) = world.core.get_lines_mut(skeleton_lines) {
+    if let Some(lines) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::lines::components::Lines>(skeleton_lines)
+    {
         lines.lines = bone_lines;
         lines.mark_dirty();
     }
@@ -450,7 +487,10 @@ pub fn teleport(sandbox_world: &mut SandboxWorld, world: &mut World, capsule_cen
         return;
     };
     let feet = capsule_center - Vec3::new(0.0, FIRST_PERSON_CAPSULE_HALF_HEIGHT, 0.0);
-    if let Some(transform) = world.core.get_local_transform_mut(body) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+    {
         transform.translation = feet;
     }
 
@@ -536,7 +576,9 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
 }
 
 fn horizontal_camera_basis(world: &World, camera: Entity) -> (Vec3, Vec3) {
-    let Some(transform) = world.core.get_local_transform(camera) else {
+    let Some(transform) = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(camera)
+    else {
         return (Vec3::new(0.0, 0.0, -1.0), Vec3::new(1.0, 0.0, 0.0));
     };
     let forward = transform.forward_vector();
@@ -568,9 +610,8 @@ fn move_character(
         .timing
         .delta_time
         .min(MAX_STEP_SECONDS);
-    let Some(mut position) = world
-        .core
-        .get_local_transform(body)
+    let Some(mut position) = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)
     else {
         return;
@@ -578,9 +619,8 @@ fn move_character(
 
     let inputs = read_inputs(world, camera);
     let gravity_y = world.resources.physics.gravity.y;
-    let camera_aim = world
-        .core
-        .get_local_transform(camera)
+    let camera_aim = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(camera)
         .map(|transform| transform.forward_vector())
         .unwrap_or_else(|| Vec3::new(0.0, 0.0, -1.0));
 
@@ -859,7 +899,10 @@ fn move_character(
     let lean = state.lean;
 
     state.velocity = velocity;
-    if let Some(transform) = world.core.get_local_transform_mut(body) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+    {
         transform.translation = position;
         let yaw_rotation = nalgebra_glm::quat_angle_axis(facing_yaw, &Vec3::y());
         let lean_angle = lean.norm();
@@ -926,7 +969,10 @@ fn hang_update(
         }
     }
 
-    if let Some(transform) = world.core.get_local_transform_mut(body) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
+    {
         transform.translation = position;
         transform.rotation = nalgebra_glm::quat_angle_axis(state.facing_yaw, &Vec3::y());
     }
@@ -961,18 +1007,23 @@ fn sync_first_person_player(sandbox_world: &SandboxWorld, world: &mut World, bod
     let Some(player_entity) = sandbox_world.resources.player.player_entity else {
         return;
     };
-    let Some(feet) = world
-        .core
-        .get_local_transform(body)
+    let Some(feet) = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)
     else {
         return;
     };
     let capsule_center = feet + Vec3::new(0.0, FIRST_PERSON_CAPSULE_HALF_HEIGHT, 0.0);
-    if let Some(transform) = world.core.get_local_transform_mut(player_entity) {
+    if let Some(transform) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::transform::components::LocalTransform>(player_entity)
+    {
         transform.translation = capsule_center;
     }
-    if let Some(interpolation) = world.core.get_physics_interpolation_mut(player_entity) {
+    if let Some(interpolation) =
+        world.ecs.worlds[CORE]
+            .get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(player_entity)
+    {
         interpolation.previous_translation = capsule_center;
         interpolation.current_translation = capsule_center;
     }
@@ -982,14 +1033,15 @@ fn draw_spheres(sandbox_world: &SandboxWorld, world: &mut World, body: Entity) {
     let Some(spheres) = sandbox_world.resources.character.spheres else {
         return;
     };
-    let Some(feet) = world
-        .core
-        .get_local_transform(body)
+    let Some(feet) = world.ecs.worlds[CORE]
+        .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)
     else {
         return;
     };
-    let Some(lines) = world.core.get_lines_mut(spheres) else {
+    let Some(lines) =
+        world.ecs.worlds[CORE].get_mut::<nightshade::ecs::lines::components::Lines>(spheres)
+    else {
         return;
     };
     lines.lines.clear();

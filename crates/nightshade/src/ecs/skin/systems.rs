@@ -1,3 +1,6 @@
+use crate::ecs::mesh::components::RenderMesh;
+use crate::ecs::skin::components::Skin;
+use crate::ecs::world::CORE;
 use crate::ecs::world::{RENDER_MESH, SKIN, World};
 use freecs::Entity;
 use nalgebra_glm::Mat4;
@@ -12,25 +15,13 @@ pub fn skinning_cache_needs_rebuild(cache: &SkinningCache, world: &World) -> boo
         return true;
     }
 
-    let mut mismatch = false;
     let mut count = 0usize;
     let expected = &cache.skinned_entity_ids;
-    world
-        .core
-        .query()
-        .with(SKIN | RENDER_MESH)
-        .iter(|entity, _, _| {
-            let index = count;
-            count += 1;
-            if mismatch {
-                return;
-            }
-            if index >= expected.len() || entity.id != expected[index] {
-                mismatch = true;
-            }
-        });
-    if mismatch {
-        return true;
+    for entity in world.ecs.worlds[CORE].query_entities(SKIN | RENDER_MESH) {
+        if count >= expected.len() || entity.id != expected[count] {
+            return true;
+        }
+        count += 1;
     }
     count != expected.len()
 }
@@ -50,23 +41,22 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let mut bone_index = 0u32;
     let joint_entities = &mut cache.joint_entities;
     let skinned_entity_ids = &mut cache.skinned_entity_ids;
-    world
-        .core
-        .query()
-        .with(SKIN | RENDER_MESH)
-        .iter(|entity, table, idx| {
-            any = true;
-            skinned_entity_ids.push(entity.id);
-            let skin = &table.skin[idx];
-            for &joint_entity in &skin.joints {
-                bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
-                    let index = bone_index;
-                    joint_entities.push(joint_entity);
-                    bone_index += 1;
-                    index
-                });
-            }
-        });
+    for (entity, (skin,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&Skin,)>()
+        .with::<RenderMesh>()
+        .iter()
+    {
+        any = true;
+        skinned_entity_ids.push(entity.id);
+        for &joint_entity in &skin.joints {
+            bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
+                let index = bone_index;
+                joint_entities.push(joint_entity);
+                bone_index += 1;
+                index
+            });
+        }
+    }
 
     if !any {
         cache.static_data_uploaded = true;
@@ -80,12 +70,12 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let skin_data = &mut cache.skin_data;
     let inverse_bind_matrices = &mut cache.inverse_bind_matrices;
     let entity_skin_indices = &mut cache.entity_skin_indices;
-    world
-        .core
-        .query()
-        .with(SKIN | RENDER_MESH)
-        .iter(|entity, table, idx| {
-            let skin = &table.skin[idx];
+    for (entity, (skin,)) in world.ecs.worlds[CORE]
+        .query_ref::<(&Skin,)>()
+        .with::<RenderMesh>()
+        .iter()
+    {
+        {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             for joint in skin.joints.iter() {
                 use std::hash::Hash;
@@ -138,7 +128,8 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
             };
 
             entity_skin_indices.insert(entity, skin_index);
-        });
+        }
+    }
 
     cache.total_joints = current_output_offset;
     cache.static_data_uploaded = true;
@@ -157,9 +148,8 @@ pub fn skinning_cache_collect_bone_transforms_into(
     bone_transforms.resize(cache.joint_entities.len(), Mat4::identity());
 
     for (index, &joint_entity) in cache.joint_entities.iter().enumerate() {
-        let transform = world
-            .core
-            .get_global_transform(joint_entity)
+        let transform = world.ecs.worlds[CORE]
+            .get::<crate::ecs::transform::components::GlobalTransform>(joint_entity)
             .map(|joint_global_transform| joint_global_transform.0)
             .unwrap_or_else(Mat4::identity);
         if bone_transforms[index] != transform {

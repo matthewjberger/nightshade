@@ -152,19 +152,15 @@ fn compute_path_cells(waypoints: &[Vec3]) -> std::collections::HashSet<(i32, i32
 
 fn spawn_waypoint(world: &mut World, index: u32, position: Vec3) {
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    world
-        .core
-        .set_name(entity, Name(format!("PathWaypoint_{index}")));
-    world.core.set_local_transform(
+    world.ecs.worlds[CORE].set(entity, Name(format!("PathWaypoint_{index}")));
+    world.ecs.worlds[CORE].set(
         entity,
         LocalTransform {
             translation: position,
             ..Default::default()
         },
     );
-    world
-        .core
-        .set_global_transform(entity, GlobalTransform::default());
+    world.ecs.worlds[CORE].set(entity, GlobalTransform::default());
     push_tag(world, entity, WAYPOINT_TAG);
 }
 
@@ -180,7 +176,7 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
         nalgebra_glm::vec3(x as f32, -0.5, z as f32),
         nalgebra_glm::vec3(0.9, 0.1, 0.9),
     );
-    world.core.set_name(entity, Name(format!("Tile_{x}_{z}")));
+    world.ecs.worlds[CORE].set(entity, Name(format!("Tile_{x}_{z}")));
     let material_name = format!("Tile_{x}_{z}_{}", entity.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -203,9 +199,7 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, TILE_TAG);
 }
 
@@ -219,7 +213,7 @@ fn spawn_marker(
     emissive: [f32; 3],
 ) {
     let entity = spawn_mesh(world, "Cube", position, scale);
-    world.core.set_name(entity, Name(name.to_string()));
+    world.ecs.worlds[CORE].set(entity, Name(name.to_string()));
     let material_name = format!("{name}_{}", entity.id);
     material_registry_insert(
         &mut world.resources.assets.material_registry,
@@ -243,9 +237,7 @@ fn spawn_marker(
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(entity, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, tag);
 }
 
@@ -269,9 +261,11 @@ fn link_path_from_world(game_world: &mut GameWorld, world: &World) {
             if !tags.iter().any(|tag| tag == WAYPOINT_TAG) {
                 return None;
             }
-            let name = world.core.get_name(*entity)?;
+            let name = world.ecs.worlds[CORE].get::<nightshade::ecs::primitives::Name>(*entity)?;
             let index = name.0.strip_prefix("PathWaypoint_")?.parse::<u32>().ok()?;
-            let transform = world.core.get_local_transform(*entity)?;
+            let transform =
+                world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
             Some((index, transform.translation))
         })
         .collect();
@@ -295,7 +289,9 @@ fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
             if !tags.iter().any(|tag| tag == TILE_TAG) {
                 return None;
             }
-            let transform = world.core.get_local_transform(*entity)?;
+            let transform =
+                world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::transform::components::LocalTransform>(*entity)?;
             let x = transform.translation.x.round() as i32;
             let z = transform.translation.z.round() as i32;
             let color = tile_color(world, *entity);
@@ -327,7 +323,9 @@ fn link_grid_from_world(game_world: &mut GameWorld, world: &World) {
 
 fn tile_color(world: &World, entity: Entity) -> Vec4 {
     let fallback = nalgebra_glm::vec4(0.1, 0.3, 0.1, 1.0);
-    let Some(material_ref) = world.core.get_material_ref(entity) else {
+    let Some(material_ref) =
+        world.ecs.worlds[CORE].get::<nightshade::ecs::material::components::MaterialRef>(entity)
+    else {
         return fallback;
     };
     let Some(material) = nightshade::render::generational_registry::registry_entry_by_name(

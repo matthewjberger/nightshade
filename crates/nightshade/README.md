@@ -49,7 +49,7 @@ impl State for SpinCube {
         pan_orbit_camera_system(world);
         self.time += world.resources.window.timing.delta_time;
         if let Some(entity) = self.cube
-            && let Some(transform) = world.core.get_local_transform_mut(entity)
+            && let Some(transform) = world.ecs.worlds[CORE].get_mut::<LocalTransform>(entity)
         {
             transform.rotation = nalgebra_glm::quat_angle_axis(self.time, &Vec3::y_axis());
         }

@@ -37,7 +37,7 @@
 //!
 //! // Skin component is already attached and configured
 //! // Just play animations - skinning happens automatically
-//! if let Some(player) = world.core.get_animation_player_mut(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     player.play(WALK_ANIMATION);
 //! }
 //! ```
@@ -53,13 +53,13 @@
 //! let head = spawn_entities(world, JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
 //!
 //! // Set up hierarchy
-//! world.core.set_parent(spine, Parent(root));
-//! world.core.set_parent(head, Parent(spine));
+//! world.ecs.worlds[CORE].set(spine, Parent(root));
+//! world.ecs.worlds[CORE].set(head, Parent(spine));
 //!
 //! // Configure joints
-//! world.core.set_joint(root, Joint::new(0).with_name("root"));
-//! world.core.set_joint(spine, Joint::new(1).with_name("spine"));
-//! world.core.set_joint(head, Joint::new(2).with_name("head"));
+//! world.ecs.worlds[CORE].set(root, Joint::new(0).with_name("root"));
+//! world.ecs.worlds[CORE].set(spine, Joint::new(1).with_name("spine"));
+//! world.ecs.worlds[CORE].set(head, Joint::new(2).with_name("head"));
 //!
 //! // Create skin with inverse bind matrices
 //! let skin = Skin::new(
@@ -72,7 +72,7 @@
 //! ).with_name("character_skin");
 //!
 //! // Attach skin to mesh entity
-//! world.core.set_skin(mesh_entity, skin);
+//! world.ecs.worlds[CORE].set(mesh_entity, skin);
 //! ```
 //!
 //! # Skin Properties

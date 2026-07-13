@@ -45,9 +45,7 @@ pub fn spawn_tower(
             index,
         );
     }
-    world
-        .core
-        .set_material_ref(engine_entity, MaterialRef::new(material_name));
+    world.ecs.worlds[CORE].set(engine_entity, MaterialRef::new(material_name));
 
     let game_entity = game_world.spawn_entities(ENTITY_HANDLE | POSITION | TOWER, 1)[0];
     game_world.set_entity_handle(game_entity, EntityHandle(engine_entity));
@@ -104,22 +102,20 @@ pub fn spawn_range_indicator(
             1,
         )[0];
 
-        world.core.set_name(
+        world.ecs.worlds[CORE].set(
             line_entity,
             Name(format!("Range Indicator Line {}", segment_index)),
         );
-        world.core.set_local_transform(
+        world.ecs.worlds[CORE].set(
             line_entity,
             LocalTransform {
                 translation: nalgebra_glm::vec3(0.0, 0.0, 0.0),
                 ..Default::default()
             },
         );
-        world
-            .core
-            .set_global_transform(line_entity, GlobalTransform::default());
+        world.ecs.worlds[CORE].set(line_entity, GlobalTransform::default());
 
-        world.core.set_lines(
+        world.ecs.worlds[CORE].set(
             line_entity,
             Lines::new(vec![Line {
                 start,
@@ -128,9 +124,7 @@ pub fn spawn_range_indicator(
             }]),
         );
 
-        world
-            .core
-            .set_visibility(line_entity, Visibility { visible: false });
+        world.ecs.worlds[CORE].set(line_entity, Visibility { visible: false });
 
         line_entities.push(line_entity);
     }
@@ -313,7 +307,11 @@ pub fn tower_targeting_system(game_world: &mut GameWorld, world: &mut World) {
                                 }
 
                                 if let Some(line_entity) = tower.target_line {
-                                    if let Some(lines_comp) = world.core.get_lines_mut(line_entity)
+                                    if let Some(lines_comp) =
+                                        world.ecs.worlds[CORE]
+                                            .get_mut::<nightshade::ecs::lines::components::Lines>(
+                                            line_entity,
+                                        )
                                     {
                                         lines_comp.lines.clear();
                                         lines_comp.lines.push(Line {
@@ -324,7 +322,10 @@ pub fn tower_targeting_system(game_world: &mut GameWorld, world: &mut World) {
                                     }
 
                                     if let Some(visibility) =
-                                        world.core.get_visibility_mut(line_entity)
+                                        world.ecs.worlds[CORE]
+                                            .get_mut::<nightshade::ecs::primitives::Visibility>(
+                                            line_entity,
+                                        )
                                     {
                                         visibility.visible = true;
                                     }
@@ -409,9 +410,7 @@ pub fn tower_shooting_system(game_world: &mut GameWorld, world: &mut World) {
                                 index,
                             );
                         }
-                        world
-                            .core
-                            .set_material_ref(engine_entity, MaterialRef::new(material_name));
+                        world.ecs.worlds[CORE].set(engine_entity, MaterialRef::new(material_name));
 
                         let projectile_entity =
                             game_world.spawn_entities(ENTITY_HANDLE | POSITION | PROJECTILE, 1)[0];
@@ -463,12 +462,18 @@ pub fn tower_shooting_system(game_world: &mut GameWorld, world: &mut World) {
             if needs_fire_animation_update
                 && let Some(handle) = game_world.get_entity_handle(tower_entity)
             {
-                if let Some(transform) = world.core.get_local_transform_mut(handle.0) {
+                if let Some(transform) =
+                    world.ecs.worlds[CORE]
+                        .get_mut::<nightshade::ecs::transform::components::LocalTransform>(handle.0)
+                {
                     transform.scale =
                         nalgebra_glm::vec3(0.4 * animation_scale, 0.8, 0.4 * animation_scale);
                 }
 
-                if let Some(material_ref) = world.core.get_material_ref(handle.0).cloned() {
+                if let Some(material_ref) = world.ecs.worlds[CORE]
+                    .get::<nightshade::ecs::material::components::MaterialRef>(handle.0)
+                    .cloned()
+                {
                     let flash_intensity = if animation_scale > 1.05 {
                         (animation_scale - 1.0) * 5.0
                     } else {

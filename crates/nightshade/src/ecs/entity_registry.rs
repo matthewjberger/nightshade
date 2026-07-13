@@ -1,3 +1,4 @@
+use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use freecs::Entity;
 use std::collections::HashMap;
@@ -16,7 +17,10 @@ pub struct EntityRegistry {
 /// `GUID` in the initial spawn bitflags to skip the archetype
 /// migration.
 pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives::Guid {
-    if let Some(existing) = world.core.get_guid(entity).copied() {
+    if let Some(existing) = world.ecs.worlds[CORE]
+        .get::<crate::ecs::primitives::Guid>(entity)
+        .copied()
+    {
         world
             .resources
             .entities
@@ -27,13 +31,10 @@ pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives:
     }
     world.resources.entities.next_guid = world.resources.entities.next_guid.saturating_add(1);
     let guid = crate::ecs::primitives::Guid(world.resources.entities.next_guid);
-    if !world
-        .core
-        .entity_has_components(entity, crate::ecs::world::GUID)
-    {
-        world.core.add_components(entity, crate::ecs::world::GUID);
+    if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
+        world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
-    world.core.set_guid(entity, guid);
+    world.ecs.worlds[CORE].set(entity, guid);
     world.resources.entities.guid_index.insert(guid.0, entity);
     guid
 }
@@ -42,13 +43,10 @@ pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives:
 /// Used by scene load to restore authored guid values into the
 /// reverse index.
 pub fn assign_guid(world: &mut World, entity: Entity, guid: crate::ecs::primitives::Guid) {
-    if !world
-        .core
-        .entity_has_components(entity, crate::ecs::world::GUID)
-    {
-        world.core.add_components(entity, crate::ecs::world::GUID);
+    if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
+        world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
-    world.core.set_guid(entity, guid);
+    world.ecs.worlds[CORE].set(entity, guid);
     world.resources.entities.guid_index.insert(guid.0, entity);
     if guid.0 > world.resources.entities.next_guid {
         world.resources.entities.next_guid = guid.0;

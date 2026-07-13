@@ -17,7 +17,7 @@
 //! Control playback through the [`AnimationPlayer`] component:
 //!
 //! ```ignore
-//! if let Some(player) = world.core.get_animation_player_mut(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     player.play(0);              // Play first animation from start
 //!     player.looping = true;       // Enable looping
 //!     player.speed = 1.5;          // 1.5x playback speed
@@ -29,7 +29,7 @@
 //! Smoothly transition between animations using [`AnimationPlayer::blend_to`]:
 //!
 //! ```ignore
-//! if let Some(player) = world.core.get_animation_player_mut(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     // Blend from current animation to animation index 2 over 0.3 seconds
 //!     player.blend_to(2, 0.3);
 //! }
@@ -38,7 +38,7 @@
 //! # Playback Control
 //!
 //! ```ignore
-//! if let Some(player) = world.core.get_animation_player_mut(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     player.pause();              // Pause at current time
 //!     player.resume();             // Continue from paused time
 //!     player.stop();               // Stop and reset to beginning
@@ -49,7 +49,7 @@
 //! # Listing Available Animations
 //!
 //! ```ignore
-//! if let Some(player) = world.core.get_animation_player(entity) {
+//! if let Some(player) = world.ecs.worlds[CORE].get::<crate::ecs::animation::components::AnimationPlayer>(entity) {
 //!     for (index, clip) in player.clips.iter().enumerate() {
 //!         println!("{}: {} ({:.2}s)", index, clip.name, clip.duration);
 //!     }

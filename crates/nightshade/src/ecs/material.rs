@@ -35,7 +35,7 @@
 //! }
 //!
 //! // Apply to an entity
-//! world.core.set_material_ref(entity, MaterialRef::new("red_metal"));
+//! world.ecs.worlds[CORE].set(entity, MaterialRef::new("red_metal"));
 //! ```
 //!
 //! # Material Registration Pattern
