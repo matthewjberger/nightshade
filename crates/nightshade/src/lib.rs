@@ -833,7 +833,10 @@ pub mod prelude {
     pub use crate::render::text_data::FontKind;
     pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
     pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiLayer, UiRect, UiTextInstance};
-    pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
+    pub use crate::render::wgpu::texture_cache::{
+        TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
+        texture_cache_release_entity,
+    };
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]

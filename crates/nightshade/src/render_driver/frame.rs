@@ -3,7 +3,6 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
-use crate::render::generational_registry::registry_name_for;
 use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::render::wgpu::pass_sync;
 use crate::render::wgpu::presentation;
@@ -197,9 +196,12 @@ pub(crate) fn drain_loading_tasks(
             crate::ecs::loading::LoadingTask::ReserveLayer { texture, .. }
             | crate::ecs::loading::LoadingTask::UploadDecodedTexture { texture, .. }
             | crate::ecs::loading::LoadingTask::MaterializeTexture { texture, .. } => {
-                registry_name_for(&world.resources.texture_cache.registry, texture.index)
-                    .map(str::to_string)
-                    .unwrap_or_else(|| format!("texture {}", texture.index))
+                crate::render::wgpu::texture_cache::texture_cache_texture_name(
+                    &world.resources.texture_cache,
+                    texture.index,
+                )
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("texture {}", texture.index))
             }
         };
         match task {
@@ -275,13 +277,12 @@ pub(crate) fn drain_loading_tasks(
                     // spec/gloss conversion). Direct-recipe textures already have
                     // their PNG bytes captured at queue_gltf_load and are skipped
                     // here via the `entry`-style insert.
-                    let texture_name = world
-                        .resources
-                        .texture_cache
-                        .registry
-                        .index_to_name
-                        .get(texture.index as usize)
-                        .and_then(|slot| slot.clone());
+                    let texture_name =
+                        crate::render::wgpu::texture_cache::texture_cache_texture_name(
+                            &world.resources.texture_cache,
+                            texture.index,
+                        )
+                        .map(str::to_string);
                     if let Some(name) = texture_name {
                         world
                             .resources

@@ -1,6 +1,7 @@
 use crate::asset_id::TextureId;
 use crate::generational_registry::*;
 use crate::texture_data::{SamplerFilter, SamplerSettings, SamplerWrap, TextureUsage};
+use freecs::Entity;
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
@@ -39,11 +40,23 @@ impl SamplerFilter {
     }
 }
 
+/// Who holds a set of texture references. Entity owners split the material's
+/// own textures from prefab variant textures so a material swap replaces one
+/// set without disturbing the other; named owners cover keep-alives that are
+/// not tied to an entity.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub enum TextureOwner {
+    EntityMaterial(Entity),
+    EntityVariants(Entity),
+    Named(String),
+}
+
 #[derive(Default)]
 pub struct TextureCache {
-    pub registry: GenerationalRegistry<TextureEntry>,
-    pub pending_references: HashMap<String, usize>,
-    pub protected_names: std::collections::HashSet<String>,
+    pub(crate) registry: GenerationalRegistry<TextureEntry>,
+    pub(crate) pending_references: HashMap<String, usize>,
+    pub(crate) protected_names: std::collections::HashSet<String>,
+    pub(crate) owners: HashMap<TextureOwner, Vec<String>>,
 }
 
 impl TextureCache {
@@ -222,7 +235,7 @@ pub fn texture_cache_reserve_id(cache: &mut TextureCache, name: String) -> Textu
     TextureId::new(index, generation)
 }
 
-pub fn texture_cache_add_reference(cache: &mut TextureCache, name: &str) {
+fn increment_reference(cache: &mut TextureCache, name: &str) {
     if let Some(&index) = cache.registry.name_to_index.get(name) {
         registry_add_reference(&mut cache.registry, index);
     } else {
@@ -233,7 +246,7 @@ pub fn texture_cache_add_reference(cache: &mut TextureCache, name: &str) {
     }
 }
 
-pub fn texture_cache_remove_reference(cache: &mut TextureCache, name: &str) {
+fn decrement_reference(cache: &mut TextureCache, name: &str) {
     if let Some(&index) = cache.registry.name_to_index.get(name) {
         registry_remove_reference(&mut cache.registry, index);
     } else if let Some(count) = cache.pending_references.get_mut(name) {
@@ -242,6 +255,54 @@ pub fn texture_cache_remove_reference(cache: &mut TextureCache, name: &str) {
             cache.pending_references.remove(name);
         }
     }
+}
+
+/// Records `names` as held by `owner`, incrementing each texture's reference
+/// count. Any set previously recorded for the same owner is released first,
+/// so re-acquiring on a material swap is a single call and reference counts
+/// never drift from what the ledger recorded.
+pub fn texture_cache_acquire(cache: &mut TextureCache, owner: TextureOwner, names: Vec<String>) {
+    if let Some(previous) = cache.owners.remove(&owner) {
+        for name in &previous {
+            decrement_reference(cache, name);
+        }
+    }
+    for name in &names {
+        increment_reference(cache, name);
+    }
+    if !names.is_empty() {
+        cache.owners.insert(owner, names);
+    }
+}
+
+/// Releases exactly the set recorded for `owner`. Unknown owners are a no-op,
+/// so double releases and releases for entities that never acquired cannot
+/// underflow a count.
+pub fn texture_cache_release(cache: &mut TextureCache, owner: &TextureOwner) {
+    if let Some(names) = cache.owners.remove(owner) {
+        for name in &names {
+            decrement_reference(cache, name);
+        }
+    }
+}
+
+/// Releases every entity-scoped set recorded for `entity`: the material's
+/// textures and any prefab variant textures.
+pub fn texture_cache_release_entity(cache: &mut TextureCache, entity: Entity) {
+    texture_cache_release(cache, &TextureOwner::EntityMaterial(entity));
+    texture_cache_release(cache, &TextureOwner::EntityVariants(entity));
+}
+
+/// Resolves a texture name to its stable id, if the name has been reserved
+/// or uploaded.
+pub fn texture_cache_texture_id(cache: &TextureCache, name: &str) -> Option<TextureId> {
+    registry_lookup_index(&cache.registry, name)
+        .map(|(index, generation)| TextureId::new(index, generation))
+}
+
+/// Resolves a texture id's slot index back to its registered name.
+pub fn texture_cache_texture_name(cache: &TextureCache, index: u32) -> Option<&str> {
+    registry_name_for(&cache.registry, index)
 }
 
 pub fn texture_cache_remove_unused(cache: &mut TextureCache) -> Vec<String> {

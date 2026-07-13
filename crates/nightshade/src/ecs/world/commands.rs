@@ -10,7 +10,7 @@ use crate::render::procedural_meshes::{
     create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
 use crate::render::wgpu::texture_cache::{
-    texture_cache_add_reference, texture_cache_remove_reference, texture_cache_remove_unused,
+    TextureOwner, texture_cache_acquire, texture_cache_release_entity, texture_cache_remove_unused,
 };
 
 use crate::prelude::*;
@@ -251,17 +251,7 @@ fn reload_material_command(
 ) {
     use crate::ecs::world::MATERIAL_REF;
 
-    let old_textures: Vec<String> =
-        registry_entry_by_name(&world.resources.assets.material_registry.registry, &name)
-            .map(|mat| mat.texture_names().map(str::to_string).collect())
-            .unwrap_or_default();
-    for texture in &old_textures {
-        texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
-    }
-
-    for texture in new_material.texture_names() {
-        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
-    }
+    let new_textures: Vec<String> = new_material.texture_names().map(str::to_string).collect();
 
     crate::ecs::material::resources::material_registry_mutate(
         &mut world.resources.assets.material_registry,
@@ -269,7 +259,7 @@ fn reload_material_command(
         |existing| *existing = new_material,
     );
 
-    let entities_to_dirty: Vec<Entity> = world.ecs.worlds[CORE]
+    let referencing_entities: Vec<Entity> = world.ecs.worlds[CORE]
         .query_entities(MATERIAL_REF)
         .filter(|&entity| {
             world
@@ -278,7 +268,12 @@ fn reload_material_command(
         })
         .collect();
 
-    for entity in entities_to_dirty {
+    for entity in referencing_entities {
+        texture_cache_acquire(
+            &mut world.resources.texture_cache,
+            TextureOwner::EntityMaterial(entity),
+            new_textures.clone(),
+        );
         world
             .resources
             .mesh_render_state
@@ -289,8 +284,6 @@ fn reload_material_command(
 /// Despawn a batch of entities and clean up cached references (textures, materials, meshes).
 /// Does not walk the hierarchy; use [`despawn_recursive_immediate`] or [`EcsCommand::DespawnRecursive`] for that.
 pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
-    let is_runtime = world.resources.is_runtime;
-
     for &entity in entities {
         world.resources.entities.tags.remove(&entity);
         if let Some(guid) = world.get::<crate::ecs::primitives::Guid>(entity).copied() {
@@ -298,21 +291,16 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         }
 
         if let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
-            if !is_runtime {
-                let mesh_name = render_mesh.name.clone();
-                if let Some(&index) = world
-                    .resources
-                    .assets
-                    .mesh_cache
-                    .registry
-                    .name_to_index
-                    .get(&mesh_name)
-                {
-                    registry_remove_reference(
-                        &mut world.resources.assets.mesh_cache.registry,
-                        index,
-                    );
-                }
+            let mesh_name = render_mesh.name.clone();
+            if let Some(&index) = world
+                .resources
+                .assets
+                .mesh_cache
+                .registry
+                .name_to_index
+                .get(&mesh_name)
+            {
+                registry_remove_reference(&mut world.resources.assets.mesh_cache.registry, index);
             }
             world
                 .resources
@@ -323,21 +311,16 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         if let Some(instanced_mesh) =
             world.get::<crate::ecs::mesh::components::InstancedMesh>(entity)
         {
-            if !is_runtime {
-                let mesh_name = instanced_mesh.mesh_name.clone();
-                if let Some(&index) = world
-                    .resources
-                    .assets
-                    .mesh_cache
-                    .registry
-                    .name_to_index
-                    .get(&mesh_name)
-                {
-                    registry_remove_reference(
-                        &mut world.resources.assets.mesh_cache.registry,
-                        index,
-                    );
-                }
+            let mesh_name = instanced_mesh.mesh_name.clone();
+            if let Some(&index) = world
+                .resources
+                .assets
+                .mesh_cache
+                .registry
+                .name_to_index
+                .get(&mesh_name)
+            {
+                registry_remove_reference(&mut world.resources.assets.mesh_cache.registry, index);
             }
             world
                 .resources
@@ -345,20 +328,12 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_instanced_meshes_changed();
         }
 
-        if !is_runtime
-            && let Some(material_ref) =
-                world.get::<crate::ecs::material::components::MaterialRef>(entity)
+        texture_cache_release_entity(&mut world.resources.texture_cache, entity);
+
+        if let Some(material_ref) =
+            world.get::<crate::ecs::material::components::MaterialRef>(entity)
         {
             let material_name = material_ref.name.clone();
-            let texture_names: Vec<String> = registry_entry_by_name(
-                &world.resources.assets.material_registry.registry,
-                &material_name,
-            )
-            .map(|material| material.texture_names().map(str::to_string).collect())
-            .unwrap_or_default();
-            for texture in &texture_names {
-                texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
-            }
             if let Some(&index) = world
                 .resources
                 .assets
@@ -714,21 +689,12 @@ pub fn set_material_with_textures(
         .get::<crate::ecs::material::components::MaterialRef>(entity)
         .cloned();
 
-    if let Some(ref mat_ref) = material_ref {
-        let old_textures: Vec<String> = registry_entry_by_name(
-            &world.resources.assets.material_registry.registry,
-            &mat_ref.name,
-        )
-        .map(|mat| mat.texture_names().map(str::to_string).collect())
-        .unwrap_or_default();
-        for texture in &old_textures {
-            texture_cache_remove_reference(&mut world.resources.texture_cache, texture);
-        }
-    }
-
-    for texture in material.texture_names() {
-        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
-    }
+    let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
+    texture_cache_acquire(
+        &mut world.resources.texture_cache,
+        TextureOwner::EntityMaterial(entity),
+        texture_names,
+    );
 
     if let Some(ref mat_ref) = material_ref {
         crate::ecs::material::resources::material_registry_mutate(
@@ -1038,9 +1004,11 @@ pub fn spawn_instanced_mesh_with_material(
     )
     .map(|mat| mat.texture_names().map(str::to_string).collect())
     .unwrap_or_default();
-    for texture in &texture_names {
-        texture_cache_add_reference(&mut world.resources.texture_cache, texture);
-    }
+    texture_cache_acquire(
+        &mut world.resources.texture_cache,
+        TextureOwner::EntityMaterial(entity),
+        texture_names,
+    );
 
     world.set(entity, components::MaterialRef::new(material_name));
 

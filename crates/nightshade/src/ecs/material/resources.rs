@@ -218,9 +218,9 @@ fn resolve_one_material(
     texture_cache: &crate::render::wgpu::texture_cache::TextureCache,
 ) {
     let lookup = |opt: &Option<String>| -> Option<TextureId> {
-        opt.as_deref()
-            .and_then(|name| registry_lookup_index(&texture_cache.registry, name))
-            .map(|(index, generation)| TextureId::new(index, generation))
+        opt.as_deref().and_then(|name| {
+            crate::render::wgpu::texture_cache::texture_cache_texture_id(texture_cache, name)
+        })
     };
     let Some(material) = registry
         .registry
@@ -276,7 +276,9 @@ pub fn material_registry_resolve_uploaded_textures(
     registry.version = registry.version.wrapping_add(1);
     let mut dirty: HashSet<u32> = HashSet::new();
     for id in uploaded {
-        let Some(name) = registry_name_for(&texture_cache.registry, id.index) else {
+        let Some(name) =
+            crate::render::wgpu::texture_cache::texture_cache_texture_name(texture_cache, id.index)
+        else {
             continue;
         };
         if let Some(materials) = registry.texture_name_to_materials.get(name) {
