@@ -2,9 +2,12 @@ mod ecs;
 mod state;
 mod systems;
 
-use nightshade::prelude::launch;
-use state::Gallery;
+use nightshade::prelude::{App, DefaultPlugins};
+use state::GalleryPlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(Gallery::default())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(GalleryPlugin)
+        .run()
 }

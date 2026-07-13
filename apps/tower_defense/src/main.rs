@@ -3,9 +3,12 @@ mod retained_ui;
 mod state;
 mod systems;
 
-use nightshade::prelude::launch;
-use state::TowerDefense;
+use nightshade::prelude::{App, DefaultPlugins};
+use state::TowerDefensePlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(TowerDefense::default())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(TowerDefensePlugin)
+        .run()
 }
