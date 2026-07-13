@@ -1,7 +1,7 @@
 use nightshade::ecs::loading::load_texture_pack_from_image_bytes;
 use nightshade::prelude::*;
 use nightshade::render::material::{Material, TextureTransform};
-use nightshade::render::wgpu::texture_cache::{SamplerSettings, TextureUsage};
+use nightshade::render::texture_data::{SamplerSettings, TextureUsage};
 
 pub const FLOOR_TEXTURE: &str = "proto_dark_06";
 pub const STAIRS_TEXTURE: &str = "proto_green_01";

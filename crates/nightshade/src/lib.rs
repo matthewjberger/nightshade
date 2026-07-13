@@ -832,8 +832,7 @@ pub mod prelude {
     pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
     pub use crate::render::text_data::FontKind;
     pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
-    pub use crate::render::ui_data::{Anchor, Rect, UiTextInstance};
-    pub use crate::render::wgpu::passes::geometry::{UiImage, UiLayer};
+    pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiLayer, UiRect, UiTextInstance};
     pub use crate::render::wgpu::texture_cache::texture_cache_add_reference;
     #[cfg(feature = "assets")]
     pub use bincode;

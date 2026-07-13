@@ -276,7 +276,7 @@ pub struct Resources {
     pub input: crate::ecs::input::resources::Input,
     pub is_runtime: bool,
     pub loading: crate::ecs::loading::LoadingState,
-    pub mesh_render_state: crate::render::wgpu::passes::geometry::MeshRenderState,
+    pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
     pub monitors: crate::ecs::window::resources::Monitors,
     #[cfg(feature = "navmesh")]
     pub navmesh: crate::ecs::navmesh::resources::NavMeshWorld,

@@ -327,6 +327,7 @@ pub mod geometry;
 pub mod grass_config;
 pub mod material;
 pub mod mesh_cache;
+pub mod mesh_state;
 pub mod particles;
 pub mod procedural_meshes;
 pub mod render_layer;
@@ -336,6 +337,7 @@ pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
 pub mod text_data;
+pub mod texture_data;
 pub mod ui_data;
 pub mod wind;
 

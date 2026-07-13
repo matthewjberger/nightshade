@@ -10,7 +10,9 @@ mod uniforms;
 
 use std::collections::{HashMap, HashSet};
 
-use super::types::{MeshBoundsData, MeshData, MeshLodInfo, MeshRenderStateInner};
+use crate::mesh_state::MeshRenderStateInner;
+
+use super::types::{MeshBoundsData, MeshData, MeshLodInfo};
 use super::world_state::{WorldGpuBuffers, WorldRenderState};
 
 pub struct MeshPass {

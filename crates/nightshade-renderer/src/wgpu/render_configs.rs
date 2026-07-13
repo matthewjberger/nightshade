@@ -9,9 +9,9 @@ use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
 pub struct UiFrameInputs {
-    pub rects: Vec<crate::wgpu::passes::geometry::UiRect>,
+    pub rects: Vec<crate::ui_data::UiRect>,
     pub rect_entities: Vec<Option<Entity>>,
-    pub images: Vec<crate::wgpu::passes::geometry::UiImage>,
+    pub images: Vec<crate::ui_data::UiImage>,
     pub text_meshes: Vec<crate::ui_data::UiTextInstance>,
     pub render_slots: crate::ui_data::RenderSlotAllocator,
     pub background_color: Option<nalgebra_glm::Vec4>,
@@ -134,7 +134,7 @@ pub struct FrameInputs {
     pub has_skinned_meshes: bool,
     /// The frame's mesh dirty state, applied to the passes once before the
     /// first graph execution.
-    pub mesh_frame_state: Option<crate::wgpu::passes::geometry::MeshRenderStateInner>,
+    pub mesh_frame_state: Option<crate::mesh_state::MeshRenderStateInner>,
     /// World-space bounding spheres of entities that changed this frame,
     /// used for per-viewport dirtiness culling.
     pub dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)>,

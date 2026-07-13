@@ -4,11 +4,12 @@
 
 use crate::asset_id::TextureId;
 use crate::generational_registry::{registry_entry_by_name, registry_name_for};
+use crate::texture_data::{SamplerSettings, TextureUsage};
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::material_texture_arrays::{MaterialTextureLayer, MaterialTextureUpload};
 use crate::wgpu::texture_cache::{
-    SamplerSettings, TextureCache, TextureReloadResult, TextureUploadRequest, TextureUploadSpec,
-    TextureUsage, texture_cache_load_from_raw_rgba_with_format, texture_cache_reload,
+    TextureCache, TextureReloadResult, TextureUploadRequest, TextureUploadSpec,
+    texture_cache_load_from_raw_rgba_with_format, texture_cache_reload,
 };
 
 pub struct MaterialTextureUploadRequest<'a> {
@@ -206,8 +207,8 @@ pub fn reload_material_texture(
                 width,
                 height,
                 usage,
-                wrap_u: crate::wgpu::texture_cache::SamplerWrap::Repeat,
-                wrap_v: crate::wgpu::texture_cache::SamplerWrap::Repeat,
+                wrap_u: crate::texture_data::SamplerWrap::Repeat,
+                wrap_v: crate::texture_data::SamplerWrap::Repeat,
             },
         );
     }

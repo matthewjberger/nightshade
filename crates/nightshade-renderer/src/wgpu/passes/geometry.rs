@@ -33,7 +33,6 @@ pub use hiz::HizPass;
 
 mod mesh;
 pub use mesh::MeshPass;
-pub use mesh::types::{MeshRenderState, MeshRenderStateInner};
 
 mod scene_overlay;
 pub use scene_overlay::SceneOverlayPass;
@@ -55,12 +54,8 @@ pub use water::WaterPass;
 mod skinned_mesh;
 pub use skinned_mesh::{BlendedIblViews, SkinnedMeshPass};
 
-mod ui_rect;
-pub use crate::ui_data::UiLayer;
-pub use ui_rect::{UiRect, UiShadow};
-
 mod ui_image;
-pub use ui_image::{UiImage, UiImagePass};
+pub use ui_image::UiImagePass;
 
 mod ui_pass;
 pub use ui_pass::UiPass;

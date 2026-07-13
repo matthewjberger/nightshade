@@ -6,9 +6,9 @@
 
 use crate::config::render_settings_signature;
 use crate::mesh_cache::{MeshCache, mesh_cache_take_dirty, mesh_cache_take_dirty_skinned};
+use crate::mesh_state::MeshRenderStateInner;
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::passes;
-use crate::wgpu::passes::geometry::MeshRenderStateInner;
 use crate::wgpu::passes::geometry::lines::LinesPass;
 use crate::wgpu::render_configs::RenderInputs;
 use crate::wgpu::rendergraph::{RenderGraph, render_graph_set_pass_enabled};

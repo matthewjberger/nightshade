@@ -1,4 +1,4 @@
-use crate::wgpu::texture_cache::{SamplerWrap, TextureUsage};
+use crate::texture_data::{SamplerWrap, TextureUsage};
 use std::collections::HashMap;
 
 const DEFAULT_LAYER_SIZE: u32 = 1024;

@@ -768,8 +768,8 @@ pub fn set_material_with_textures(
 }
 
 pub fn load_procedural_textures(world: &mut World) {
-    let default_sampler = crate::render::wgpu::texture_cache::SamplerSettings::DEFAULT;
-    let color = crate::render::wgpu::texture_cache::TextureUsage::Color;
+    let default_sampler = crate::render::texture_data::SamplerSettings::DEFAULT;
+    let color = crate::render::texture_data::TextureUsage::Color;
 
     let checkerboard = generate_checkerboard_texture();
     crate::ecs::loading::queue_decoded_texture(

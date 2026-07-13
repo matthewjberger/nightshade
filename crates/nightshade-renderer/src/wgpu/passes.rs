@@ -109,7 +109,7 @@ pub use geometry::GrassPass;
 pub use geometry::TerrainPass;
 pub use geometry::{
     ClothPass, DecalPass, GridPass, LinesPass, MeshPass, ParticlePass, SceneOverlayPass,
-    SkinnedMeshPass, SkyPass, TextPass, UiImage, UiImagePass, UiPass, UiRect, WaterPass,
+    SkinnedMeshPass, SkyPass, TextPass, UiImagePass, UiPass, WaterPass,
 };
 
 pub mod shadow_depth;
