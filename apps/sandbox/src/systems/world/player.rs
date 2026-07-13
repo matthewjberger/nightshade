@@ -80,7 +80,7 @@ pub fn set_fly(sandbox_world: &mut SandboxWorld, world: &mut World, enabled: boo
     } else {
         world.resources.active_camera = gameplay_camera;
         if let Some(fly_camera) = sandbox_world.resources.player.fly_camera.take() {
-            world.despawn_entities(&[fly_camera]);
+            despawn_entities_with_cache_cleanup(world, &[fly_camera]);
         }
     }
 }

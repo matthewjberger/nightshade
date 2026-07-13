@@ -389,7 +389,7 @@ impl NavMeshDemo {
 
         if clear_clicked {
             for fox in self.foxes.drain(..) {
-                world.despawn_entities(&[fox.agent_entity, fox.name_entity]);
+                despawn_entities_with_cache_cleanup(world, &[fox.agent_entity, fox.name_entity]);
                 despawn_recursive_immediate(world, fox.entity);
             }
             self.used_names.clear();

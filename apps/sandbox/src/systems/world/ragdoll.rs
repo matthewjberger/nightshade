@@ -290,7 +290,7 @@ fn teardown(sandbox_world: &mut SandboxWorld, world: &mut World) {
         .map(|link| link.body)
         .collect();
     if !bodies.is_empty() {
-        world.despawn_entities(&bodies);
+        despawn_entities_with_cache_cleanup(world, &bodies);
     }
     let state = &mut sandbox_world.resources.ragdoll;
     state.links.clear();

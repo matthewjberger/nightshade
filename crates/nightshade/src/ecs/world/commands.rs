@@ -69,20 +69,12 @@ pub struct CommandQueues {
 
 /// Spawn `count` entities in the `core` archetype with the supplied component mask.
 pub fn spawn_entities(world: &mut World, core_mask: u64, count: usize) -> Vec<Entity> {
-    let entities = world.spawn_count(count);
-    for &entity in &entities {
-        world.ecs.worlds[CORE].add_components(entity, core_mask);
-    }
-    entities
+    world.ecs.spawn_entities(CORE, core_mask, count)
 }
 
 /// Spawn `count` entities in the retained-UI archetype with the supplied component mask.
 pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<Entity> {
-    let entities = world.spawn_count(count);
-    for &entity in &entities {
-        world.ecs.worlds[UI].add_components(entity, ui_mask);
-    }
-    entities
+    world.ecs.spawn_entities(UI, ui_mask, count)
 }
 
 /// Queue an [`EcsCommand`] to be drained by `process_commands_system` later in the frame schedule.
