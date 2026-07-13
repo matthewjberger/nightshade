@@ -24,7 +24,7 @@ tracing-web = "0.1"
 tracing-tracy = "0.11"
 tracing-chrome = "0.7"
 arboard = "3"
-freecs = { version = "3.15", features = ["dynamic", "snapshot"] }
+freecs = { version = "3.16", features = ["dynamic", "snapshot"] }
 webbrowser = "1"
 gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = [
@@ -93,9 +93,11 @@ console_error_panic_hook = "0.1"
 
 [profile.dev]
 opt-level = 1
+debug = "line-tables-only"
 
 [profile.dev.package."*"]
 opt-level = 3
+debug = false
 
 [profile.wasm-release]
 inherits = "release"

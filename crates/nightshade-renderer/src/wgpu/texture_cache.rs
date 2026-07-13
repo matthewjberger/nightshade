@@ -293,6 +293,30 @@ pub fn texture_cache_release_entity(cache: &mut TextureCache, entity: RenderEnti
     texture_cache_release(cache, &TextureOwner::EntityVariants(entity));
 }
 
+/// Releases every entity-scoped set whose entity fails `keep`, covering
+/// owners that died without their release running, such as a world restore
+/// replacing the entity population wholesale. Named keep-alives are never
+/// touched.
+pub fn texture_cache_release_dead_entities(
+    cache: &mut TextureCache,
+    keep: impl Fn(RenderEntity) -> bool,
+) {
+    let dead: Vec<TextureOwner> = cache
+        .owners
+        .keys()
+        .filter(|owner| match owner {
+            TextureOwner::EntityMaterial(entity) | TextureOwner::EntityVariants(entity) => {
+                !keep(*entity)
+            }
+            TextureOwner::Named(_) => false,
+        })
+        .cloned()
+        .collect();
+    for owner in dead {
+        texture_cache_release(cache, &owner);
+    }
+}
+
 /// Resolves a texture name to its stable id, if the name has been reserved
 /// or uploaded.
 pub fn texture_cache_texture_id(cache: &TextureCache, name: &str) -> Option<TextureId> {
