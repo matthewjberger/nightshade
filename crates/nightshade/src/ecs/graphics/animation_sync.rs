@@ -14,12 +14,42 @@ const PROPERTY_SCALE: u32 = 2;
 /// Resolves the scene's skinned-animation state into
 /// `renderer_state.render_animation` so the skinned-mesh compute driver builds
 /// its GPU buffers without reading ECS animation, skin, parent, or transform
-/// components. The heavy per-skeleton payload is rebuilt only when the static
-/// signature changes; the runtime maps refresh every frame.
+/// components. The static signature is computed only on frames where a cheap
+/// change gate fires (an `AnimationPlayer` or `Skin` change tick, a
+/// skinned-set generation bump, or a played-clip change, which catches
+/// raw-write clip finishes the ticks cannot see), and the heavy per-skeleton
+/// payload rebuilds only when that signature actually moved. The runtime maps
+/// refresh every frame into reused allocations.
 pub fn render_sync_animation_system(world: &mut World) {
-    let mut joint_to_player: HashMap<Entity, Entity> = HashMap::new();
-    let mut player_runtime: HashMap<Entity, [f32; 3]> = HashMap::new();
-    let mut player_clips: HashMap<Entity, (i64, i64)> = HashMap::new();
+    let since = world.resources.render_scene_sync.animation_cursor;
+    let players_ticked = world
+        .core
+        .query_entities_changed_since(ANIMATION_PLAYER, since)
+        .next()
+        .is_some();
+    let skins_ticked = world
+        .core
+        .query_entities_changed_since(SKIN, since)
+        .next()
+        .is_some();
+    world.resources.render_scene_sync.animation_cursor =
+        world.resources.render_scene_sync.data_cursor;
+
+    let mut player_runtime = std::mem::take(
+        &mut world
+            .resources
+            .renderer_state
+            .render_animation
+            .player_runtime,
+    );
+    player_runtime.clear();
+    let mut player_clips = std::mem::take(
+        &mut world
+            .resources
+            .render_scene_sync
+            .animation_player_clips_scratch,
+    );
+    player_clips.clear();
 
     world
         .core
@@ -27,12 +57,9 @@ pub fn render_sync_animation_system(world: &mut World) {
         .with(ANIMATION_PLAYER)
         .iter(|player_entity, table, idx| {
             let player = &table.animation_player[idx];
-            if !player.playing || player.play_all {
+            if !player.playing || player.play_all || player.get_current_clip().is_none() {
                 return;
             }
-            let Some(current) = player.get_current_clip() else {
-                return;
-            };
             player_runtime.insert(
                 player_entity,
                 [player.time, player.blend_from_time, player.blend_factor],
@@ -47,34 +74,66 @@ pub fn render_sync_animation_system(world: &mut World) {
                         .unwrap_or(-1),
                 ),
             );
-            for channel in &current.channels {
-                if gpu_property(channel.target_property).is_some()
-                    && let Some(target) = player.resolve_target_entity(channel)
-                {
-                    joint_to_player.entry(target).or_insert(player_entity);
-                }
-            }
         });
 
-    let mut skin_entities: Vec<Entity> = world.core.query_entities(SKIN).collect();
-    skin_entities.sort_by_key(|entity| (entity.id, entity.generation));
+    let skinned_generation = world.resources.renderer_state.skinned_objects_generation;
+    let gate_fired = {
+        let sync = &mut world.resources.render_scene_sync;
+        let gate_fired = !sync.animation_initialized
+            || players_ticked
+            || skins_ticked
+            || sync.animation_skinned_generation_seen != skinned_generation
+            || player_clips != sync.animation_player_clips;
+        sync.animation_initialized = true;
+        sync.animation_skinned_generation_seen = skinned_generation;
+        gate_fired
+    };
 
-    let signature = static_signature(world, &skin_entities, &joint_to_player, &player_clips);
-    let previous_signature = world.resources.renderer_state.render_animation.signature;
-
-    let skeletons = if signature != previous_signature {
-        build_skeletons(world, &skin_entities, &joint_to_player)
+    let skeletons = if gate_fired {
+        let joint_to_player = collect_joint_to_player(world);
+        let mut skin_entities: Vec<Entity> = world.core.query_entities(SKIN).collect();
+        skin_entities.sort_by_key(|entity| (entity.id, entity.generation));
+        let signature = static_signature(world, &skin_entities, &joint_to_player, &player_clips);
+        let snapshot = &mut world.resources.renderer_state.render_animation;
+        if signature != snapshot.signature {
+            snapshot.signature = signature;
+            build_skeletons(world, &skin_entities, &joint_to_player)
+        } else {
+            std::mem::take(&mut world.resources.renderer_state.render_animation.skeletons)
+        }
     } else {
         std::mem::take(&mut world.resources.renderer_state.render_animation.skeletons)
     };
 
-    let mut layer_runtime: HashMap<(Entity, usize), [f32; 2]> = HashMap::new();
-    let mut armature_roots: HashMap<Entity, nalgebra_glm::Mat4> = HashMap::new();
+    {
+        let sync = &mut world.resources.render_scene_sync;
+        sync.animation_player_clips_scratch =
+            std::mem::replace(&mut sync.animation_player_clips, player_clips);
+    }
+
+    let mut layer_runtime = std::mem::take(
+        &mut world
+            .resources
+            .renderer_state
+            .render_animation
+            .layer_runtime,
+    );
+    layer_runtime.clear();
+    let mut armature_roots = std::mem::take(
+        &mut world
+            .resources
+            .renderer_state
+            .render_animation
+            .armature_roots,
+    );
+    armature_roots.clear();
     for skeleton in &skeletons {
-        armature_roots.insert(
-            skeleton.skin_entity,
-            skin_armature_root(world, skeleton.skin_entity),
-        );
+        let root = skeleton
+            .armature_parent
+            .and_then(|parent| world.core.get_global_transform(parent))
+            .map(|global| global.0)
+            .unwrap_or_else(nalgebra_glm::Mat4::identity);
+        armature_roots.insert(skeleton.skin_entity, root);
         if let Some(player) = world.core.get_animation_player(skeleton.player_entity) {
             for layer_index in 0..skeleton.layer_count as usize {
                 if let Some(layer) = player.layers.get(layer_index) {
@@ -88,11 +147,35 @@ pub fn render_sync_animation_system(world: &mut World) {
     }
 
     let snapshot = &mut world.resources.renderer_state.render_animation;
-    snapshot.signature = signature;
     snapshot.skeletons = skeletons;
     snapshot.player_runtime = player_runtime;
     snapshot.layer_runtime = layer_runtime;
     snapshot.armature_roots = armature_roots;
+}
+
+fn collect_joint_to_player(world: &World) -> HashMap<Entity, Entity> {
+    let mut joint_to_player: HashMap<Entity, Entity> = HashMap::new();
+    world
+        .core
+        .query()
+        .with(ANIMATION_PLAYER)
+        .iter(|player_entity, table, idx| {
+            let player = &table.animation_player[idx];
+            if !player.playing || player.play_all {
+                return;
+            }
+            let Some(current) = player.get_current_clip() else {
+                return;
+            };
+            for channel in &current.channels {
+                if gpu_property(channel.target_property).is_some()
+                    && let Some(target) = player.resolve_target_entity(channel)
+                {
+                    joint_to_player.entry(target).or_insert(player_entity);
+                }
+            }
+        });
+    joint_to_player
 }
 
 fn build_skeletons(
@@ -210,6 +293,7 @@ fn build_skeletons(
         skeletons.push(SkinnedSkeletonData {
             skin_entity,
             player_entity,
+            armature_parent: skin_armature_parent(world, skin_entity),
             joint_count: skin.joints.len() as u32,
             layer_count,
             joints_ordered,
@@ -341,31 +425,6 @@ fn joint_depth(
     depth
 }
 
-fn skin_armature_root(world: &World, skin_entity: Entity) -> nalgebra_glm::Mat4 {
-    let Some(skin) = world.core.get_skin(skin_entity) else {
-        return nalgebra_glm::Mat4::identity();
-    };
-    let local_index_of: HashMap<Entity, usize> = skin
-        .joints
-        .iter()
-        .enumerate()
-        .map(|(local, joint)| (*joint, local))
-        .collect();
-    skin.joints
-        .iter()
-        .find_map(|joint| {
-            let parent = world.core.get_parent(*joint).and_then(|parent| parent.0)?;
-            if local_index_of.contains_key(&parent) {
-                return None;
-            }
-            world
-                .core
-                .get_global_transform(parent)
-                .map(|global| global.0)
-        })
-        .unwrap_or_else(nalgebra_glm::Mat4::identity)
-}
-
 fn static_signature(
     world: &World,
     skin_entities: &[Entity],
@@ -403,4 +462,24 @@ fn static_signature(
         }
     }
     hasher.finish()
+}
+
+fn skin_armature_parent(world: &World, skin_entity: Entity) -> Option<Entity> {
+    let skin = world.core.get_skin(skin_entity)?;
+    let local_index_of: HashMap<Entity, usize> = skin
+        .joints
+        .iter()
+        .enumerate()
+        .map(|(local, joint)| (*joint, local))
+        .collect();
+    skin.joints.iter().find_map(|joint| {
+        let parent = world.core.get_parent(*joint).and_then(|parent| parent.0)?;
+        if local_index_of.contains_key(&parent) {
+            return None;
+        }
+        world
+            .core
+            .get_global_transform(parent)
+            .map(|_global| parent)
+    })
 }

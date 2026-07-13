@@ -1267,6 +1267,10 @@ pub struct SkinnedJointData {
 pub struct SkinnedSkeletonData {
     pub skin_entity: freecs::Entity,
     pub player_entity: freecs::Entity,
+    /// The entity above the skeleton's root joints, captured at build time so
+    /// the per-frame armature-root refresh is one transform read instead of a
+    /// joint-parent walk.
+    pub armature_parent: Option<freecs::Entity>,
     pub joint_count: u32,
     pub layer_count: u32,
     pub joints_ordered: Vec<SkinnedJointData>,
@@ -1291,7 +1295,8 @@ pub struct RenderSkinning {
 /// Animation state resolved once per frame by the engine so the skinned-mesh
 /// compute driver builds its GPU buffers without reading ECS animation, skin,
 /// parent, or transform components. The heavy `skeletons` payload is rebuilt
-/// only when `signature` changes; the runtime maps refresh every frame.
+/// only when the engine's animation gate sees a change, bumping `signature`;
+/// the runtime maps refresh every frame.
 #[derive(Clone, Default)]
 pub struct SkinnedAnimationSnapshot {
     pub signature: u64,

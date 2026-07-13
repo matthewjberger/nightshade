@@ -7,7 +7,7 @@
 //! log (the log overflowed) falls back to one full resync.
 
 use crate::ecs::world::World;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Cursors and gates for the persistent scene sync.
 #[derive(Default)]
@@ -19,6 +19,11 @@ pub struct RenderSceneSync {
     pub materials_initialized: bool,
     pub materials_version_seen: u64,
     pub materials_names_version_seen: u64,
+    pub animation_initialized: bool,
+    pub animation_cursor: u32,
+    pub animation_skinned_generation_seen: u64,
+    pub animation_player_clips: HashMap<crate::ecs::world::Entity, (i64, i64)>,
+    pub animation_player_clips_scratch: HashMap<crate::ecs::world::Entity, (i64, i64)>,
 }
 
 #[derive(Default)]
