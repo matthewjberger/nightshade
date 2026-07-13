@@ -2,8 +2,9 @@
 //!
 //! An [`App`] assembles a program from [`Plugin`]s: the engine's
 //! capabilities ship as plugins, and the game itself is one more plugin
-//! added in the builder. An empty app runs its startup schedule once and
-//! exits; [`WindowPlugin`] adds the event loop and a window;
+//! added in the builder. An empty app runs its startup schedule and one
+//! pass of the stages, then exits; [`WindowPlugin`] adds the event loop
+//! and a window;
 //! [`RenderPlugin`] adds the renderer; omitting [`WindowPlugin`] while
 //! keeping [`RenderPlugin`] renders against a hidden window. Behavior
 //! plugins toggle the engine capabilities their systems need, and
@@ -73,11 +74,14 @@ type UpdateRenderGraphFn = Box<
 /// The plugin-composed application: the world, a startup schedule that
 /// runs once, and named per-frame stages that plugins push systems into.
 ///
-/// Stage order is declared here once: `"first"`, `"update"`, `"frame"`,
-/// `"last"`. Game logic belongs in `"update"`; the engine's frame
-/// schedule (physics, animation, transforms, retained UI) runs as the
-/// `"frame"` stage; `"first"` and `"last"` bracket the frame for
-/// bookkeeping systems.
+/// Stage order is declared here once: `"first"`, `"update"`, and
+/// `"late_update"`, all running in that order each frame BEFORE the
+/// engine's frame schedule (physics, animation, transforms, retained
+/// UI) and rendering, exactly where game logic ran historically. Game
+/// logic belongs in `"update"`; `"late_update"` is for systems that
+/// must observe every update system's writes; work that must follow
+/// the engine systems hooks into the frame schedule itself with
+/// `schedule_insert_before`/`schedule_insert_after`.
 pub struct App {
     pub world: World,
     pub startup: freecs::Schedule<World>,
@@ -101,8 +105,7 @@ impl App {
         stages
             .add_stage("first")
             .add_stage("update")
-            .add_stage("frame")
-            .add_stage("last");
+            .add_stage("late_update");
         Self {
             world: World::default(),
             startup: freecs::Schedule::new(),
@@ -206,8 +209,9 @@ impl App {
     }
 
     /// Runs the app. With neither [`WindowPlugin`] nor [`RenderPlugin`],
-    /// the startup schedule runs once against the world and the program
-    /// returns: the do-nothing composition. With either, the winit event
+    /// the startup schedule and one pass of the stages run against the
+    /// world and the program returns: the do-nothing composition. With
+    /// either, the winit event
     /// loop drives the startup schedule once and then the stages every
     /// frame; without [`WindowPlugin`] the window stays hidden, and
     /// without [`RenderPlugin`] no renderer is created.
