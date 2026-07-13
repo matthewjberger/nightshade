@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, RANGE_INDICATOR, RangeIndicator, TowerDefenseResources};
+use crate::ecs::{RANGE_INDICATOR, RangeIndicator, TowerDefenseResources};
 use crate::systems::can_place_tower_at;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;

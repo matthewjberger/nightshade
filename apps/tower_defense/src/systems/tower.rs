@@ -1,6 +1,6 @@
 use crate::ecs::{
-    GAME, GRID_CELL, GridCell, Position, Projectile, RangeIndicator, TOWER, Tower,
-    TowerDefenseResources, TowerType,
+    GRID_CELL, GridCell, Position, Projectile, RangeIndicator, TOWER, Tower, TowerDefenseResources,
+    TowerType,
 };
 use crate::systems::{create_muzzle_flash, spawn_money_popup};
 use nightshade::ecs::material::resources::material_registry_insert;

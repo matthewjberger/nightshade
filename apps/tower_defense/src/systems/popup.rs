@@ -50,33 +50,36 @@ pub fn spawn_money_popup(world: &mut World, position: Vec3, amount: i32) {
 }
 
 pub fn update_money_popups(world: &mut World, delta_time: f32) {
-    let snapshots: Vec<(Entity, MoneyPopup)> = world
-        .query_ref::<&MoneyPopup>()
-        .iter()
-        .map(|(entity, popup)| (entity, *popup))
-        .collect();
-    let mut popups_to_remove = Vec::new();
+    let mut popups_to_remove: Vec<Entity> = Vec::new();
+    let mut fades: Vec<(Entity, f32, f32)> = Vec::new();
 
-    for (text_entity, mut popup) in snapshots {
-        popup.lifetime += delta_time;
+    world
+        .ecs
+        .query_join::<(
+            &mut MoneyPopup,
+            &nightshade::ecs::transform::components::LocalTransform,
+        )>()
+        .for_each(|text_entity, (popup, transform)| {
+            popup.lifetime += delta_time;
+            if popup.lifetime > 1.5 {
+                popups_to_remove.push(text_entity);
+                return;
+            }
+            let risen = transform.translation.y + delta_time * 0.5;
+            let alpha = (1.0 - (popup.lifetime / 1.5)).max(0.0);
+            fades.push((text_entity, risen, alpha));
+        });
 
-        if popup.lifetime > 1.5 {
-            popups_to_remove.push(text_entity);
-            continue;
-        }
-
-        world.set(text_entity, popup);
-
+    for (text_entity, risen, alpha) in fades {
         if let Some(transform) =
             world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(text_entity)
         {
-            transform.translation.y += delta_time * 0.5;
+            transform.translation.y = risen;
         }
 
         if let Some(text_component) =
             world.get_mut::<nightshade::ecs::text::components::Text>(text_entity)
         {
-            let alpha = (1.0 - (popup.lifetime / 1.5)).max(0.0);
             text_component.properties.color.w = alpha;
             text_component.dirty = true;
         }

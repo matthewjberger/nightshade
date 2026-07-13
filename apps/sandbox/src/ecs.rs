@@ -6,9 +6,6 @@ pub use resources::*;
 
 use nightshade::prelude::freecs;
 
-/// Index of the sandbox app's member world in `world.ecs.worlds`.
-pub const GAME: usize = 2;
-
 freecs::dynamic_schema! {
     pub fn register_sandbox_components {
         enemy: Enemy => ENEMY,

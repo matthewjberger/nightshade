@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, SandboxResources, Screen, register_sandbox_components};
+use crate::ecs::{SandboxResources, Screen, register_sandbox_components};
 use crate::systems::screens::{hud, pause, title};
 use crate::systems::world::{
     character, enemies, grass, infinite, level, player, rocks, terrain, textures,

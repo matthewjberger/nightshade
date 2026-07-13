@@ -1,4 +1,4 @@
-use crate::ecs::{ENEMY, GAME, SandboxResources, Screen, TitleHandles};
+use crate::ecs::{ENEMY, SandboxResources, Screen, TitleHandles};
 use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
 use crate::systems::world::enemies;

@@ -1,4 +1,4 @@
-use crate::ecs::{GAME, GRID_CELL, GridCell, TowerDefenseResources};
+use crate::ecs::{GRID_CELL, GridCell, TowerDefenseResources};
 use nightshade::prelude::*;
 
 pub fn get_grid_position_from_mouse(world: &World) -> Option<(i32, i32)> {

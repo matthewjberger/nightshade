@@ -1,4 +1,4 @@
-use crate::ecs::{EffectType, GAME, TowerDefenseResources, VISUAL_EFFECT, VisualEffect};
+use crate::ecs::{EffectType, TowerDefenseResources, VISUAL_EFFECT, VisualEffect};
 use crate::systems::despawn_entity;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;

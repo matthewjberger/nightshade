@@ -1,4 +1,4 @@
-use crate::ecs::{ENEMY, Enemy, GAME};
+use crate::ecs::{ENEMY, Enemy};
 use nightshade::ecs::world::commands::{spawn_entities, spawn_material};
 use nightshade::prelude::*;
 use nightshade::render::material::Material;
@@ -51,81 +51,74 @@ pub fn spawn(world: &mut World) {
 pub fn update(world: &mut World) {
     let delta = world.resources.window.timing.delta_time;
 
-    let snapshots: Vec<(Entity, Enemy, Vec3)> = world
-        .query_ref::<&Enemy>()
-        .iter()
-        .filter_map(|(sheep, enemy)| {
-            let position = world
-                .get::<nightshade::ecs::transform::components::LocalTransform>(sheep)?
-                .translation;
-            Some((sheep, *enemy, position))
-        })
-        .collect();
+    let mut body_writes: Vec<(Entity, Vec3, Option<f32>)> = Vec::new();
+    let mut leg_writes: Vec<(Entity, f32, f32, f32)> = Vec::new();
 
-    let mut translations: Vec<(Entity, Vec3)> = Vec::with_capacity(snapshots.len());
-    let mut state_updates: Vec<(Entity, Enemy)> = Vec::with_capacity(snapshots.len());
+    world
+        .ecs
+        .query_join::<(
+            &mut Enemy,
+            &nightshade::ecs::transform::components::LocalTransform,
+        )>()
+        .for_each(|sheep, (enemy, transform)| {
+            let position = transform.translation;
+            let to_target = enemy.target - position;
+            let distance = to_target.norm();
+            let step = (enemy.speed * delta).min(distance.max(0.0));
 
-    for (sheep, enemy, position) in snapshots {
-        let to_target = enemy.target - position;
-        let distance = to_target.norm();
-        let step = (enemy.speed * delta).min(distance.max(0.0));
-
-        let new_position = if distance > f32::EPSILON {
-            position + (to_target / distance) * step
-        } else {
-            position
-        };
-
-        let mut new_state = enemy;
-        if distance <= TARGET_REACHED {
-            let next_index = (enemy.patrol_index as usize + 1) % PATROL_POINTS.len();
-            new_state.patrol_index = next_index as u32;
-            new_state.target = patrol_target(next_index);
-        }
-        new_state.gait_phase = enemy.gait_phase + delta * enemy.speed * GAIT_FREQUENCY;
-
-        if distance > f32::EPSILON {
-            let yaw = to_target.x.atan2(to_target.z);
-            if let Some(transform) =
-                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
-            {
-                transform.rotation = nalgebra_glm::quat_angle_axis(yaw, &Vec3::y());
-            }
-        }
-
-        for (leg_index, leg) in enemy.legs.iter().enumerate() {
-            let leg_phase = if leg_index == 0 || leg_index == 3 {
-                0.0
+            let new_position = if distance > f32::EPSILON {
+                position + (to_target / distance) * step
             } else {
-                std::f32::consts::PI
+                position
             };
-            let swing = (new_state.gait_phase + leg_phase).sin() * LEG_SWING;
-            let (offset_x, offset_z) = LEG_OFFSETS[leg_index];
-            if let Some(transform) =
-                world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(*leg)
-            {
-                transform.rotation = nalgebra_glm::quat_angle_axis(swing, &Vec3::x());
-                transform.translation = Vec3::new(
-                    offset_x,
-                    LEG_HIP_HEIGHT - LEG_HALF_LENGTH * swing.cos(),
-                    offset_z - LEG_HALF_LENGTH * swing.sin(),
-                );
+
+            if distance <= TARGET_REACHED {
+                let next_index = (enemy.patrol_index as usize + 1) % PATROL_POINTS.len();
+                enemy.patrol_index = next_index as u32;
+                enemy.target = patrol_target(next_index);
             }
-        }
+            enemy.gait_phase += delta * enemy.speed * GAIT_FREQUENCY;
 
-        translations.push((sheep, new_position));
-        state_updates.push((sheep, new_state));
-    }
+            let yaw = if distance > f32::EPSILON {
+                Some(to_target.x.atan2(to_target.z))
+            } else {
+                None
+            };
+            body_writes.push((sheep, new_position, yaw));
 
-    for (sheep, new_position) in translations {
+            for (leg_index, leg) in enemy.legs.iter().enumerate() {
+                let leg_phase = if leg_index == 0 || leg_index == 3 {
+                    0.0
+                } else {
+                    std::f32::consts::PI
+                };
+                let swing = (enemy.gait_phase + leg_phase).sin() * LEG_SWING;
+                let (offset_x, offset_z) = LEG_OFFSETS[leg_index];
+                leg_writes.push((*leg, swing, offset_x, offset_z));
+            }
+        });
+
+    for (sheep, new_position, yaw) in body_writes {
         if let Some(transform) =
             world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(sheep)
         {
             transform.translation = new_position;
+            if let Some(yaw) = yaw {
+                transform.rotation = nalgebra_glm::quat_angle_axis(yaw, &Vec3::y());
+            }
         }
     }
-    for (sheep, new_state) in state_updates {
-        world.set(sheep, new_state);
+    for (leg, swing, offset_x, offset_z) in leg_writes {
+        if let Some(transform) =
+            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(leg)
+        {
+            transform.rotation = nalgebra_glm::quat_angle_axis(swing, &Vec3::x());
+            transform.translation = Vec3::new(
+                offset_x,
+                LEG_HIP_HEIGHT - LEG_HALF_LENGTH * swing.cos(),
+                offset_z - LEG_HALF_LENGTH * swing.sin(),
+            );
+        }
     }
 }
 

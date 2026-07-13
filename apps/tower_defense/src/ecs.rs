@@ -1,9 +1,6 @@
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
-/// Index of the tower defense app's member world in `world.ecs.worlds`.
-pub const GAME: usize = 2;
-
 freecs::dynamic_schema! {
     pub fn register_tower_defense_components {
         position: Position => POSITION,

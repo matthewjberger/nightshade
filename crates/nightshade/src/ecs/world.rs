@@ -318,6 +318,11 @@ freecs::dynamic_worlds! {
     }
 }
 
+/// Index of an app's game member world in `world.ecs.worlds`, the first
+/// slot after the engine's members. Apps register their schema there once
+/// at initialize: `world.ecs.add_world_at(GAME, register_game_components())`.
+pub const GAME: usize = 2;
+
 /// The engine's ECS: a [`freecs::dynamic::DynEcs`] group with the core and
 /// retained-UI member worlds over one shared entity allocator, plus the
 /// engine's resources. The group keeps the lifecycle log (handle allocation
