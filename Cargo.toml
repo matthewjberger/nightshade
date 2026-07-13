@@ -93,11 +93,11 @@ console_error_panic_hook = "0.1"
 
 [profile.dev]
 opt-level = 1
-debug = "line-tables-only"
+debug = false
+# debug = "line-tables-only" # use for a speedier build that still has source code lines in stack traces
 
 [profile.dev.package."*"]
 opt-level = 3
-debug = false
 
 [profile.wasm-release]
 inherits = "release"
