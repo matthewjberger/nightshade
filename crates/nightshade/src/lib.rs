@@ -568,16 +568,12 @@ pub use systems::*;
 /// queue free functions ([`queue_ecs_command`], [`queue_render_command`]),
 /// spawn helpers ([`spawn_cube_at`], [`spawn_sphere_at`], [`spawn_sun`],
 /// [`spawn_camera`], etc.), input types, transform helpers, material and
-/// mesh registry helpers, retained UI builders, and the engine-entity sync
-/// utilities for the dual-world pattern.
+/// mesh registry helpers, and retained UI builders.
 ///
 /// Items not in the prelude live in their submodules and can be imported
 /// individually when needed.
 #[cfg(feature = "runtime")]
 pub mod prelude {
-    pub use crate::ecs::sync::{
-        EngineEntity, despawn_linked, sync_engine_transform, sync_engine_translation,
-    };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,

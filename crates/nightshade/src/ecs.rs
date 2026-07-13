@@ -55,7 +55,6 @@ pub mod primitives;
 pub mod scene;
 pub mod script;
 pub mod skin;
-pub mod sync;
 #[cfg(feature = "terrain")]
 pub mod terrain;
 pub mod text;
