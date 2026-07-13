@@ -109,8 +109,8 @@ fn ancestry(world: &World, body: Entity, entity: Entity) -> Vec<Entity> {
     let mut chain = vec![entity];
     let mut current = entity;
     while let Some(parent) = world.ecs.worlds[CORE]
-        .get::<nightshade::ecs::transform::components::Parent>(current)
-        .and_then(|parent| parent.0)
+        .get::<freecs::dynamic::ChildOf>(current)
+        .map(|child_of| child_of.0)
     {
         chain.push(parent);
         if parent == body {

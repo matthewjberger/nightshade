@@ -484,7 +484,7 @@ fn spawn_child_sphere(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Sphere"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 fn spawn_child_sphere_emissive(
@@ -542,7 +542,7 @@ fn spawn_child_sphere_emissive(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Sphere"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 fn spawn_child_cube(
@@ -598,7 +598,7 @@ fn spawn_child_cube(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cube"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 fn spawn_child_cylinder(
@@ -667,7 +667,7 @@ fn spawn_child_cylinder(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cylinder"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 fn spawn_child_cone_rotated(
@@ -725,7 +725,7 @@ fn spawn_child_cone_rotated(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cone"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 fn spawn_child_cone_emissive(
@@ -783,7 +783,7 @@ fn spawn_child_cone_emissive(
     }
     world.ecs.worlds[CORE].set(child, MaterialRef::new(material_name));
     world.ecs.worlds[CORE].set(child, BoundingVolume::from_mesh_type("Cone"));
-    world.ecs.worlds[CORE].set(child, Parent(Some(parent)));
+    world.ecs.worlds[CORE].set(child, ChildOf(parent));
 }
 
 pub fn enemy_movement_system(game_world: &mut GameWorld, world: &mut World) {

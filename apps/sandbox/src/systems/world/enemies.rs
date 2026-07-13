@@ -248,7 +248,7 @@ fn spawn_sheep_part(
         transform.translation = translation;
         transform.scale = scale;
     }
-    world.ecs.worlds[CORE].set(entity, Parent(Some(root)));
+    world.ecs.worlds[CORE].set(entity, ChildOf(root));
     if let Some(mesh) =
         world.ecs.worlds[CORE].get_mut::<nightshade::ecs::mesh::components::RenderMesh>(entity)
     {

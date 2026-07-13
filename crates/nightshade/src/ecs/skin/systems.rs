@@ -41,7 +41,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let mut bone_index = 0u32;
     let joint_entities = &mut cache.joint_entities;
     let skinned_entity_ids = &mut cache.skinned_entity_ids;
-    for (entity, (skin,)) in world.ecs.worlds[CORE]
+    for (entity, skin) in world.ecs.worlds[CORE]
         .query_ref::<&Skin>()
         .with::<RenderMesh>()
         .iter()
@@ -70,7 +70,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
     let skin_data = &mut cache.skin_data;
     let inverse_bind_matrices = &mut cache.inverse_bind_matrices;
     let entity_skin_indices = &mut cache.entity_skin_indices;
-    for (entity, (skin,)) in world.ecs.worlds[CORE]
+    for (entity, skin) in world.ecs.worlds[CORE]
         .query_ref::<&Skin>()
         .with::<RenderMesh>()
         .iter()

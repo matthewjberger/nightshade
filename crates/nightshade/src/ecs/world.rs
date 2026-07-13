@@ -54,7 +54,7 @@ pub mod components {
         Text, TextCharacterBackgroundColors, TextCharacterColors, TextProperties,
     };
     pub use crate::ecs::transform::components::{
-        GlobalTransform, LocalTransform, Parent, Rotation,
+        ChildOf, GlobalTransform, LocalTransform, Rotation,
     };
     pub use crate::ecs::ui::components::{
         StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
@@ -164,7 +164,7 @@ freecs::dynamic_schema! {
             name: crate::ecs::primitives::Name => NAME,
             navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
             pan_orbit_camera: crate::ecs::camera::components::PanOrbitCamera => PAN_ORBIT_CAMERA,
-            parent: crate::ecs::transform::components::Parent => PARENT,
+            child_of: freecs::dynamic::ChildOf => PARENT,
             particle_emitter: crate::render::particles::ParticleEmitter => PARTICLE_EMITTER,
             physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
@@ -301,6 +301,7 @@ pub struct Resources {
     pub text: crate::ecs::text::resources::TextState,
     pub texture_cache: crate::render::wgpu::texture_cache::TextureCache,
     pub transform_state: crate::ecs::transform::resources::TransformState,
+    pub hierarchy: freecs::dynamic::HierarchyIndex,
     pub render_scene_sync: crate::ecs::graphics::scene_sync::RenderSceneSync,
     pub tweens: crate::ecs::tween::Tweens,
     pub ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,

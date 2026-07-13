@@ -2,7 +2,7 @@ pub use crate::ecs::transform::queries::*;
 
 use crate::ecs::world::{
     GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, PARENT, RENDER_MESH, World,
-    components::{GlobalTransform, Parent},
+    components::{ChildOf, GlobalTransform},
 };
 
 use crate::prelude::*;
@@ -11,58 +11,28 @@ pub fn run_systems(world: &mut World) {
     update_global_transforms_system(world);
 }
 
-pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Parent>) {
-    let old_parent_entity = world.ecs.worlds[CORE]
-        .get::<crate::ecs::transform::components::Parent>(child)
-        .and_then(|p| p.0);
-
-    if let Some(old_parent_entity) = old_parent_entity
-        && let Some(children) = world
-            .resources
-            .transform_state
-            .children_cache
-            .get_mut(&old_parent_entity)
-    {
-        children.retain(|&e| e != child);
-    }
-
-    if let Some(new_parent) = new_parent {
-        world.ecs.worlds[CORE].set(child, new_parent);
-        if let Some(parent_entity) = new_parent.0 {
-            world
-                .resources
-                .transform_state
-                .children_cache
-                .entry(parent_entity)
-                .or_default()
-                .push(child);
-        }
-    } else {
-        world.ecs.worlds[CORE].remove_components(child, PARENT);
-    }
-
-    world.resources.transform_state.children_cache_valid = false;
+/// Pull-syncs the maintained hierarchy index from the core world's
+/// structural log and change ticks. Runs at the top of the transform pass
+/// every frame; call it directly before reading
+/// `world.resources.hierarchy` when links may have changed this frame.
+/// Must run before the render sync trims the structural log, so never gate
+/// the transform-pass sync behind a condition.
+pub fn sync_hierarchy_index(world: &mut World) {
+    let World { ecs, resources } = world;
+    resources.hierarchy.sync(&mut ecs.worlds[CORE]);
 }
 
-pub fn validate_and_rebuild_children_cache(world: &mut World) {
-    world.resources.transform_state.children_cache.clear();
-
-    let children_cache = &mut world.resources.transform_state.children_cache;
-    for (child, (parent,)) in world.ecs.worlds[CORE].query_ref::<&Parent>().iter() {
-        if let Some(parent_entity) = parent.0 {
-            children_cache.entry(parent_entity).or_default().push(child);
+pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Entity>) {
+    match new_parent {
+        Some(parent) => world.ecs.worlds[CORE].set(child, ChildOf(parent)),
+        None => {
+            world.ecs.worlds[CORE].remove_components(child, PARENT);
         }
     }
-
-    for children in world.resources.transform_state.children_cache.values_mut() {
-        children.sort_by_key(|entity| entity.id);
-    }
-
-    world.resources.transform_state.children_cache_valid = true;
 }
 
 /// Recomputes [`GlobalTransform`] for every entity whose [`LocalTransform`] or
-/// [`Parent`] changed since the previous run, plus all of their descendants.
+/// [`ChildOf`] changed since the previous run, plus all of their descendants.
 /// Change detection rides on the ECS change ticks, so any write through the
 /// component accessors is picked up automatically. The system keeps its own
 /// change cursor and fences the world tick after consuming, so writes made
@@ -71,12 +41,13 @@ pub fn validate_and_rebuild_children_cache(world: &mut World) {
 /// multiplying the parent's already-updated global by the child's local, one
 /// matrix product per entity.
 pub fn update_global_transforms_system(world: &mut World) {
+    sync_hierarchy_index(world);
+
     let initial_pass = !world.resources.transform_state.initial_pass_done;
 
     let mut dirty_entities = std::mem::take(&mut world.resources.transform_state.dirty_scratch);
     dirty_entities.clear();
 
-    let mut hierarchy_changed = false;
     if initial_pass {
         dirty_entities
             .extend(world.ecs.worlds[CORE].query_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM));
@@ -86,17 +57,11 @@ pub fn update_global_transforms_system(world: &mut World) {
         dirty_entities.extend(
             world.ecs.worlds[CORE].query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
         );
-        let local_changed_count = dirty_entities.len();
         dirty_entities
             .extend(world.ecs.worlds[CORE].query_entities_changed_since(PARENT, since_tick));
-        hierarchy_changed = dirty_entities.len() > local_changed_count;
     }
     world.resources.transform_state.last_consumed_tick = world.ecs.worlds[CORE].current_tick();
     world.ecs.worlds[CORE].increment_tick();
-
-    if hierarchy_changed || !world.resources.transform_state.children_cache_valid {
-        validate_and_rebuild_children_cache(world);
-    }
 
     if dirty_entities.is_empty() {
         world.resources.transform_state.dirty_scratch = dirty_entities;
@@ -110,16 +75,14 @@ pub fn update_global_transforms_system(world: &mut World) {
     seen.clear();
     seen.extend(dirty_entities.iter().copied());
     {
-        let children_cache = &world.resources.transform_state.children_cache;
+        let hierarchy = &world.resources.hierarchy;
         let mut index = 0;
         while index < dirty_entities.len() {
             let entity = dirty_entities[index];
             index += 1;
-            if let Some(children) = children_cache.get(&entity) {
-                for child in children {
-                    if seen.insert(*child) {
-                        dirty_entities.push(*child);
-                    }
+            for child in hierarchy.children(entity) {
+                if seen.insert(*child) {
+                    dirty_entities.push(*child);
                 }
             }
         }
@@ -135,8 +98,8 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     for entity in dirty_entities.iter().copied() {
         let parent_is_dirty = world.ecs.worlds[CORE]
-            .get::<crate::ecs::transform::components::Parent>(entity)
-            .and_then(|parent| parent.0)
+            .get::<freecs::dynamic::ChildOf>(entity)
+            .map(|child_of| child_of.0)
             .is_some_and(|parent_entity| seen.contains(&parent_entity));
         if !parent_is_dirty {
             stack.push(entity);
@@ -156,8 +119,8 @@ pub fn update_global_transforms_system(world: &mut World) {
         };
 
         let new_global_transform = match world.ecs.worlds[CORE]
-            .get::<crate::ecs::transform::components::Parent>(current)
-            .and_then(|parent| parent.0)
+            .get::<freecs::dynamic::ChildOf>(current)
+            .map(|child_of| child_of.0)
         {
             Some(parent_entity) => {
                 let mut parent_matrix = world.ecs.worlds[CORE]
@@ -192,10 +155,8 @@ pub fn update_global_transforms_system(world: &mut World) {
             render_dirty_entities.push(current);
         }
 
-        if let Some(children) = world.resources.transform_state.children_cache.get(&current) {
-            for child in children {
-                stack.push(*child);
-            }
+        for child in world.resources.hierarchy.children(current) {
+            stack.push(*child);
         }
     }
 

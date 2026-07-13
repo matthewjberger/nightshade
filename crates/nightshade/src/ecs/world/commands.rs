@@ -244,11 +244,7 @@ pub fn process_commands_system(world: &mut World) {
     for command in commands {
         match command {
             EcsCommand::DespawnRecursive { entity } => {
-                if !world.resources.transform_state.children_cache_valid {
-                    validate_and_rebuild_children_cache(world);
-                }
-                let descendents = query_descendents(world, entity);
-                despawn_entities_with_cache_cleanup(world, &descendents);
+                despawn_recursive_immediate(world, entity);
             }
             EcsCommand::ReloadMaterial { name, material } => {
                 reload_material_command(world, name, *material);
@@ -299,59 +295,18 @@ fn reload_material_command(
     }
 }
 
-fn query_children(world: &World, entity: Entity) -> Vec<Entity> {
-    world
-        .resources
-        .transform_state
-        .children_cache
-        .get(&entity)
-        .cloned()
-        .unwrap_or_default()
-}
-
-fn query_descendents(world: &World, target_entity: Entity) -> Vec<Entity> {
-    let mut descendents = Vec::new();
-    let mut stack = vec![target_entity];
-    while let Some(entity) = stack.pop() {
-        descendents.push(entity);
-        for child in query_children(world, entity) {
-            stack.push(child);
-        }
-    }
-    descendents
-}
-
 /// Despawn a batch of entities and clean up cached references (textures, materials, meshes).
 /// Does not walk the hierarchy; use [`despawn_recursive_immediate`] or [`EcsCommand::DespawnRecursive`] for that.
 pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
-    let mut has_parent_entities = false;
     let is_runtime = world.resources.is_runtime;
 
     for &entity in entities {
-        world
-            .resources
-            .transform_state
-            .children_cache
-            .remove(&entity);
         world.resources.entities.tags.remove(&entity);
         if let Some(guid) = world.ecs.worlds[CORE]
             .get::<crate::ecs::primitives::Guid>(entity)
             .copied()
         {
             world.resources.entities.guid_index.remove(&guid.0);
-        }
-
-        if let Some(parent_component) =
-            world.ecs.worlds[CORE].get::<crate::ecs::transform::components::Parent>(entity)
-            && let Some(parent_entity) = parent_component.0
-            && let Some(children) = world
-                .resources
-                .transform_state
-                .children_cache
-                .get_mut(&parent_entity)
-        {
-            children.retain(|&e| e != entity);
-            has_parent_entities = true;
         }
 
         if let Some(render_mesh) =
@@ -434,20 +389,15 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         }
     }
 
-    if has_parent_entities {
-        world.resources.transform_state.children_cache_valid = false;
-    }
-
     world.despawn_entities(entities);
 }
 
 /// Despawn `entity` and all of its descendants immediately (no deferral).
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
-    if !world.resources.transform_state.children_cache_valid {
-        validate_and_rebuild_children_cache(world);
-    }
-    let descendents = query_descendents(world, entity);
-    despawn_entities_with_cache_cleanup(world, &descendents);
+    crate::ecs::transform::systems::sync_hierarchy_index(world);
+    let mut targets = world.resources.hierarchy.descendants(entity);
+    targets.insert(0, entity);
+    despawn_entities_with_cache_cleanup(world, &targets);
 }
 
 /// Spawn a default directional light positioned above the origin, with shadows enabled.

@@ -4,7 +4,7 @@
 //!
 //! - [`LocalTransform`]: Position, rotation, and scale relative to parent (or world if no parent)
 //! - [`GlobalTransform`]: Computed world-space transformation matrix
-//! - [`Parent`]: Establishes parent-child hierarchy relationships
+//! - [`ChildOf`]: Establishes parent-child hierarchy relationships
 //! - [`Rotation`]: Continuous rotation animation helper
 //! - [`IgnoreParentScale`]: Marker to exclude parent scale from transform inheritance
 //!

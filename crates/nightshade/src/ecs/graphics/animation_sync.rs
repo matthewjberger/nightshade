@@ -50,7 +50,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     );
     player_clips.clear();
 
-    for (player_entity, (player,)) in world.ecs.worlds[CORE]
+    for (player_entity, player) in world.ecs.worlds[CORE]
         .query_ref::<&AnimationPlayer>()
         .iter()
     {
@@ -158,7 +158,7 @@ pub fn render_sync_animation_system(world: &mut World) {
 
 fn collect_joint_to_player(world: &World) -> HashMap<Entity, Entity> {
     let mut joint_to_player: HashMap<Entity, Entity> = HashMap::new();
-    for (player_entity, (player,)) in world.ecs.worlds[CORE]
+    for (player_entity, player) in world.ecs.worlds[CORE]
         .query_ref::<&AnimationPlayer>()
         .iter()
     {
@@ -186,7 +186,7 @@ fn build_skeletons(
 ) -> Vec<SkinnedSkeletonData> {
     let mut joint_cur: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
     let mut joint_blend: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
-    for (_, (player,)) in world.ecs.worlds[CORE]
+    for (_, player) in world.ecs.worlds[CORE]
         .query_ref::<&AnimationPlayer>()
         .iter()
     {
@@ -262,8 +262,8 @@ fn build_skeletons(
                 .copied()
                 .unwrap_or_default();
             let parent_local = world.ecs.worlds[CORE]
-                .get::<crate::ecs::transform::components::Parent>(joint)
-                .and_then(|parent| parent.0)
+                .get::<freecs::dynamic::ChildOf>(joint)
+                .map(|child_of| child_of.0)
                 .and_then(|parent| local_index_of.get(&parent).copied());
             let cur_channels = joint_cur.get(&joint).cloned().unwrap_or_default();
             let blend_channels = joint_blend.get(&joint).cloned().unwrap_or_default();
@@ -412,8 +412,8 @@ fn joint_depth(
     let mut depth = 0u32;
     let mut current = joints[local];
     while let Some(parent) = world.ecs.worlds[CORE]
-        .get::<crate::ecs::transform::components::Parent>(current)
-        .and_then(|parent| parent.0)
+        .get::<freecs::dynamic::ChildOf>(current)
+        .map(|child_of| child_of.0)
     {
         if !local_index_of.contains_key(&parent) {
             break;
@@ -481,8 +481,8 @@ fn skin_armature_parent(world: &World, skin_entity: Entity) -> Option<Entity> {
         .collect();
     skin.joints.iter().find_map(|joint| {
         let parent = world.ecs.worlds[CORE]
-            .get::<crate::ecs::transform::components::Parent>(*joint)
-            .and_then(|parent| parent.0)?;
+            .get::<freecs::dynamic::ChildOf>(*joint)
+            .map(|child_of| child_of.0)?;
         if local_index_of.contains_key(&parent) {
             return None;
         }

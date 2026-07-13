@@ -918,7 +918,7 @@ pub mod prelude {
     pub use crate::ecs::file_watcher::FileWatcher;
 
     // === decap re-exports (generated) ===
-    pub use crate::ecs::transform::systems::{update_parent, validate_and_rebuild_children_cache};
+    pub use crate::ecs::transform::systems::{sync_hierarchy_index, update_parent};
     pub use crate::ecs::ui::widgets::world_canvas::{
         ui_canvas_arc, ui_canvas_circle, ui_canvas_circle_stroke, ui_canvas_clear,
         ui_canvas_cubic_bezier, ui_canvas_hit_test, ui_canvas_line, ui_canvas_polyline,

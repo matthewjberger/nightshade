@@ -49,7 +49,7 @@ pub fn ensure_bounding_volumes(world: &mut World) {
     let mut pending: Vec<(Entity, BoundingVolume)> = Vec::new();
 
     let mesh_cache = &world.resources.assets.mesh_cache;
-    for (entity, (render_mesh,)) in world.ecs.worlds[CORE]
+    for (entity, render_mesh) in world.ecs.worlds[CORE]
         .query_ref::<&crate::ecs::mesh::components::RenderMesh>()
         .without::<BoundingVolume>()
         .iter()
@@ -59,7 +59,7 @@ pub fn ensure_bounding_volumes(world: &mut World) {
             resolve_bounding_volume(mesh_cache, &render_mesh.name),
         ));
     }
-    for (entity, (instanced_mesh,)) in world.ecs.worlds[CORE]
+    for (entity, instanced_mesh) in world.ecs.worlds[CORE]
         .query_ref::<&InstancedMesh>()
         .without::<BoundingVolume>()
         .iter()

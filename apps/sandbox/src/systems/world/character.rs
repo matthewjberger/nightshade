@@ -188,11 +188,7 @@ fn spawn_model(sandbox_world: &mut SandboxWorld, world: &mut World, body: Entity
         name.0 = "Character Model".to_string();
     }
     world.ecs.worlds[CORE].add_components(model, nightshade::ecs::world::PARENT);
-    world.ecs.worlds[CORE].set(
-        model,
-        nightshade::ecs::transform::components::Parent(Some(body)),
-    );
-    world.resources.transform_state.children_cache_valid = false;
+    world.ecs.worlds[CORE].set(model, nightshade::ecs::transform::components::ChildOf(body));
     if let Some(transform) =
         world.ecs.worlds[CORE]
             .get_mut::<nightshade::ecs::transform::components::LocalTransform>(model)
@@ -436,8 +432,8 @@ fn draw_skeleton(sandbox_world: &SandboxWorld, world: &mut World) {
             push_joint_cross(&mut bone_lines, joint_position);
 
             let Some(parent) = world.ecs.worlds[CORE]
-                .get::<nightshade::ecs::transform::components::Parent>(joint_entity)
-                .and_then(|parent| parent.0)
+                .get::<freecs::dynamic::ChildOf>(joint_entity)
+                .map(|child_of| child_of.0)
             else {
                 continue;
             };

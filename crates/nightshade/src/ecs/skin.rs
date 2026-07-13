@@ -53,8 +53,8 @@
 //! let head = spawn_entities(world, JOINT | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | PARENT, 1)[0];
 //!
 //! // Set up hierarchy
-//! world.ecs.worlds[CORE].set(spine, Parent(root));
-//! world.ecs.worlds[CORE].set(head, Parent(spine));
+//! world.ecs.worlds[CORE].set(spine, ChildOf(root));
+//! world.ecs.worlds[CORE].set(head, ChildOf(spine));
 //!
 //! // Configure joints
 //! world.ecs.worlds[CORE].set(root, Joint::new(0).with_name("root"));
