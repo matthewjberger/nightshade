@@ -132,7 +132,7 @@ pub use freecs::Entity;
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 
 freecs::dynamic_schema! {
-    fn register_core_components {
+    serde pub(crate) fn register_core_components {
             animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
             audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
             audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,

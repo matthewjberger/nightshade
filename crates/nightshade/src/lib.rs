@@ -748,6 +748,9 @@ pub mod prelude {
         load_scene, register_component_descriptor, save_scene, spawn_scene,
         spawn_scene_with_deserializer, world_to_scene, world_to_scene_with_serializer,
     };
+    pub use crate::ecs::snapshot::{WorldSnapshot, restore_world, snapshot_world};
+    #[cfg(feature = "assets")]
+    pub use crate::ecs::snapshot::{load_world_snapshot_from_bytes, save_world_snapshot_to_bytes};
     #[cfg(all(feature = "terrain", feature = "physics"))]
     pub use crate::ecs::terrain::terrain_collider_system;
     pub use crate::ecs::text::commands::{

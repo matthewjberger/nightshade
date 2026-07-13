@@ -19,7 +19,7 @@ use nalgebra_glm::{Mat4, Vec3};
 ///
 /// For entities without a [`ChildOf`] link, this equals the local transform matrix.
 /// For entities with parents, this is the product of all ancestor transforms.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GlobalTransform(pub Mat4);
 
 impl Default for GlobalTransform {
