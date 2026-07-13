@@ -33,7 +33,7 @@
 //!         app.add_startup_system("initialize", |world| {
 //!             game_scope::<MyGame, _>(world, initialize);
 //!         });
-//!         app.add_system("update", "tick", |world| {
+//!         app.add_system(Stage::Update, "tick", |world| {
 //!             game_scope::<MyGame, _>(world, tick);
 //!         });
 //!     }
@@ -340,7 +340,7 @@
 //! impl Plugin for DebugUiPlugin {
 //!     fn build(&self, app: &mut App) {
 //!         app.world.resources.egui.enabled = true;
-//!         app.add_system("update", "debug_ui", |world| {
+//!         app.add_system(Stage::Update, "debug_ui", |world| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
 //!                     ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
@@ -593,7 +593,8 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::app::PhysicsPlugin;
     pub use crate::app::{
-        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, UiPlugin, WindowPlugin, game_scope,
+        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, Stage, UiPlugin, WindowPlugin,
+        game_scope,
     };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,

@@ -176,7 +176,7 @@ impl Plugin for NavMeshPlugin {
         app.add_startup_system("navmesh_initialize", |world| {
             game_scope::<NavMeshDemo, _>(world, initialize);
         });
-        app.add_system("update", "navmesh_update", |world| {
+        app.add_system(Stage::Update, "navmesh_update", |world| {
             game_scope::<NavMeshDemo, _>(world, update);
         });
     }

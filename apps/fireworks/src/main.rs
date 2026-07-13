@@ -154,7 +154,7 @@ impl Plugin for FireworksPlugin {
         app.add_startup_system("fireworks_initialize", |world| {
             game_scope::<FireworksDemo, _>(world, initialize);
         });
-        app.add_system("update", "fireworks_update", |world| {
+        app.add_system(Stage::Update, "fireworks_update", |world| {
             game_scope::<FireworksDemo, _>(world, update);
         });
     }

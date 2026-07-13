@@ -92,7 +92,7 @@ impl Plugin for PickingPlugin {
         app.add_startup_system("picking_initialize", |world| {
             game_scope::<PickingDemo, _>(world, initialize);
         });
-        app.add_system("update", "picking_update", |world| {
+        app.add_system(Stage::Update, "picking_update", |world| {
             game_scope::<PickingDemo, _>(world, update);
         });
     }

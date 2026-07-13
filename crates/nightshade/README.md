@@ -43,7 +43,7 @@ impl Plugin for SpinCubePlugin {
         app.add_startup_system("initialize", |world| {
             game_scope::<SpinCube, _>(world, initialize);
         });
-        app.add_system("update", "spin", |world| {
+        app.add_system(Stage::Update, "spin", |world| {
             game_scope::<SpinCube, _>(world, spin);
         });
     }

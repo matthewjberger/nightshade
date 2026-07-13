@@ -22,7 +22,7 @@
 //!         app.add_startup_system("initialize", |world| {
 //!             game_scope::<MyGame, _>(world, systems::initialize);
 //!         });
-//!         app.add_system("update", "tick", |world| {
+//!         app.add_system(Stage::Update, "tick", |world| {
 //!             game_scope::<MyGame, _>(world, systems::tick);
 //!         });
 //!     }
@@ -52,6 +52,28 @@ pub trait PluginGroup {
     fn build(&self, app: &mut App);
 }
 
+/// The per-frame stages, in run order, all before the engine frame
+/// schedule. Game logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`]
+/// is for systems that must observe every update system's writes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Stage {
+    First,
+    Update,
+    LateUpdate,
+}
+
+impl Stage {
+    const ALL: [Stage; 3] = [Stage::First, Stage::Update, Stage::LateUpdate];
+
+    fn name(self) -> &'static str {
+        match self {
+            Stage::First => "first",
+            Stage::Update => "update",
+            Stage::LateUpdate => "late_update",
+        }
+    }
+}
+
 type RenderGraphConfigFn = Box<
     dyn FnMut(
         &mut crate::render::wgpu::rendergraph::RenderGraph<
@@ -73,16 +95,15 @@ type UpdateRenderGraphFn = Box<
 >;
 
 /// The plugin-composed application: the world, a startup schedule that
-/// runs once, and named per-frame stages that plugins push systems into.
+/// runs once, and per-frame [`Stage`]s that plugins push systems into.
 ///
-/// Stage order is declared here once: `"first"`, `"update"`, and
-/// `"late_update"`, all running in that order each frame BEFORE the
+/// The stages run in [`Stage`] declaration order each frame BEFORE the
 /// engine's frame schedule (physics, animation, transforms, retained
 /// UI) and rendering, exactly where game logic ran historically. Game
-/// logic belongs in `"update"`; `"late_update"` is for systems that
-/// must observe every update system's writes; work that must follow
-/// the engine systems hooks into the frame schedule itself with
-/// `schedule_insert_before`/`schedule_insert_after`.
+/// logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`] is for
+/// systems that must observe every update system's writes; work that
+/// must follow the engine systems hooks into the frame schedule itself
+/// with `schedule_insert_before`/`schedule_insert_after`.
 pub struct App {
     pub world: World,
     pub startup: freecs::Schedule<World>,
@@ -103,10 +124,9 @@ impl Default for App {
 impl App {
     pub fn new() -> Self {
         let mut stages = freecs::Stages::new();
-        stages
-            .add_stage("first")
-            .add_stage("update")
-            .add_stage("late_update");
+        for stage in Stage::ALL {
+            stages.add_stage(stage.name());
+        }
         Self {
             world: World::default(),
             startup: freecs::Schedule::new(),
@@ -129,15 +149,14 @@ impl App {
         self
     }
 
-    /// Pushes a system onto a declared stage. Panics on an undeclared
-    /// stage name, listing the declared set.
+    /// Pushes a system onto a [`Stage`].
     pub fn add_system(
         &mut self,
-        stage: &str,
+        stage: Stage,
         name: &'static str,
         system: impl FnMut(&mut World) + Send + 'static,
     ) -> &mut Self {
-        self.stages.stage_mut(stage).push(name, system);
+        self.stages.stage_mut(stage.name()).push(name, system);
         self
     }
 
