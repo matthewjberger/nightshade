@@ -34,7 +34,7 @@ pub(crate) fn prepare_text_meshes(
         crate::ecs::text::components::TextProperties,
     )> = Vec::new();
     for (entity, (text,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&crate::ecs::text::components::Text,)>()
+        .query_ref::<&crate::ecs::text::components::Text>()
         .iter()
     {
         if text.dirty {

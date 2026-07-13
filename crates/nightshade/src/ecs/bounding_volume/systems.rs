@@ -50,7 +50,7 @@ pub fn ensure_bounding_volumes(world: &mut World) {
 
     let mesh_cache = &world.resources.assets.mesh_cache;
     for (entity, (render_mesh,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&crate::ecs::mesh::components::RenderMesh,)>()
+        .query_ref::<&crate::ecs::mesh::components::RenderMesh>()
         .without::<BoundingVolume>()
         .iter()
     {
@@ -60,7 +60,7 @@ pub fn ensure_bounding_volumes(world: &mut World) {
         ));
     }
     for (entity, (instanced_mesh,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&InstancedMesh,)>()
+        .query_ref::<&InstancedMesh>()
         .without::<BoundingVolume>()
         .iter()
     {

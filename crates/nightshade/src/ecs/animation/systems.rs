@@ -67,7 +67,7 @@ pub fn apply_animations(world: &mut World) {
     // targets are applied here as well.
     let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
     for (_, (player,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&crate::ecs::animation::components::AnimationPlayer,)>()
+        .query_ref::<&crate::ecs::animation::components::AnimationPlayer>()
         .iter()
     {
         {

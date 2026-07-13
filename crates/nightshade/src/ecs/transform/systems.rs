@@ -48,7 +48,7 @@ pub fn validate_and_rebuild_children_cache(world: &mut World) {
     world.resources.transform_state.children_cache.clear();
 
     let children_cache = &mut world.resources.transform_state.children_cache;
-    for (child, (parent,)) in world.ecs.worlds[CORE].query_ref::<(&Parent,)>().iter() {
+    for (child, (parent,)) in world.ecs.worlds[CORE].query_ref::<&Parent>().iter() {
         if let Some(parent_entity) = parent.0 {
             children_cache.entry(parent_entity).or_default().push(child);
         }

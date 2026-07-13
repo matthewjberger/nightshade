@@ -51,7 +51,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     player_clips.clear();
 
     for (player_entity, (player,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&AnimationPlayer,)>()
+        .query_ref::<&AnimationPlayer>()
         .iter()
     {
         if !player.playing || player.play_all || player.get_current_clip().is_none() {
@@ -159,7 +159,7 @@ pub fn render_sync_animation_system(world: &mut World) {
 fn collect_joint_to_player(world: &World) -> HashMap<Entity, Entity> {
     let mut joint_to_player: HashMap<Entity, Entity> = HashMap::new();
     for (player_entity, (player,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&AnimationPlayer,)>()
+        .query_ref::<&AnimationPlayer>()
         .iter()
     {
         if !player.playing || player.play_all {
@@ -187,7 +187,7 @@ fn build_skeletons(
     let mut joint_cur: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
     let mut joint_blend: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
     for (_, (player,)) in world.ecs.worlds[CORE]
-        .query_ref::<(&AnimationPlayer,)>()
+        .query_ref::<&AnimationPlayer>()
         .iter()
     {
         if !player.playing || player.play_all {
