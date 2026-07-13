@@ -531,8 +531,9 @@ pub mod ecs;
 pub mod logging;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
-pub mod render_driver;
 #[cfg(feature = "runtime")]
+pub mod app;
+pub mod render_driver;
 pub mod run;
 #[cfg(feature = "runtime")]
 pub mod schedule;
@@ -575,6 +576,11 @@ pub use systems::*;
 /// individually when needed.
 #[cfg(feature = "runtime")]
 pub mod prelude {
+    #[cfg(feature = "physics")]
+    pub use crate::app::PhysicsPlugin;
+    pub use crate::app::{
+        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, UiPlugin, WindowPlugin, game_scope,
+    };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,

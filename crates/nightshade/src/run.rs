@@ -125,8 +125,18 @@ pub fn launch(state: impl State + 'static) -> Result<(), Box<dyn std::error::Err
 
 /// Launches a windowed application (desktop or web).
 pub fn launch_windowed(state: impl State + 'static) -> Result<(), Box<dyn std::error::Error>> {
+    launch_with_world(state, World::default())
+}
+
+/// Launches the event loop over a world the caller already built, which is
+/// how a plugin-composed [`App`](crate::app::App) carries its registered
+/// member worlds, resources, and settings into the runner.
+pub fn launch_with_world(
+    state: impl State + 'static,
+    world: World,
+) -> Result<(), Box<dyn std::error::Error>> {
     #[allow(unused_mut)]
-    let mut world = World::default();
+    let mut world = world;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
     let (log_config, log_file_name) = {
@@ -436,10 +446,13 @@ pub(crate) fn step(
     handle_event_systems(world, event);
 
     match event {
-        WindowEvent::RedrawRequested => {
-            let renderer = renderer.as_mut()?;
-            run_frame_body(world, state.as_mut(), renderer)
-        }
+        WindowEvent::RedrawRequested => match renderer.as_mut() {
+            Some(renderer) => run_frame_body(world, state.as_mut(), renderer),
+            None if !world.resources.window.create_renderer => {
+                run_frame_logic(world, state.as_mut())
+            }
+            None => None,
+        },
         event => {
             forward_window_events(world, event);
             None
@@ -462,6 +475,41 @@ pub fn run_frame_body(
     state: &mut dyn State,
     renderer: &mut crate::render::wgpu::WgpuRenderer,
 ) -> Option<Box<dyn State>> {
+    if let Some(next_state) = run_frame_logic(world, state) {
+        return Some(next_state);
+    }
+
+    let (viewport_width, viewport_height) =
+        if let Some(window_handle) = world.resources.window.handle.as_ref() {
+            let size = window_handle.inner_size();
+            (size.width, size.height)
+        } else {
+            world
+                .resources
+                .window
+                .cached_viewport_size
+                .unwrap_or((0, 0))
+        };
+    let should_render = viewport_width > 0 && viewport_height > 0;
+    if should_render {
+        if let Err(error) = crate::render_driver::update_with_state(renderer, state, world) {
+            tracing::error!("Failed to update render graph: {error}");
+        }
+
+        state.pre_render(renderer, world);
+
+        if let Err(error) = crate::render_driver::render_frame(renderer, world) {
+            tracing::error!("Failed to draw frame: {error}");
+        }
+    }
+
+    None
+}
+
+/// Runs the renderer-free portion of a frame: the per-frame engine systems,
+/// the user [`State::run_systems`], and the frame schedule. This is the whole
+/// frame for app compositions that omit the render plugin.
+pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Option<Box<dyn State>> {
     world.ecs.worlds[CORE].increment_tick();
 
     #[cfg(feature = "gamepad")]
@@ -520,30 +568,6 @@ pub fn run_frame_body(
             window_handle.set_cursor(winit::window::CursorIcon::Default);
             world.resources.retained_ui.interaction.applied_cursor =
                 Some(winit::window::CursorIcon::Default);
-        }
-    }
-
-    let (viewport_width, viewport_height) =
-        if let Some(window_handle) = world.resources.window.handle.as_ref() {
-            let size = window_handle.inner_size();
-            (size.width, size.height)
-        } else {
-            world
-                .resources
-                .window
-                .cached_viewport_size
-                .unwrap_or((0, 0))
-        };
-    let should_render = viewport_width > 0 && viewport_height > 0;
-    if should_render {
-        if let Err(error) = crate::render_driver::update_with_state(renderer, state, world) {
-            tracing::error!("Failed to update render graph: {error}");
-        }
-
-        state.pre_render(renderer, world);
-
-        if let Err(error) = crate::render_driver::render_frame(renderer, world) {
-            tracing::error!("Failed to draw frame: {error}");
         }
     }
 
@@ -1536,7 +1560,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         let dimension = window_handle.inner_size();
 
         #[cfg(not(target_arch = "wasm32"))]
-        {
+        if self.world.resources.window.create_renderer {
             match pollster::block_on(crate::render::core::create_renderer(
                 window_handle.clone(),
                 dimension.width,
@@ -1558,7 +1582,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
 
         #[cfg(target_arch = "wasm32")]
-        {
+        if self.world.resources.window.create_renderer {
             let (sender, receiver) = futures::channel::oneshot::channel();
             self.renderer_receiver = Some(receiver);
 
