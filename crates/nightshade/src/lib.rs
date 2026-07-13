@@ -13,43 +13,52 @@
 //!
 //! ### 2. Create Your Game
 //!
+//! Programs assemble from plugins: the engine capabilities are default
+//! plugins, and the game is one more plugin added in the builder.
+//!
 //! ```ignore
 //! use nightshade::prelude::*;
 //!
-//! struct Game {
+//! #[derive(Default)]
+//! struct MyGame {
 //!     camera: Option<Entity>,
 //! }
 //!
-//! impl Default for Game {
-//!     fn default() -> Self {
-//!         Self { camera: None }
+//! struct MyGamePlugin;
+//!
+//! impl Plugin for MyGamePlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.world.resources.window.title = "My Game".to_string();
+//!         app.insert_resource(MyGame::default());
+//!         app.add_startup_system("initialize", |world| {
+//!             game_scope::<MyGame, _>(world, initialize);
+//!         });
+//!         app.add_system("update", "tick", |world| {
+//!             game_scope::<MyGame, _>(world, tick);
+//!         });
 //!     }
 //! }
 //!
-//! impl State for Game {
-//!     fn initialize(&mut self, world: &mut World) {
-//!         world.resources.window.title = "My Game".to_string();
+//! fn initialize(game: &mut MyGame, world: &mut World) {
+//!     world.resources.render_settings.atmosphere = Atmosphere::Sky;
+//!     spawn_sun(world);
 //!
-//!         // Graphics setup
-//!         world.resources.render_settings.atmosphere = Atmosphere::Sky;
-//!         spawn_sun(world);
+//!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
+//!     world.resources.active_camera = Some(camera);
+//!     game.camera = Some(camera);
 //!
-//!         // Camera
-//!         let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!         world.resources.active_camera = Some(camera);
-//!         self.camera = Some(camera);
+//!     spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
+//! }
 //!
-//!         // Spawn objects
-//!         spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
-//!     }
-//!
-//!     fn run_systems(&mut self, world: &mut World) {
-//!         let _dt = world.resources.window.timing.delta_time;
-//!     }
+//! fn tick(game: &mut MyGame, world: &mut World) {
+//!     let delta_time = world.resources.window.timing.delta_time;
 //! }
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     launch(Game::default())
+//!     App::new()
+//!         .add_plugins(DefaultPlugins)
+//!         .add_plugin(MyGamePlugin)
+//!         .run()
 //! }
 //! ```
 //!
