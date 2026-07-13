@@ -28,6 +28,15 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
     rocks::initialize(sandbox_world, world);
     sandbox_world.screen.show_fps = true;
 
+    build_ui(sandbox_world, world);
+
+    enter(sandbox_world, world, Screen::Title);
+}
+
+/// Builds the retained UI tree and stores the handles. Runs at initialize
+/// and again after a snapshot restore, which recreates the UI member
+/// world empty.
+pub fn build_ui(sandbox_world: &mut SandboxResources, world: &mut World) {
     let mut tree = UiTreeBuilder::new(world);
     let title_handles = title::build(&mut tree);
     let pause_handles = pause::build(&mut tree);
@@ -36,8 +45,6 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
     sandbox_world.ui_handles.title = title_handles;
     sandbox_world.ui_handles.pause = pause_handles;
     sandbox_world.ui_handles.hud = hud_handles;
-
-    enter(sandbox_world, world, Screen::Title);
 }
 
 /// Drive every screen transition through one function so the

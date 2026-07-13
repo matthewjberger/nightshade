@@ -226,3 +226,9 @@ pub struct UiHandles {
     pub pause: PauseHandles,
     pub hud: HudHandles,
 }
+
+/// Holds the latest whole-world snapshot taken with F5, restored with F9.
+#[derive(Default)]
+pub struct SaveState {
+    pub snapshot: Option<Vec<u8>>,
+}

@@ -4,7 +4,7 @@ use nalgebra_glm::Vec3;
 /// world on the same entity that carries the engine-side render
 /// components, so systems read and write the entity's transform
 /// directly.
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Enemy {
     pub target: Vec3,
     pub speed: f32,

@@ -7,13 +7,14 @@ pub use resources::*;
 use nightshade::prelude::freecs;
 
 freecs::dynamic_schema! {
-    pub fn register_sandbox_components {
+    serde pub fn register_sandbox_components {
         enemy: Enemy => ENEMY,
     }
 }
 
 #[derive(Default)]
 pub struct SandboxResources {
+    pub save: SaveState,
     pub screen: ScreenState,
     pub player: PlayerState,
     pub character: CharacterState,
