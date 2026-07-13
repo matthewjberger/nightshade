@@ -333,23 +333,23 @@
 //! ### Immediate Mode UI (`egui` feature)
 //!
 //! Opt in with the `egui` feature and set `world.resources.egui.enabled`. The pass opens
-//! before `run_systems` each frame, so draw from any system by pulling the frame's context
+//! before the app stages each frame, so draw from any system by pulling the frame's context
 //! with `egui_context`. The tessellated output composites over the scene and the retained UI.
 //!
 //! ```ignore
-//! impl State for Game {
-//!     fn initialize(&mut self, world: &mut World) {
-//!         world.resources.egui.enabled = true;
-//!     }
-//!     fn run_systems(&mut self, world: &mut World) {
-//!         if let Some(ctx) = egui_context(world) {
-//!             egui::Window::new("Debug").show(&ctx, |ui| {
-//!                 ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
-//!                 if ui.button("Spawn Cube").clicked() {
-//!                     spawn_cube_at(world, Vec3::zeros());
-//!                 }
-//!             });
-//!         }
+//! impl Plugin for DebugUiPlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.world.resources.egui.enabled = true;
+//!         app.add_system("update", "debug_ui", |world| {
+//!             if let Some(ctx) = egui_context(world) {
+//!                 egui::Window::new("Debug").show(&ctx, |ui| {
+//!                     ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
+//!                     if ui.button("Spawn Cube").clicked() {
+//!                         spawn_cube_at(world, Vec3::zeros());
+//!                     }
+//!                 });
+//!             }
+//!         });
 //!     }
 //! }
 //! ```
@@ -357,7 +357,7 @@
 //! ### Gamepad Input (`gamepad` feature)
 //!
 //! ```ignore
-//! fn run_systems(&mut self, world: &mut World) {
+//! fn tick(world: &mut World) {
 //!     if let Some(gamepad) = &world.resources.input.gamepad {
 //!         // Analog sticks
 //!         let move_x = gamepad.left_stick.x;
@@ -378,23 +378,24 @@
 //!
 //! ### Steam Integration (`steam` feature)
 //!
+//! The engine pumps Steam callbacks every frame; systems only initialize
+//! and use the API.
+//!
 //! ```ignore
-//! fn initialize(&mut self, world: &mut World) {
+//! fn initialize(world: &mut World) {
 //!     steam_initialize(&mut world.resources.steam).ok();
 //!     steam_request_stats(&mut world.resources.steam);
 //! }
 //!
-//! fn run_systems(&mut self, world: &mut World) {
-//!     steam_run_callbacks(&world.resources.steam);
-//!
+//! fn tick(game: &mut MyGame, world: &mut World) {
 //!     // Unlock achievement
-//!     if self.score >= 1000 {
+//!     if game.score >= 1000 {
 //!         steam_unlock_achievement(&world.resources.steam, "ACH_HIGH_SCORE").ok();
 //!         steam_store_stats(&world.resources.steam).ok();
 //!     }
 //!
 //!     // Update stat
-//!     steam_set_stat_int(&world.resources.steam, "total_score", self.score).ok();
+//!     steam_set_stat_int(&world.resources.steam, "total_score", game.score).ok();
 //! }
 //! ```
 //!
@@ -404,8 +405,8 @@
 //! // Create debug lines entity
 //! let debug = spawn_entities(world, LINES, 1)[0];
 //!
-//! fn run_systems(&mut self, world: &mut World) {
-//!     if let Some(lines) = world.get_mut::<crate::ecs::lines::components::Lines>(self.debug) {
+//! fn tick(game: &mut MyGame, world: &mut World) {
+//!     if let Some(lines) = world.get_mut::<crate::ecs::lines::components::Lines>(game.debug) {
 //!         lines.clear();
 //!
 //!         // Draw a line
@@ -483,16 +484,19 @@
 //! ```no_run
 //! use nightshade::prelude::*;
 //!
-//! struct Game;
+//! struct GamePlugin;
 //!
-//! impl State for Game {
-//!     fn initialize(&mut self, world: &mut World) {
-//!         world.resources.window.title = "My Game".to_string();
+//! impl Plugin for GamePlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.world.resources.window.title = "My Game".to_string();
 //!     }
 //! }
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     launch(Game)
+//!     App::new()
+//!         .add_plugins(DefaultPlugins)
+//!         .add_plugin(GamePlugin)
+//!         .run()
 //! }
 //! ```
 //!
@@ -503,7 +507,7 @@
 //! 1. Process window/input events
 //! 2. Update keyboard/mouse/gamepad state
 //! 3. Calculate delta time
-//! 4. Call [`State::run_systems()`](run::State::run_systems)
+//! 4. Run the app stages (`first`, `update`, `late_update`)
 //! 5. Dispatch event bus messages
 //! 6. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
 //!    - Initialize and update audio (if `audio` enabled)
@@ -514,11 +518,11 @@
 //!    - Update instanced mesh caches, sync text
 //!    - Reset input state
 //!    - Process deferred commands, cleanup
-//! 9. Execute render graph passes
+//! 7. Execute render graph passes
 //!
 //! The frame schedule is a resource at `world.resources.schedules.frame`, with
 //! the retained UI sub-schedule at `world.resources.schedules.retained_ui`. Modify
-//! either in [`State::initialize()`](run::State::initialize) to insert, remove, or
+//! either from a startup system to insert, remove, or
 //! reorder engine systems. See [`system_names`](schedule::system_names) and
 //! [`retained_ui_system_names`](schedule::retained_ui_system_names) for the
 //! available system name constants.
@@ -575,7 +579,8 @@ pub use systems::*;
 /// ```
 ///
 /// The prelude pulls in [`World`], [`Entity`], component bitflags, the
-/// `State` trait, math types from `nalgebra_glm`, schedule helpers, command
+/// [`App`](crate::app::App) builder with its `Plugin` trait (plus the
+/// `State` trait escape hatch), math types from `nalgebra_glm`, schedule helpers, command
 /// queue free functions ([`queue_ecs_command`], [`queue_render_command`]),
 /// spawn helpers ([`spawn_cube_at`], [`spawn_sphere_at`], [`spawn_sun`],
 /// [`spawn_camera`], etc.), input types, transform helpers, material and

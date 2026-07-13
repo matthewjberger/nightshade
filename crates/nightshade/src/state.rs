@@ -8,6 +8,7 @@ use crate::ecs::world::World;
 /// Resource IDs for render graph configuration.
 ///
 /// Provided to [`State::configure_render_graph`] for custom pass setup.
+#[derive(Clone, Copy)]
 pub struct RenderResources {
     /// Main HDR scene color target.
     pub scene_color: crate::render::wgpu::rendergraph::ResourceId,

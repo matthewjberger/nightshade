@@ -88,9 +88,9 @@ pub struct App {
     pub stages: freecs::Stages<World>,
     windowed: bool,
     rendered: bool,
-    render_graph_config: Option<RenderGraphConfigFn>,
-    pre_render: Option<PreRenderFn>,
-    update_render_graph: Option<UpdateRenderGraphFn>,
+    render_graph_config: Vec<RenderGraphConfigFn>,
+    pre_render: Vec<PreRenderFn>,
+    update_render_graph: Vec<UpdateRenderGraphFn>,
 }
 
 impl Default for App {
@@ -112,9 +112,9 @@ impl App {
             stages,
             windowed: false,
             rendered: false,
-            render_graph_config: None,
-            pre_render: None,
-            update_render_graph: None,
+            render_graph_config: Vec::new(),
+            pre_render: Vec::new(),
+            update_render_graph: Vec::new(),
         }
     }
 
@@ -159,9 +159,10 @@ impl App {
         self
     }
 
-    /// Installs the custom render graph configuration hook, called once
-    /// when the renderer is created.
-    pub fn set_render_graph_config(
+    /// Adds a render graph configuration hook, called once when the
+    /// renderer is created. Hooks from every plugin run in the order they
+    /// were added.
+    pub fn add_render_graph_config(
         &mut self,
         hook: impl FnMut(
             &mut crate::render::wgpu::rendergraph::RenderGraph<
@@ -172,21 +173,22 @@ impl App {
             RenderResources,
         ) + 'static,
     ) -> &mut Self {
-        self.render_graph_config = Some(Box::new(hook));
+        self.render_graph_config.push(Box::new(hook));
         self
     }
 
-    /// Installs the pre-render hook, called each frame before the render
-    /// graph executes.
+    /// Adds a pre-render hook, called each frame before the render graph
+    /// executes. Hooks from every plugin run in the order they were added.
     pub fn on_pre_render(
         &mut self,
         hook: impl FnMut(&mut crate::render::wgpu::WgpuRenderer, &mut World) + 'static,
     ) -> &mut Self {
-        self.pre_render = Some(Box::new(hook));
+        self.pre_render.push(Box::new(hook));
         self
     }
 
-    /// Installs the per-frame render graph update hook.
+    /// Adds a per-frame render graph update hook. Hooks from every plugin
+    /// run in the order they were added.
     pub fn on_update_render_graph(
         &mut self,
         hook: impl FnMut(
@@ -196,7 +198,7 @@ impl App {
             &World,
         ) + 'static,
     ) -> &mut Self {
-        self.update_render_graph = Some(Box::new(hook));
+        self.update_render_graph.push(Box::new(hook));
         self
     }
 
@@ -260,22 +262,44 @@ impl App {
 /// Temporarily removes a group resource so a system can hold it alongside
 /// full `&mut World` access, then puts it back. The safe equivalent of a
 /// resource scope: systems keep the plain `(game, world)` signature with
-/// no aliasing and no `unsafe`.
+/// no aliasing and no `unsafe`. The resource is reinserted even if `body`
+/// unwinds.
 ///
 /// Panics if the resource was never inserted or is already scoped.
 pub fn game_scope<T: Send + Sync + 'static, R>(
     world: &mut World,
     body: impl FnOnce(&mut T, &mut World) -> R,
 ) -> R {
-    let mut value = world.ecs.remove_resource::<T>().unwrap_or_else(|| {
+    let value = world.ecs.remove_resource::<T>().unwrap_or_else(|| {
         panic!(
             "game_scope: resource {} is not inserted",
             std::any::type_name::<T>()
         )
     });
-    let result = body(&mut value, world);
-    world.ecs.insert_resource(value);
-    result
+    let mut scope = ScopedResource {
+        world,
+        value: Some(value),
+    };
+    body(
+        scope
+            .value
+            .as_mut()
+            .expect("game_scope: scoped resource missing"),
+        scope.world,
+    )
+}
+
+struct ScopedResource<'world, T: Send + Sync + 'static> {
+    world: &'world mut World,
+    value: Option<T>,
+}
+
+impl<T: Send + Sync + 'static> Drop for ScopedResource<'_, T> {
+    fn drop(&mut self) {
+        if let Some(value) = self.value.take() {
+            self.world.ecs.insert_resource(value);
+        }
+    }
 }
 
 /// The [`State`] adapter that drives an [`App`]'s schedules through the
@@ -284,9 +308,9 @@ pub fn game_scope<T: Send + Sync + 'static, R>(
 struct StageState {
     startup: freecs::Schedule<World>,
     stages: freecs::Stages<World>,
-    render_graph_config: Option<RenderGraphConfigFn>,
-    pre_render: Option<PreRenderFn>,
-    update_render_graph: Option<UpdateRenderGraphFn>,
+    render_graph_config: Vec<RenderGraphConfigFn>,
+    pre_render: Vec<PreRenderFn>,
+    update_render_graph: Vec<UpdateRenderGraphFn>,
 }
 
 impl State for StageState {
@@ -307,13 +331,13 @@ impl State for StageState {
         format: wgpu::TextureFormat,
         resources: RenderResources,
     ) {
-        if let Some(hook) = &mut self.render_graph_config {
+        for hook in &mut self.render_graph_config {
             hook(graph, device, format, resources);
         }
     }
 
     fn pre_render(&mut self, renderer: &mut crate::render::wgpu::WgpuRenderer, world: &mut World) {
-        if let Some(hook) = &mut self.pre_render {
+        for hook in &mut self.pre_render {
             hook(renderer, world);
         }
     }
@@ -325,7 +349,7 @@ impl State for StageState {
         >,
         world: &World,
     ) {
-        if let Some(hook) = &mut self.update_render_graph {
+        for hook in &mut self.update_render_graph {
             hook(graph, world);
         }
     }

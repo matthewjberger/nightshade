@@ -1,6 +1,8 @@
 //! Application entry point and main loop.
 //!
-//! Launch a Nightshade application by implementing [`State`] and calling [`launch`]:
+//! Programs normally compose an [`App`](crate::app::App) from plugins and
+//! call its `run`, which drives this loop. [`State`] and [`launch`] are the
+//! low-level escape hatch for custom runners that own their own state type:
 //!
 //! ```ignore
 //! struct MyGame;

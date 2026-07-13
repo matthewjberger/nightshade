@@ -23,7 +23,10 @@ nightshade = "0.50.0"
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    launch(SpinCube::default())
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(SpinCubePlugin)
+        .run()
 }
 
 #[derive(Default)]
@@ -32,27 +35,39 @@ struct SpinCube {
     time: f32,
 }
 
-impl State for SpinCube {
-    fn initialize(&mut self, world: &mut World) {
-        world.resources.render_settings.atmosphere = Atmosphere::Nebula;
-        let camera = spawn_pan_orbit_camera(
-            world,
-            Vec3::zeros(), 5.0, 0.5, 0.3,
-            "Camera".to_string(),
-        );
-        world.resources.active_camera = Some(camera);
-        spawn_sun(world);
-        self.cube = Some(spawn_mesh_at(world, "Cube", Vec3::zeros(), Vec3::new(1.0, 1.0, 1.0)));
-    }
+struct SpinCubePlugin;
 
-    fn run_systems(&mut self, world: &mut World) {
-        pan_orbit_camera_system(world);
-        self.time += world.resources.window.timing.delta_time;
-        if let Some(entity) = self.cube
-            && let Some(transform) = world.ecs.worlds[CORE].get_mut::<LocalTransform>(entity)
-        {
-            transform.rotation = nalgebra_glm::quat_angle_axis(self.time, &Vec3::y_axis());
-        }
+impl Plugin for SpinCubePlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(SpinCube::default());
+        app.add_startup_system("initialize", |world| {
+            game_scope::<SpinCube, _>(world, initialize);
+        });
+        app.add_system("update", "spin", |world| {
+            game_scope::<SpinCube, _>(world, spin);
+        });
+    }
+}
+
+fn initialize(game: &mut SpinCube, world: &mut World) {
+    world.resources.render_settings.atmosphere = Atmosphere::Nebula;
+    let camera = spawn_pan_orbit_camera(
+        world,
+        Vec3::zeros(), 5.0, 0.5, 0.3,
+        "Camera".to_string(),
+    );
+    world.resources.active_camera = Some(camera);
+    spawn_sun(world);
+    game.cube = Some(spawn_mesh_at(world, "Cube", Vec3::zeros(), Vec3::new(1.0, 1.0, 1.0)));
+}
+
+fn spin(game: &mut SpinCube, world: &mut World) {
+    pan_orbit_camera_system(world);
+    game.time += world.resources.window.timing.delta_time;
+    if let Some(entity) = game.cube
+        && let Some(transform) = world.get_mut::<LocalTransform>(entity)
+    {
+        transform.rotation = nalgebra_glm::quat_angle_axis(game.time, &Vec3::y_axis());
     }
 }
 ```
