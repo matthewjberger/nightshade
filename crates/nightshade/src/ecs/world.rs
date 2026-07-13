@@ -94,8 +94,8 @@ pub mod resources {
     pub use crate::render::config::ViewportRect;
     pub use crate::render::config::{
         Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
-        GpuDeviceType, GpuProfile, IblViews, MeshLodChain, MeshLodLevel, RenderSettings,
-        RendererState, TonemapAlgorithm, VertexSnap,
+        GpuDeviceType, GpuProfile, MeshLodChain, MeshLodLevel, RenderSettings, RendererState,
+        TonemapAlgorithm, VertexSnap,
     };
     pub use crate::render::mesh_cache::MeshCache;
     pub use crate::render::wgpu::texture_cache::TextureCache;
@@ -272,7 +272,6 @@ pub struct Resources {
     pub debug_draw: crate::render::config::DebugDraw,
     pub editor_selection: crate::render::config::EditorSelection,
     pub renderer_state: crate::render::config::RendererState,
-    pub ibl_views: crate::render::config::IblViews,
     pub input: crate::ecs::input::resources::Input,
     pub is_runtime: bool,
     pub loading: crate::ecs::loading::LoadingState,
@@ -291,7 +290,6 @@ pub struct Resources {
     pub schedules: crate::schedule::Schedules,
     pub global_scripts: crate::ecs::script::components::GlobalScripts,
     pub scratch: crate::ecs::world::scratch::Scratch,
-    pub shadow_atlas: crate::render::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub steam: crate::steam::SteamResources,
     #[cfg(feature = "terrain")]

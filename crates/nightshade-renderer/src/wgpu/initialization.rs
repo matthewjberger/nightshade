@@ -788,6 +788,7 @@ impl super::WgpuRenderer {
                 captured_day_night_snapshots: false,
             },
             gpu_profile,
+            ibl_views: crate::config::IblViews::default(),
         })
     }
 }

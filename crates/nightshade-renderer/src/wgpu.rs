@@ -107,6 +107,9 @@ pub struct WgpuRenderer {
     /// The adapter the renderer selected, published into `RendererState` on the
     /// first frame so game code can adapt quality and controls to the device.
     pub gpu_profile: crate::config::GpuProfile,
+    /// Image-based-lighting texture views, persisted across frames and swapped
+    /// into [`RenderInputs`](render_configs::RenderInputs) for the frame.
+    pub ibl_views: crate::config::IblViews,
 }
 
 /// Render-graph resource handles for the built-in pipeline targets.

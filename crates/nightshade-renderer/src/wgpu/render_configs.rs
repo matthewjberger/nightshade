@@ -173,9 +173,13 @@ pub struct RenderInputs {
     pub editor_selection: crate::config::EditorSelection,
     /// The per-frame scene snapshot every pass draws from.
     pub scene: crate::config::RendererState,
-    /// Image-based-lighting texture views captured by the sky pass.
+    /// Image-based-lighting texture views. Renderer-owned: the frame driver
+    /// swaps the persisted views in at frame start, so callers compose this
+    /// field as `Default::default()`.
     pub ibl_views: crate::config::IblViews,
-    /// Spotlight shadow atlas slot assignment for this frame.
+    /// Spotlight shadow atlas slot assignment. Renderer-computed at frame
+    /// start from the scene's lights, so callers compose this field as
+    /// `Default::default()`.
     pub shadow_atlas: crate::wgpu::passes::shadow_depth::atlas::SpotlightAtlasAssignment,
     /// Global wind driving the cloth simulation.
     pub wind: crate::wind::Wind,

@@ -31,7 +31,21 @@ fn fit_constrained_aspect(tile_width: u32, tile_height: u32, aspect: f32) -> (u3
     }
 }
 
+/// Renders one frame. The renderer's persistent [`IblViews`](crate::config::IblViews)
+/// are swapped into the inputs for the duration of the frame and reclaimed
+/// afterward, so the caller never holds image-based-lighting state.
 pub fn render_frame(
+    renderer: &mut crate::wgpu::WgpuRenderer,
+    inputs: &mut RenderInputs,
+    outputs: &mut FrameOutputs,
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
+    let result = run_frame(renderer, inputs, outputs);
+    std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
+    result
+}
+
+fn run_frame(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
@@ -51,6 +65,13 @@ pub fn render_frame(
         inputs.scene.prev_view_projection = inputs.scene.view_projection;
         inputs.scene.view_projection = view_projection;
     }
+
+    inputs.shadow_atlas = passes::shadow_depth::atlas::assign_spotlight_atlas(
+        &inputs.scene,
+        inputs.frame.active_camera_frame.as_ref(),
+        inputs.view.camera_tile_rects.is_empty(),
+        passes::shadow_depth::atlas::shadow_atlas_size(),
+    );
 
     renderer.sync_present_mode(inputs.settings.vsync_enabled);
     pass_sync::sync_settings_version(renderer, inputs);

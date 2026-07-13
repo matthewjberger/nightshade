@@ -141,7 +141,9 @@ fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
 /// handing the renderer its inputs costs nothing regardless of scene size.
 /// The frame itself never sees the world: anything it needs is captured
 /// here, and anything it produces for the world comes back through
-/// [`FrameOutputs`] in [`restore_render_inputs`].
+/// [`FrameOutputs`] in [`restore_render_inputs`]. The `ibl_views` and
+/// `shadow_atlas` fields are renderer-owned and composed empty; the frame
+/// driver fills them itself.
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let commands = map_render_commands(world);
 
@@ -234,8 +236,8 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         debug_draw: std::mem::take(&mut resources.debug_draw),
         editor_selection: std::mem::take(&mut resources.editor_selection),
         scene: std::mem::take(&mut resources.renderer_state),
-        ibl_views: std::mem::take(&mut resources.ibl_views),
-        shadow_atlas: std::mem::take(&mut resources.shadow_atlas),
+        ibl_views: Default::default(),
+        shadow_atlas: Default::default(),
         wind: resources.wind,
         mesh_cache: std::mem::take(&mut resources.assets.mesh_cache),
         texture_cache: std::mem::take(&mut resources.texture_cache),
@@ -294,8 +296,6 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     resources.debug_draw = inputs.debug_draw;
     resources.editor_selection = inputs.editor_selection;
     resources.renderer_state = inputs.scene;
-    resources.ibl_views = inputs.ibl_views;
-    resources.shadow_atlas = inputs.shadow_atlas;
     resources.texture_cache = inputs.texture_cache;
     resources.assets.mesh_cache = inputs.mesh_cache;
     let mut pending = inputs.pending_particle_textures;

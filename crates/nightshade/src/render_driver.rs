@@ -12,9 +12,7 @@ mod extract;
 mod frame;
 mod inputs;
 mod lines;
-mod shadow_atlas;
 pub mod text_mesh;
 
 pub use frame::*;
 pub use inputs::*;
-pub use shadow_atlas::*;
