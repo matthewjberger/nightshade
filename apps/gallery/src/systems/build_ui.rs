@@ -1,7 +1,7 @@
 use nightshade::ecs::ui::components::{ThemeEffect, ThemeShadow};
 use nightshade::prelude::*;
 
-use crate::ecs::GalleryWorld;
+use crate::ecs::GalleryResources;
 
 const SIDEBAR_WIDTH: f32 = 220.0;
 const SIDEBAR_COMPACT_WIDTH: f32 = 64.0;
@@ -59,7 +59,7 @@ const NAV_ITEMS: [NavItem; 8] = [
     },
 ];
 
-pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
+pub fn build_gallery_ui(gallery: &mut GalleryResources, world: &mut World) {
     let mut tree = UiTreeBuilder::new(world);
 
     let root = tree
@@ -223,7 +223,7 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
         ui_set_named(world, entity, name);
     }
 
-    let state = &mut gallery.resources.state;
+    let state = &mut gallery.state;
     state.nav_buttons = nav_buttons.clone();
     state.nav_indicators = nav_indicators.clone();
     state.nav_labels = nav_labels.clone();
@@ -234,10 +234,10 @@ pub fn build_gallery_ui(gallery: &mut GalleryWorld, world: &mut World) {
     state.nav_slider_target_y = state.nav_slider_y;
 }
 
-pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
-    let nav_buttons = gallery.resources.state.nav_buttons.clone();
-    let nav_labels = gallery.resources.state.nav_labels.clone();
-    let screen_roots = gallery.resources.state.screen_roots.clone();
+pub fn poll_gallery(gallery: &mut GalleryResources, world: &mut World) {
+    let nav_buttons = gallery.state.nav_buttons.clone();
+    let nav_labels = gallery.state.nav_labels.clone();
+    let screen_roots = gallery.state.screen_roots.clone();
     let modal_trigger = ui_named_entity(world, "modal_trigger");
     let modal_dialog = ui_named_entity(world, "modal_dialog");
     let confirm_trigger = ui_named_entity(world, "confirm_trigger");
@@ -348,15 +348,15 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     if let Some(index) = new_active {
-        let prev = gallery.resources.state.active_screen;
+        let prev = gallery.state.active_screen;
         if index != prev {
             ui_set_visible(world, screen_roots[prev], false);
             update_nav_label_color(world, nav_labels.get(prev).copied(), false);
             ui_set_visible(world, screen_roots[index], true);
             update_nav_label_color(world, nav_labels.get(index).copied(), true);
-            gallery.resources.state.active_screen = index;
-            if let Some(target_y) = gallery.resources.state.nav_y_offsets.get(index).copied() {
-                gallery.resources.state.nav_slider_target_y = target_y;
+            gallery.state.active_screen = index;
+            if let Some(target_y) = gallery.state.nav_y_offsets.get(index).copied() {
+                gallery.state.nav_slider_target_y = target_y;
             }
         }
     }
@@ -371,8 +371,8 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     let slider_entity = ui_named_entity(world, "nav_slider");
-    let mut slider_y = gallery.resources.state.nav_slider_y;
-    let slider_target = gallery.resources.state.nav_slider_target_y;
+    let mut slider_y = gallery.state.nav_slider_y;
+    let slider_target = gallery.state.nav_slider_target_y;
     let delta_time = world.resources.window.timing.delta_time.clamp(0.0, 0.05);
     let stiffness = 220.0_f32;
     let displacement = slider_y - slider_target;
@@ -381,7 +381,7 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
     if (slider_y - slider_target).abs() < 0.05 {
         slider_y = slider_target;
     }
-    gallery.resources.state.nav_slider_y = slider_y;
+    gallery.state.nav_slider_y = slider_y;
     if let Some(slider) = slider_entity {
         update_slider_y(world, slider, slider_y);
     }
@@ -417,9 +417,9 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
         ui_set_disabled(world, slider, disabled);
     }
     if submit_count_increment > 0 {
-        gallery.resources.state.submit_count += submit_count_increment;
+        gallery.state.submit_count += submit_count_increment;
         if let Some(log_entity) = ui_named_entity(world, "submit_log") {
-            let count = gallery.resources.state.submit_count;
+            let count = gallery.state.submit_count;
             let message = format!("Submitted {count} time(s)");
             if let Some(UiNodeContent::Text { text_slot, .. }) =
                 world.ecs.worlds[UI]
@@ -449,7 +449,6 @@ pub fn poll_gallery(gallery: &mut GalleryWorld, world: &mut World) {
             .map(|data| data.visible_start)
             .unwrap_or(0);
         for (pool_index, text_entity) in gallery
-            .resources
             .state
             .virtual_list_text_nodes
             .clone()

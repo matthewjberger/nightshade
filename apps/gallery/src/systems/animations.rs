@@ -1,8 +1,8 @@
 use nightshade::prelude::*;
 
-use crate::ecs::GalleryWorld;
+use crate::ecs::GalleryResources;
 
-pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
+pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) {
     let timing = world.resources.window.timing.clone();
     let fps = timing.frames_per_second;
     let uptime_ms = timing.uptime_milliseconds;
@@ -18,11 +18,11 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     if let Some(progress) = ui_named_entity(world, "progress_entity") {
-        gallery.resources.state.progress_value += delta * 0.1;
-        if gallery.resources.state.progress_value > 1.0 {
-            gallery.resources.state.progress_value = 0.0;
+        gallery.state.progress_value += delta * 0.1;
+        if gallery.state.progress_value > 1.0 {
+            gallery.state.progress_value = 0.0;
         }
-        ui_progress_bar_set_value(world, progress, gallery.resources.state.progress_value);
+        ui_progress_bar_set_value(world, progress, gallery.state.progress_value);
     }
 
     let theme = world
@@ -50,14 +50,14 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
         }
     }
 
-    gallery.resources.state.color_blend_time += delta * 0.3;
-    if gallery.resources.state.color_blend_time > 1.0 {
-        gallery.resources.state.color_blend_time -= 1.0;
+    gallery.state.color_blend_time += delta * 0.3;
+    if gallery.state.color_blend_time > 1.0 {
+        gallery.state.color_blend_time -= 1.0;
     }
     let blended = blend_color(
         theme.accent_color,
         theme.text_color_accent,
-        gallery.resources.state.color_blend_time,
+        gallery.state.color_blend_time,
     );
 
     let time = uptime_ms as f32 / 1000.0;
@@ -79,20 +79,16 @@ pub fn run_animation_systems(gallery: &mut GalleryWorld, world: &mut World) {
     }
 
     if let Some(entity) = ui_named_entity(world, "effects_progress") {
-        gallery.resources.state.effects_progress_value += delta * 0.4;
-        if gallery.resources.state.effects_progress_value > 1.0 {
-            gallery.resources.state.effects_progress_value = 0.0;
+        gallery.state.effects_progress_value += delta * 0.4;
+        if gallery.state.effects_progress_value > 1.0 {
+            gallery.state.effects_progress_value = 0.0;
         }
-        ui_progress_bar_set_value(
-            world,
-            entity,
-            gallery.resources.state.effects_progress_value,
-        );
+        ui_progress_bar_set_value(world, entity, gallery.state.effects_progress_value);
     }
 
     if let Some(entity) = ui_named_entity(world, "effects_spinner") {
-        gallery.resources.state.effects_spinner_angle += delta * 1.4;
-        let angle = gallery.resources.state.effects_spinner_angle;
+        gallery.state.effects_spinner_angle += delta * 1.4;
+        let angle = gallery.state.effects_spinner_angle;
         let hue = (angle * 0.5).rem_euclid(std::f32::consts::TAU) / std::f32::consts::TAU;
         let r = (hue * 6.0).sin().abs();
         let g = (hue * 6.0 + 2.0).sin().abs();
