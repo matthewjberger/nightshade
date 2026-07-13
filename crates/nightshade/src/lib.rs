@@ -149,8 +149,9 @@
 //! - Call `player.play(index)` to start
 //!
 //! **Textures Missing**
-//! - Call `texture_cache_add_reference(&mut world.resources.texture_cache, path)` before material creation
-//! - Paths are case-sensitive
+//! - Textures acquired through materials are released on despawn; keep hand-loaded
+//!   textures alive with `texture_cache_protect(&mut world.resources.texture_cache, name)`
+//! - Names are case-sensitive
 //!
 //! **Entity Invisible**
 //! - Needs `RENDER_MESH` flag
