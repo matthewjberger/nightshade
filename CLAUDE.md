@@ -31,6 +31,6 @@ Games use two ECS worlds: the engine `World` (rendering, physics, transforms) an
 
 - WGSL uniform structs need 16-byte alignment. Use `vec4` packing, not `vec3`.
 - `nalgebra_glm` only, never `glam`. `Vec2::component_mul()` for element-wise multiply.
-- The renderer syncs by diffing freecs change ticks, and raw table writes in `query_mut` closures do not stamp them. Write every render-facing component (transforms, visibility, lights, morph weights, text, water, decals, instanced meshes) through the stamping accessors (`set_*`, `get_*_mut`, `modify_*`) or the change never reaches the renderer. Mutate registered materials through `material_registry_mutate`, never through `registry_entry_by_name_mut`.
+- The renderer syncs by diffing freecs change ticks, and raw table writes in `query_mut` closures do not stamp them. Write every render-facing component (transforms, visibility, lights, morph weights, text, water, decals, instanced meshes) through the stamping accessors (`set_*`, `get_*_mut`, `modify_*`) or the change never reaches the renderer. Hot bulk passes that must stay on raw table access can opt in afterward with `world.core.mark_changed(entity, MASK)` or per-table `table.mark_columns_changed(MASK, tick)`. Mutate registered materials through `material_registry_mutate`, never through `registry_entry_by_name_mut`.
 - `freecs::Entity` is the entity type everywhere.
 - Sprite atlas slot size: `nightshade::render::SPRITE_ATLAS_SLOT_SIZE` = (512, 512).
