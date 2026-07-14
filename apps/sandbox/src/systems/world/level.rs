@@ -3,7 +3,6 @@ use crate::systems::world::textures::{
     prototype_material,
 };
 use nightshade::ecs::world::components;
-use nightshade::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME};
 use nightshade::prelude::*;
 
 pub const PLAYER_SPAWN_TAG: &str = "player_spawn";
@@ -240,19 +239,14 @@ fn spawn_floor(world: &mut World) {
 }
 
 fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
-    let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
-        name.0 = "PlayerSpawn".to_string();
-    }
-    world.set(
-        entity,
+    let entity = world.spawn_with((
+        Name("PlayerSpawn".to_string()),
         components::LocalTransform {
             translation: position,
-            rotation: Quat::identity(),
-            scale: Vec3::new(1.0, 1.0, 1.0),
+            ..Default::default()
         },
-    );
-    world.set(entity, components::GlobalTransform::default());
+        components::GlobalTransform::default(),
+    ));
     world
         .resources
         .entities

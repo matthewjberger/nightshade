@@ -1,7 +1,6 @@
 use crate::ecs::{CharacterState, RagdollMode, SandboxResources};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::lines::components::{Line, Lines};
-use nightshade::ecs::world::{GLOBAL_TRANSFORM, LINES, LOCAL_TRANSFORM, NAME, VISIBILITY};
 use nightshade::plugins::gamepad::query_active_gamepad;
 use nightshade::prelude::*;
 
@@ -97,15 +96,14 @@ const SKELETON_JOINT_SIZE: f32 = 0.04;
 pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     let feet = spawn_feet_position(world);
 
-    let body = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(body) {
-        name.0 = "Character".to_string();
-    }
-    if let Some(transform) =
-        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(body)
-    {
-        transform.translation = feet;
-    }
+    let body = world.spawn_with((
+        Name("Character".to_string()),
+        LocalTransform {
+            translation: feet,
+            ..Default::default()
+        },
+        GlobalTransform::default(),
+    ));
 
     let camera = spawn_third_person_camera(
         world,
@@ -116,33 +114,21 @@ pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
         "Character Camera".to_string(),
     );
 
-    let spheres = spawn_entities(
-        world,
-        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
-        1,
-    )[0];
-    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(spheres) {
-        name.0 = "Character Spheres".to_string();
-    }
-    world.set(spheres, Lines::new(Vec::new()));
-    if let Some(visibility) = world.get_mut::<nightshade::ecs::primitives::Visibility>(spheres) {
-        visibility.visible = false;
-    }
+    let spheres = world.spawn_with((
+        Name("Character Spheres".to_string()),
+        Lines::new(Vec::new()),
+        Visibility { visible: false },
+        LocalTransform::default(),
+        GlobalTransform::default(),
+    ));
 
-    let skeleton_lines = spawn_entities(
-        world,
-        NAME | LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
-        1,
-    )[0];
-    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(skeleton_lines) {
-        name.0 = "Character Skeleton".to_string();
-    }
-    world.set(skeleton_lines, Lines::new_always_on_top(Vec::new()));
-    if let Some(visibility) =
-        world.get_mut::<nightshade::ecs::primitives::Visibility>(skeleton_lines)
-    {
-        visibility.visible = false;
-    }
+    let skeleton_lines = world.spawn_with((
+        Name("Character Skeleton".to_string()),
+        Lines::new_always_on_top(Vec::new()),
+        Visibility { visible: false },
+        LocalTransform::default(),
+        GlobalTransform::default(),
+    ));
 
     let state = &mut sandbox_world.character;
     state.body = Some(body);

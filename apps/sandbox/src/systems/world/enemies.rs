@@ -1,5 +1,5 @@
 use crate::ecs::{ENEMY, Enemy};
-use nightshade::ecs::world::commands::{spawn_entities, spawn_material};
+use nightshade::ecs::world::commands::spawn_material;
 use nightshade::prelude::*;
 use nightshade::render::material::Material;
 
@@ -138,15 +138,14 @@ fn patrol_target(index: usize) -> Vec3 {
 }
 
 fn spawn_visual(world: &mut World, position: Vec3, index: u32) -> (Entity, [Entity; 4]) {
-    let root = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-    if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(root) {
-        name.0 = format!("Sheep {}", index);
-    }
-    if let Some(transform) =
-        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(root)
-    {
-        transform.translation = position;
-    }
+    let root = world.spawn_with((
+        Name(format!("Sheep {}", index)),
+        LocalTransform {
+            translation: position,
+            ..Default::default()
+        },
+        GlobalTransform::default(),
+    ));
 
     let wool = Material {
         base_color: [0.93, 0.91, 0.87, 1.0],
@@ -209,29 +208,18 @@ fn spawn_sheep_part(
     scale: Vec3,
     material: Material,
 ) -> Entity {
-    let entity = spawn_entities(
-        world,
-        NAME | LOCAL_TRANSFORM
-            | GLOBAL_TRANSFORM
-            | RENDER_MESH
-            | MATERIAL_REF
-            | VISIBILITY
-            | PARENT,
-        1,
-    )[0];
-    if let Some(part_name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
-        part_name.0 = name.clone();
-    }
-    if let Some(transform) =
-        world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(entity)
-    {
-        transform.translation = translation;
-        transform.scale = scale;
-    }
-    world.set(entity, ChildOf(root));
-    if let Some(mesh) = world.get_mut::<nightshade::ecs::mesh::components::RenderMesh>(entity) {
-        mesh.name = "Cube".to_string();
-    }
+    let entity = world.spawn_with((
+        Name(name.clone()),
+        LocalTransform {
+            translation,
+            scale,
+            ..Default::default()
+        },
+        GlobalTransform::default(),
+        RenderMesh::new("Cube"),
+        Visibility::default(),
+        ChildOf(root),
+    ));
     spawn_material(world, entity, name, material);
     entity
 }

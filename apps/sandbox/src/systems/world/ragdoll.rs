@@ -2,9 +2,6 @@ use crate::ecs::{RagdollLink, RagdollMode, SandboxResources};
 use crate::systems::world::ik::{rotation_between, world_pose_of};
 use crate::systems::world::pose::{find_bone, joint_rotation, quat_to_rotation_vector};
 use nightshade::ecs::transform::queries::query_children;
-use nightshade::ecs::world::{
-    COLLIDER, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, PHYSICS_INTERPOLATION, RIGID_BODY,
-};
 use nightshade::plugins::physics::joints::{SphericalJoint, create_spherical_joint};
 use nightshade::prelude::*;
 use std::collections::HashMap;
@@ -161,55 +158,37 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
         let center = start.position + segment * 0.5;
         let body_rotation = rotation_between(Vec3::y(), direction);
 
-        let proxy = spawn_entities(
-            world,
-            NAME | LOCAL_TRANSFORM
-                | GLOBAL_TRANSFORM
-                | RIGID_BODY
-                | COLLIDER
-                | PHYSICS_INTERPOLATION,
-            1,
-        )[0];
-        if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(proxy) {
-            name.0 = format!("Ragdoll {suffix}");
-        }
-        if let Some(transform) =
-            world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(proxy)
-        {
-            transform.translation = center;
-            transform.rotation = body_rotation;
-        }
-        if let Some(rigid_body) =
-            world.get_mut::<nightshade::plugins::physics::components::RigidBodyComponent>(proxy)
-        {
-            *rigid_body = RigidBodyComponent::new_dynamic()
-                .with_translation(center.x, center.y, center.z)
-                .with_rotation(
-                    body_rotation.i,
-                    body_rotation.j,
-                    body_rotation.k,
-                    body_rotation.w,
-                )
-                .with_mass(*mass);
-            rigid_body.linvel = [launch_velocity.x, launch_velocity.y, launch_velocity.z];
-        }
-        if let Some(collider) =
-            world.get_mut::<nightshade::plugins::physics::components::ColliderComponent>(proxy)
-        {
-            let half_height = ((length * CAPSULE_FILL) * 0.5 - radius).max(0.02);
-            *collider = ColliderComponent::new_capsule(half_height, *radius)
+        let mut rigid_body = RigidBodyComponent::new_dynamic()
+            .with_translation(center.x, center.y, center.z)
+            .with_rotation(
+                body_rotation.i,
+                body_rotation.j,
+                body_rotation.k,
+                body_rotation.w,
+            )
+            .with_mass(*mass);
+        rigid_body.linvel = [launch_velocity.x, launch_velocity.y, launch_velocity.z];
+        let half_height = ((length * CAPSULE_FILL) * 0.5 - radius).max(0.02);
+        let proxy = world.spawn_with((
+            Name(format!("Ragdoll {suffix}")),
+            LocalTransform {
+                translation: center,
+                rotation: body_rotation,
+                ..Default::default()
+            },
+            GlobalTransform::default(),
+            rigid_body,
+            ColliderComponent::new_capsule(half_height, *radius)
                 .with_friction(0.8)
-                .with_restitution(0.05);
-        }
-        if let Some(interpolation) =
-            world.get_mut::<nightshade::plugins::physics::components::PhysicsInterpolation>(proxy)
-        {
-            interpolation.previous_translation = center;
-            interpolation.current_translation = center;
-            interpolation.previous_rotation = body_rotation;
-            interpolation.current_rotation = body_rotation;
-            interpolation.enabled = true;
-        }
+                .with_restitution(0.05),
+            PhysicsInterpolation {
+                previous_translation: center,
+                current_translation: center,
+                previous_rotation: body_rotation,
+                current_rotation: body_rotation,
+                enabled: true,
+            },
+        ));
 
         link_by_suffix.insert(suffix, links.len());
         links.push(RagdollLink {
