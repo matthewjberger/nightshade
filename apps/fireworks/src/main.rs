@@ -151,10 +151,10 @@ impl Plugin for FireworksPlugin {
     fn build(&self, app: &mut App) {
         app.world.resources.window.title = "Fireworks".to_string();
         app.insert_resource(FireworksDemo::default());
-        app.add_startup_system("fireworks_initialize", |world| {
+        app.add_startup_system(|world| {
             game_scope::<FireworksDemo, _>(world, initialize);
         });
-        app.add_system(Stage::Update, "fireworks_update", |world| {
+        app.add_system(Stage::Update, |world| {
             game_scope::<FireworksDemo, _>(world, update);
         });
     }

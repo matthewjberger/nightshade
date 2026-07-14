@@ -26,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(PhysicsPlugin)
-        .add_plugin(NavMeshPlugin)
+        .add_plugin(NavmeshPlugin)
+        .add_plugin(NavMeshDemoPlugin)
         .run()
 }
 
@@ -168,16 +169,16 @@ impl Default for NavMeshDemo {
     }
 }
 
-struct NavMeshPlugin;
+struct NavMeshDemoPlugin;
 
-impl Plugin for NavMeshPlugin {
+impl Plugin for NavMeshDemoPlugin {
     fn build(&self, app: &mut App) {
         app.world.resources.window.title = "NavMesh Pathfinding".to_string();
         app.insert_resource(NavMeshDemo::default());
-        app.add_startup_system("navmesh_initialize", |world| {
+        app.add_startup_system(|world| {
             game_scope::<NavMeshDemo, _>(world, initialize);
         });
-        app.add_system(Stage::Update, "navmesh_update", |world| {
+        app.add_system(Stage::Update, |world| {
             game_scope::<NavMeshDemo, _>(world, update);
         });
     }
@@ -807,7 +808,7 @@ impl NavMeshDemo {
         }
 
         if let Some(agent) =
-            world.get_mut::<nightshade::ecs::navmesh::components::NavMeshAgent>(agent_entity)
+            world.get_mut::<nightshade::plugins::navmesh::components::NavMeshAgent>(agent_entity)
         {
             agent.movement_speed = self.agent_speed;
         }
@@ -929,8 +930,8 @@ impl NavMeshDemo {
                 terrain::sample_terrain_height(agent_pos.x, agent_pos.z, &terrain_config);
             let fox_pos = Vec3::new(agent_pos.x, terrain_y, agent_pos.z);
 
-            let agent =
-                world.get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world
+                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let is_moving = agent
                 .map(|a| a.state == NavMeshAgentState::Moving)
                 .unwrap_or(false);
@@ -978,8 +979,8 @@ impl NavMeshDemo {
         const WALK_DISTANCE_THRESHOLD: f32 = 2.0;
 
         for fox in &mut self.foxes {
-            let agent =
-                world.get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world
+                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let (is_moving, distance) = agent
                 .map(|a| {
                     (
@@ -1026,8 +1027,8 @@ impl NavMeshDemo {
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &self.foxes {
-            let agent =
-                world.get::<nightshade::ecs::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world
+                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
             let needs_destination = agent
                 .map(|a| {
                     a.state == NavMeshAgentState::Idle

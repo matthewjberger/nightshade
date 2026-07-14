@@ -113,31 +113,30 @@ pub use resources::*;
 #[cfg(feature = "physics")]
 pub use systems::*;
 
-/// Installs the physics simulation: the step and collision-event systems
-/// join the frame schedule where they have always run, stepping from the
-/// start. Pause and resume at runtime through
-/// `world.resources.physics.enabled`, the way games gate physics per
-/// screen.
+/// Registers the physics step and collision-event systems into the frame
+/// schedule's update phase, stepping from the start.
+#[cfg(feature = "physics")]
+pub fn install(world: &mut crate::ecs::world::World) {
+    use crate::schedule::{FramePhase, schedule_push};
+    world.resources.physics.enabled = true;
+    let schedule = &mut world.resources.schedules.frame;
+    schedule_push(schedule, FramePhase::Update, systems::run_physics_systems);
+    schedule_push(
+        schedule,
+        FramePhase::Update,
+        crate::ecs::event::emit_collision_events_system,
+    );
+}
+
+/// Installs the physics simulation through [`install`]. Pause and resume
+/// at runtime through `world.resources.physics.enabled`, the way games
+/// gate physics per screen.
 #[cfg(feature = "physics")]
 pub struct PhysicsPlugin;
 
 #[cfg(feature = "physics")]
 impl crate::app::Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.world.resources.physics.enabled = true;
-        app.add_startup_system("install_physics_systems", |world| {
-            crate::schedule::schedule_insert_after(
-                &mut world.resources.schedules.frame,
-                crate::schedule::system_names::ENSURE_BOUNDING_VOLUMES,
-                crate::schedule::system_names::RUN_PHYSICS,
-                systems::run_physics_systems,
-            );
-            crate::schedule::schedule_insert_after(
-                &mut world.resources.schedules.frame,
-                crate::schedule::system_names::RUN_PHYSICS,
-                crate::schedule::system_names::EMIT_COLLISION_EVENTS,
-                crate::ecs::event::emit_collision_events_system,
-            );
-        });
+        app.add_startup_system(install);
     }
 }

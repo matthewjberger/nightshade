@@ -870,12 +870,12 @@ pub struct SteamPlugin;
 
 impl crate::app::Plugin for SteamPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.add_startup_system("initialize_steam", |world| {
+        app.add_startup_system(|world| {
             if let Err(error) = steam_initialize(&mut world.resources.steam) {
                 tracing::warn!("Steam unavailable: {error}");
             }
         });
-        app.add_system(crate::app::Stage::First, "steam_callbacks", |world| {
+        app.add_system(crate::app::Stage::First, |world| {
             steam_run_callbacks(&world.resources.steam);
         });
     }

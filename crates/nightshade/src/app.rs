@@ -22,10 +22,10 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.ecs.add_world_at(GAME, register_game_components());
 //!         app.insert_resource(MyGame::default());
-//!         app.add_startup_system("initialize", |world| {
+//!         app.add_startup_system(|world| {
 //!             game_scope::<MyGame, _>(world, systems::initialize);
 //!         });
-//!         app.add_system(Stage::Update, "tick", |world| {
+//!         app.add_system(Stage::Update, |world| {
 //!             game_scope::<MyGame, _>(world, systems::tick);
 //!         });
 //!     }
@@ -105,15 +105,13 @@ type UpdateRenderGraphFn = Box<
 /// UI) and rendering, exactly where game logic ran historically. Game
 /// logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`] is for
 /// systems that must observe every update system's writes; work that
-/// must follow the engine systems hooks into the frame schedule itself
-/// with `schedule_insert_before`/`schedule_insert_after`.
+/// must follow the engine systems registers into a frame schedule phase
+/// with `schedule_push`.
 pub struct App {
     pub world: World,
     pub startup: freecs::Schedule<World>,
     pub stages: freecs::Stages<World>,
     pub(crate) log_guards: Vec<Box<dyn std::any::Any>>,
-    windowed: bool,
-    rendered: bool,
     render_graph_config: Vec<RenderGraphConfigFn>,
     pre_render: Vec<PreRenderFn>,
     update_render_graph: Vec<UpdateRenderGraphFn>,
@@ -131,13 +129,14 @@ impl App {
         for stage in Stage::ALL {
             stages.add_stage(stage.name());
         }
+        let mut world = World::default();
+        world.resources.window.start_hidden = true;
+        world.resources.window.create_renderer = false;
         Self {
-            world: World::default(),
+            world,
             startup: freecs::Schedule::new(),
             stages,
             log_guards: Vec::new(),
-            windowed: false,
-            rendered: false,
             render_graph_config: Vec::new(),
             pre_render: Vec::new(),
             update_render_graph: Vec::new(),
@@ -154,13 +153,14 @@ impl App {
         self
     }
 
-    /// Pushes a system onto a [`Stage`].
+    /// Pushes a system onto a [`Stage`]. Systems run in the order they
+    /// were added.
     pub fn add_system(
         &mut self,
         stage: Stage,
-        name: &'static str,
         system: impl FnMut(&mut World) + Send + 'static,
     ) -> &mut Self {
+        let name = std::any::type_name_of_val(&system);
         self.stages.stage_mut(stage.name()).push(name, system);
         self
     }
@@ -170,9 +170,9 @@ impl App {
     /// no runner).
     pub fn add_startup_system(
         &mut self,
-        name: &'static str,
         system: impl FnMut(&mut World) + Send + 'static,
     ) -> &mut Self {
+        let name = std::any::type_name_of_val(&system);
         self.startup.push(name, system);
         self
     }
@@ -227,14 +227,6 @@ impl App {
         self
     }
 
-    pub(crate) fn set_windowed(&mut self) {
-        self.windowed = true;
-    }
-
-    pub(crate) fn set_rendered(&mut self) {
-        self.rendered = true;
-    }
-
     /// Runs the app. With neither [`WindowPlugin`] nor [`RenderPlugin`],
     /// the startup schedule and one pass of the stages run against the
     /// world and the program returns: the do-nothing composition. With
@@ -243,15 +235,13 @@ impl App {
     /// frame; without [`WindowPlugin`] the window stays hidden, and
     /// without [`RenderPlugin`] no renderer is created.
     pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
-        if !self.windowed && !self.rendered {
+        if self.world.resources.window.start_hidden && !self.world.resources.window.create_renderer
+        {
             let mut world = self.world;
             self.startup.run(&mut world);
             self.stages.run(&mut world);
             return Ok(());
         }
-
-        self.world.resources.window.start_hidden = !self.windowed;
-        self.world.resources.window.create_renderer = self.rendered;
 
         let log_guards = std::mem::take(&mut self.log_guards);
         let (world, state) = self.into_parts();
@@ -378,22 +368,12 @@ impl Plugin for WindowPlugin {
         if self.size.is_some() {
             app.world.resources.window.initial_size = self.size;
         }
-        app.set_windowed();
+        app.world.resources.window.start_hidden = false;
     }
 }
 
-/// Adds the renderer. With [`WindowPlugin`] it renders to the window;
-/// without, it renders against a hidden window for headless capture.
-pub struct RenderPlugin;
-
-impl Plugin for RenderPlugin {
-    fn build(&self, app: &mut App) {
-        app.set_rendered();
-    }
-}
-
-/// The standard composition: a visible window, the renderer, the UI
-/// systems, and logging. The capability plugins in [`crate::plugins`] stay
+/// The standard composition: a visible window, logging, the renderer, and
+/// the UI systems. The capability plugins in [`crate::plugins`] stay
 /// opt-in: physics because most apps drive it per screen, and audio,
 /// gamepad, and egui so a program only acquires the devices and overlays
 /// it composes.
@@ -403,7 +383,7 @@ impl PluginGroup for DefaultPlugins {
     fn build(&self, app: &mut App) {
         WindowPlugin::default().build(app);
         crate::plugins::log::LogPlugin::default().build(app);
-        RenderPlugin.build(app);
+        crate::plugins::render::RenderPlugin::default().build(app);
         crate::plugins::ui::UiPlugin.build(app);
     }
 }

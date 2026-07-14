@@ -30,10 +30,10 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.resources.window.title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
-//!         app.add_startup_system("initialize", |world| {
+//!         app.add_startup_system(|world| {
 //!             game_scope::<MyGame, _>(world, initialize);
 //!         });
-//!         app.add_system(Stage::Update, "tick", |world| {
+//!         app.add_system(Stage::Update, |world| {
 //!             game_scope::<MyGame, _>(world, tick);
 //!         });
 //!     }
@@ -340,7 +340,7 @@
 //! impl Plugin for DebugUiPlugin {
 //!     fn build(&self, app: &mut App) {
 //!         app.world.resources.egui.enabled = true;
-//!         app.add_system(Stage::Update, "debug_ui", |world| {
+//!         app.add_system(Stage::Update, |world| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
 //!                     ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
@@ -512,22 +512,21 @@
 //! 4. Run the app stages (`first`, `update`, `late_update`)
 //! 5. Dispatch event bus messages
 //! 6. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
-//!    - Build audio buses and update audio (when `AudioPlugin` is composed)
-//!    - Update camera aspect ratios
-//!    - Step physics simulation (if `physics` enabled)
-//!    - Update animation players, apply to transforms
-//!    - Propagate transform hierarchy
-//!    - Update instanced mesh caches, sync text
-//!    - Reset input state
-//!    - Process deferred commands, cleanup
+//!    - `Start`: swap event buffers, audio (when `AudioPlugin` is composed)
+//!    - `Update`: simulation (physics, animation, tweens, particles, cloth, vfx)
+//!    - `PostUpdate`: transform propagation, instanced mesh caches, retained UI
+//!    - `Render`: the render sync systems (when `RenderPlugin` is composed)
+//!    - `Last`: input reset, deferred commands, cleanup
 //! 7. Execute render graph passes
 //!
 //! The frame schedule is a resource at `world.resources.schedules.frame`, with
-//! the retained UI sub-schedule at `world.resources.schedules.retained_ui`. Modify
-//! either from a startup system to insert, remove, or
-//! reorder engine systems. See [`system_names`](schedule::system_names) and
-//! [`retained_ui_system_names`](schedule::retained_ui_system_names) for the
-//! available system name constants.
+//! the retained UI sub-schedule at `world.resources.schedules.retained_ui`.
+//! Within a [`FramePhase`](schedule::FramePhase), systems run in registration
+//! order: the core systems land first, then each plugin's in composition
+//! order. Register your own from a startup system with
+//! [`schedule_push`](schedule::schedule_push), or drop an engine system with
+//! [`schedule_remove`](schedule::schedule_remove) by passing the function
+//! itself.
 //!
 //! ## Threading Model
 //!
@@ -591,7 +590,7 @@ pub use systems::*;
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, Stage, WindowPlugin, game_scope,
+        App, DefaultPlugins, Plugin, PluginGroup, Stage, WindowPlugin, game_scope,
     };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
@@ -604,21 +603,28 @@ pub mod prelude {
     pub use crate::plugins::audio::AudioPlugin;
     #[cfg(feature = "egui")]
     pub use crate::plugins::egui::EguiPlugin;
+    #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+    pub use crate::plugins::file_watcher::FileWatcherPlugin;
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::GamepadPlugin;
+    #[cfg(feature = "gizmos")]
+    pub use crate::plugins::gizmos::GizmosPlugin;
     pub use crate::plugins::log::LogPlugin;
     pub use crate::plugins::log::{LogConfig, LogRotation};
+    #[cfg(feature = "navmesh")]
+    pub use crate::plugins::navmesh::NavmeshPlugin;
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsPlugin;
+    pub use crate::plugins::render::RenderPlugin;
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use crate::plugins::steam::SteamPlugin;
-    pub use crate::plugins::ui::UiPlugin;
+    pub use crate::plugins::ui::{
+        UiPlugin, build_default_retained_ui_schedule, run_retained_ui_schedule,
+    };
     pub use crate::run::*;
     pub use crate::schedule::{
-        FrameSchedule, FrameScheduleEntry, Schedules, SystemFn, build_default_retained_ui_schedule,
-        retained_ui_system_names, run_retained_ui_schedule, schedule_contains,
-        schedule_insert_after, schedule_insert_before, schedule_push, schedule_remove,
-        schedule_run, system_names,
+        FramePhase, FrameSchedule, Schedules, SystemFn, schedule_push, schedule_remove,
+        schedule_run,
     };
     pub use crate::state::{NextStateBuilder, RenderResources, State};
     pub use crate::systems::*;
@@ -677,17 +683,6 @@ pub mod prelude {
     pub use crate::ecs::material::resources::{material_registry_insert, material_registry_mutate};
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
-    pub use crate::ecs::navmesh::{NavMeshAgent, NavMeshAgentState};
-    #[cfg(feature = "navmesh")]
-    pub use crate::ecs::navmesh::{
-        NavMeshConnection, NavMeshEdge, NavMeshTriangle, NavMeshWorld, PathRequest, PathResult,
-        PathStatus, PathfindingAlgorithm, SpatialHash, clear_navmesh,
-        find_closest_point_on_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
-        sample_navmesh_height, set_agent_destination, set_agent_speed, set_navmesh_debug_draw,
-        spawn_navmesh_agent, stop_agent,
-    };
-    #[cfg(feature = "navmesh-bake")]
-    pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     pub use crate::ecs::particles::systems::update_particle_emitters;
     #[cfg(feature = "picking")]
     pub use crate::ecs::picking::{
@@ -815,6 +810,17 @@ pub mod prelude {
     pub use crate::plugins::gamepad::detect_input_mode_system;
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::query_active_gamepad;
+    pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
+    #[cfg(feature = "navmesh")]
+    pub use crate::plugins::navmesh::{
+        NavMeshConnection, NavMeshEdge, NavMeshTriangle, NavMeshWorld, PathRequest, PathResult,
+        PathStatus, PathfindingAlgorithm, SpatialHash, clear_navmesh,
+        find_closest_point_on_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
+        sample_navmesh_height, set_agent_destination, set_agent_speed, set_navmesh_debug_draw,
+        spawn_navmesh_agent, stop_agent,
+    };
+    #[cfg(feature = "navmesh-bake")]
+    pub use crate::plugins::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsWorld;
     #[cfg(feature = "physics")]
@@ -951,7 +957,7 @@ pub mod prelude {
     };
 
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-    pub use crate::ecs::file_watcher::FileWatcher;
+    pub use crate::plugins::file_watcher::FileWatcher;
 
     // === decap re-exports (generated) ===
     pub use crate::ecs::transform::systems::{sync_hierarchy_index, update_parent};

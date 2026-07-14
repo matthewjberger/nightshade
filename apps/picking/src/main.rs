@@ -89,10 +89,10 @@ impl Plugin for PickingPlugin {
     fn build(&self, app: &mut App) {
         app.world.resources.window.title = "Picking Demo".to_string();
         app.insert_resource(PickingDemo::default());
-        app.add_startup_system("picking_initialize", |world| {
+        app.add_startup_system(|world| {
             game_scope::<PickingDemo, _>(world, initialize);
         });
-        app.add_system(Stage::Update, "picking_update", |world| {
+        app.add_system(Stage::Update, |world| {
             game_scope::<PickingDemo, _>(world, update);
         });
     }

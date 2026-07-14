@@ -162,7 +162,7 @@ freecs::dynamic_schema! {
             material_variants: crate::ecs::material::components::MaterialVariants => MATERIAL_VARIANTS,
             morph_weights: crate::ecs::morph::components::MorphWeights => MORPH_WEIGHTS,
             name: crate::ecs::primitives::Name => NAME,
-            navmesh_agent: crate::ecs::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
+            navmesh_agent: crate::plugins::navmesh::components::NavMeshAgent => NAVMESH_AGENT,
             pan_orbit_camera: crate::ecs::camera::components::PanOrbitCamera => PAN_ORBIT_CAMERA,
             child_of: freecs::dynamic::ChildOf => PARENT,
             particle_emitter: crate::render::particles::ParticleEmitter => PARTICLE_EMITTER,
@@ -264,7 +264,7 @@ pub struct Resources {
     pub entities: crate::ecs::entity_registry::EntityRegistry,
     pub event_bus: crate::ecs::event_bus::resources::EventBus,
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-    pub file_watcher: crate::ecs::file_watcher::FileWatcher,
+    pub file_watcher: crate::plugins::file_watcher::FileWatcher,
     pub gpu_picking: crate::ecs::gpu_picking::GpuPicking,
     #[cfg(feature = "grass")]
     pub grass: crate::render::grass_config::GrassSettings,
@@ -278,7 +278,7 @@ pub struct Resources {
     pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
     pub monitors: crate::ecs::window::resources::Monitors,
     #[cfg(feature = "navmesh")]
-    pub navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
+    pub navmesh: crate::plugins::navmesh::resources::NavMeshWorld,
     #[cfg(feature = "physics")]
     pub physics: crate::plugins::physics::resources::PhysicsWorld,
     #[cfg(feature = "physics")]

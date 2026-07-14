@@ -26,14 +26,10 @@ pub mod camera;
 pub mod cloth;
 pub mod cutscene;
 pub mod entity_registry;
-#[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-pub mod file_watcher;
 
 pub mod decal;
 pub mod event;
 pub mod event_bus;
-#[cfg(feature = "gizmos")]
-pub mod gizmos;
 pub mod gpu_picking;
 pub mod graphics;
 pub mod input;
@@ -43,7 +39,6 @@ pub mod loading;
 pub mod material;
 pub mod mesh;
 pub mod morph;
-pub mod navmesh;
 pub mod particles;
 #[cfg(feature = "picking")]
 pub mod picking;

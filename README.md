@@ -174,10 +174,10 @@ struct SpinCubePlugin;
 impl Plugin for SpinCubePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(SpinCube::default());
-        app.add_startup_system("initialize", |world| {
+        app.add_startup_system(|world| {
             game_scope::<SpinCube, _>(world, initialize);
         });
-        app.add_system(Stage::Update, "spin", |world| {
+        app.add_system(Stage::Update, |world| {
             game_scope::<SpinCube, _>(world, spin);
         });
     }

@@ -1,0 +1,226 @@
+//! The renderer composition. The renderer itself deliberately lives
+//! outside the [`World`]: it is freecs-free, consumes one owned
+//! `RenderInputs` per frame, and its lifecycle (window surface, resize,
+//! present) belongs to the runner. This plugin declares that a renderer
+//! exists and installs the world-side sync systems that feed it.
+
+use crate::app::{App, Plugin};
+use crate::ecs::world::CORE;
+use crate::ecs::world::World;
+use crate::render_driver::render_entity;
+
+/// Registers the scene, material, animation, and skinning sync systems
+/// into the frame schedule's render phase, after every system that writes
+/// render-facing state.
+pub fn install(world: &mut World) {
+    use crate::schedule::{FramePhase, schedule_push};
+    let schedule = &mut world.resources.schedules.frame;
+    schedule_push(
+        schedule,
+        FramePhase::Render,
+        crate::ecs::graphics::scene_sync::render_sync_system,
+    );
+    schedule_push(schedule, FramePhase::Render, render_sync_materials_system);
+    schedule_push(
+        schedule,
+        FramePhase::Render,
+        crate::ecs::graphics::animation_sync::render_sync_animation_system,
+    );
+    schedule_push(
+        schedule,
+        FramePhase::Render,
+        crate::ecs::skin::systems::render_sync_skinning_system,
+    );
+}
+
+/// Adds the renderer: the surface comes up (against a hidden window
+/// without `WindowPlugin`, the headless capture path), and the sync
+/// systems from [`install`] join the frame schedule to feed it. Without
+/// this plugin the engine does no render work at all. The optional fields
+/// override the engine's vsync and frame rate defaults at composition.
+#[derive(Default)]
+pub struct RenderPlugin {
+    pub vsync: Option<bool>,
+    pub frame_rate_limit: Option<f32>,
+}
+
+impl Plugin for RenderPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.resources.window.create_renderer = true;
+        if let Some(vsync) = self.vsync {
+            app.world.resources.render_settings.vsync_enabled = vsync;
+        }
+        if let Some(limit) = self.frame_rate_limit {
+            app.world.resources.render_settings.frame_rate_limit = Some(limit);
+        }
+        app.add_startup_system(install);
+    }
+}
+
+fn material_table_entry(
+    registry: &crate::ecs::material::resources::MaterialRegistry,
+    index: usize,
+) -> crate::render::config::RenderMaterialEntry {
+    match registry.registry.entries[index].as_ref() {
+        Some(material) => crate::render::config::RenderMaterialEntry {
+            material: material.clone(),
+            texture_ids: registry.texture_ids.get(index).copied().unwrap_or_default(),
+        },
+        None => crate::render::config::RenderMaterialEntry::default(),
+    }
+}
+
+/// Resolves the scene's materials into `renderer_state.render_materials`,
+/// with ids equal to the registry index offset by one, so an id never moves
+/// when other materials are added or removed (id 0 is the built-in default).
+/// Render passes read this instead of walking the material registry and each
+/// `MaterialRef` themselves; each pass still converts the resolved materials
+/// to GPU form with its own bindless texture-layer map. The table persists
+/// across frames: registry edits refresh only the entries whose indices the
+/// registry marked dirty, and the entity maps rebuild only when a
+/// `MaterialRef` or the renderable entity set changed.
+pub fn render_sync_materials_system(world: &mut World) {
+    let registry_version = world.resources.assets.material_registry.version;
+    let registry_names_version = world.resources.assets.material_registry.names_version;
+    let (rebuild_entity_maps, first_run) = {
+        let sync = &mut world.resources.render_scene_sync;
+        let entities_dirty = std::mem::take(&mut sync.materials_dirty);
+        let version_dirty = sync.materials_version_seen != registry_version;
+        let names_dirty = sync.materials_names_version_seen != registry_names_version;
+        let first_run = !sync.materials_initialized;
+        if !entities_dirty && !version_dirty && !first_run {
+            return;
+        }
+        sync.materials_initialized = true;
+        sync.materials_version_seen = registry_version;
+        sync.materials_names_version_seen = registry_names_version;
+        (entities_dirty || names_dirty || first_run, first_run)
+    };
+    let _span = tracing::info_span!("render_sync_materials").entered();
+    use crate::render::material::AlphaMode;
+
+    let mut dirty_indices =
+        std::mem::take(&mut world.resources.assets.material_registry.dirty_indices);
+    dirty_indices.sort_unstable();
+    dirty_indices.dedup();
+
+    {
+        let resources = &mut world.resources;
+        let registry = &resources.assets.material_registry;
+        let table = &mut resources.renderer_state.render_materials;
+        let entry_count = registry.registry.entries.len();
+
+        if first_run || table.entries.len() > entry_count {
+            table.entries.clear();
+            table.entries.reserve(entry_count);
+            for index in 0..entry_count {
+                table.entries.push(material_table_entry(registry, index));
+            }
+        } else {
+            if table.entries.len() < entry_count {
+                table.entries.resize_with(
+                    entry_count,
+                    crate::render::config::RenderMaterialEntry::default,
+                );
+            }
+            for &index in &dirty_indices {
+                let index = index as usize;
+                if index < entry_count {
+                    table.entries[index] = material_table_entry(registry, index);
+                }
+            }
+        }
+
+        table.name_to_id.clear();
+        for (index, name_slot) in registry.registry.index_to_name.iter().enumerate() {
+            if let Some(name) = name_slot
+                && registry.registry.entries[index].is_some()
+            {
+                table.name_to_id.insert(name.clone(), index as u32 + 1);
+            }
+        }
+
+        table.transparent_ids.clear();
+        table.mask_ids.clear();
+        table.double_sided_ids.clear();
+        for (index, entry) in table.entries.iter().enumerate() {
+            let material_id = index as u32 + 1;
+            let material = &entry.material;
+            if material.alpha_mode == AlphaMode::Blend || material.transmission_factor > 0.0 {
+                table.transparent_ids.insert(material_id);
+            }
+            if matches!(material.alpha_mode, AlphaMode::Mask | AlphaMode::Dither) {
+                table.mask_ids.insert(material_id);
+            }
+            if material.double_sided {
+                table.double_sided_ids.insert(material_id);
+            }
+        }
+    }
+
+    {
+        let table = &mut world.resources.renderer_state.render_materials;
+        table.generation = table.generation.wrapping_add(1);
+    }
+
+    if !rebuild_entity_maps {
+        return;
+    }
+
+    let mesh_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::RENDER_MESH)
+        .filter(|entity| {
+            !world.ecs.worlds[CORE].entity_has_components(*entity, crate::ecs::world::SKIN)
+        })
+        .collect();
+    let skinned_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::SKIN | crate::ecs::world::RENDER_MESH)
+        .collect();
+    let instanced_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::INSTANCED_MESH)
+        .collect();
+
+    let registry = &world.resources.assets.material_registry;
+    let mut entity_to_id: std::collections::HashMap<crate::ecs::world::Entity, u32> =
+        std::collections::HashMap::new();
+    let mut entity_to_name: std::collections::HashMap<crate::ecs::world::Entity, String> =
+        std::collections::HashMap::new();
+    for &entity in mesh_entities
+        .iter()
+        .chain(skinned_entities.iter())
+        .chain(instanced_entities.iter())
+    {
+        use crate::render::generational_registry::{registry_entry, registry_lookup_index};
+        let Some(material_ref) = world.get::<crate::ecs::material::components::MaterialRef>(entity)
+        else {
+            continue;
+        };
+        entity_to_name.insert(entity, material_ref.name.clone());
+        let id = material_ref
+            .id
+            .and_then(|id| {
+                registry_entry(&registry.registry, id.index, id.generation).map(|_| id.index + 1)
+            })
+            .or_else(|| {
+                registry_lookup_index(&registry.registry, &material_ref.name).and_then(
+                    |(index, _generation)| {
+                        registry.registry.entries[index as usize]
+                            .as_ref()
+                            .map(|_| index + 1)
+                    },
+                )
+            })
+            .unwrap_or(0);
+        entity_to_id.insert(entity, id);
+    }
+
+    let table = &mut world.resources.renderer_state.render_materials;
+    table.entity_to_id = entity_to_id
+        .into_iter()
+        .map(|(entity, id)| (render_entity(entity), id))
+        .collect();
+    table.entity_to_name = entity_to_name
+        .into_iter()
+        .map(|(entity, name)| (render_entity(entity), name))
+        .collect();
+}

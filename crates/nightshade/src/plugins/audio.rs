@@ -73,11 +73,24 @@ pub use resources::*;
 #[cfg(feature = "audio")]
 pub use systems::*;
 
+/// Registers the bus construction and per-frame source sync at the start
+/// of the frame, right after the event swap, where they have always run.
+#[cfg(feature = "audio")]
+pub fn install(world: &mut crate::ecs::world::World) {
+    use crate::schedule::{FramePhase, schedule_push};
+    let schedule = &mut world.resources.schedules.frame;
+    schedule_push(
+        schedule,
+        FramePhase::Start,
+        systems::build_audio_buses_system,
+    );
+    schedule_push(schedule, FramePhase::Start, systems::update_audio_system);
+}
+
 /// Installs the audio engine: on native the device opens at startup, on
-/// the web at the first user gesture, and the bus construction and
-/// per-frame source sync join the frame schedule where they have always
-/// run. Without this plugin the engine never opens the audio device and
-/// the frame schedule carries no audio work.
+/// the web at the first user gesture, and [`install`] adds the audio
+/// systems to the frame schedule. Without this plugin the engine never
+/// opens the audio device and the frame schedule carries no audio work.
 #[cfg(feature = "audio")]
 pub struct AudioPlugin;
 
@@ -85,26 +98,12 @@ pub struct AudioPlugin;
 impl crate::app::Plugin for AudioPlugin {
     fn build(&self, app: &mut crate::app::App) {
         #[cfg(not(target_arch = "wasm32"))]
-        app.add_startup_system("initialize_audio", systems::initialize_audio_system);
+        app.add_startup_system(systems::initialize_audio_system);
         #[cfg(target_arch = "wasm32")]
         app.add_system(
             crate::app::Stage::First,
-            "initialize_audio",
             systems::lazy_initialize_audio_system,
         );
-        app.add_startup_system("install_audio_systems", |world| {
-            crate::schedule::schedule_insert_after(
-                &mut world.resources.schedules.frame,
-                crate::schedule::system_names::SWAP_EVENTS,
-                crate::schedule::system_names::BUILD_AUDIO_BUSES,
-                systems::build_audio_buses_system,
-            );
-            crate::schedule::schedule_insert_after(
-                &mut world.resources.schedules.frame,
-                crate::schedule::system_names::BUILD_AUDIO_BUSES,
-                crate::schedule::system_names::UPDATE_AUDIO,
-                systems::update_audio_system,
-            );
-        });
+        app.add_startup_system(install);
     }
 }

@@ -1,6 +1,3 @@
-use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
-
 pub struct FileFilter {
     pub name: String,
     pub extensions: Vec<String>,
@@ -27,49 +24,40 @@ pub struct LoadedFile {
     pub bytes: Vec<u8>,
 }
 
-thread_local! {
-    static COMPLETED_LOADS: RefCell<HashMap<u64, LoadedFile>> = RefCell::new(HashMap::new());
-    static NEXT_LOAD_ID: Cell<u64> = const { Cell::new(1) };
-}
-
-fn allocate_load_id() -> u64 {
-    NEXT_LOAD_ID.with(|cell| {
-        let id = cell.get();
-        cell.set(id + 1);
-        id
-    })
-}
-
-fn store_completed_load(id: u64, file: LoadedFile) {
-    COMPLETED_LOADS.with(|cell| {
-        cell.borrow_mut().insert(id, file);
-    });
-}
-
-#[derive(Clone, Copy)]
+/// A file load in flight: the handle owns the slot the load completes
+/// into, so there is no global registry. On native the slot fills before
+/// the handle is returned; on the web the file picker's callback fills it
+/// later and the caller polls.
+#[derive(Clone)]
 pub struct PendingFileLoad {
-    id: u64,
+    slot: std::sync::Arc<std::sync::Mutex<Option<LoadedFile>>>,
 }
 
 impl PendingFileLoad {
     pub fn empty() -> Self {
         Self {
-            id: allocate_load_id(),
+            slot: std::sync::Arc::new(std::sync::Mutex::new(None)),
         }
     }
 
     pub fn ready(file: LoadedFile) -> Self {
-        let id = allocate_load_id();
-        store_completed_load(id, file);
-        Self { id }
+        Self {
+            slot: std::sync::Arc::new(std::sync::Mutex::new(Some(file))),
+        }
+    }
+
+    pub fn complete(&self, file: LoadedFile) {
+        if let Ok(mut slot) = self.slot.lock() {
+            *slot = Some(file);
+        }
     }
 
     pub fn is_ready(&self) -> bool {
-        COMPLETED_LOADS.with(|cell| cell.borrow().contains_key(&self.id))
+        self.slot.lock().map(|slot| slot.is_some()).unwrap_or(false)
     }
 
     pub fn take(&self) -> Option<LoadedFile> {
-        COMPLETED_LOADS.with(|cell| cell.borrow_mut().remove(&self.id))
+        self.slot.lock().ok().and_then(|mut slot| slot.take())
     }
 }
 
@@ -227,7 +215,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
     use wasm_bindgen::prelude::*;
 
     let pending = PendingFileLoad::empty();
-    let pending_id = pending.id;
+    let completion = pending.clone();
 
     let Some(window) = web_sys::window() else {
         return pending;
@@ -274,7 +262,7 @@ pub fn request_file_load(filters: &[FileFilter]) -> PendingFileLoad {
                 {
                     let uint8_array = js_sys::Uint8Array::new(&array_buffer);
                     let bytes = uint8_array.to_vec();
-                    store_completed_load(pending_id, LoadedFile { name, bytes });
+                    completion.complete(LoadedFile { name, bytes });
                 }
             }
         });

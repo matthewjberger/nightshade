@@ -7,10 +7,16 @@
 pub mod audio;
 #[cfg(feature = "egui")]
 pub mod egui;
+#[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+pub mod file_watcher;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
+#[cfg(feature = "gizmos")]
+pub mod gizmos;
 pub mod log;
+pub mod navmesh;
 pub mod physics;
+pub mod render;
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
 pub mod ui;
