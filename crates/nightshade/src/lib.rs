@@ -30,12 +30,8 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.resources.window.title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
-//!         app.add_startup_system(|world| {
-//!             game_scope::<MyGame, _>(world, initialize);
-//!         });
-//!         app.add_system(Stage::Update, |world| {
-//!             game_scope::<MyGame, _>(world, tick);
-//!         });
+//!         app.add_game_startup_system(initialize);
+//!         app.add_game_system(Stage::Update, tick);
 //!     }
 //! }
 //!

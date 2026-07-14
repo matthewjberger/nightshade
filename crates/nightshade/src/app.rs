@@ -22,12 +22,8 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.ecs.add_world_at(GAME, register_game_components());
 //!         app.insert_resource(MyGame::default());
-//!         app.add_startup_system(|world| {
-//!             game_scope::<MyGame, _>(world, systems::initialize);
-//!         });
-//!         app.add_system(Stage::Update, |world| {
-//!             game_scope::<MyGame, _>(world, systems::tick);
-//!         });
+//!         app.add_game_startup_system(systems::initialize);
+//!         app.add_game_system(Stage::Update, systems::tick);
 //!     }
 //! }
 //!
@@ -138,6 +134,346 @@ impl PluginGroup for PluginGroupBuilder {
         self
     }
 }
+
+macro_rules! impl_plugin_group_for_tuple {
+    ($(($plugin_type:ident, $plugin_value:ident)),+) => {
+        impl<$($plugin_type: Plugin + 'static),+> PluginGroup for ($($plugin_type,)+) {
+            fn build(self) -> PluginGroupBuilder {
+                let ($($plugin_value,)+) = self;
+                PluginGroupBuilder::new()$(.add_plugin($plugin_value))+
+            }
+        }
+    };
+}
+
+impl_plugin_group_for_tuple!((P1, plugin1));
+impl_plugin_group_for_tuple!((P1, plugin1), (P2, plugin2));
+impl_plugin_group_for_tuple!((P1, plugin1), (P2, plugin2), (P3, plugin3));
+impl_plugin_group_for_tuple!((P1, plugin1), (P2, plugin2), (P3, plugin3), (P4, plugin4));
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11),
+    (P12, plugin12)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11),
+    (P12, plugin12),
+    (P13, plugin13)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11),
+    (P12, plugin12),
+    (P13, plugin13),
+    (P14, plugin14)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11),
+    (P12, plugin12),
+    (P13, plugin13),
+    (P14, plugin14),
+    (P15, plugin15)
+);
+impl_plugin_group_for_tuple!(
+    (P1, plugin1),
+    (P2, plugin2),
+    (P3, plugin3),
+    (P4, plugin4),
+    (P5, plugin5),
+    (P6, plugin6),
+    (P7, plugin7),
+    (P8, plugin8),
+    (P9, plugin9),
+    (P10, plugin10),
+    (P11, plugin11),
+    (P12, plugin12),
+    (P13, plugin13),
+    (P14, plugin14),
+    (P15, plugin15),
+    (P16, plugin16)
+);
+
+/// A tuple of systems accepted by [`App::add_systems`] and
+/// [`App::add_startup_systems`], registered in tuple order.
+pub trait SystemTuple {
+    fn push_onto(self, schedule: &mut freecs::Schedule<World>);
+}
+
+macro_rules! impl_system_tuple {
+    ($(($system_type:ident, $system_value:ident)),+) => {
+        impl<$($system_type: FnMut(&mut World) + Send + 'static),+> SystemTuple
+            for ($($system_type,)+)
+        {
+            fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+                let ($($system_value,)+) = self;
+                $(schedule.push(std::any::type_name_of_val(&$system_value), $system_value);)+
+            }
+        }
+    };
+}
+
+impl_system_tuple!((S1, system1));
+impl_system_tuple!((S1, system1), (S2, system2));
+impl_system_tuple!((S1, system1), (S2, system2), (S3, system3));
+impl_system_tuple!((S1, system1), (S2, system2), (S3, system3), (S4, system4));
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11),
+    (S12, system12)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11),
+    (S12, system12),
+    (S13, system13)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11),
+    (S12, system12),
+    (S13, system13),
+    (S14, system14)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11),
+    (S12, system12),
+    (S13, system13),
+    (S14, system14),
+    (S15, system15)
+);
+impl_system_tuple!(
+    (S1, system1),
+    (S2, system2),
+    (S3, system3),
+    (S4, system4),
+    (S5, system5),
+    (S6, system6),
+    (S7, system7),
+    (S8, system8),
+    (S9, system9),
+    (S10, system10),
+    (S11, system11),
+    (S12, system12),
+    (S13, system13),
+    (S14, system14),
+    (S15, system15),
+    (S16, system16)
+);
 
 /// The per-frame stages, in run order, all before the engine frame
 /// schedule. Game logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`]
@@ -274,6 +610,12 @@ impl App {
         self
     }
 
+    /// Pushes a tuple of systems onto a [`Stage`], in tuple order.
+    pub fn add_systems(&mut self, stage: Stage, systems: impl SystemTuple) -> &mut Self {
+        systems.push_onto(self.stages.stage_mut(stage.name()));
+        self
+    }
+
     /// Pushes a system onto the startup schedule, which runs once after
     /// the window and renderer come up (or immediately for an app with
     /// no runner).
@@ -283,6 +625,44 @@ impl App {
     ) -> &mut Self {
         let name = std::any::type_name_of_val(&system);
         self.startup.push(name, system);
+        self
+    }
+
+    /// Pushes a tuple of systems onto the startup schedule, in tuple order.
+    pub fn add_startup_systems(&mut self, systems: impl SystemTuple) -> &mut Self {
+        systems.push_onto(&mut self.startup);
+        self
+    }
+
+    /// Pushes a [`game_scope`]d system onto a [`Stage`]: the system keeps
+    /// the plain `(state, world)` signature and the scope is applied at
+    /// registration, so plugins write
+    /// `app.add_game_system(Stage::Update, systems::tick)` with the state
+    /// type inferred from the function itself. The state must have been
+    /// inserted with [`App::insert_resource`].
+    pub fn add_game_system<T: Send + Sync + 'static>(
+        &mut self,
+        stage: Stage,
+        mut system: impl FnMut(&mut T, &mut World) + Send + 'static,
+    ) -> &mut Self {
+        let name = std::any::type_name_of_val(&system);
+        self.stages
+            .stage_mut(stage.name())
+            .push(name, move |world| {
+                game_scope(world, |state: &mut T, world| system(state, world));
+            });
+        self
+    }
+
+    /// The startup form of [`App::add_game_system`].
+    pub fn add_game_startup_system<T: Send + Sync + 'static>(
+        &mut self,
+        mut system: impl FnMut(&mut T, &mut World) + Send + 'static,
+    ) -> &mut Self {
+        let name = std::any::type_name_of_val(&system);
+        self.startup.push(name, move |world| {
+            game_scope(world, |state: &mut T, world| system(state, world));
+        });
         self
     }
 

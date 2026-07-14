@@ -175,12 +175,8 @@ impl Plugin for NavMeshDemoPlugin {
     fn build(&self, app: &mut App) {
         app.world.resources.window.title = "NavMesh Pathfinding".to_string();
         app.insert_resource(NavMeshDemo::default());
-        app.add_startup_system(|world| {
-            game_scope::<NavMeshDemo, _>(world, initialize);
-        });
-        app.add_system(Stage::Update, |world| {
-            game_scope::<NavMeshDemo, _>(world, update);
-        });
+        app.add_game_startup_system(initialize);
+        app.add_game_system(Stage::Update, update);
     }
 }
 
