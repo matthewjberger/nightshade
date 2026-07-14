@@ -6,7 +6,7 @@ This is the renderer behind the [nightshade](https://crates.io/crates/nightshade
 
 ```toml
 [dependencies]
-nightshade-renderer = "0.50.0"
+nightshade-renderer = "0.51.0"
 ```
 
 ## Design
@@ -43,7 +43,7 @@ The renderer is built on its own frame graph, exposed as the `rendergraph` modul
 
 ```toml
 [dependencies]
-nightshade-renderer = { version = "0.50.0", default-features = false, features = ["rendergraph"] }
+nightshade-renderer = { version = "0.51.0", default-features = false, features = ["rendergraph"] }
 ```
 
 Declare passes and the resources they read and write, compile once, execute every frame. The graph is generic over an inputs type `C` that you define; passes implement `PassNode<C>` and receive `&C` during prepare and execute. The graph handles pass ordering from declared dependencies, transient resource allocation and aliasing, load and store op optimization, dead pass culling, per-pass enable toggles, external per-frame resources like the swapchain, and execute phases so cached-viewport frames can run a cheap compose-only subset.
