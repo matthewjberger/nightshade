@@ -93,7 +93,7 @@ Use the `justfile`, never raw `cargo run`.
 ## High-value gotchas
 
 - `spawn_scene` overwrites global render settings (atmosphere included). Save and restore around a partial subtree spawn.
-- Retained UI needs both `world.resources.user_interface.enabled` and `world.resources.retained_ui.enabled`.
+- Retained UI runs only when `UiPlugin` is composed (it installs the frame-schedule entry). Hide and show the tree at runtime with `world.resources.retained_ui.visible`.
 - Renderer lifecycle, material reference counts, and transform propagation all derive from ECS change ticks and the structural change log. Write components through the accessors (`set_x`, `get_x_mut`), never through raw `query_mut` table writes, or the change goes unseen.
 - `world.resources.mesh_render_state.request_full_rebuild()` remains the escape hatch if a batch ever looks stale after unusual churn.
 

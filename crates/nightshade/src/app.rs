@@ -6,8 +6,11 @@
 //! pass of the stages, then exits; [`WindowPlugin`] adds the event loop
 //! and a window;
 //! [`RenderPlugin`] adds the renderer; omitting [`WindowPlugin`] while
-//! keeping [`RenderPlugin`] renders against a hidden window. Behavior
-//! plugins toggle the engine capabilities their systems need, and
+//! keeping [`RenderPlugin`] renders against a hidden window. Capability
+//! plugins bring their own systems: `AudioPlugin` opens the audio device
+//! and installs the audio systems, `GamepadPlugin` polls devices,
+//! `PhysicsPlugin` enables the simulation, and `EguiPlugin` the overlay.
+//! A capability the program never adds costs nothing at runtime.
 //! [`DefaultPlugins`] bundles the standard set.
 //!
 //! ```ignore
@@ -384,13 +387,22 @@ impl Plugin for RenderPlugin {
     }
 }
 
-/// Enables the immediate-draw and retained UI systems.
+/// Installs the retained UI: the frame-schedule entry that runs the UI
+/// sub-schedule, shown from the start. Hide and show the whole tree at
+/// runtime through `world.resources.retained_ui.visible`.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.user_interface.enabled = true;
-        app.world.resources.retained_ui.enabled = true;
+        app.world.resources.retained_ui.visible = true;
+        app.add_startup_system("install_retained_ui", |world| {
+            crate::schedule::schedule_insert_after(
+                &mut world.resources.schedules.frame,
+                crate::schedule::system_names::RENDER_SYNC_SKINNING,
+                crate::schedule::system_names::RETAINED_UI,
+                crate::schedule::run_retained_ui_schedule,
+            );
+        });
     }
 }
 
@@ -405,9 +417,84 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
+/// Installs the audio engine: on native the device opens at startup, on
+/// the web at the first user gesture, and the bus construction and
+/// per-frame source sync join the frame schedule where they have always
+/// run. Without this plugin the engine never opens the audio device and
+/// the frame schedule carries no audio work.
+#[cfg(feature = "audio")]
+pub struct AudioPlugin;
+
+#[cfg(feature = "audio")]
+impl Plugin for AudioPlugin {
+    fn build(&self, app: &mut App) {
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_startup_system(
+            "initialize_audio",
+            crate::ecs::audio::systems::initialize_audio_system,
+        );
+        #[cfg(target_arch = "wasm32")]
+        app.add_system(
+            Stage::First,
+            "initialize_audio",
+            crate::ecs::audio::systems::lazy_initialize_audio_system,
+        );
+        app.add_startup_system("install_audio_systems", |world| {
+            crate::schedule::schedule_insert_after(
+                &mut world.resources.schedules.frame,
+                crate::schedule::system_names::SWAP_EVENTS,
+                crate::schedule::system_names::BUILD_AUDIO_BUSES,
+                crate::ecs::audio::systems::build_audio_buses_system,
+            );
+            crate::schedule::schedule_insert_after(
+                &mut world.resources.schedules.frame,
+                crate::schedule::system_names::BUILD_AUDIO_BUSES,
+                crate::schedule::system_names::UPDATE_AUDIO,
+                crate::ecs::audio::systems::update_audio_system,
+            );
+        });
+    }
+}
+
+/// Installs gamepad input: polls devices at the top of every frame and
+/// forwards connection and button events onto `world.resources.input.events`.
+/// Without this plugin the engine never opens the gilrs context.
+#[cfg(feature = "gamepad")]
+pub struct GamepadPlugin;
+
+#[cfg(feature = "gamepad")]
+impl Plugin for GamepadPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(Stage::First, "gamepad_input", |world| {
+            crate::ecs::input::systems::gamepad_input_system(world);
+            let gamepad_events = world.resources.input.gamepad.events.clone();
+            for event in gamepad_events {
+                world
+                    .resources
+                    .input
+                    .events
+                    .push(crate::ecs::input::events::AppEvent::Gamepad(event));
+            }
+        });
+    }
+}
+
+/// Enables the immediate-mode egui overlay. Draw from any system by pulling
+/// the frame's context with `egui_context`.
+#[cfg(feature = "egui")]
+pub struct EguiPlugin;
+
+#[cfg(feature = "egui")]
+impl Plugin for EguiPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.resources.egui.enabled = true;
+    }
+}
+
 /// The standard composition: a visible window, the renderer, and the UI
-/// systems. Physics stays opt-in through [`PhysicsPlugin`] because most
-/// apps drive it per screen.
+/// systems. The capability plugins stay opt-in: physics because most apps
+/// drive it per screen, and audio, gamepad, and egui so a program only
+/// acquires the devices and overlays it composes.
 pub struct DefaultPlugins;
 
 impl PluginGroup for DefaultPlugins {

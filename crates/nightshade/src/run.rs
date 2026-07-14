@@ -50,7 +50,6 @@
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
 //!     // Configure graphics
-//!     world.resources.user_interface.enabled = true;
 //!     world.resources.render_settings.atmosphere = Atmosphere::Sky;
 //!     world.resources.debug_draw.show_grid = true;
 //!
@@ -514,24 +513,10 @@ pub fn run_frame_body(
 pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Option<Box<dyn State>> {
     world.ecs.worlds[CORE].increment_tick();
 
-    #[cfg(feature = "gamepad")]
-    crate::ecs::input::systems::gamepad_input_system(world);
     process_dropped_files(world);
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     crate::steam::steam_run_callbacks(&world.resources.steam);
-
-    #[cfg(feature = "gamepad")]
-    {
-        let gamepad_events = world.resources.input.gamepad.events.clone();
-        for event in gamepad_events {
-            world
-                .resources
-                .input
-                .events
-                .push(crate::ecs::input::events::AppEvent::Gamepad(event));
-        }
-    }
 
     #[cfg(target_arch = "wasm32")]
     crate::ecs::world::commands::sync_cursor_lock_state(world);
@@ -553,7 +538,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         return Some(builder(world));
     }
 
-    if world.resources.retained_ui.enabled
+    if world.resources.retained_ui.visible
         && let Some(window_handle) = world.resources.window.handle.as_ref()
     {
         let requested = world.resources.retained_ui.interaction.requested_cursor;
@@ -1359,17 +1344,6 @@ fn forward_window_events(world: &mut World, event: &WindowEvent) {
 
     if world.resources.user_interface.consumed_event {
         return;
-    }
-
-    #[cfg(all(target_arch = "wasm32", feature = "audio"))]
-    {
-        let is_user_gesture = matches!(
-            event,
-            WindowEvent::KeyboardInput { .. } | WindowEvent::MouseInput { .. }
-        );
-        if is_user_gesture && !audio_engine_is_initialized(&world.resources.audio) {
-            crate::ecs::audio::systems::lazy_initialize_audio_system(world);
-        }
     }
 
     if let WindowEvent::KeyboardInput {

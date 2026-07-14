@@ -197,12 +197,12 @@
 //!
 //! ### Optional Features
 //!
-//! - **`egui`** - Opt-in immediate-mode UI. Set `world.resources.egui.enabled`, then draw from
+//! - **`egui`** - Opt-in immediate-mode UI. Add `EguiPlugin`, then draw from
 //!   any system with `egui_context(world)`. Composites over the scene and retained UI.
 //!
 //! - **`shell`** - Developer console with command registration, rendered via the retained UI.
 //!
-//! - **`audio`** - Audio playback using Kira.
+//! - **`audio`** - Audio playback using Kira. Add `AudioPlugin` to open the device and install the audio systems.
 //!
 //! - **`physics`** - 3D physics using Rapier.
 //!
@@ -214,7 +214,7 @@
 //!
 //! - **`picking`** - Ray-based entity picking. Trimesh picking requires `physics`.
 //!
-//! - **`gamepad`** - Gamepad input using gilrs.
+//! - **`gamepad`** - Gamepad input using gilrs. Add `GamepadPlugin` to poll devices.
 //!
 //! ### Platform Features
 //!
@@ -332,7 +332,7 @@
 //!
 //! ### Immediate Mode UI (`egui` feature)
 //!
-//! Opt in with the `egui` feature and set `world.resources.egui.enabled`. The pass opens
+//! Opt in with the `egui` feature and `EguiPlugin` (or set `world.resources.egui.enabled`). The pass opens
 //! before the app stages each frame, so draw from any system by pulling the frame's context
 //! with `egui_context`. The tessellated output composites over the scene and the retained UI.
 //!
@@ -355,6 +355,8 @@
 //! ```
 //!
 //! ### Gamepad Input (`gamepad` feature)
+//!
+//! Add `GamepadPlugin` so the engine polls pads at the top of every frame.
 //!
 //! ```ignore
 //! fn tick(world: &mut World) {
@@ -510,7 +512,7 @@
 //! 4. Run the app stages (`first`, `update`, `late_update`)
 //! 5. Dispatch event bus messages
 //! 6. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
-//!    - Initialize and update audio (if `audio` enabled)
+//!    - Build audio buses and update audio (when `AudioPlugin` is composed)
 //!    - Update camera aspect ratios
 //!    - Step physics simulation (if `physics` enabled)
 //!    - Update animation players, apply to transforms
@@ -590,6 +592,12 @@ pub use systems::*;
 /// individually when needed.
 #[cfg(feature = "runtime")]
 pub mod prelude {
+    #[cfg(feature = "audio")]
+    pub use crate::app::AudioPlugin;
+    #[cfg(feature = "egui")]
+    pub use crate::app::EguiPlugin;
+    #[cfg(feature = "gamepad")]
+    pub use crate::app::GamepadPlugin;
     #[cfg(feature = "physics")]
     pub use crate::app::PhysicsPlugin;
     pub use crate::app::{
