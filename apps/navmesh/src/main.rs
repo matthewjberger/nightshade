@@ -25,6 +25,7 @@ const LAST_NAMES: &[&str] = &[
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(PhysicsPlugin)
         .add_plugin(NavMeshPlugin)
         .run()
 }

@@ -48,8 +48,6 @@ pub fn pump_shell_new(state: Box<dyn State>) -> Result<PumpShell, Box<dyn std::e
         state,
         world: World::default(),
         renderer: None,
-        snapshot_path: None,
-        snapshot_queued: false,
         #[cfg(all(not(target_os = "android"), feature = "core"))]
         accesskit: None,
         initialized: false,

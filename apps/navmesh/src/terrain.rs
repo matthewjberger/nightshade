@@ -2,8 +2,10 @@ use nalgebra_glm::{Quat, Vec3, vec3};
 use nightshade::ecs::material::components::MaterialRef;
 use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::mesh::components::{Mesh, RenderMesh, Vertex};
-use nightshade::ecs::physics::components::{ColliderComponent, ColliderShape, RigidBodyComponent};
-use nightshade::ecs::physics::types::InteractionGroups;
+use nightshade::plugins::physics::components::{
+    ColliderComponent, ColliderShape, RigidBodyComponent,
+};
+use nightshade::plugins::physics::types::InteractionGroups;
 use nightshade::prelude::*;
 use nightshade::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
 use nightshade::render::generational_registry::registry_add_reference;
@@ -212,14 +214,14 @@ pub fn spawn_terrain(
     );
 
     if let Some(rigid_body) =
-        world.get_mut::<nightshade::ecs::physics::components::RigidBodyComponent>(entity)
+        world.get_mut::<nightshade::plugins::physics::components::RigidBodyComponent>(entity)
     {
         *rigid_body =
             RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z);
     }
 
     if let Some(collider) =
-        world.get_mut::<nightshade::ecs::physics::components::ColliderComponent>(entity)
+        world.get_mut::<nightshade::plugins::physics::components::ColliderComponent>(entity)
     {
         *collider = ColliderComponent {
             handle: None,

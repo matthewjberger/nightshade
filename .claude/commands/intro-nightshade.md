@@ -88,6 +88,7 @@ Use the `justfile`, never raw `cargo run`.
 ## Adding a component or system
 
 - **App-level game data** does not touch engine source. Define your own `freecs::ecs!` world with the component and run systems over it. See `apps/sandbox/src/ecs.rs`.
+- **Plugin-owned subsystems** (audio, gamepad, physics, steam, egui, log, the UI composition) live self-contained under `src/plugins/<name>`: systems, components, resources, and the plugin struct together, crate-shaped on purpose but feature-gated into this crate. Composing the plugin is what activates the capability.
 - **Engine-level component.** Create the module at `src/ecs/<name>.rs` plus `src/ecs/<name>/components.rs`, with systems in `src/ecs/<name>/systems.rs`. Register it in `src/ecs/ecs.rs` (`pub mod <name>;`) and in `src/ecs/world.rs`: append one `field: Type => CONST,` line to the matching `freecs::dynamic_schema!` block (append only, registration order is the snapshot schema) and add the type to the `pub mod components` re-exports. Resources are plain fields on the `Resources` struct in the same file. Re-export systems in `src/systems.rs` and add to the prelude in `src/lib.rs`. 2024 edition, so no `mod.rs`.
 
 ## High-value gotchas

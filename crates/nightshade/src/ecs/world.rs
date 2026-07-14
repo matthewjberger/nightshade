@@ -20,12 +20,12 @@ pub mod components {
         AnimationChannel, AnimationClip, AnimationInterpolation, AnimationPlayer,
         AnimationProperty, AnimationSampler, AnimationSamplerOutput, AnimationValue,
     };
-    pub use crate::ecs::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::ecs::camera::components::{
         Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
         OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode, Smoothing,
         ViewportShading,
     };
+    pub use crate::plugins::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
     pub use crate::render::config::ViewportUpdateMode;
 
@@ -39,10 +39,6 @@ pub mod components {
     };
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
     pub use crate::ecs::morph::components::MorphWeights;
-    pub use crate::ecs::physics::components::{
-        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
-        PhysicsInterpolation, RigidBodyComponent,
-    };
     pub use crate::ecs::primitives::CastsShadow;
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
@@ -62,6 +58,10 @@ pub mod components {
     };
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::water::components::Water;
+    pub use crate::plugins::physics::components::{
+        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
+        PhysicsInterpolation, RigidBodyComponent,
+    };
     pub use crate::render::material::{AlphaMode, Material};
     pub use crate::render::particles::{
         ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
@@ -73,16 +73,12 @@ pub mod components {
 
 pub mod resources {
     pub use crate::ecs::asset_state::AssetState;
-    #[cfg(feature = "audio")]
-    pub use crate::ecs::audio::resources::AudioEngine;
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::resources::PhysicsWorld;
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::resources::CachedPrefab;
     pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
@@ -91,6 +87,10 @@ pub mod resources {
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::window::resources::{Window, WindowTiming};
     pub use crate::ecs::world::cleanup::CleanupState;
+    #[cfg(feature = "audio")]
+    pub use crate::plugins::audio::resources::AudioEngine;
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::resources::PhysicsWorld;
     pub use crate::render::config::ViewportRect;
     pub use crate::render::config::{
         Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
@@ -134,18 +134,18 @@ pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 freecs::dynamic_schema! {
     serde pub(crate) fn register_core_components {
             animation_player: crate::ecs::animation::components::AnimationPlayer => ANIMATION_PLAYER,
-            audio_listener: crate::ecs::audio::components::AudioListener => AUDIO_LISTENER,
-            audio_source: crate::ecs::audio::components::AudioSource => AUDIO_SOURCE,
+            audio_listener: crate::plugins::audio::components::AudioListener => AUDIO_LISTENER,
+            audio_source: crate::plugins::audio::components::AudioSource => AUDIO_SOURCE,
             bounding_volume: crate::render::bounding_volume::BoundingVolume => BOUNDING_VOLUME,
             camera_culling_mask: crate::ecs::primitives::CameraCullingMask => CAMERA_CULLING_MASK,
             camera_environment: crate::ecs::camera::components::CameraEnvironment => CAMERA_ENVIRONMENT,
             camera_post_process: crate::ecs::camera::components::CameraPostProcess => CAMERA_POST_PROCESS,
             camera: crate::ecs::camera::components::Camera => CAMERA,
             casts_shadow: crate::ecs::primitives::CastsShadow => CASTS_SHADOW,
-            character_controller: crate::ecs::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
+            character_controller: crate::plugins::physics::components::CharacterControllerComponent => CHARACTER_CONTROLLER,
             cloth: crate::ecs::cloth::components::Cloth => CLOTH,
-            collider: crate::ecs::physics::components::ColliderComponent => COLLIDER,
-            collision_listener: crate::ecs::physics::components::CollisionListener => COLLISION_LISTENER,
+            collider: crate::plugins::physics::components::ColliderComponent => COLLIDER,
+            collision_listener: crate::plugins::physics::components::CollisionListener => COLLISION_LISTENER,
             constrained_aspect: crate::ecs::camera::components::ConstrainedAspect => CONSTRAINED_ASPECT,
             culling_mask: crate::ecs::primitives::CullingMask => CULLING_MASK,
             decal: crate::ecs::decal::components::Decal => DECAL,
@@ -166,11 +166,11 @@ freecs::dynamic_schema! {
             pan_orbit_camera: crate::ecs::camera::components::PanOrbitCamera => PAN_ORBIT_CAMERA,
             child_of: freecs::dynamic::ChildOf => PARENT,
             particle_emitter: crate::render::particles::ParticleEmitter => PARTICLE_EMITTER,
-            physics_interpolation: crate::ecs::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
+            physics_interpolation: crate::plugins::physics::components::PhysicsInterpolation => PHYSICS_INTERPOLATION,
             prefab_source: crate::ecs::prefab::components::PrefabSource => PREFAB_SOURCE,
             render_layer: crate::render::render_layer::RenderLayer => RENDER_LAYER,
             render_mesh: crate::ecs::mesh::components::RenderMesh => RENDER_MESH,
-            rigid_body: crate::ecs::physics::components::RigidBodyComponent => RIGID_BODY,
+            rigid_body: crate::plugins::physics::components::RigidBodyComponent => RIGID_BODY,
             rotation: crate::ecs::transform::components::Rotation => ROTATION,
             script: crate::ecs::script::components::Script => SCRIPT,
             skin: crate::ecs::skin::components::Skin => SKIN,
@@ -255,7 +255,7 @@ pub struct Resources {
     pub asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
     pub assets: crate::ecs::asset_state::AssetState,
     #[cfg(feature = "audio")]
-    pub audio: crate::ecs::audio::resources::AudioEngine,
+    pub audio: crate::plugins::audio::resources::AudioEngine,
     pub cleanup: crate::ecs::world::cleanup::CleanupState,
     pub cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
     pub commands: crate::ecs::world::commands::CommandQueues,
@@ -280,18 +280,18 @@ pub struct Resources {
     #[cfg(feature = "navmesh")]
     pub navmesh: crate::ecs::navmesh::resources::NavMeshWorld,
     #[cfg(feature = "physics")]
-    pub physics: crate::ecs::physics::resources::PhysicsWorld,
+    pub physics: crate::plugins::physics::resources::PhysicsWorld,
     #[cfg(feature = "physics")]
     pub picking_world: crate::ecs::picking::resources::PickingWorld,
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
     #[cfg(feature = "egui")]
-    pub egui: crate::ecs::ui::egui_state::EguiState,
+    pub egui: crate::plugins::egui::EguiState,
     pub events: crate::ecs::event::Events,
     pub schedules: crate::schedule::Schedules,
     pub global_scripts: crate::ecs::script::components::GlobalScripts,
     pub scratch: crate::ecs::world::scratch::Scratch,
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub steam: crate::steam::SteamResources,
+    pub steam: crate::plugins::steam::SteamResources,
     #[cfg(feature = "terrain")]
     pub terrain: crate::render::terrain_config::TerrainSettings,
     #[cfg(feature = "terrain")]

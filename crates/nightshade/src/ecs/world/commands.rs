@@ -1,8 +1,10 @@
 use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::{material_registry_insert, material_registry_remove_unused};
-#[cfg(feature = "physics")]
-use crate::ecs::physics::resources::{physics_world_add_collider, physics_world_add_rigid_body};
 use crate::ecs::world::{Entity, NAME, World};
+#[cfg(feature = "physics")]
+use crate::plugins::physics::resources::{
+    physics_world_add_collider, physics_world_add_rigid_body,
+};
 use crate::render::generational_registry::registry_entry_by_name;
 use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
 use crate::render::procedural_meshes::{
@@ -197,10 +199,10 @@ pub fn register_material(
 #[cfg(feature = "physics")]
 pub fn spawn_physics_body(world: &mut World, entity: Entity) {
     let rigid_body_comp = world
-        .get::<crate::ecs::physics::components::RigidBodyComponent>(entity)
+        .get::<crate::plugins::physics::components::RigidBodyComponent>(entity)
         .cloned();
     let collider_comp = world
-        .get::<crate::ecs::physics::components::ColliderComponent>(entity)
+        .get::<crate::plugins::physics::components::ColliderComponent>(entity)
         .cloned();
 
     if let Some(rigid_body_comp) = rigid_body_comp {
@@ -217,11 +219,10 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
         }
 
         if let Some(rigid_body_mut) =
-            world.get_mut::<crate::ecs::physics::components::RigidBodyComponent>(entity)
+            world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
         {
-            rigid_body_mut.handle = Some(
-                crate::ecs::physics::types::rigid_body_handle_from_rapier(rapier_handle),
-            );
+            rigid_body_mut.handle =
+                Some(crate::plugins::physics::types::rigid_body_handle_from_rapier(rapier_handle));
         }
 
         world

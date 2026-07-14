@@ -64,7 +64,6 @@ pub fn initialize_offscreen(
     }
 
     world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
-    world.resources.schedules.retained_ui = crate::schedule::build_default_retained_ui_schedule();
 
     state.initialize(world);
 }

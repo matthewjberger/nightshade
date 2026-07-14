@@ -543,7 +543,8 @@ pub mod filesystem;
 
 #[cfg(feature = "runtime")]
 pub mod ecs;
-pub mod logging;
+#[cfg(feature = "runtime")]
+pub mod plugins;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
 #[cfg(feature = "runtime")]
@@ -562,9 +563,6 @@ pub use hearsay as networking;
 
 #[cfg(feature = "shell")]
 pub mod shell;
-
-#[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-pub mod steam;
 
 #[cfg(all(windows, feature = "windows-app-icon"))]
 pub mod build;
@@ -592,17 +590,8 @@ pub use systems::*;
 /// individually when needed.
 #[cfg(feature = "runtime")]
 pub mod prelude {
-    #[cfg(feature = "audio")]
-    pub use crate::app::AudioPlugin;
-    #[cfg(feature = "egui")]
-    pub use crate::app::EguiPlugin;
-    #[cfg(feature = "gamepad")]
-    pub use crate::app::GamepadPlugin;
-    #[cfg(feature = "physics")]
-    pub use crate::app::PhysicsPlugin;
     pub use crate::app::{
-        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, Stage, UiPlugin, WindowPlugin,
-        game_scope,
+        App, DefaultPlugins, Plugin, PluginGroup, RenderPlugin, Stage, WindowPlugin, game_scope,
     };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
@@ -611,7 +600,19 @@ pub mod prelude {
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
-    pub use crate::logging::{LogConfig, LogRotation};
+    #[cfg(feature = "audio")]
+    pub use crate::plugins::audio::AudioPlugin;
+    #[cfg(feature = "egui")]
+    pub use crate::plugins::egui::EguiPlugin;
+    #[cfg(feature = "gamepad")]
+    pub use crate::plugins::gamepad::GamepadPlugin;
+    pub use crate::plugins::log::LogPlugin;
+    pub use crate::plugins::log::{LogConfig, LogRotation};
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::PhysicsPlugin;
+    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+    pub use crate::plugins::steam::SteamPlugin;
+    pub use crate::plugins::ui::UiPlugin;
     pub use crate::run::*;
     pub use crate::schedule::{
         FrameSchedule, FrameScheduleEntry, Schedules, SystemFn, build_default_retained_ui_schedule,
@@ -627,17 +628,6 @@ pub mod prelude {
 
     pub use crate::ecs::animation::ik::{look_at_bone, solve_two_bone_ik};
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
-    #[cfg(feature = "audio")]
-    pub use crate::ecs::audio::resources::{
-        audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
-        audio_engine_has_handle, audio_engine_initialize, audio_engine_is_initialized,
-        audio_engine_load_sound, audio_engine_pause_sound, audio_engine_resume_sound,
-        audio_engine_stop_sound,
-    };
-    #[cfg(feature = "audio")]
-    pub use crate::ecs::audio::systems::{
-        load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
-    };
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{
         spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
@@ -667,13 +657,9 @@ pub mod prelude {
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
-    #[cfg(feature = "gamepad")]
-    pub use crate::ecs::input::queries::query_active_gamepad;
     pub use crate::ecs::input::resources::input_mode::InputMode;
     pub use crate::ecs::input::resources::mouse::MouseState;
     pub use crate::ecs::input::resources::touch::{TouchGesture, TouchPhase};
-    #[cfg(feature = "gamepad")]
-    pub use crate::ecs::input::systems::detect_input_mode_system;
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
@@ -703,37 +689,6 @@ pub mod prelude {
     #[cfg(feature = "navmesh-bake")]
     pub use crate::ecs::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     pub use crate::ecs::particles::systems::update_particle_emitters;
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::PhysicsWorld;
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::commands::{
-        create_textured_material, reset_physics_interpolation,
-        spawn_dynamic_physics_cube_with_material, spawn_dynamic_physics_cylinder_with_material,
-        spawn_dynamic_physics_sphere_with_material, spawn_static_physics_cube_with_material,
-    };
-    #[cfg(all(feature = "physics", feature = "debug_render"))]
-    pub use crate::ecs::physics::debug::physics_debug_draw_system;
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::resources::{
-        physics_world_angular_velocity, physics_world_apply_force, physics_world_apply_impulse,
-        physics_world_apply_impulse_at_point, physics_world_apply_torque,
-        physics_world_body_rotation, physics_world_body_translation,
-        physics_world_capsule_contacts, physics_world_cast_ray, physics_world_collision_events,
-        physics_world_contact_force_events, physics_world_get_interpolation_alpha,
-        physics_world_linear_velocity, physics_world_overlap_sphere,
-        physics_world_set_additional_mass, physics_world_set_angular_damping,
-        physics_world_set_angular_velocity, physics_world_set_friction,
-        physics_world_set_gravity_scale, physics_world_set_linear_damping,
-        physics_world_set_linear_velocity, physics_world_set_restitution, physics_world_step,
-    };
-    #[cfg(feature = "physics")]
-    pub use crate::ecs::physics::types::{RaycastHit, ShapeContact};
-    pub use crate::ecs::physics::{
-        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
-        PhysicsInterpolation, RigidBodyComponent,
-    };
     #[cfg(feature = "picking")]
     pub use crate::ecs::picking::{
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
@@ -795,8 +750,6 @@ pub mod prelude {
     };
     pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
-    #[cfg(feature = "egui")]
-    pub use crate::ecs::ui::egui_state::egui_context;
     pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
@@ -844,6 +797,56 @@ pub mod prelude {
         spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
         spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
+    };
+    #[cfg(feature = "audio")]
+    pub use crate::plugins::audio::resources::{
+        audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
+        audio_engine_has_handle, audio_engine_initialize, audio_engine_is_initialized,
+        audio_engine_load_sound, audio_engine_pause_sound, audio_engine_resume_sound,
+        audio_engine_stop_sound,
+    };
+    #[cfg(feature = "audio")]
+    pub use crate::plugins::audio::systems::{
+        load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
+    };
+    #[cfg(feature = "egui")]
+    pub use crate::plugins::egui::egui_context;
+    #[cfg(feature = "gamepad")]
+    pub use crate::plugins::gamepad::detect_input_mode_system;
+    #[cfg(feature = "gamepad")]
+    pub use crate::plugins::gamepad::query_active_gamepad;
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::PhysicsWorld;
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::commands::{
+        create_textured_material, reset_physics_interpolation,
+        spawn_dynamic_physics_cube_with_material, spawn_dynamic_physics_cylinder_with_material,
+        spawn_dynamic_physics_sphere_with_material, spawn_static_physics_cube_with_material,
+    };
+    #[cfg(all(feature = "physics", feature = "debug_render"))]
+    pub use crate::plugins::physics::debug::physics_debug_draw_system;
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::events::{
+        CollisionEvent, CollisionEventKind, ContactForceEvent,
+    };
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::resources::{
+        physics_world_angular_velocity, physics_world_apply_force, physics_world_apply_impulse,
+        physics_world_apply_impulse_at_point, physics_world_apply_torque,
+        physics_world_body_rotation, physics_world_body_translation,
+        physics_world_capsule_contacts, physics_world_cast_ray, physics_world_collision_events,
+        physics_world_contact_force_events, physics_world_get_interpolation_alpha,
+        physics_world_linear_velocity, physics_world_overlap_sphere,
+        physics_world_set_additional_mass, physics_world_set_angular_damping,
+        physics_world_set_angular_velocity, physics_world_set_friction,
+        physics_world_set_gravity_scale, physics_world_set_linear_damping,
+        physics_world_set_linear_velocity, physics_world_set_restitution, physics_world_step,
+    };
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::types::{RaycastHit, ShapeContact};
+    pub use crate::plugins::physics::{
+        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
+        PhysicsInterpolation, RigidBodyComponent,
     };
     pub use crate::render::bounding_volume::BoundingVolume;
     pub use crate::render::entity::RenderEntity;
@@ -935,7 +938,7 @@ pub mod prelude {
     pub use wgpu;
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub use crate::steam::{
+    pub use crate::plugins::steam::{
         AchievementInfo, ActiveSession, FriendInfo, NetworkMessage, PendingSessionRequest,
         PersonaState, SessionState, StatInfo, StatValue, SteamResources,
     };

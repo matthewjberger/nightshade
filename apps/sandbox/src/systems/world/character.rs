@@ -1,8 +1,8 @@
 use crate::ecs::{CharacterState, RagdollMode, SandboxResources};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
-use nightshade::ecs::input::queries::query_active_gamepad;
 use nightshade::ecs::lines::components::{Line, Lines};
 use nightshade::ecs::world::{GLOBAL_TRANSFORM, LINES, LOCAL_TRANSFORM, NAME, VISIBILITY};
+use nightshade::plugins::gamepad::query_active_gamepad;
 use nightshade::prelude::*;
 
 const BUMPER_RADIUS: f32 = 0.55;
@@ -255,10 +255,11 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
         state.grounded = false;
         state.jump_suppress_timer = 0.0;
 
-        if let Some(controller) = world
-            .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
-            player_entity,
-        ) {
+        if let Some(controller) =
+            world.get_mut::<nightshade::plugins::physics::components::CharacterControllerComponent>(
+                player_entity,
+            )
+        {
             controller.disable_gravity = true;
             controller.velocity = Vec3::zeros();
         }
@@ -273,10 +274,11 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
             world.resources.active_camera = sandbox_world.character.camera;
         }
     } else {
-        if let Some(controller) = world
-            .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
-            player_entity,
-        ) {
+        if let Some(controller) =
+            world.get_mut::<nightshade::plugins::physics::components::CharacterControllerComponent>(
+                player_entity,
+            )
+        {
             controller.disable_gravity = false;
             controller.velocity = Vec3::zeros();
         }
@@ -996,8 +998,8 @@ fn sync_first_person_player(sandbox_world: &SandboxResources, world: &mut World,
     {
         transform.translation = capsule_center;
     }
-    if let Some(interpolation) =
-        world.get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(player_entity)
+    if let Some(interpolation) = world
+        .get_mut::<nightshade::plugins::physics::components::PhysicsInterpolation>(player_entity)
     {
         interpolation.previous_translation = capsule_center;
         interpolation.current_translation = capsule_center;

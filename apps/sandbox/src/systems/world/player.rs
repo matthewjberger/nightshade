@@ -1,6 +1,6 @@
 use crate::ecs::SandboxResources;
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
-use nightshade::ecs::physics::commands::spawn_first_person_player;
+use nightshade::plugins::physics::commands::spawn_first_person_player;
 use nightshade::prelude::*;
 
 pub const PLAYER_TAG: &str = "player";
@@ -113,13 +113,13 @@ pub fn reset(sandbox_world: &mut SandboxResources, world: &mut World) {
         transform.translation = spawn;
     }
     if let Some(controller) = world
-        .get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(
+        .get_mut::<nightshade::plugins::physics::components::CharacterControllerComponent>(
         player_entity,
     ) {
         controller.velocity = Vec3::zeros();
     }
-    if let Some(interpolation) =
-        world.get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(player_entity)
+    if let Some(interpolation) = world
+        .get_mut::<nightshade::plugins::physics::components::PhysicsInterpolation>(player_entity)
     {
         interpolation.previous_translation = spawn;
         interpolation.current_translation = spawn;

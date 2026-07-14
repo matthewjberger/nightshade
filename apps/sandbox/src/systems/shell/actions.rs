@@ -19,7 +19,7 @@ pub fn apply_shell_actions(
                 {
                     transform.translation = position;
                 }
-                if let Some(controller) = world.get_mut::<nightshade::ecs::physics::components::CharacterControllerComponent>(player_entity) {
+                if let Some(controller) = world.get_mut::<nightshade::plugins::physics::components::CharacterControllerComponent>(player_entity) {
                     controller.velocity = Vec3::zeros();
                 }
                 reset_physics_interpolation(world, player_entity);

@@ -100,8 +100,8 @@ use winit::{
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
-pub use crate::logging::log_file_name;
-pub use crate::logging::{LogConfig, LogRotation};
+pub use crate::plugins::log::log_file_name;
+pub use crate::plugins::log::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
 #[cfg(feature = "egui")]
@@ -136,179 +136,6 @@ pub fn launch_with_world(
     state: impl State + 'static,
     world: World,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    #[allow(unused_mut)]
-    let mut world = world;
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
-    let (log_config, log_file_name) = {
-        let config = world.resources.window.log_config.clone();
-        let file_name = log_file_name(&world.resources.window.title, &config);
-        (config, file_name)
-    };
-
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "tracing")))]
-    tracing_subscriber::fmt::init();
-
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        feature = "tracing",
-        not(feature = "tracy"),
-        not(feature = "chrome")
-    ))]
-    let _guard = {
-        use tracing_subscriber::EnvFilter;
-        use tracing_subscriber::layer::SubscriberExt;
-        use tracing_subscriber::util::SubscriberInitExt;
-
-        let file_appender = match log_config.rotation {
-            LogRotation::Daily => {
-                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
-            }
-            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
-        };
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
-
-        tracing_subscriber::registry()
-            .with(env_filter)
-            .with(tracing_subscriber::fmt::layer())
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_writer(non_blocking)
-                    .with_ansi(false),
-            )
-            .init();
-
-        guard
-    };
-
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        feature = "tracy",
-        not(feature = "chrome")
-    ))]
-    let _guard = {
-        use tracing_subscriber::EnvFilter;
-        use tracing_subscriber::layer::SubscriberExt;
-        use tracing_subscriber::util::SubscriberInitExt;
-
-        let file_appender = match log_config.rotation {
-            LogRotation::Daily => {
-                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
-            }
-            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
-        };
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
-
-        tracing_subscriber::registry()
-            .with(env_filter)
-            .with(tracing_subscriber::fmt::layer())
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_writer(non_blocking)
-                    .with_ansi(false),
-            )
-            .with(tracing_tracy::TracyLayer::default())
-            .init();
-
-        guard
-    };
-
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        feature = "chrome",
-        not(feature = "tracy")
-    ))]
-    let _guard = {
-        use tracing_subscriber::EnvFilter;
-        use tracing_subscriber::layer::SubscriberExt;
-        use tracing_subscriber::util::SubscriberInitExt;
-
-        let file_appender = match log_config.rotation {
-            LogRotation::Daily => {
-                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
-            }
-            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
-        };
-        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
-
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
-
-        let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
-            .file("logs/trace.json")
-            .build();
-
-        tracing_subscriber::registry()
-            .with(env_filter)
-            .with(tracing_subscriber::fmt::layer())
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_writer(non_blocking)
-                    .with_ansi(false),
-            )
-            .with(chrome_layer)
-            .init();
-
-        (file_guard, chrome_guard)
-    };
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "tracy", feature = "chrome"))]
-    let _guard = {
-        use tracing_subscriber::EnvFilter;
-        use tracing_subscriber::layer::SubscriberExt;
-        use tracing_subscriber::util::SubscriberInitExt;
-
-        let file_appender = match log_config.rotation {
-            LogRotation::Daily => {
-                tracing_appender::rolling::daily(&log_config.directory, &log_file_name)
-            }
-            _ => tracing_appender::rolling::never(&log_config.directory, &log_file_name),
-        };
-        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
-
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new(&log_config.default_filter));
-
-        let (chrome_layer, chrome_guard) = tracing_chrome::ChromeLayerBuilder::new()
-            .file("logs/trace.json")
-            .build();
-
-        tracing_subscriber::registry()
-            .with(env_filter)
-            .with(tracing_subscriber::fmt::layer())
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_writer(non_blocking)
-                    .with_ansi(false),
-            )
-            .with(tracing_tracy::TracyLayer::default())
-            .with(chrome_layer)
-            .init();
-
-        (file_guard, chrome_guard)
-    };
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        console_error_panic_hook::set_once();
-        let max_level = if cfg!(debug_assertions) {
-            tracing::level_filters::LevelFilter::INFO
-        } else {
-            tracing::level_filters::LevelFilter::WARN
-        };
-        tracing_subscriber::fmt()
-            .with_max_level(max_level)
-            .with_writer(tracing_web::MakeConsoleWriter)
-            .without_time()
-            .init();
-    }
-
     let state = Box::new(state);
 
     let event_loop = EventLoop::builder().build()?;
@@ -320,8 +147,6 @@ pub fn launch_with_world(
             state,
             world,
             renderer: None,
-            snapshot_path: None,
-            snapshot_queued: false,
             #[cfg(all(
                 not(target_arch = "wasm32"),
                 not(target_os = "android"),
@@ -515,13 +340,9 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
 
     process_dropped_files(world);
 
-    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    crate::steam::steam_run_callbacks(&world.resources.steam);
-
     #[cfg(target_arch = "wasm32")]
     crate::ecs::world::commands::sync_cursor_lock_state(world);
 
-    crate::ecs::graphics::systems::day_night_cycle_system(world);
     #[cfg(not(target_arch = "wasm32"))]
     recenter_locked_cursor(world);
     #[cfg(feature = "egui")]
@@ -1387,10 +1208,6 @@ pub struct WindowContext {
     /// Receiver for async renderer creation on web.
     pub renderer_receiver:
         Option<futures::channel::oneshot::Receiver<crate::render::wgpu::WgpuRenderer>>,
-    #[cfg(not(target_arch = "wasm32"))]
-    pub snapshot_path: Option<std::path::PathBuf>,
-    #[cfg(not(target_arch = "wasm32"))]
-    pub snapshot_queued: bool,
     #[cfg(all(
         not(target_arch = "wasm32"),
         not(target_os = "android"),
@@ -1587,8 +1404,6 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if !self.world.resources.window.create_renderer && !self.initialized {
             self.world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
-            self.world.resources.schedules.retained_ui =
-                crate::schedule::build_default_retained_ui_schedule();
             self.state.initialize(&mut self.world);
             sync_min_window_size(&mut self.world);
             crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
@@ -1600,8 +1415,6 @@ impl winit::application::ApplicationHandler for WindowContext {
             if !self.initialized {
                 self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
-                self.world.resources.schedules.retained_ui =
-                    crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]
@@ -1650,8 +1463,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 self.world.resources.schedules.frame =
                     crate::schedule::build_default_frame_schedule();
-                self.world.resources.schedules.retained_ui =
-                    crate::schedule::build_default_retained_ui_schedule();
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]
@@ -1777,20 +1588,6 @@ impl winit::application::ApplicationHandler for WindowContext {
         ))]
         if let Some(host) = self.accesskit.as_mut() {
             host.update(&mut self.world);
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(path) = &self.snapshot_path {
-            let uptime = self.world.resources.window.timing.uptime_milliseconds;
-            if !self.snapshot_queued && uptime >= 4000 {
-                crate::ecs::world::commands::capture_screenshot_to_path(
-                    &mut self.world,
-                    path.clone(),
-                );
-                self.snapshot_queued = true;
-            } else if self.snapshot_queued && uptime >= 5000 {
-                self.world.resources.window.should_exit = true;
-            }
         }
 
         request_redraw_system(&mut self.world);

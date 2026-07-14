@@ -1,0 +1,16 @@
+//! The engine's capability plugins, each a self-contained unit: the plugin
+//! struct plus the systems, components, and resources its feature owns.
+//! They are shaped so any of them could stand alone as a crate, and are
+//! built into this crate behind feature flags on purpose: cargo features
+//! decide what code exists, composing the plugin is what activates it.
+
+pub mod audio;
+#[cfg(feature = "egui")]
+pub mod egui;
+#[cfg(feature = "gamepad")]
+pub mod gamepad;
+pub mod log;
+pub mod physics;
+#[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+pub mod steam;
+pub mod ui;

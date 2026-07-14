@@ -106,7 +106,7 @@
 //!         for entity in world.ecs.worlds[CORE].query_entities(RIGID_BODY | LOCAL_TRANSFORM) {
 //!             if let Some(transform) = world.get::<crate::ecs::transform::components::LocalTransform>(entity) {
 //!                 // Draw velocity vector
-//!                 if let Some(rb) = world.get::<crate::ecs::physics::components::RigidBodyComponent>(entity) {
+//!                 if let Some(rb) = world.get::<crate::plugins::physics::components::RigidBodyComponent>(entity) {
 //!                     lines.push(Line {
 //!                         start: transform.translation,
 //!                         end: transform.translation + Vec3::from(rb.linvel),

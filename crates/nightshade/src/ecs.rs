@@ -21,7 +21,6 @@ pub mod asset_state;
     not(target_arch = "wasm32")
 ))]
 pub mod asset_watcher;
-pub mod audio;
 pub mod bounding_volume;
 pub mod camera;
 pub mod cloth;
@@ -46,7 +45,6 @@ pub mod mesh;
 pub mod morph;
 pub mod navmesh;
 pub mod particles;
-pub mod physics;
 #[cfg(feature = "picking")]
 pub mod picking;
 pub mod prefab;

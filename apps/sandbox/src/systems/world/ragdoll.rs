@@ -1,11 +1,11 @@
 use crate::ecs::{RagdollLink, RagdollMode, SandboxResources};
 use crate::systems::world::ik::{rotation_between, world_pose_of};
 use crate::systems::world::pose::{find_bone, joint_rotation, quat_to_rotation_vector};
-use nightshade::ecs::physics::joints::{SphericalJoint, create_spherical_joint};
 use nightshade::ecs::transform::queries::query_children;
 use nightshade::ecs::world::{
     COLLIDER, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, PHYSICS_INTERPOLATION, RIGID_BODY,
 };
+use nightshade::plugins::physics::joints::{SphericalJoint, create_spherical_joint};
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
@@ -180,7 +180,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
             transform.rotation = body_rotation;
         }
         if let Some(rigid_body) =
-            world.get_mut::<nightshade::ecs::physics::components::RigidBodyComponent>(proxy)
+            world.get_mut::<nightshade::plugins::physics::components::RigidBodyComponent>(proxy)
         {
             *rigid_body = RigidBodyComponent::new_dynamic()
                 .with_translation(center.x, center.y, center.z)
@@ -194,7 +194,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
             rigid_body.linvel = [launch_velocity.x, launch_velocity.y, launch_velocity.z];
         }
         if let Some(collider) =
-            world.get_mut::<nightshade::ecs::physics::components::ColliderComponent>(proxy)
+            world.get_mut::<nightshade::plugins::physics::components::ColliderComponent>(proxy)
         {
             let half_height = ((length * CAPSULE_FILL) * 0.5 - radius).max(0.02);
             *collider = ColliderComponent::new_capsule(half_height, *radius)
@@ -202,7 +202,7 @@ fn build(sandbox_world: &mut SandboxResources, world: &mut World) {
                 .with_restitution(0.05);
         }
         if let Some(interpolation) =
-            world.get_mut::<nightshade::ecs::physics::components::PhysicsInterpolation>(proxy)
+            world.get_mut::<nightshade::plugins::physics::components::PhysicsInterpolation>(proxy)
         {
             interpolation.previous_translation = center;
             interpolation.current_translation = center;
