@@ -600,8 +600,11 @@ pub mod prelude {
     pub use crate::ecs::world::*;
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::AudioPlugin;
+    pub use crate::plugins::camera_controller::CameraControllerPlugin;
+    pub use crate::plugins::cutscene::CutscenePlugin;
     #[cfg(feature = "egui")]
     pub use crate::plugins::egui::EguiPlugin;
+    pub use crate::plugins::exit_on_escape::ExitOnEscapePlugin;
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::plugins::file_watcher::FileWatcherPlugin;
     #[cfg(feature = "gamepad")]
@@ -641,7 +644,7 @@ pub mod prelude {
     pub use crate::ecs::camera::components::ThirdPersonCamera;
     pub use crate::ecs::camera::systems::{
         camera_controllers_system, first_person_camera_look_system, fly_camera_system,
-        ortho_camera_system, pan_orbit_camera_system, third_person_camera_system,
+        pan_orbit_camera_system, third_person_camera_system,
     };
     pub use crate::ecs::cloth::commands::{reset_cloth, spawn_cloth};
     pub use crate::ecs::cloth::systems::sync_cloth_meshes_system;

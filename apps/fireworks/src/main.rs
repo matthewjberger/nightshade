@@ -5,6 +5,8 @@ use std::collections::HashMap;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(ExitOnEscapePlugin)
+        .add_plugin(CameraControllerPlugin)
         .add_plugin(FireworksPlugin)
         .run()
 }
@@ -247,11 +249,8 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
 }
 
 fn update(fireworks: &mut FireworksDemo, world: &mut World) {
-    escape_key_exit_system(world);
     fireworks.poll_ui_events(world);
     fireworks.update_ui_state(world);
-
-    camera_controllers_system(world);
 
     let delta_time = world.resources.window.timing.delta_time;
     let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;

@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_plugins(DefaultPlugins)
         .add_plugin(PhysicsPlugin)
         .add_plugin(NavmeshPlugin)
+        .add_plugin(ExitOnEscapePlugin)
         .add_plugin(NavMeshDemoPlugin)
         .run()
 }
@@ -209,7 +210,6 @@ fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
 }
 
 fn update(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
-    escape_key_exit_system(world);
     if !navmesh_demo.follow_mode {
         pan_orbit_camera_system(world);
     }
