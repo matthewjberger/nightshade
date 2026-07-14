@@ -45,14 +45,98 @@ use freecs::dynamic::ResourceHostExt;
 
 /// A unit of app composition. Engine capabilities and games alike
 /// implement this and register their worlds, resources, systems, and
-/// hooks against the [`App`] in `build`.
+/// hooks against the [`App`] in `build`. Each plugin type is added at
+/// most once; a second add panics.
 pub trait Plugin {
     fn build(&self, app: &mut App);
 }
 
-/// A set of plugins added together, in a fixed order.
-pub trait PluginGroup {
-    fn build(&self, app: &mut App);
+/// A set of plugins added together, in a fixed order. Customize a group
+/// at the call site without abandoning it: [`set`](PluginGroup::set)
+/// swaps a member's configuration and [`disable`](PluginGroup::disable)
+/// drops a member.
+///
+/// ```ignore
+/// App::new()
+///     .add_plugins(
+///         DefaultPlugins
+///             .set(WindowPlugin { title: "My Game".to_string(), size: None })
+///             .disable::<LogPlugin>(),
+///     )
+///     .run()
+/// ```
+pub trait PluginGroup: Sized {
+    fn build(self) -> PluginGroupBuilder;
+
+    fn set<P: Plugin + 'static>(self, plugin: P) -> PluginGroupBuilder {
+        self.build().set(plugin)
+    }
+
+    fn disable<P: Plugin + 'static>(self) -> PluginGroupBuilder {
+        self.build().disable::<P>()
+    }
+}
+
+/// The ordered members of a [`PluginGroup`], each replaceable by type
+/// through [`set`](PluginGroupBuilder::set) and removable through
+/// [`disable`](PluginGroupBuilder::disable) before the app adds them.
+#[derive(Default)]
+pub struct PluginGroupBuilder {
+    entries: Vec<PluginGroupEntry>,
+}
+
+struct PluginGroupEntry {
+    id: std::any::TypeId,
+    name: &'static str,
+    enabled: bool,
+    plugin: Box<dyn Plugin>,
+}
+
+impl PluginGroupBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Appends a plugin to the group.
+    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+        self.entries.push(PluginGroupEntry {
+            id: std::any::TypeId::of::<P>(),
+            name: std::any::type_name::<P>(),
+            enabled: true,
+            plugin: Box::new(plugin),
+        });
+        self
+    }
+
+    /// Replaces the group's existing `P` with the given configuration,
+    /// keeping its position. Panics if the group has no `P`.
+    pub fn set<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+        let entry = self.entry_mut::<P>().unwrap_or_else(|| {
+            panic!("{} is not in this plugin group", std::any::type_name::<P>())
+        });
+        entry.plugin = Box::new(plugin);
+        self
+    }
+
+    /// Drops `P` from the group. Panics if the group has no `P`.
+    pub fn disable<P: Plugin + 'static>(mut self) -> Self {
+        let entry = self.entry_mut::<P>().unwrap_or_else(|| {
+            panic!("{} is not in this plugin group", std::any::type_name::<P>())
+        });
+        entry.enabled = false;
+        self
+    }
+
+    fn entry_mut<P: Plugin + 'static>(&mut self) -> Option<&mut PluginGroupEntry> {
+        let id = std::any::TypeId::of::<P>();
+        self.entries.iter_mut().find(|entry| entry.id == id)
+    }
+}
+
+impl PluginGroup for PluginGroupBuilder {
+    fn build(self) -> PluginGroupBuilder {
+        self
+    }
 }
 
 /// The per-frame stages, in run order, all before the engine frame
@@ -88,6 +172,7 @@ type RenderGraphConfigFn = Box<
     ),
 >;
 type PreRenderFn = Box<dyn FnMut(&mut crate::render::wgpu::WgpuRenderer, &mut World)>;
+type RunnerFn = Box<dyn FnOnce(App) -> Result<(), Box<dyn std::error::Error>>>;
 type UpdateRenderGraphFn = Box<
     dyn FnMut(
         &mut crate::render::wgpu::rendergraph::RenderGraph<
@@ -115,6 +200,8 @@ pub struct App {
     render_graph_config: Vec<RenderGraphConfigFn>,
     pre_render: Vec<PreRenderFn>,
     update_render_graph: Vec<UpdateRenderGraphFn>,
+    runner: Option<RunnerFn>,
+    added_plugins: Vec<std::any::TypeId>,
 }
 
 impl Default for App {
@@ -140,17 +227,39 @@ impl App {
             render_graph_config: Vec::new(),
             pre_render: Vec::new(),
             update_render_graph: Vec::new(),
+            runner: None,
+            added_plugins: Vec::new(),
         }
     }
 
-    pub fn add_plugin(mut self, plugin: impl Plugin) -> Self {
+    /// Adds a plugin. Panics if a plugin of the same type was already
+    /// added, since building twice would double every system and hook the
+    /// plugin registers.
+    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+        self.track_plugin(std::any::TypeId::of::<P>(), std::any::type_name::<P>());
         plugin.build(&mut self);
         self
     }
 
+    /// Adds a [`PluginGroup`]'s members in group order, skipping disabled
+    /// ones. Members count toward the same once-per-type rule as
+    /// [`add_plugin`](App::add_plugin).
     pub fn add_plugins(mut self, group: impl PluginGroup) -> Self {
-        group.build(&mut self);
+        for entry in group.build().entries {
+            if !entry.enabled {
+                continue;
+            }
+            self.track_plugin(entry.id, entry.name);
+            entry.plugin.build(&mut self);
+        }
         self
+    }
+
+    fn track_plugin(&mut self, id: std::any::TypeId, name: &'static str) {
+        if self.added_plugins.contains(&id) {
+            panic!("plugin {name} was added twice, each plugin type is added at most once");
+        }
+        self.added_plugins.push(id);
     }
 
     /// Pushes a system onto a [`Stage`]. Systems run in the order they
@@ -227,7 +336,23 @@ impl App {
         self
     }
 
-    /// Runs the app. With neither [`WindowPlugin`] nor [`RenderPlugin`],
+    /// Hands the whole app to a custom runner in place of the built-in
+    /// loops: the runner owns the world, the schedules, the render hooks
+    /// (through [`App::into_parts`]), and the log guards, and drives them
+    /// however its host requires. This is how a plugin claims the main
+    /// loop itself, the way `WorkerHostPlugin` hosts the engine inside a
+    /// web worker.
+    pub fn set_runner(
+        &mut self,
+        runner: impl FnOnce(App) -> Result<(), Box<dyn std::error::Error>> + 'static,
+    ) -> &mut Self {
+        self.runner = Some(Box::new(runner));
+        self
+    }
+
+    /// Runs the app. A runner installed with [`App::set_runner`] takes the
+    /// whole app and owns the loop. Otherwise, with neither
+    /// [`WindowPlugin`] nor [`RenderPlugin`],
     /// the startup schedule and one pass of the stages run against the
     /// world and the program returns: the do-nothing composition. With
     /// either, the winit event
@@ -235,6 +360,10 @@ impl App {
     /// frame; without [`WindowPlugin`] the window stays hidden, and
     /// without [`RenderPlugin`] no renderer is created.
     pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(runner) = self.runner.take() {
+            return runner(self);
+        }
+
         if self.world.resources.window.start_hidden && !self.world.resources.window.create_renderer
         {
             let mut world = self.world;
@@ -248,6 +377,13 @@ impl App {
         let result = crate::run::launch_with_world(state, world);
         drop(log_guards);
         result
+    }
+
+    /// Takes the log appender guards out of the app. A custom runner calls
+    /// this before [`App::into_parts`] and keeps the guards alive for the
+    /// life of the program so buffered log lines flush.
+    pub fn take_log_guards(&mut self) -> Vec<Box<dyn std::any::Any>> {
+        std::mem::take(&mut self.log_guards)
     }
 
     /// Splits the composed app into its world and a [`State`] that drives
@@ -376,14 +512,16 @@ impl Plugin for WindowPlugin {
 /// the UI systems. The capability plugins in [`crate::plugins`] stay
 /// opt-in: physics because most apps drive it per screen, and audio,
 /// gamepad, and egui so a program only acquires the devices and overlays
-/// it composes.
+/// it composes. Customize members at the call site with
+/// [`set`](PluginGroup::set) and [`disable`](PluginGroup::disable).
 pub struct DefaultPlugins;
 
 impl PluginGroup for DefaultPlugins {
-    fn build(&self, app: &mut App) {
-        WindowPlugin::default().build(app);
-        crate::plugins::log::LogPlugin::default().build(app);
-        crate::plugins::render::RenderPlugin::default().build(app);
-        crate::plugins::ui::UiPlugin.build(app);
+    fn build(self) -> PluginGroupBuilder {
+        PluginGroupBuilder::new()
+            .add_plugin(WindowPlugin::default())
+            .add_plugin(crate::plugins::log::LogPlugin::default())
+            .add_plugin(crate::plugins::render::RenderPlugin::default())
+            .add_plugin(crate::plugins::ui::UiPlugin)
     }
 }

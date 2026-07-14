@@ -590,7 +590,8 @@ pub use systems::*;
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, Plugin, PluginGroup, Stage, WindowPlugin, game_scope,
+        App, DefaultPlugins, Plugin, PluginGroup, PluginGroupBuilder, Stage, WindowPlugin,
+        game_scope,
     };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
