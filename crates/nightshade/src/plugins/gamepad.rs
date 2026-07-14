@@ -151,7 +151,7 @@ pub struct GamepadPlugin;
 
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Stage::First, |world| {
+        app.add_system(Stage::First, |world: &mut World| {
             gamepad_input_system(world);
             let gamepad_events = world.resources.input.gamepad.events.clone();
             for event in gamepad_events {

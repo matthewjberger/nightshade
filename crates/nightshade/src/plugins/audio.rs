@@ -98,12 +98,12 @@ pub struct AudioPlugin;
 impl crate::app::Plugin for AudioPlugin {
     fn build(&self, app: &mut crate::app::App) {
         #[cfg(not(target_arch = "wasm32"))]
-        app.add_startup_system(systems::initialize_audio_system);
+        app.add_system(crate::app::Stage::Startup, systems::initialize_audio_system);
         #[cfg(target_arch = "wasm32")]
         app.add_system(
             crate::app::Stage::First,
             systems::lazy_initialize_audio_system,
         );
-        app.add_startup_system(install);
+        app.add_system(crate::app::Stage::Startup, install);
     }
 }

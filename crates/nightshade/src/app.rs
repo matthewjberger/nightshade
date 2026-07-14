@@ -22,8 +22,8 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.ecs.add_world_at(GAME, register_game_components());
 //!         app.insert_resource(MyGame::default());
-//!         app.add_game_startup_system(systems::initialize);
-//!         app.add_game_system(Stage::Update, systems::tick);
+//!         app.add_system(Stage::Startup, systems::initialize);
+//!         app.add_system(Stage::Update, systems::tick);
 //!     }
 //! }
 //!
@@ -301,195 +301,233 @@ impl_plugin_group_for_tuple!(
     (P16, plugin16)
 );
 
-/// A tuple of systems accepted by [`App::add_systems`] and
-/// [`App::add_startup_systems`], registered in tuple order.
-pub trait SystemTuple {
+/// The system shapes [`App::add_system`] accepts: a plain `fn(&mut World)`
+/// system, a state-and-world `fn(&mut T, &mut World)` game system with
+/// [`game_scope`] applied at registration, or a tuple mixing both,
+/// registered in tuple order. The `Marker` parameter is inferred from the
+/// shape and never written at call sites.
+pub trait SystemCollection<Marker> {
     fn push_onto(self, schedule: &mut freecs::Schedule<World>);
 }
 
-macro_rules! impl_system_tuple {
-    ($(($system_type:ident, $system_value:ident)),+) => {
-        impl<$($system_type: FnMut(&mut World) + Send + 'static),+> SystemTuple
-            for ($($system_type,)+)
+pub struct WorldSystemMarker;
+
+pub struct GameSystemMarker<T>(std::marker::PhantomData<T>);
+
+impl<F> SystemCollection<WorldSystemMarker> for F
+where
+    F: FnMut(&mut World) + Send + 'static,
+{
+    fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+        schedule.push(std::any::type_name_of_val(&self), self);
+    }
+}
+
+impl<T, F> SystemCollection<GameSystemMarker<T>> for F
+where
+    T: Send + Sync + 'static,
+    F: FnMut(&mut T, &mut World) + Send + 'static,
+{
+    fn push_onto(mut self, schedule: &mut freecs::Schedule<World>) {
+        let name = std::any::type_name_of_val(&self);
+        schedule.push(name, move |world: &mut World| {
+            game_scope(world, |state: &mut T, world| self(state, world));
+        });
+    }
+}
+
+macro_rules! impl_system_collection_for_tuple {
+    ($(($marker:ident, $system_type:ident, $system_value:ident)),+) => {
+        impl<$($marker),+, $($system_type: SystemCollection<$marker>),+>
+            SystemCollection<($($marker,)+)> for ($($system_type,)+)
         {
             fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
                 let ($($system_value,)+) = self;
-                $(schedule.push(std::any::type_name_of_val(&$system_value), $system_value);)+
+                $($system_value.push_onto(schedule);)+
             }
         }
     };
 }
 
-impl_system_tuple!((S1, system1));
-impl_system_tuple!((S1, system1), (S2, system2));
-impl_system_tuple!((S1, system1), (S2, system2), (S3, system3));
-impl_system_tuple!((S1, system1), (S2, system2), (S3, system3), (S4, system4));
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5)
+impl_system_collection_for_tuple!((M1, S1, system1));
+impl_system_collection_for_tuple!((M1, S1, system1), (M2, S2, system2));
+impl_system_collection_for_tuple!((M1, S1, system1), (M2, S2, system2), (M3, S3, system3));
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11),
-    (S12, system12)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11),
-    (S12, system12),
-    (S13, system13)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11),
+    (M12, S12, system12)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11),
-    (S12, system12),
-    (S13, system13),
-    (S14, system14)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11),
+    (M12, S12, system12),
+    (M13, S13, system13)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11),
-    (S12, system12),
-    (S13, system13),
-    (S14, system14),
-    (S15, system15)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11),
+    (M12, S12, system12),
+    (M13, S13, system13),
+    (M14, S14, system14)
 );
-impl_system_tuple!(
-    (S1, system1),
-    (S2, system2),
-    (S3, system3),
-    (S4, system4),
-    (S5, system5),
-    (S6, system6),
-    (S7, system7),
-    (S8, system8),
-    (S9, system9),
-    (S10, system10),
-    (S11, system11),
-    (S12, system12),
-    (S13, system13),
-    (S14, system14),
-    (S15, system15),
-    (S16, system16)
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11),
+    (M12, S12, system12),
+    (M13, S13, system13),
+    (M14, S14, system14),
+    (M15, S15, system15)
+);
+impl_system_collection_for_tuple!(
+    (M1, S1, system1),
+    (M2, S2, system2),
+    (M3, S3, system3),
+    (M4, S4, system4),
+    (M5, S5, system5),
+    (M6, S6, system6),
+    (M7, S7, system7),
+    (M8, S8, system8),
+    (M9, S9, system9),
+    (M10, S10, system10),
+    (M11, S11, system11),
+    (M12, S12, system12),
+    (M13, S13, system13),
+    (M14, S14, system14),
+    (M15, S15, system15),
+    (M16, S16, system16)
 );
 
-/// The per-frame stages, in run order, all before the engine frame
+/// When a system runs. [`Stage::Startup`] runs once, after the window and
+/// renderer come up (or immediately for an app with no runner). The rest
+/// are the per-frame stages, in run order, all before the engine frame
 /// schedule. Game logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`]
 /// is for systems that must observe every update system's writes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
+    Startup,
     First,
     Update,
     LateUpdate,
 }
 
 impl Stage {
-    const ALL: [Stage; 3] = [Stage::First, Stage::Update, Stage::LateUpdate];
+    const PER_FRAME: [Stage; 3] = [Stage::First, Stage::Update, Stage::LateUpdate];
 
     fn name(self) -> &'static str {
         match self {
+            Stage::Startup => "startup",
             Stage::First => "first",
             Stage::Update => "update",
             Stage::LateUpdate => "late_update",
@@ -549,7 +587,7 @@ impl Default for App {
 impl App {
     pub fn new() -> Self {
         let mut stages = freecs::Stages::new();
-        for stage in Stage::ALL {
+        for stage in Stage::PER_FRAME {
             stages.add_stage(stage.name());
         }
         let mut world = World::default();
@@ -598,71 +636,24 @@ impl App {
         self.added_plugins.push(id);
     }
 
-    /// Pushes a system onto a [`Stage`]. Systems run in the order they
-    /// were added.
-    pub fn add_system(
+    /// Registers systems onto a [`Stage`], in registration order. The one
+    /// registration method: it takes a plain `fn(&mut World)` system, a
+    /// state-and-world `fn(&mut T, &mut World)` game system ([`game_scope`]
+    /// applied at registration, state type inferred from the function, the
+    /// state inserted with [`App::insert_resource`]), or a tuple mixing
+    /// both. [`Stage::Startup`] routes to the startup schedule, which runs
+    /// once. Gate a system on an app state by wrapping it in
+    /// [`while_in`](crate::states::while_in).
+    pub fn add_system<Marker>(
         &mut self,
         stage: Stage,
-        system: impl FnMut(&mut World) + Send + 'static,
+        systems: impl SystemCollection<Marker>,
     ) -> &mut Self {
-        let name = std::any::type_name_of_val(&system);
-        self.stages.stage_mut(stage.name()).push(name, system);
-        self
-    }
-
-    /// Pushes a tuple of systems onto a [`Stage`], in tuple order.
-    pub fn add_systems(&mut self, stage: Stage, systems: impl SystemTuple) -> &mut Self {
-        systems.push_onto(self.stages.stage_mut(stage.name()));
-        self
-    }
-
-    /// Pushes a system onto the startup schedule, which runs once after
-    /// the window and renderer come up (or immediately for an app with
-    /// no runner).
-    pub fn add_startup_system(
-        &mut self,
-        system: impl FnMut(&mut World) + Send + 'static,
-    ) -> &mut Self {
-        let name = std::any::type_name_of_val(&system);
-        self.startup.push(name, system);
-        self
-    }
-
-    /// Pushes a tuple of systems onto the startup schedule, in tuple order.
-    pub fn add_startup_systems(&mut self, systems: impl SystemTuple) -> &mut Self {
-        systems.push_onto(&mut self.startup);
-        self
-    }
-
-    /// Pushes a [`game_scope`]d system onto a [`Stage`]: the system keeps
-    /// the plain `(state, world)` signature and the scope is applied at
-    /// registration, so plugins write
-    /// `app.add_game_system(Stage::Update, systems::tick)` with the state
-    /// type inferred from the function itself. The state must have been
-    /// inserted with [`App::insert_resource`].
-    pub fn add_game_system<T: Send + Sync + 'static>(
-        &mut self,
-        stage: Stage,
-        mut system: impl FnMut(&mut T, &mut World) + Send + 'static,
-    ) -> &mut Self {
-        let name = std::any::type_name_of_val(&system);
-        self.stages
-            .stage_mut(stage.name())
-            .push(name, move |world| {
-                game_scope(world, |state: &mut T, world| system(state, world));
-            });
-        self
-    }
-
-    /// The startup form of [`App::add_game_system`].
-    pub fn add_game_startup_system<T: Send + Sync + 'static>(
-        &mut self,
-        mut system: impl FnMut(&mut T, &mut World) + Send + 'static,
-    ) -> &mut Self {
-        let name = std::any::type_name_of_val(&system);
-        self.startup.push(name, move |world| {
-            game_scope(world, |state: &mut T, world| system(state, world));
-        });
+        let schedule = match stage {
+            Stage::Startup => &mut self.startup,
+            per_frame => self.stages.stage_mut(per_frame.name()),
+        };
+        systems.push_onto(schedule);
         self
     }
 

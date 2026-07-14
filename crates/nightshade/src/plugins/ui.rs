@@ -3,7 +3,7 @@
 //! [`crate::ecs::ui`] because it is core, not feature-gated; this plugin
 //! is what activates it.
 
-use crate::app::{App, Plugin};
+use crate::app::{App, Plugin, Stage};
 use crate::ecs::world::World;
 use crate::schedule::{FramePhase, SystemFn, schedule_push};
 
@@ -60,6 +60,6 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(install);
+        app.add_system(Stage::Startup, install);
     }
 }

@@ -30,8 +30,8 @@
 //!     fn build(&self, app: &mut App) {
 //!         app.world.resources.window.title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
-//!         app.add_game_startup_system(initialize);
-//!         app.add_game_system(Stage::Update, tick);
+//!         app.add_system(Stage::Startup, initialize);
+//!         app.add_system(Stage::Update, tick);
 //!     }
 //! }
 //!
@@ -588,8 +588,8 @@ pub use systems::*;
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, Plugin, PluginGroup, PluginGroupBuilder, Stage, WindowPlugin,
-        game_scope,
+        App, DefaultPlugins, GameSystemMarker, Plugin, PluginGroup, PluginGroupBuilder, Stage,
+        SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
     };
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
@@ -629,7 +629,9 @@ pub mod prelude {
         schedule_run,
     };
     pub use crate::state::{NextStateBuilder, RenderResources, State};
-    pub use crate::states::{AppState, current_state, in_state, next_state};
+    pub use crate::states::{
+        AppState, GateableSystem, current_state, in_state, next_state, while_in,
+    };
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

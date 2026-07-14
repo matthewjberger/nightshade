@@ -1,6 +1,6 @@
 //! The demo-friendly exit key: composing it closes the app on Escape.
 
-use crate::app::{App, Plugin};
+use crate::app::{App, Plugin, Stage};
 use crate::ecs::world::World;
 use crate::schedule::{FramePhase, schedule_push};
 
@@ -19,6 +19,6 @@ pub struct ExitOnEscapePlugin;
 
 impl Plugin for ExitOnEscapePlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(install);
+        app.add_system(Stage::Startup, install);
     }
 }

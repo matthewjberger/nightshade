@@ -4,7 +4,7 @@
 //! present) belongs to the runner. This plugin declares that a renderer
 //! exists and installs the world-side sync systems that feed it.
 
-use crate::app::{App, Plugin};
+use crate::app::{App, Plugin, Stage};
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use crate::render_driver::render_entity;
@@ -53,7 +53,7 @@ impl Plugin for RenderPlugin {
         if let Some(limit) = self.frame_rate_limit {
             app.world.resources.render_settings.frame_rate_limit = Some(limit);
         }
-        app.add_startup_system(install);
+        app.add_system(Stage::Startup, install);
     }
 }
 

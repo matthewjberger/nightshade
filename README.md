@@ -174,8 +174,8 @@ struct SpinCubePlugin;
 impl Plugin for SpinCubePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(SpinCube::default());
-        app.add_game_startup_system(initialize);
-        app.add_game_system(Stage::Update, spin);
+        app.add_system(Stage::Startup, initialize);
+        app.add_system(Stage::Update, spin);
     }
 }
 

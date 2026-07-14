@@ -52,7 +52,7 @@ If unsure, default to the facade and only descend when a specific need forces it
 
 ## Reference code (copy proven patterns, do not invent new architecture)
 
-- `apps/sandbox`: the canonical engine-layer 3D game. A game plugin registering startup and update systems with `add_game_system` onto free functions in `systems/<domain>`, an app member world for game components, screens driven by app states (`insert_state`/`on_enter`/`next_state`) with the per-screen config in `systems/lifecycle.rs`, retained-UI handles stored in resources, `theme.rs` for UI constants. Read it before writing a new engine-layer app.
+- `apps/sandbox`: the canonical engine-layer 3D game. A game plugin registering startup and update systems with `add_system` onto free functions in `systems/<domain>`, an app member world for game components, screens driven by app states (`insert_state`/`on_enter`/`next_state`) with the per-screen config in `systems/lifecycle.rs`, retained-UI handles stored in resources, `theme.rs` for UI constants. Read it before writing a new engine-layer app.
 - `apps/coin_dash`, `apps/coin_rush`: idiomatic facade games. `run!(setup, ...systems)`, state in a plain struct holding `Entity` handles.
 - `template/` (engine skeleton), `template_api/` (facade skeleton): the same architecture stripped to a starting point.
 - Per-feature apps: `fireworks` (particles), `cloth`, `movement` (physics queries), `gallery` and `ui_test_harness` (retained UI), `navmesh`, `lights` (clustered forward, 1024 point lights), `ssr`, `decals`, `alpha_blending` (custom render-graph configs), `water`, `vfx`, `cutscene`, `editor` (the densest app). `docs/ENGINE_FEATURES.md` maps features to apps.

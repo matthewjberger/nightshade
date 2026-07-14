@@ -19,7 +19,7 @@
 //!         app.insert_state(Screen::Title);
 //!         app.on_enter(Screen::Title, build_title_ui);
 //!         app.on_exit(Screen::Title, teardown_title_ui);
-//!         app.add_state_system(Stage::Update, Screen::Playing, tick);
+//!         app.add_system(Stage::Update, while_in(Screen::Playing, tick));
 //!     }
 //! }
 //!
@@ -63,6 +63,50 @@ pub fn current_state<S: Copy + PartialEq + Send + Sync + 'static>(world: &World)
 /// Whether the current state is `state`.
 pub fn in_state<S: Copy + PartialEq + Send + Sync + 'static>(world: &World, state: S) -> bool {
     current_state::<S>(world) == state
+}
+
+/// The system shapes [`while_in`] gates: plain world systems and
+/// state-and-world game systems, sharing the marker types of
+/// [`SystemCollection`](crate::app::SystemCollection).
+pub trait GateableSystem<Marker>: Send + 'static {
+    fn run(&mut self, world: &mut World);
+}
+
+impl<F> GateableSystem<crate::app::WorldSystemMarker> for F
+where
+    F: FnMut(&mut World) + Send + 'static,
+{
+    fn run(&mut self, world: &mut World) {
+        self(world);
+    }
+}
+
+impl<T, F> GateableSystem<crate::app::GameSystemMarker<T>> for F
+where
+    T: Send + Sync + 'static,
+    F: FnMut(&mut T, &mut World) + Send + 'static,
+{
+    fn run(&mut self, world: &mut World) {
+        game_scope(world, |state: &mut T, world| self(state, world));
+    }
+}
+
+/// Gates a system on the current state, returning a system for
+/// [`App::add_system`]: the wrapped system runs only while the state is
+/// `state`. Takes either system shape.
+///
+/// ```ignore
+/// app.add_system(Stage::Update, while_in(Screen::Playing, tick));
+/// ```
+pub fn while_in<S: Copy + PartialEq + Send + Sync + 'static, Marker>(
+    state: S,
+    mut system: impl GateableSystem<Marker>,
+) -> impl FnMut(&mut World) + Send + 'static {
+    move |world: &mut World| {
+        if in_state(world, state) {
+            system.run(world);
+        }
+    }
 }
 
 /// Requests a transition, applied at the start of the next frame: exit
@@ -175,38 +219,6 @@ impl App {
             .exit
             .push((state, Box::new(system)));
         self
-    }
-
-    /// The [`App::add_system`] form gated on the current state: the
-    /// system runs only while the state is `state`.
-    pub fn add_state_system<S: Copy + PartialEq + Send + Sync + 'static>(
-        &mut self,
-        stage: Stage,
-        state: S,
-        mut system: impl FnMut(&mut World) + Send + 'static,
-    ) -> &mut Self {
-        self.add_system(stage, move |world| {
-            if in_state(world, state) {
-                system(world);
-            }
-        })
-    }
-
-    /// The [`App::add_game_system`] form gated on the current state.
-    pub fn add_game_state_system<
-        S: Copy + PartialEq + Send + Sync + 'static,
-        T: Send + Sync + 'static,
-    >(
-        &mut self,
-        stage: Stage,
-        state: S,
-        mut system: impl FnMut(&mut T, &mut World) + Send + 'static,
-    ) -> &mut Self {
-        self.add_system(stage, move |world| {
-            if in_state(world, state) {
-                game_scope(world, |game: &mut T, world| system(game, world));
-            }
-        })
     }
 
     fn state_holder<S: Copy + PartialEq + Send + Sync + 'static>(&mut self) -> &mut AppState<S> {
