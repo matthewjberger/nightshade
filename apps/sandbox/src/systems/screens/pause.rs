@@ -1,5 +1,4 @@
 use crate::ecs::{PauseHandles, SandboxResources, Screen};
-use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
 use crate::systems::world::{character, enemies, grass, infinite, player, rocks, terrain};
 use crate::theme::*;
@@ -256,7 +255,7 @@ pub fn set_checkbox_value(world: &mut World, checkbox: Entity, value: bool) {
 }
 
 pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
-    if !matches!(sandbox_world.screen.current, Screen::Paused) {
+    if !in_state(world, Screen::Paused) {
         return;
     }
     let resume = sandbox_world.ui_handles.pause.resume_button;
@@ -340,11 +339,11 @@ pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
     if clicked_resume {
         ui_set_visible(world, settings_panel, false);
         ui_set_visible(world, main_panel, true);
-        lifecycle::enter(sandbox_world, world, Screen::InGame);
+        next_state(world, Screen::InGame);
     } else if clicked_main_menu {
         player::reset(sandbox_world, world);
         enemies::despawn(world);
-        lifecycle::enter(sandbox_world, world, Screen::Title);
+        next_state(world, Screen::Title);
     } else if clicked_quit {
         world.resources.window.should_exit = true;
     }

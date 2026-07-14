@@ -27,8 +27,6 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
     sandbox_world.screen.show_fps = true;
 
     build_ui(sandbox_world, world);
-
-    enter(sandbox_world, world, Screen::Title);
 }
 
 /// Builds the retained UI tree and stores the handles. Runs at initialize
@@ -45,15 +43,14 @@ pub fn build_ui(sandbox_world: &mut SandboxResources, world: &mut World) {
     sandbox_world.ui_handles.hud = hud_handles;
 }
 
-/// Drive every screen transition through one function so the
-/// physics/cursor/gamepad-nav booleans and the initial focused
-/// button all live in a single place. Each screen contributes a
-/// small config block and the body just applies it.
+/// Applies one screen's configuration, so the physics/cursor/gamepad-nav
+/// booleans and the initial focused button all live in a single place.
+/// Registered as the `on_enter` hook for every [`Screen`], and called
+/// directly after a snapshot restore re-applies the current screen.
 pub fn enter(sandbox_world: &mut SandboxResources, world: &mut World, screen: Screen) {
     let config = screen_config(&sandbox_world.ui_handles, screen);
 
-    sandbox_world.screen.current = screen;
-    apply_visibility(sandbox_world, world);
+    apply_visibility(sandbox_world, world, screen);
 
     world.resources.physics.enabled = config.physics_enabled;
     set_cursor_locked(world, config.cursor_locked);
@@ -98,9 +95,8 @@ fn screen_config(handles: &crate::ecs::UiHandles, screen: Screen) -> ScreenConfi
     }
 }
 
-pub fn apply_visibility(sandbox_world: &SandboxResources, world: &mut World) {
+pub fn apply_visibility(sandbox_world: &SandboxResources, world: &mut World, screen: Screen) {
     let handles = &sandbox_world.ui_handles;
-    let screen = sandbox_world.screen.current;
     ui_set_visible(world, handles.title.root, matches!(screen, Screen::Title));
     ui_set_visible(world, handles.pause.root, matches!(screen, Screen::Paused));
     ui_set_visible(

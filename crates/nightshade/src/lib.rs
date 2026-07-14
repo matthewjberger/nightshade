@@ -551,6 +551,8 @@ pub mod schedule;
 #[cfg(feature = "runtime")]
 pub mod state;
 #[cfg(feature = "runtime")]
+pub mod states;
+#[cfg(feature = "runtime")]
 mod systems;
 
 #[cfg(feature = "networking")]
@@ -624,6 +626,7 @@ pub mod prelude {
         schedule_run,
     };
     pub use crate::state::{NextStateBuilder, RenderResources, State};
+    pub use crate::states::{AppState, current_state, in_state, next_state};
     pub use crate::systems::*;
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

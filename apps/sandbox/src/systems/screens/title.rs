@@ -1,5 +1,4 @@
 use crate::ecs::{ENEMY, SandboxResources, Screen, TitleHandles};
-use crate::systems::lifecycle;
 use crate::systems::screens::menu_button;
 use crate::systems::world::enemies;
 use crate::theme::*;
@@ -95,7 +94,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> TitleHandles {
 }
 
 pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
-    if !matches!(sandbox_world.screen.current, Screen::Title) {
+    if !in_state(world, Screen::Title) {
         return;
     }
     let play = sandbox_world.ui_handles.title.play_button;
@@ -117,7 +116,7 @@ pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
         {
             enemies::spawn(world);
         }
-        lifecycle::enter(sandbox_world, world, Screen::InGame);
+        next_state(world, Screen::InGame);
     }
     if clicked_quit {
         world.resources.window.should_exit = true;

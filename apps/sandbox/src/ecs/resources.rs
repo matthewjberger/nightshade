@@ -37,7 +37,6 @@ pub enum Screen {
 
 #[derive(Default)]
 pub struct ScreenState {
-    pub current: Screen,
     pub show_fps: bool,
 }
 
