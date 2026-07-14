@@ -22,4 +22,6 @@ pub mod physics;
 pub mod render;
 #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
 pub mod steam;
+#[cfg(feature = "terrain")]
+pub mod terrain;
 pub mod ui;

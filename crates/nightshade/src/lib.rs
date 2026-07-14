@@ -734,8 +734,6 @@ pub mod prelude {
     pub use crate::ecs::snapshot::{WorldSnapshot, restore_world, snapshot_world};
     #[cfg(feature = "assets")]
     pub use crate::ecs::snapshot::{load_world_snapshot_from_bytes, save_world_snapshot_to_bytes};
-    #[cfg(all(feature = "terrain", feature = "physics"))]
-    pub use crate::ecs::terrain::terrain_collider_system;
     pub use crate::ecs::text::commands::{
         load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
     };
@@ -857,6 +855,10 @@ pub mod prelude {
         CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
         PhysicsInterpolation, RigidBodyComponent,
     };
+    #[cfg(feature = "terrain")]
+    pub use crate::plugins::terrain::TerrainColliderAnchor;
+    #[cfg(all(feature = "terrain", feature = "physics"))]
+    pub use crate::plugins::terrain::TerrainPlugin;
     pub use crate::render::bounding_volume::BoundingVolume;
     pub use crate::render::entity::RenderEntity;
     pub use crate::render::generational_registry::{
