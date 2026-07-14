@@ -111,29 +111,7 @@ pub fn update_global_transforms_system(world: &mut World) {
             continue;
         }
 
-        let local_matrix =
-            match world.get::<crate::ecs::transform::components::LocalTransform>(current) {
-                Some(local_transform) => local_transform.as_matrix(),
-                None => nalgebra_glm::Mat4::identity(),
-            };
-
-        let new_global_transform = match world
-            .get::<freecs::dynamic::ChildOf>(current)
-            .map(|child_of| child_of.0)
-        {
-            Some(parent_entity) => {
-                let mut parent_matrix = world
-                    .get::<crate::ecs::transform::components::GlobalTransform>(parent_entity)
-                    .map(|global_transform| global_transform.0)
-                    .unwrap_or_else(nalgebra_glm::Mat4::identity);
-                if world.has::<crate::ecs::transform::components::IgnoreParentScale>(current) {
-                    parent_matrix = remove_scale_from_matrix(parent_matrix);
-                }
-                parent_matrix * local_matrix
-            }
-            None => local_matrix,
-        };
-
+        let new_global_transform = computed_global_transform(world, current);
         if let Some(global_transform) =
             world.get_mut::<crate::ecs::transform::components::GlobalTransform>(current)
         {
@@ -170,6 +148,54 @@ pub fn update_global_transforms_system(world: &mut World) {
     world.resources.transform_state.traversal_stack = stack;
     world.resources.transform_state.render_dirty_scratch = render_dirty_entities;
     world.resources.transform_state.dirty_scratch = dirty_entities;
+}
+
+fn computed_global_transform(world: &World, current: Entity) -> nalgebra_glm::Mat4 {
+    let local_matrix = match world.get::<crate::ecs::transform::components::LocalTransform>(current)
+    {
+        Some(local_transform) => local_transform.as_matrix(),
+        None => nalgebra_glm::Mat4::identity(),
+    };
+
+    match world
+        .get::<freecs::dynamic::ChildOf>(current)
+        .map(|child_of| child_of.0)
+    {
+        Some(parent_entity) => {
+            let mut parent_matrix = world
+                .get::<crate::ecs::transform::components::GlobalTransform>(parent_entity)
+                .map(|global_transform| global_transform.0)
+                .unwrap_or_else(nalgebra_glm::Mat4::identity);
+            if world.has::<crate::ecs::transform::components::IgnoreParentScale>(current) {
+                parent_matrix = remove_scale_from_matrix(parent_matrix);
+            }
+            parent_matrix * local_matrix
+        }
+        None => local_matrix,
+    }
+}
+
+/// Computes [`GlobalTransform`] for `root` and every descendant right now,
+/// top down, so a freshly spawned subtree is world-valid the moment the
+/// spawn call returns instead of after the frame schedule's propagation
+/// pass. The scheduled pass still owns render dirt and change-tick
+/// consumption; this walk only writes the matrices. The spawn paths call
+/// it themselves; reach for it directly only after moving a subtree
+/// mid-frame and needing its world transforms in the same breath.
+pub fn propagate_subtree_global_transforms(world: &mut World, root: Entity) {
+    sync_hierarchy_index(world);
+    let mut stack = vec![root];
+    while let Some(current) = stack.pop() {
+        let new_global_transform = computed_global_transform(world, current);
+        if let Some(global_transform) =
+            world.get_mut::<crate::ecs::transform::components::GlobalTransform>(current)
+        {
+            *global_transform = GlobalTransform(new_global_transform);
+        }
+        for child in world.resources.hierarchy.children(current) {
+            stack.push(*child);
+        }
+    }
 }
 
 fn remove_scale_from_matrix(matrix: nalgebra_glm::Mat4) -> nalgebra_glm::Mat4 {
