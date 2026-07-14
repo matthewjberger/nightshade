@@ -43,6 +43,8 @@ mod stagger;
 pub mod texture_cache;
 pub mod ui_texture_array;
 
+pub use ::wgpu::*;
+
 #[derive(Default, Clone)]
 pub struct WindowRenderState {
     /// Every distinct buffer size this window has dispatched at this

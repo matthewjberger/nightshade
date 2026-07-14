@@ -125,7 +125,7 @@ full = [
 grass = ["nightshade-renderer/grass"]
 terrain = ["grass", "nightshade-renderer/terrain"]
 
-wgpu = ["dep:wgpu", "dep:naga_oil", "nightshade-renderer/wgpu", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
+wgpu = ["nightshade-renderer/wgpu"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]
 tracing = ["dep:tracing-appender", "dep:chrono"]
 tracy = ["tracing", "dep:tracing-tracy"]
@@ -169,8 +169,6 @@ winit = { workspace = true, optional = true }
 ehttp = { workspace = true, optional = true }
 taffy = { workspace = true }
 
-wgpu = { workspace = true, optional = true }
-naga_oil = { workspace = true, optional = true }
 nightshade-renderer = { workspace = true }
 
 egui = { workspace = true, optional = true }

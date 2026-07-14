@@ -948,7 +948,7 @@ pub mod prelude {
     pub use gilrs;
     pub use nalgebra_glm;
     pub use nalgebra_glm::{vec2, vec3, vec4};
-    pub use wgpu;
+    pub use nightshade_renderer::wgpu;
 
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use crate::plugins::steam::{

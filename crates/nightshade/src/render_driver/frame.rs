@@ -3,6 +3,7 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
+use crate::render::wgpu;
 use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::render::wgpu::pass_sync;
 use crate::render::wgpu::presentation;

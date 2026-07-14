@@ -94,6 +94,8 @@
 use crate::prelude::*;
 
 use crate::ecs::world::World;
+#[cfg(target_arch = "wasm32")]
+use crate::render::wgpu;
 use winit::{
     event::{DeviceEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},

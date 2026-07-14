@@ -36,6 +36,7 @@
 //! ```
 
 use crate::ecs::world::World;
+use crate::render::wgpu;
 use crate::state::{RenderResources, State};
 use freecs::dynamic::ResourceHostExt;
 

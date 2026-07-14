@@ -27,6 +27,62 @@ A host drives it with three steps per frame:
 
 `RenderInputs` deliberately has no `Default`: every field is load-bearing and the move-in/move-out cycle is the contract. Build one compose function against the struct and the compiler walks you through the fields.
 
+In code, the whole cycle:
+
+```rust,ignore
+use nightshade_renderer::config::{DebugDraw, EditorSelection, RenderSettings, RendererState};
+use nightshade_renderer::core::create_renderer;
+use nightshade_renderer::mesh_cache::MeshCache;
+use nightshade_renderer::wgpu::frame::render_frame;
+use nightshade_renderer::wgpu::render_configs::{FrameInputs, FrameOutputs, RenderInputs};
+use nightshade_renderer::wgpu::texture_cache::TextureCache;
+
+// Once: bring the renderer up over anything with window handles
+// (a winit window on native, an OffscreenCanvas on the web).
+let mut renderer = create_renderer(window, width, height).await?;
+
+// Persistent state lives on your side between frames. Keep it current
+// with deltas: insert meshes into the cache, queue texture uploads,
+// update the scene snapshot's transforms and materials.
+let mut scene = RendererState::default();
+let mut mesh_cache = MeshCache::default();
+let mut texture_cache = TextureCache::default();
+
+loop {
+    // 1. Compose this frame's inputs. Persistent state moves in by value;
+    //    renderer-owned fields (ibl_views, shadow_atlas) compose as
+    //    Default::default(). The frame field carries this frame's cameras
+    //    (as CameraFrameInputs), drained commands, and dirty spheres.
+    let mut inputs = RenderInputs {
+        settings: RenderSettings::default(),
+        debug_draw: DebugDraw::default(),
+        editor_selection: EditorSelection::default(),
+        scene: std::mem::take(&mut scene),
+        ibl_views: Default::default(),
+        shadow_atlas: Default::default(),
+        wind: Default::default(),
+        mesh_cache: std::mem::take(&mut mesh_cache),
+        texture_cache: std::mem::take(&mut texture_cache),
+        pending_particle_textures: Vec::new(),
+        ui: Default::default(),
+        view: view_inputs,
+        world_id: 0,
+        frame: compose_frame_inputs(cameras, commands),
+    };
+
+    // 2. Render. On a skipped frame (occluded or lost surface) the
+    //    unconsumed dirty state stays in the inputs.
+    let mut outputs = FrameOutputs::default();
+    render_frame(&mut renderer, &mut inputs, &mut outputs)?;
+
+    // 3. Apply the outputs and take the persistent state back out.
+    apply_viewport_sizes(&outputs.viewport_texture_sizes);
+    scene = inputs.scene;
+    mesh_cache = inputs.mesh_cache;
+    texture_cache = inputs.texture_cache;
+}
+```
+
 ## What it renders
 
 - Clustered forward PBR with the metallic-roughness workflow and the glTF KHR material extension set

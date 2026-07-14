@@ -4,6 +4,7 @@
 //! [`RenderResources`] which is passed to [`State::configure_render_graph`].
 
 use crate::ecs::world::World;
+use crate::render::wgpu;
 
 /// Resource IDs for render graph configuration.
 ///
