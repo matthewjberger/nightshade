@@ -97,7 +97,7 @@ impl Plugin for PickingPlugin {
 fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
     world.resources.debug_draw.show_grid = true;
     world.resources.render_settings.atmosphere = Atmosphere::Sky;
-    world.resources.debug_draw.selection_outline_enabled = true;
+    world.resources.selection.outline_enabled = true;
     picking_demo.show_debug_volumes = true;
     picking_demo.spin_speed = 1.0;
 
@@ -382,13 +382,7 @@ impl PickingDemo {
     }
 
     fn sync_outline(&self, world: &mut World) {
-        world
-            .resources
-            .editor_selection
-            .bounding_volume_selected_entity = self
-            .highlighted_entity
-            .or(self.selected_entity)
-            .map(render_entity);
+        world.resources.selection.active_entity = self.highlighted_entity.or(self.selected_entity);
     }
 
     fn sync_panel(&self, world: &mut World) {

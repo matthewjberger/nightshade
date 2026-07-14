@@ -76,6 +76,7 @@ pub mod resources {
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
+    pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
@@ -93,9 +94,9 @@ pub mod resources {
     pub use crate::plugins::physics::resources::PhysicsWorld;
     pub use crate::render::config::ViewportRect;
     pub use crate::render::config::{
-        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, EditorSelection, Fog, GpuBackend,
-        GpuDeviceType, GpuProfile, MeshLodChain, MeshLodLevel, RenderSettings, RendererState,
-        TonemapAlgorithm, VertexSnap,
+        Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, Fog, GpuBackend, GpuDeviceType,
+        GpuProfile, MeshLodChain, MeshLodLevel, RenderSettings, RendererState, TonemapAlgorithm,
+        VertexSnap,
     };
     pub use crate::render::mesh_cache::MeshCache;
     pub use crate::render::wgpu::texture_cache::TextureCache;
@@ -270,7 +271,7 @@ pub struct Resources {
     pub grass: crate::render::grass_config::GrassSettings,
     pub render_settings: crate::render::config::RenderSettings,
     pub debug_draw: crate::render::config::DebugDraw,
-    pub editor_selection: crate::render::config::EditorSelection,
+    pub selection: crate::ecs::graphics::selection::Selection,
     pub renderer_state: crate::render::config::RendererState,
     pub input: crate::ecs::input::resources::Input,
     pub is_runtime: bool,

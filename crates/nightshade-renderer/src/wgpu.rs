@@ -16,12 +16,12 @@
 
 pub mod brdf_lut;
 mod camera_viewport;
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 pub mod envmap_filter;
 mod execution;
 pub mod frame;
 pub mod glyph_atlas;
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 pub mod hdr;
 pub mod ibl;
 mod initialization;

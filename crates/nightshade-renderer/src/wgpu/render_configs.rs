@@ -169,8 +169,6 @@ pub struct RenderInputs {
     pub settings: crate::config::RenderSettings,
     /// Debug visualization toggles.
     pub debug_draw: crate::config::DebugDraw,
-    /// Editor selection state for outlines and culling overrides.
-    pub editor_selection: crate::config::EditorSelection,
     /// The per-frame scene snapshot every pass draws from.
     pub scene: crate::config::RendererState,
     /// Image-based-lighting texture views. Renderer-owned: the frame driver

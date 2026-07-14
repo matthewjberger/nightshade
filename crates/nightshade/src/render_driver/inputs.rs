@@ -57,6 +57,7 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
     let effective_shading = crate::ecs::camera::components::effective_shading_for_camera(
         &world.resources.render_settings,
         &world.resources.debug_draw,
+        &world.resources.selection,
         &shading,
         post_process.as_ref(),
         culling_mask.as_ref(),
@@ -162,6 +163,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let fallback_shading = crate::ecs::camera::components::effective_shading_from_graphics(
         &world.resources.render_settings,
         &world.resources.debug_draw,
+        &world.resources.selection,
     );
 
     let mut wants_normals = world.resources.debug_draw.show_normals;
@@ -242,7 +244,6 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     RenderInputs {
         settings: std::mem::take(&mut resources.render_settings),
         debug_draw: std::mem::take(&mut resources.debug_draw),
-        editor_selection: std::mem::take(&mut resources.editor_selection),
         scene: std::mem::take(&mut resources.renderer_state),
         ibl_views: Default::default(),
         shadow_atlas: Default::default(),
@@ -310,7 +311,6 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     let resources = &mut world.resources;
     resources.render_settings = inputs.settings;
     resources.debug_draw = inputs.debug_draw;
-    resources.editor_selection = inputs.editor_selection;
     resources.renderer_state = inputs.scene;
     resources.texture_cache = inputs.texture_cache;
     resources.assets.mesh_cache = inputs.mesh_cache;

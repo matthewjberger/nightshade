@@ -192,17 +192,13 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for OutlinePass {
         configs: &crate::wgpu::render_configs::RenderInputs,
     ) {
         self.enabled = configs.scene.active_view.selection_outline_enabled
-            && (configs
-                .editor_selection
-                .bounding_volume_selected_entity
-                .is_some()
-                || !configs.editor_selection.selected_entities.is_empty());
+            && !configs.scene.render_selection_outline_ids.is_empty();
 
         if !self.enabled {
             return;
         }
 
-        self.outline_color = configs.debug_draw.selection_outline_color;
+        self.outline_color = configs.scene.render_selection_outline_color;
 
         let params = OutlineParams {
             outline_color: self.outline_color,

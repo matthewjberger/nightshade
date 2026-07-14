@@ -30,7 +30,7 @@ A host drives it with three steps per frame:
 In code, the whole cycle:
 
 ```rust,ignore
-use nightshade_renderer::config::{DebugDraw, EditorSelection, RenderSettings, RendererState};
+use nightshade_renderer::config::{DebugDraw, RenderSettings, RendererState};
 use nightshade_renderer::core::create_renderer;
 use nightshade_renderer::mesh_cache::MeshCache;
 use nightshade_renderer::wgpu::frame::render_frame;
@@ -56,7 +56,6 @@ loop {
     let mut inputs = RenderInputs {
         settings: RenderSettings::default(),
         debug_draw: DebugDraw::default(),
-        editor_selection: EditorSelection::default(),
         scene: std::mem::take(&mut scene),
         ibl_views: Default::default(),
         shadow_atlas: Default::default(),
@@ -150,7 +149,7 @@ queue.submit(command_buffers);
 |---------|--------------|
 | `wgpu` | Default. The renderer itself, on DX12, Metal, Vulkan, and WebGPU |
 | `rendergraph` | The frame graph alone: pass scheduling, transient resource aliasing, store-op optimization |
-| `assets` | HDR decoding and image loading for skyboxes and IBL captures |
+| `hdr` | HDR decoding and image loading for skyboxes and IBL captures |
 | `screenshot` | GPU readback capture to PNG |
 | `egui` | An egui overlay pass |
 | `debug_render` | Line, bounding volume, and normal overlays plus the selection outline |

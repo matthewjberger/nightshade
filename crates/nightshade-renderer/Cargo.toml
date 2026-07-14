@@ -42,7 +42,7 @@ wasm-bindgen-futures = { workspace = true }
 default = ["wgpu"]
 rendergraph = ["dep:wgpu", "dep:petgraph", "dep:thiserror"]
 wgpu = ["rendergraph", "dep:wgpu", "dep:naga_oil", "dep:cosmic-text", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
-assets = ["dep:image", "dep:half"]
+hdr = ["dep:image", "dep:half"]
 screenshot = ["dep:image"]
 browser_yield = []
 debug_render = []

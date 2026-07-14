@@ -246,7 +246,8 @@ pub fn sync_settings_version(renderer: &mut WgpuRenderer, inputs: &mut RenderInp
     let current_settings_signature = render_settings_signature(
         &inputs.settings,
         &inputs.debug_draw,
-        &inputs.editor_selection,
+        &inputs.scene.render_selection_outline_ids,
+        inputs.scene.render_selection_outline_color,
     );
     if renderer.frame_state.last_settings_signature != Some(current_settings_signature) {
         inputs.scene.settings_version = inputs.scene.settings_version.wrapping_add(1);

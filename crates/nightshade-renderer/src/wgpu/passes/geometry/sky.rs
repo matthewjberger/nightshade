@@ -1,14 +1,14 @@
 use crate::config::Atmosphere;
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 use crate::wgpu::envmap_filter::filter_environment_map;
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 use crate::wgpu::hdr::generate_cubemap_mipmaps;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 const PROCEDURAL_CUBEMAP_SIZE: u32 = 1024;
 
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 fn calculate_mip_count(size: u32) -> u32 {
     (size as f32).log2().floor() as u32 + 1
 }
@@ -49,26 +49,26 @@ pub struct SkyPass {
     hdr_bind_group: wgpu::BindGroup,
     hdr_pipeline: wgpu::RenderPipeline,
     hdr_lod_pipeline: wgpu::RenderPipeline,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     cubemap_texture: wgpu::Texture,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     cubemap_view: wgpu::TextureView,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     sampler: wgpu::Sampler,
     hdr_loaded: bool,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     hdr_bind_group_layout: wgpu::BindGroupLayout,
     irradiance_bind_group: wgpu::BindGroup,
     prefilter_bind_group: wgpu::BindGroup,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     irradiance_texture: Option<wgpu::Texture>,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     prefilter_texture: Option<wgpu::Texture>,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     procedural_cubemap_pipeline: wgpu::ComputePipeline,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     procedural_cubemap_bind_group_layout: wgpu::BindGroupLayout,
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     procedural_uniform_buffer: wgpu::Buffer,
     pub ibl_snapshots: Vec<(f32, wgpu::Texture, wgpu::Texture)>,
     pub ibl_snapshot_atmosphere: Option<crate::config::Atmosphere>,
@@ -130,9 +130,9 @@ impl SkyPass {
             mapped_at_creation: false,
         });
 
-        #[cfg(feature = "assets")]
+        #[cfg(feature = "hdr")]
         let (cubemap_texture, cubemap_view) = create_dummy_cubemap(device);
-        #[cfg(not(feature = "assets"))]
+        #[cfg(not(feature = "hdr"))]
         let (_, cubemap_view) = create_dummy_cubemap(device);
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
@@ -379,7 +379,7 @@ impl SkyPass {
             label: Some("Sky Prefilter Bind Group"),
         });
 
-        #[cfg(feature = "assets")]
+        #[cfg(feature = "hdr")]
         let (
             procedural_uniform_buffer,
             procedural_cubemap_bind_group_layout,
@@ -461,33 +461,33 @@ impl SkyPass {
             hdr_bind_group,
             hdr_pipeline,
             hdr_lod_pipeline,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             cubemap_texture,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             cubemap_view,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             sampler,
             hdr_loaded: false,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             hdr_bind_group_layout,
             irradiance_bind_group,
             prefilter_bind_group,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             irradiance_texture: None,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             prefilter_texture: None,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             procedural_cubemap_pipeline,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             procedural_cubemap_bind_group_layout,
-            #[cfg(feature = "assets")]
+            #[cfg(feature = "hdr")]
             procedural_uniform_buffer,
             ibl_snapshots: Vec::new(),
             ibl_snapshot_atmosphere: None,
         }
     }
 
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     pub fn load_hdr_skybox(
         &mut self,
         device: &wgpu::Device,
@@ -584,7 +584,7 @@ impl SkyPass {
         (irradiance_view, prefiltered_view)
     }
 
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     pub fn capture_procedural_atmosphere(
         &mut self,
         device: &wgpu::Device,
@@ -746,7 +746,7 @@ impl SkyPass {
         Some((irradiance_view, prefiltered_view))
     }
 
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     pub fn capture_ibl_snapshots(
         &mut self,
         device: &wgpu::Device,

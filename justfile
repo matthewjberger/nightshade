@@ -101,7 +101,7 @@ lint-rendergraph:
 check-feature-forwarding:
     #!/usr/bin/env bash
     status=0
-    for feature in wgpu assets egui debug_render screenshot grass terrain browser_yield; do
+    for feature in wgpu hdr egui debug_render screenshot grass terrain browser_yield; do
         if ! grep -q "nightshade-renderer/${feature}" crates/nightshade/Cargo.toml; then
             echo "missing forwarding: nightshade '${feature}' does not forward to nightshade-renderer/${feature}"
             status=1

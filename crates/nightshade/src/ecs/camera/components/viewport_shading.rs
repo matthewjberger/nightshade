@@ -25,6 +25,7 @@
 //! the selection outline) for that camera only. The world ground grid is
 //! a separate global toggle.
 
+use crate::ecs::graphics::selection::Selection;
 use crate::ecs::primitives::CameraCullingMask;
 use crate::render::config::{
     Atmosphere, ColorGrading, DebugDraw, DepthOfField, Fog, RenderSettings,
@@ -59,6 +60,7 @@ use crate::render::config::{EffectiveShading, FLAT_SHADING_COLOR, WIREFRAME_SENT
 pub fn effective_shading_from_graphics(
     render: &RenderSettings,
     debug: &DebugDraw,
+    selection: &Selection,
 ) -> EffectiveShading {
     EffectiveShading {
         unlit_mode: render.unlit_mode,
@@ -69,7 +71,7 @@ pub fn effective_shading_from_graphics(
         show_normals: debug.show_normals,
         show_bounding_volumes: debug.show_bounding_volumes,
         show_wireframe: false,
-        selection_outline_enabled: debug.selection_outline_enabled,
+        selection_outline_enabled: selection.outline_enabled,
         flat_shading_color: None,
         shadow_depth_enabled: true,
         lines_enabled: debug.show_normals || debug.show_bounding_volumes,
@@ -106,12 +108,13 @@ pub fn effective_shading_from_graphics(
 pub fn effective_shading_for_camera(
     render: &RenderSettings,
     debug: &DebugDraw,
+    selection: &Selection,
     shading: &ViewportShading,
     post_process: Option<&CameraPostProcess>,
     culling_mask: Option<&CameraCullingMask>,
     environment: Option<&CameraEnvironment>,
 ) -> EffectiveShading {
-    let mut effective = effective_shading_from_graphics(render, debug);
+    let mut effective = effective_shading_from_graphics(render, debug, selection);
     if let Some(mask) = culling_mask {
         effective.culling_mask = mask.0;
     }

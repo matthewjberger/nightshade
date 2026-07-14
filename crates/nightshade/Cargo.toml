@@ -50,7 +50,7 @@ core = [
 
 assets = [
     "core",
-    "nightshade-renderer/assets",
+    "nightshade-renderer/hdr",
     "dep:gltf",
     "dep:half",
     "dep:image",

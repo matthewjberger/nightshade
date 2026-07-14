@@ -3,13 +3,13 @@
 //! snapshot brackets. Every capture fans the resulting views out to the mesh
 //! and skinned mesh passes and records them in [`RenderInputs::ibl_views`].
 
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 use crate::config::IblViews;
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::passes;
 use crate::wgpu::render_configs::RenderInputs;
 
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 fn apply_ibl_views(
     renderer: &mut WgpuRenderer,
     ibl_views: &mut IblViews,
@@ -39,7 +39,7 @@ fn apply_ibl_views(
     ibl_views.prefiltered_view = Some(prefiltered_view);
 }
 
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 pub fn load_hdr_skyboxes(
     renderer: &mut WgpuRenderer,
     ibl_views: &mut IblViews,
@@ -64,7 +64,7 @@ pub fn load_hdr_skyboxes(
 /// Keeps the procedural-atmosphere IBL in sync with the frame's settings:
 /// re-captures the cubemaps when the atmosphere changes, and for the day-night
 /// atmosphere captures the hour-bracket snapshots once the cycle starts moving.
-#[cfg(feature = "assets")]
+#[cfg(feature = "hdr")]
 pub fn sync_procedural_ibl(renderer: &mut WgpuRenderer, inputs: &mut RenderInputs) {
     use crate::config::Atmosphere;
     let atmosphere = inputs.settings.atmosphere;

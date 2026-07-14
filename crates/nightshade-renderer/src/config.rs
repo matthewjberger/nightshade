@@ -1076,10 +1076,6 @@ pub struct DebugDraw {
     pub normal_line_length: f32,
     /// Color for normal debug lines.
     pub normal_line_color: [f32; 4],
-    /// Enable selection outline effect.
-    pub selection_outline_enabled: bool,
-    /// Selection outline color.
-    pub selection_outline_color: [f32; 4],
     /// PBR debug visualization mode.
     pub pbr_debug_mode: PbrDebugMode,
     /// Show animated debug stripes on textures.
@@ -1087,20 +1083,6 @@ pub struct DebugDraw {
     /// Animation speed for debug stripes.
     pub texture_debug_stripes_speed: f32,
     pub ssao_visualization: bool,
-}
-
-/// Editor/selection state used by tools that highlight entities. Held
-/// in `RenderInputs::editor_selection`.
-#[derive(Clone, Default)]
-pub struct EditorSelection {
-    /// RenderEntity to highlight with bounding volume.
-    pub bounding_volume_selected_entity: Option<crate::entity::RenderEntity>,
-    /// Additional entities to include in the selection outline. The
-    /// outline pass renders these alongside `bounding_volume_selected_entity`
-    /// and their descendants.
-    pub selected_entities: Vec<crate::entity::RenderEntity>,
-    /// When set, frustum culling uses this camera's frustum instead of the active camera's.
-    pub culling_camera_override: Option<crate::entity::RenderEntity>,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1630,6 +1612,9 @@ pub struct RendererState {
     /// reads them here instead of walking the transform hierarchy. Empty when the
     /// outline is disabled or nothing is selected.
     pub render_selection_outline_ids: Vec<u32>,
+    /// The color the outline pass draws the selection outline with, resolved
+    /// once per frame alongside `render_selection_outline_ids`.
+    pub render_selection_outline_color: [f32; 4],
     /// Per-entity bounding volumes collected once per frame, so culling, the
     /// wireframe pass, and shadow bounds read them here instead of the ECS.
     pub render_bounds: std::collections::HashMap<crate::entity::RenderEntity, RenderBounds>,
@@ -1643,9 +1628,9 @@ pub struct RendererState {
     /// query order, so the mesh pass builds its scene from this list instead of
     /// querying `RENDER_MESH` and filtering `SKIN` against the ECS.
     pub render_regular_mesh_entities: Vec<crate::entity::RenderEntity>,
-    /// View-projection of the frozen culling-override camera when the editor
-    /// pins culling to a specific camera, so the mesh pass derives cull frustum
-    /// planes here instead of querying that camera's matrices from the ECS.
+    /// When set, the mesh pass derives its cull frustum planes from this
+    /// view-projection instead of the active camera's, pinning culling to a
+    /// fixed viewpoint.
     pub culling_camera_view_projection: Option<nalgebra_glm::Mat4>,
     /// Skinning palette resolved once per frame, so the skinned-mesh and shadow
     /// passes read bone data here instead of walking Skin and bone transforms.
@@ -1756,23 +1741,22 @@ impl AdaptiveSamplingState {
 }
 
 /// Hash of every setting that materially affects what a rendered tile
-/// looks like, spanning the render/debug/selection buckets. Fields that
+/// looks like, spanning the render and debug buckets plus the resolved
+/// selection-outline coverage. Fields that
 /// only affect performance, window chrome, or day/night driver state are
 /// excluded. The renderer compares this signature against the previous
 /// frame's value and bumps `RendererState::settings_version` when they differ.
 pub fn render_settings_signature(
     render: &RenderSettings,
     debug: &DebugDraw,
-    selection: &EditorSelection,
+    outline_ids: &[u32],
+    outline_color: [f32; 4],
 ) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    selection
-        .bounding_volume_selected_entity
-        .map(|entity| (entity.id, entity.generation))
-        .hash(&mut hasher);
-    for entity in &selection.selected_entities {
-        (entity.id, entity.generation).hash(&mut hasher);
+    outline_ids.hash(&mut hasher);
+    for component in outline_color {
+        component.to_bits().hash(&mut hasher);
     }
     debug.show_grid.hash(&mut hasher);
     debug.show_bounding_volumes.hash(&mut hasher);
@@ -1790,10 +1774,6 @@ pub fn render_settings_signature(
         component.to_bits().hash(&mut hasher);
     }
     render.unlit_mode.hash(&mut hasher);
-    debug.selection_outline_enabled.hash(&mut hasher);
-    for component in debug.selection_outline_color {
-        component.to_bits().hash(&mut hasher);
-    }
     render.vertex_snap.is_some().hash(&mut hasher);
     if let Some(ref snap) = render.vertex_snap {
         for component in snap.resolution {
@@ -1939,8 +1919,6 @@ impl Default for DebugDraw {
             show_normals: false,
             normal_line_length: 0.1,
             normal_line_color: [0.0, 1.0, 0.0, 1.0],
-            selection_outline_enabled: false,
-            selection_outline_color: [1.0, 0.45, 0.0, 1.0],
             pbr_debug_mode: PbrDebugMode::None,
             texture_debug_stripes: false,
             texture_debug_stripes_speed: 100.0,
@@ -1979,6 +1957,7 @@ impl Default for RendererState {
             render_water: Vec::new(),
             render_cloth: Vec::new(),
             render_selection_outline_ids: Vec::new(),
+            render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
             render_bounds: std::collections::HashMap::new(),
             render_shadow_casters: RenderShadowCasters::default(),
             render_skinned_meshes: Vec::new(),

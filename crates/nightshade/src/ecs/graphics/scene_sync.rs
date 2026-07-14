@@ -922,7 +922,7 @@ fn sync_texts(world: &mut World) {
     world.resources.renderer_state.render_texts = texts;
 }
 
-fn sync_selection_and_culling_camera(world: &mut World) {
+fn sync_selection_outline(world: &mut World) {
     let selection_ids: Vec<u32> = if world
         .resources
         .renderer_state
@@ -930,16 +930,12 @@ fn sync_selection_and_culling_camera(world: &mut World) {
         .selection_outline_enabled
     {
         let mut seeds: Vec<crate::ecs::world::Entity> = Vec::new();
-        if let Some(primary) = world
-            .resources
-            .editor_selection
-            .bounding_volume_selected_entity
-        {
-            seeds.push(scene_entity(primary));
+        if let Some(active) = world.resources.selection.active_entity {
+            seeds.push(active);
         }
-        for entity in &world.resources.editor_selection.selected_entities {
-            if !seeds.contains(&scene_entity(*entity)) {
-                seeds.push(scene_entity(*entity));
+        for entity in &world.resources.selection.entities {
+            if !seeds.contains(entity) {
+                seeds.push(*entity);
             }
         }
         let mut ids: Vec<u32> = Vec::with_capacity(seeds.len() * 4);
@@ -954,19 +950,10 @@ fn sync_selection_and_culling_camera(world: &mut World) {
         Vec::new()
     };
     world.resources.renderer_state.render_selection_outline_ids = selection_ids;
-
-    let culling_camera_view_projection = world
-        .resources
-        .editor_selection
-        .culling_camera_override
-        .and_then(|camera| {
-            crate::ecs::camera::queries::query_camera_matrices(world, scene_entity(camera))
-        })
-        .map(|matrices| matrices.projection * matrices.view);
     world
         .resources
         .renderer_state
-        .culling_camera_view_projection = culling_camera_view_projection;
+        .render_selection_outline_color = world.resources.selection.outline_color;
 }
 
 /// Keeps the scene collections in `renderer_state` current. On the first run
@@ -992,7 +979,7 @@ pub fn render_sync_system(world: &mut World) {
         sync_water(world);
         sync_cloth(world);
         sync_texts(world);
-        sync_selection_and_culling_camera(world);
+        sync_selection_outline(world);
         return;
     }
 
@@ -1025,5 +1012,5 @@ pub fn render_sync_system(world: &mut World) {
     if dirt.texts {
         sync_texts(world);
     }
-    sync_selection_and_culling_camera(world);
+    sync_selection_outline(world);
 }

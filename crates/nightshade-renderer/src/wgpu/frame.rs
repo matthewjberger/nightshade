@@ -145,12 +145,12 @@ fn run_frame(
         }
     }
 
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     crate::wgpu::ibl::load_hdr_skyboxes(renderer, &mut inputs.ibl_views, hdr_skybox_commands);
-    #[cfg(not(feature = "assets"))]
+    #[cfg(not(feature = "hdr"))]
     drop(hdr_skybox_commands);
 
-    #[cfg(feature = "assets")]
+    #[cfg(feature = "hdr")]
     crate::wgpu::ibl::sync_procedural_ibl(renderer, inputs);
 
     if let Some(lines_pass) = pass_sync::lines_pass_mut(&mut renderer.graph) {
