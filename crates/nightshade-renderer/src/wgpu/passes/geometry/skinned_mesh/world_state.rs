@@ -2,8 +2,8 @@ use wgpu::util::DeviceExt;
 
 use super::types::{
     AreaLightData, AreaUniforms, ClusterUniforms, LightData, LightGrid, MAX_AREA_LIGHTS,
-    MAX_LIGHTS_PER_CLUSTER, MaterialData, SkinnedCullObject, SkinnedCullUniforms,
-    SkinnedDrawIndexedIndirect, SkinnedObjectData, TOTAL_CLUSTERS,
+    MAX_LIGHTS_PER_CLUSTER, MaterialData, SkinnedBoundsInput, SkinnedCullObject,
+    SkinnedCullUniforms, SkinnedDrawIndexedIndirect, SkinnedObjectData, TOTAL_CLUSTERS,
 };
 
 const INITIAL_LIGHTS: usize = 32;
@@ -27,6 +27,8 @@ pub(super) struct SkinnedWorldGpuBuffers {
     pub light_indices_buffer: wgpu::Buffer,
     pub cull_objects_buffer: wgpu::Buffer,
     pub cull_objects_buffer_size: usize,
+    pub bounds_inputs_buffer: wgpu::Buffer,
+    pub bounds_inputs_buffer_size: usize,
     pub indirect_commands_buffer: wgpu::Buffer,
     pub indirect_commands_buffer_size: usize,
     pub visible_indices_buffer: wgpu::Buffer,
@@ -61,6 +63,14 @@ impl SkinnedWorldGpuBuffers {
         let cull_objects_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Skinned Mesh Cull Objects Buffer (Per-World)"),
             size: (std::mem::size_of::<SkinnedCullObject>() * cull_objects_buffer_size) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let bounds_inputs_buffer_size = INITIAL_OBJECTS;
+        let bounds_inputs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Skinned Mesh Bounds Inputs Buffer (Per-World)"),
+            size: (std::mem::size_of::<SkinnedBoundsInput>() * bounds_inputs_buffer_size) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -308,6 +318,8 @@ impl SkinnedWorldGpuBuffers {
             light_indices_buffer,
             cull_objects_buffer,
             cull_objects_buffer_size,
+            bounds_inputs_buffer,
+            bounds_inputs_buffer_size,
             indirect_commands_buffer,
             indirect_commands_buffer_size,
             visible_indices_buffer,

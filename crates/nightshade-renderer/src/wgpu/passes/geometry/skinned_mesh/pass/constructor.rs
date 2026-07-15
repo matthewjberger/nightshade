@@ -213,6 +213,36 @@ impl SkinnedMeshPass {
             cache: None,
         });
 
+        let bounds_compute_shader = crate::wgpu::shader_compose::compile_wgsl(
+            device,
+            "skinned_bounds.wgsl",
+            include_str!("../../../../shaders/skinned_bounds.wgsl"),
+        );
+        let bounds_compute_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Skinned Bounds Compute Bind Group Layout"),
+                entries: &[
+                    cull_storage_entry(0, true),
+                    cull_storage_entry(1, true),
+                    cull_storage_entry(2, false),
+                ],
+            });
+        let bounds_compute_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Skinned Bounds Compute Pipeline Layout"),
+                bind_group_layouts: &[Some(&bounds_compute_bind_group_layout)],
+                immediate_size: 0,
+            });
+        let bounds_compute_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Skinned Bounds Compute Pipeline"),
+                layout: Some(&bounds_compute_pipeline_layout),
+                module: &bounds_compute_shader,
+                entry_point: Some("main"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+
         crate::wgpu::stagger::yield_to_event_loop(queue).await;
 
         let batch_shader = crate::wgpu::shader_compose::compile_wgsl(
@@ -1336,6 +1366,10 @@ impl SkinnedMeshPass {
             oit_composite_bind_group_layout,
             cull_pipeline,
             cull_bind_group_layout,
+            bounds_compute_pipeline,
+            bounds_compute_bind_group_layout,
+            bounds_compute_bind_group: None,
+            bounds_dispatch_count: 0,
             batch_clear_pipeline,
             batch_count_pipeline,
             batch_build_pipeline,

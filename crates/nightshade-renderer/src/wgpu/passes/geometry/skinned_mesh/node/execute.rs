@@ -47,6 +47,21 @@ impl SkinnedMeshPass {
             compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
         }
 
+        if self.bounds_dispatch_count > 0
+            && let Some(bounds_bind_group) = self.bounds_compute_bind_group.as_ref()
+        {
+            let mut compute_pass =
+                context
+                    .encoder
+                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Skinned Bounds Compute Pass"),
+                        timestamp_writes: None,
+                    });
+            compute_pass.set_pipeline(&self.bounds_compute_pipeline);
+            compute_pass.set_bind_group(0, bounds_bind_group, &[]);
+            compute_pass.dispatch_workgroups(self.bounds_dispatch_count.div_ceil(64), 1, 1);
+        }
+
         if self.gpu_batching_enabled {
             let object_count = self.state().skinned_entities.len() as u32;
             let mesh_count = self.skinned_mesh_data.len().max(1) as u32;

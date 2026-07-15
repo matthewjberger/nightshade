@@ -139,6 +139,36 @@ impl SkinnedMeshPass {
         }
     }
 
+    pub(in super::super) fn rebuild_bounds_compute_bind_group(&mut self, device: &wgpu::Device) {
+        let bind_group = {
+            let Some(gpu) = self.world_states[self.current_world_id as usize]
+                .as_ref()
+                .and_then(|state| state.gpu_buffers.as_ref())
+            else {
+                return;
+            };
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Skinned Bounds Compute Bind Group"),
+                layout: &self.bounds_compute_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self.bone_transforms_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: gpu.bounds_inputs_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: gpu.cull_objects_buffer.as_entire_binding(),
+                    },
+                ],
+            })
+        };
+        self.bounds_compute_bind_group = Some(bind_group);
+    }
+
     pub(in super::super) fn rebuild_skinning_compute_bind_group(&mut self, device: &wgpu::Device) {
         self.skinning_compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Skinning Compute Bind Group"),

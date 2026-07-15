@@ -114,6 +114,15 @@ pub(super) struct SkinnedCullObject {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub(super) struct SkinnedBoundsInput {
+    pub(super) base_bone: u32,
+    pub(super) joint_count: u32,
+    pub(super) rest_radius: f32,
+    pub(super) pad: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct SkinnedDrawIndexedIndirect {
     pub(super) index_count: u32,
     pub(super) instance_count: u32,

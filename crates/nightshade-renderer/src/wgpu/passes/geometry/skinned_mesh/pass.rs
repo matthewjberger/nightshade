@@ -58,6 +58,11 @@ pub struct SkinnedMeshPass {
     pub(super) cull_pipeline: wgpu::ComputePipeline,
     pub(super) cull_bind_group_layout: wgpu::BindGroupLayout,
 
+    pub(super) bounds_compute_pipeline: wgpu::ComputePipeline,
+    pub(super) bounds_compute_bind_group_layout: wgpu::BindGroupLayout,
+    pub(super) bounds_compute_bind_group: Option<wgpu::BindGroup>,
+    pub(super) bounds_dispatch_count: u32,
+
     pub(super) batch_clear_pipeline: wgpu::ComputePipeline,
     pub(super) batch_count_pipeline: wgpu::ComputePipeline,
     pub(super) batch_build_pipeline: wgpu::ComputePipeline,

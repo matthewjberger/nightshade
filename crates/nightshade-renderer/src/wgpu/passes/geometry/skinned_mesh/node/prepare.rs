@@ -17,8 +17,10 @@ impl SkinnedMeshPass {
     ) {
         self.set_current_world(configs.world_id);
         self.ensure_world_gpu_buffers(device);
+        self.rebuild_bounds_compute_bind_group(device);
         self.frame_counter += 1;
         self.state_mut().last_used_frame = self.frame_counter;
+        self.bounds_dispatch_count = 0;
 
         let mesh_registry_changed = self.sync_skinned_meshes(device, queue, &configs.mesh_cache);
 
@@ -171,6 +173,7 @@ impl SkinnedMeshPass {
 
         if buffers_resized {
             self.rebuild_skinning_compute_bind_group(device);
+            self.rebuild_bounds_compute_bind_group(device);
         }
 
         self.animation.update(
@@ -220,24 +223,7 @@ impl SkinnedMeshPass {
                 self.state_mut().cached_indirect_commands = commands;
             }
             if bones_changed {
-                let palette = &configs.scene.render_skinning.bone_transforms;
-                let state = self.state_mut();
-                for index in 0..state.cached_bounds_inputs.len() {
-                    let (base_bone, joint_count, rest_radius) = state.cached_bounds_inputs[index];
-                    state.cached_cull_objects[index].bounds = crate::skinning::skinned_world_bounds(
-                        palette,
-                        base_bone,
-                        joint_count,
-                        rest_radius,
-                    );
-                }
-                let cull_objects = std::mem::take(&mut self.state_mut().cached_cull_objects);
-                queue.write_buffer(
-                    &self.gpu().cull_objects_buffer,
-                    0,
-                    bytemuck::cast_slice(&cull_objects),
-                );
-                self.state_mut().cached_cull_objects = cull_objects;
+                self.bounds_dispatch_count = self.state().cached_bounds_inputs.len() as u32;
             }
         } else {
             self.state_mut().skinned_entities.clear();
@@ -522,6 +508,16 @@ impl SkinnedMeshPass {
                     ) {
                         needs_bind_group_rebuild = true;
                     }
+                    if grow_storage_buffer::<SkinnedBoundsInput>(
+                        device,
+                        &mut gpu.bounds_inputs_buffer,
+                        &mut gpu.bounds_inputs_buffer_size,
+                        cull_objects.len(),
+                        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        "Skinned Mesh Bounds Inputs Buffer (Resized)",
+                    ) {
+                        needs_bind_group_rebuild = true;
+                    }
                     if grow_storage_buffer::<SkinnedDrawIndexedIndirect>(
                         device,
                         &mut gpu.indirect_commands_buffer,
@@ -548,6 +544,7 @@ impl SkinnedMeshPass {
                 if needs_bind_group_rebuild {
                     self.rebuild_instance_bind_group(device);
                     self.rebuild_cull_bind_group(device);
+                    self.rebuild_bounds_compute_bind_group(device);
                     self.gpu_mut().batch_bind_group = None;
                 }
             }
@@ -556,6 +553,22 @@ impl SkinnedMeshPass {
                 &self.gpu().cull_objects_buffer,
                 0,
                 bytemuck::cast_slice(&cull_objects),
+            );
+            let bounds_inputs_packed: Vec<SkinnedBoundsInput> = bounds_inputs
+                .iter()
+                .map(
+                    |&(base_bone, joint_count, rest_radius)| SkinnedBoundsInput {
+                        base_bone: base_bone as u32,
+                        joint_count: joint_count as u32,
+                        rest_radius,
+                        pad: 0,
+                    },
+                )
+                .collect();
+            queue.write_buffer(
+                &self.gpu().bounds_inputs_buffer,
+                0,
+                bytemuck::cast_slice(&bounds_inputs_packed),
             );
             queue.write_buffer(
                 &self.gpu().indirect_commands_buffer,
