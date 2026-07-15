@@ -332,44 +332,32 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
                     let mut files = Vec::new();
                     super::file_drop::collect_directory_files(path, path, &mut files);
                     if files.is_empty() {
-                        world
-                            .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                            .events
-                            .push(AppEvent::FileDroppedPath(path.clone()));
+                        crate::ecs::events::emit_app_event(
+                            world,
+                            AppEvent::FileDroppedPath(path.clone()),
+                        );
                     } else {
                         for file in files {
-                            world
-                                .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                                .events
-                                .push(AppEvent::FileDropped(file));
+                            crate::ecs::events::emit_app_event(world, AppEvent::FileDropped(file));
                         }
                     }
                 } else {
-                    world
-                        .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                        .events
-                        .push(AppEvent::FileDroppedPath(path.clone()));
+                    crate::ecs::events::emit_app_event(
+                        world,
+                        AppEvent::FileDroppedPath(path.clone()),
+                    );
                 }
             }
             #[cfg(target_arch = "wasm32")]
             {
-                world
-                    .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                    .events
-                    .push(AppEvent::FileDroppedPath(path.clone()));
+                crate::ecs::events::emit_app_event(world, AppEvent::FileDroppedPath(path.clone()));
             }
         }
         WindowEvent::HoveredFile(path) => {
-            world
-                .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                .events
-                .push(AppEvent::FileHovered(path.clone()));
+            crate::ecs::events::emit_app_event(world, AppEvent::FileHovered(path.clone()));
         }
         WindowEvent::HoveredFileCancelled => {
-            world
-                .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                .events
-                .push(AppEvent::FileHoverCancelled);
+            crate::ecs::events::emit_app_event(world, AppEvent::FileHoverCancelled);
         }
         _ => {}
     }
@@ -388,13 +376,13 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         ..
     } = event
     {
-        world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
-            .events
-            .push(AppEvent::Keyboard {
+        crate::ecs::events::emit_app_event(
+            world,
+            AppEvent::Keyboard {
                 key: *key_code,
                 state: *key_state,
-            });
+            },
+        );
     }
 
     if let WindowEvent::MouseInput {
@@ -403,12 +391,12 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         ..
     } = event
     {
-        world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
-            .events
-            .push(AppEvent::Mouse {
+        crate::ecs::events::emit_app_event(
+            world,
+            AppEvent::Mouse {
                 button: *button,
                 state: *mouse_state,
-            });
+            },
+        );
     }
 }

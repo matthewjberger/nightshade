@@ -610,6 +610,7 @@ pub mod prelude {
         PluginGroup, PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker,
         game_scope,
     };
+    pub use crate::ecs::events::{EventQueue, EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::input::resources::Input;
     pub use crate::ecs::script::components::GlobalScripts;

@@ -196,9 +196,12 @@ fn refresh_panel_text(picking_demo: &mut PickingDemo, input: Res<Input>, world: 
     picking_demo.sync_panel(&input, world);
 }
 
-fn drain_keyboard(picking_demo: &mut PickingDemo, world: &mut World) {
-    let events = std::mem::take(&mut world.expect_resource_mut::<Input>().events);
-    for event in events {
+fn drain_keyboard(
+    picking_demo: &mut PickingDemo,
+    reader: EventReader<AppEvent>,
+    world: &mut World,
+) {
+    for event in reader.read() {
         if let AppEvent::Keyboard {
             key,
             state: KeyState::Pressed,

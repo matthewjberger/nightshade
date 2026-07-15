@@ -398,6 +398,10 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .events
         .clear();
+    world
+        .expect_resource_mut::<crate::ecs::events::EventQueue<crate::ecs::input::events::AppEvent>>(
+        )
+        .clear();
 
     run_frame_systems(world);
 
@@ -547,10 +551,10 @@ pub struct WindowContext {
 
 impl winit::application::ApplicationHandler for WindowContext {
     fn suspended(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
-        self.world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
-            .events
-            .push(crate::ecs::input::events::AppEvent::Suspended);
+        crate::ecs::events::emit_app_event(
+            &mut self.world,
+            crate::ecs::input::events::AppEvent::Suspended,
+        );
         self.renderer = None;
         self.world
             .expect_resource_mut::<crate::ecs::window::resources::Window>()
@@ -805,10 +809,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.initialized = true;
             }
 
-            self.world
-                .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                .events
-                .push(crate::ecs::input::events::AppEvent::Resumed);
+            crate::ecs::events::emit_app_event(
+                &mut self.world,
+                crate::ecs::input::events::AppEvent::Resumed,
+            );
 
             let window_handle = self
                 .world

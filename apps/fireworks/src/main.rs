@@ -293,11 +293,10 @@ fn cleanup_effects(fireworks: &mut FireworksDemo, world: &mut World) {
 
 fn handle_keyboard_input(
     fireworks: &mut FireworksDemo,
-    mut input: ResMut<Input>,
+    reader: EventReader<AppEvent>,
     world: &mut World,
 ) {
-    let events = std::mem::take(&mut input.events);
-    for event in events {
+    for event in reader.read() {
         let AppEvent::Keyboard {
             key,
             state: KeyState::Pressed,

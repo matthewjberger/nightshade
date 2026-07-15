@@ -57,10 +57,10 @@ pub(crate) fn process_dropped_files(world: &mut World) {
         .drain(..)
         .collect();
     for file in dropped_files {
-        world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
-            .events
-            .push(crate::ecs::input::events::AppEvent::FileDropped(file));
+        crate::ecs::events::emit_app_event(
+            world,
+            crate::ecs::input::events::AppEvent::FileDropped(file),
+        );
     }
 }
 

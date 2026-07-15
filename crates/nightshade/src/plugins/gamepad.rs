@@ -158,10 +158,10 @@ impl Plugin for GamepadPlugin {
             gamepad_input_system(world);
             let gamepad_events = world.expect_resource::<Gamepad>().events.clone();
             for event in gamepad_events {
-                world
-                    .expect_resource_mut::<crate::ecs::input::resources::Input>()
-                    .events
-                    .push(crate::ecs::input::events::AppEvent::Gamepad(event));
+                crate::ecs::events::emit_app_event(
+                    world,
+                    crate::ecs::input::events::AppEvent::Gamepad(event),
+                );
             }
         });
     }

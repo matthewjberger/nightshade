@@ -30,6 +30,7 @@ pub mod entity_registry;
 pub mod decal;
 pub mod event;
 pub mod event_bus;
+pub mod events;
 pub mod gpu_picking;
 pub mod graphics;
 pub mod input;
