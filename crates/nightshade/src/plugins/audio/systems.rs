@@ -314,8 +314,7 @@ pub fn update_audio_system(world: &mut World) {
             source,
             *entity,
             world
-                .expect_resource::<crate::ecs::window::resources::Window>()
-                .timing
+                .expect_resource::<crate::ecs::time::Time>()
                 .uptime_milliseconds,
         );
         let bus = source.bus;

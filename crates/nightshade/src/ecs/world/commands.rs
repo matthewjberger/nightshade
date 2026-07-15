@@ -146,50 +146,34 @@ pub fn set_cursor_visible(world: &mut World, visible: bool) {
 /// unscaled work reads `raw_delta_time` instead.
 pub fn set_time_scale(world: &mut World, scale: f32) {
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .time_speed = scale.max(0.0);
 }
 
 /// The current global time scale.
 pub fn time_scale(world: &World) -> f32 {
-    world
-        .expect_resource::<crate::ecs::window::resources::Window>()
-        .timing
-        .time_speed
+    world.expect_resource::<crate::ecs::time::Time>().time_speed
 }
 
 /// Pause game time, so the scaled delta time reports zero until resumed. The
 /// time scale is preserved, so resuming returns to the previous speed.
 pub fn pause(world: &mut World) {
-    world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
-        .paused = true;
+    world.expect_resource_mut::<crate::ecs::time::Time>().paused = true;
 }
 
 /// Resume game time after a pause.
 pub fn unpause(world: &mut World) {
-    world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
-        .paused = false;
+    world.expect_resource_mut::<crate::ecs::time::Time>().paused = false;
 }
 
 /// Set whether game time is paused.
 pub fn set_paused(world: &mut World, paused: bool) {
-    world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
-        .paused = paused;
+    world.expect_resource_mut::<crate::ecs::time::Time>().paused = paused;
 }
 
 /// Whether game time is currently paused.
 pub fn is_paused(world: &World) -> bool {
-    world
-        .expect_resource::<crate::ecs::window::resources::Window>()
-        .timing
-        .paused
+    world.expect_resource::<crate::ecs::time::Time>().paused
 }
 
 /// Insert a material into the registry, ref-count it, and attach it to `entity` via [`MaterialRef`].

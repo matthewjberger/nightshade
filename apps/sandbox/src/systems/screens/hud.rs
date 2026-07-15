@@ -49,8 +49,7 @@ pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
         return;
     }
     let fps = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .frames_per_second;
     ui_set_text(world, fps_label, &format!("{:.0} FPS", fps));
     let color = if fps >= 110.0 {

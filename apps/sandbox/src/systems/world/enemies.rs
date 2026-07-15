@@ -50,8 +50,7 @@ pub fn spawn(world: &mut World) {
 
 pub fn update(world: &mut World) {
     let delta = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time;
 
     let mut body_writes: Vec<(Entity, Vec3, Option<f32>)> = Vec::new();

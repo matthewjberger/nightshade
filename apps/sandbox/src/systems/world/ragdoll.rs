@@ -75,8 +75,7 @@ pub fn activate_from_impact(sandbox_world: &mut SandboxResources, world: &mut Wo
 
 pub fn update(sandbox_world: &mut SandboxResources, world: &mut World, body: Entity) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time;
     sandbox_world.ragdoll.flail_clock += delta_time;
 

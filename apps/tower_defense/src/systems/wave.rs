@@ -108,8 +108,7 @@ pub fn plan_wave(game_world: &mut TowerDefenseResources) {
 
 pub fn wave_spawning_system(game_world: &mut TowerDefenseResources, world: &mut World) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time
         * game_world.game_speed;
 

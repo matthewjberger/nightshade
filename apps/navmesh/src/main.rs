@@ -478,8 +478,7 @@ impl NavMeshDemo {
             &format!(
                 "FPS: {:.1}",
                 world
-                    .expect_resource::<nightshade::ecs::window::resources::Window>()
-                    .timing
+                    .expect_resource::<nightshade::ecs::time::Time>()
                     .frames_per_second
             ),
         );
@@ -958,8 +957,7 @@ impl NavMeshDemo {
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
         let delta_time = world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .timing
+            .expect_resource_mut::<nightshade::ecs::time::Time>()
             .delta_time;
         let terrain_config = self.terrain_config.to_terrain_config();
 

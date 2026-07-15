@@ -138,9 +138,9 @@
 //! query, or a helper deep in a call graph):
 //!
 //! ```ignore
-//! let dt = world.expect_resource::<crate::ecs::window::resources::Window>().timing.delta_time;
-//! let fps = world.expect_resource::<crate::ecs::window::resources::Window>().timing.frames_per_second;
-//! let uptime_ms = world.expect_resource::<crate::ecs::window::resources::Window>().timing.uptime_milliseconds;
+//! let dt = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+//! let fps = world.expect_resource::<crate::ecs::time::Time>().frames_per_second;
+//! let uptime_ms = world.expect_resource::<crate::ecs::time::Time>().uptime_milliseconds;
 //! world.resources.active_camera = Some(camera_entity);
 //! ```
 //!
@@ -273,7 +273,7 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     let delta_time = world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.delta_time;
+//!     let delta_time = world.expect_resource_mut::<crate::ecs::time::Time>().delta_time;
 //!     physics_world_step(world.plugin_resource_mut::<PhysicsWorld>(), delta_time);
 //!     sync_physics_transforms(world);
 //! }
@@ -295,7 +295,7 @@
 //!
 //! // Update each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     run_navmesh_systems(world, world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.delta_time);
+//!     run_navmesh_systems(world, world.expect_resource_mut::<crate::ecs::time::Time>().delta_time);
 //! }
 //! ```
 //!
@@ -355,7 +355,7 @@
 //!         app.add_system(Stage::Update, |world| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
-//!                     ui.label(format!("FPS: {:.0}", world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.frames_per_second));
+//!                     ui.label(format!("FPS: {:.0}", world.expect_resource_mut::<crate::ecs::time::Time>().frames_per_second));
 //!                     if ui.button("Spawn Cube").clicked() {
 //!                         spawn_cube_at(world, Vec3::zeros());
 //!                     }
@@ -611,6 +611,7 @@ pub mod prelude {
         game_scope,
     };
     pub use crate::ecs::input::resources::Input;
+    pub use crate::ecs::time::Time;
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,

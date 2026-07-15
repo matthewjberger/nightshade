@@ -575,8 +575,7 @@ fn move_character(
     camera: Entity,
 ) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time
         .min(MAX_STEP_SECONDS);
     let Some(mut position) = world

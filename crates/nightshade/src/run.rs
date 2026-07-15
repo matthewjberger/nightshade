@@ -299,8 +299,7 @@ pub(crate) fn step(
     event: &WindowEvent,
 ) -> Option<Box<dyn State>> {
     let delta_ms = (world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .delta_time
         * 1000.0) as u32;
     let _span = tracing::info_span!("frame", delta_ms).entered();
@@ -459,7 +458,7 @@ fn timing_system(world: &mut World, event: &WindowEvent) {
 }
 
 /// Advances frame timing by one frame: `delta_time`, the fps averaging window,
-/// and `uptime_milliseconds` on `world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing`.
+/// and `uptime_milliseconds` on the `world.expect_resource_mut::<crate::ecs::time::Time>()` resource.
 ///
 /// The winit loop calls this on every `RedrawRequested`. Offscreen and headless
 /// callers invoke it once per frame through [`tick_offscreen`].
@@ -468,9 +467,7 @@ pub fn advance_timing(world: &mut World) {
 
     let now = Instant::now();
 
-    let timing = &mut world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing;
+    let timing = world.expect_resource_mut::<crate::ecs::time::Time>();
 
     if timing.initial_frame_start_instant.is_none() {
         timing.initial_frame_start_instant = Some(now);

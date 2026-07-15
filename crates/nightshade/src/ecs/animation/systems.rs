@@ -10,8 +10,7 @@ use crate::prelude::*;
 pub fn update_animation_players(world: &mut World) {
     let _span = tracing::info_span!("animation").entered();
     let delta_time = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .delta_time;
     let mut finished: Vec<Entity> = Vec::new();
     let mut markers: Vec<(Entity, String)> = Vec::new();

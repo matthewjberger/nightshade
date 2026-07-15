@@ -52,6 +52,7 @@ pub mod snapshot;
 pub mod text;
 #[cfg(feature = "assets")]
 pub mod texture_loader;
+pub mod time;
 pub mod timer;
 pub mod transform;
 pub mod tween;

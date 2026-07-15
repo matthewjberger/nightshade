@@ -58,7 +58,7 @@ fn initialize(game: &mut SpinCube, world: &mut World) {
 }
 
 fn spin(game: &mut SpinCube, world: &mut World) {
-    game.time += world.expect_resource::<nightshade::ecs::window::resources::Window>().timing.delta_time;
+    game.time += world.expect_resource::<nightshade::ecs::time::Time>().delta_time;
     if let Some(entity) = game.cube
         && let Some(transform) = world.get_mut::<LocalTransform>(entity)
     {

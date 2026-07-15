@@ -274,8 +274,7 @@ impl PickingDemo {
 
     fn tick_rotation(&mut self, world: &mut World) {
         let delta = world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .timing
+            .expect_resource_mut::<nightshade::ecs::time::Time>()
             .delta_time
             .max(0.0);
         if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {

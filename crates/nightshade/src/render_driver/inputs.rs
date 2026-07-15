@@ -257,12 +257,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let settings =
         std::mem::take(world.expect_resource_mut::<crate::render::config::RenderSettings>());
     let window_uptime_milliseconds = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .uptime_milliseconds;
     let window_delta_time = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .delta_time;
     let window_cached_viewport_size = world
         .expect_resource_mut::<crate::ecs::window::resources::Window>()

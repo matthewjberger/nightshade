@@ -4,8 +4,7 @@ use nightshade::prelude::*;
 pub fn ui_update_system(game_world: &mut TowerDefenseResources, world: &mut World) {
     if game_world.wave_announce_timer > 0.0 {
         let delta_time = world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .timing
+            .expect_resource_mut::<nightshade::ecs::time::Time>()
             .delta_time
             * game_world.game_speed;
         game_world.wave_announce_timer = (game_world.wave_announce_timer - delta_time).max(0.0);

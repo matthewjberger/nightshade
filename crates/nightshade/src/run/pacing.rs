@@ -14,8 +14,7 @@ pub(crate) fn throttle_to_frame_rate_limit(world: &mut World) {
         return;
     }
     let Some(last_frame_start) = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .last_frame_start_instant
     else {
         return;

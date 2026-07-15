@@ -273,8 +273,7 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
 
 fn advance_show(fireworks: &mut FireworksDemo, world: &mut World) {
     let uptime = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .uptime_milliseconds as f32
         / 1000.0;
 
@@ -292,24 +291,21 @@ fn advance_show(fireworks: &mut FireworksDemo, world: &mut World) {
 
 fn advance_shells(fireworks: &mut FireworksDemo, world: &mut World) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time;
     fireworks.update_shells(world, delta_time);
 }
 
 fn advance_sub_shells(fireworks: &mut FireworksDemo, world: &mut World) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time;
     fireworks.update_sub_shells(world, delta_time);
 }
 
 fn cleanup_effects(fireworks: &mut FireworksDemo, world: &mut World) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<nightshade::ecs::time::Time>()
         .delta_time;
     fireworks.cleanup_expired_effects(world, delta_time);
 }
@@ -580,8 +576,7 @@ impl FireworksDemo {
                 self.show_active = false;
             } else {
                 let uptime = world
-                    .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-                    .timing
+                    .expect_resource_mut::<nightshade::ecs::time::Time>()
                     .uptime_milliseconds as f32
                     / 1000.0;
                 self.start_fireworks_show(uptime);

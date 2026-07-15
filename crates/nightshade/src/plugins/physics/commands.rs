@@ -484,8 +484,7 @@ pub fn look_camera_system(world: &mut World) {
     };
 
     let delta_time = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
-        .timing
+        .expect_resource_mut::<crate::ecs::time::Time>()
         .delta_time;
     let right_clicked = world
         .expect_resource_mut::<crate::ecs::input::resources::Input>()

@@ -9,7 +9,7 @@
 //!
 //! Key resource paths:
 //!
-//! - `world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing` â€” frame timing ([`WindowTiming`](resources::WindowTiming))
+//! - `world.expect_resource::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
 //! - `world.expect_resource_mut::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
 //! - `world.expect_resource_mut::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.resources.active_camera` â€” current camera entity
@@ -84,9 +84,10 @@ pub mod resources {
     pub use crate::ecs::prefab::resources::CachedPrefab;
     pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
     pub use crate::ecs::text::resources::{TextCache, TextState};
+    pub use crate::ecs::time::Time;
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
-    pub use crate::ecs::window::resources::{Window, WindowTiming};
+    pub use crate::ecs::window::resources::Window;
     pub use crate::ecs::world::cleanup::CleanupState;
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::resources::AudioEngine;
@@ -360,6 +361,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::input::resources::Input::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
+        ecs.insert_resource(crate::ecs::time::Time::default());
         Self {
             ecs,
             resources: Resources::default(),
