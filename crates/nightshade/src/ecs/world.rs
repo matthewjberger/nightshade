@@ -249,7 +249,6 @@ freecs::dynamic_schema! {
 #[derive(Default)]
 pub struct Resources {
     pub active_camera: Option<freecs::Entity>,
-    pub pending_state: Option<crate::state::NextStateBuilder>,
     pub assets: crate::ecs::asset_state::AssetState,
     pub commands: crate::ecs::world::commands::CommandQueues,
     pub event_bus: crate::ecs::event_bus::resources::EventBus,
@@ -360,6 +359,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
         ecs.insert_resource(crate::ecs::loading::LoadingState::default());
+        ecs.insert_resource(crate::state::PendingState::default());
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         ecs.insert_resource(crate::plugins::steam::SteamResources::default());
         Self {

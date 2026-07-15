@@ -653,7 +653,7 @@ pub mod prelude {
         FramePhase, FrameSchedule, Schedules, SystemFn, schedule_push, schedule_remove,
         schedule_run,
     };
-    pub use crate::state::{NextStateBuilder, RenderResources, State};
+    pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::{
         AppState, GateableSystem, current_state, in_state, next_state, while_in,
     };

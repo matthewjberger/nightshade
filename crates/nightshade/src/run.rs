@@ -40,7 +40,7 @@
 //! values. Drain them in [`State::run_systems`].
 //!
 //! To transition to a different `State`, set
-//! `world.resources.pending_state = Some(Box::new(|world| Box::new(NewState::new(world))))`
+//! `world.expect_resource_mut::<PendingState>().0 = Some(Box::new(|world| Box::new(NewState::new(world))))`
 //! from inside `run_systems`; the engine takes the builder at the end of the
 //! frame and invokes it with `&mut World` so the new state can be constructed
 //! against the live world.
@@ -68,15 +68,14 @@
 //! # State Transitions
 //!
 //! Switch between game states (menu, gameplay, pause) by writing a builder
-//! closure to the `next_state` field of the
-//! [`Window`](crate::ecs::window::resources::Window) resource from inside
-//! [`State::run_systems`]. The closure receives `&mut World` so the new state
-//! can be constructed against live engine data.
+//! closure to the [`PendingState`](crate::state::PendingState) resource from
+//! inside [`State::run_systems`]. The closure receives `&mut World` so the new
+//! state can be constructed against live engine data.
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
 //!     if self.should_go_to_menu {
-//!         world.resources.pending_state =
+//!         world.expect_resource_mut::<PendingState>().0 =
 //!             Some(Box::new(|_world| Box::new(MenuState::default())));
 //!     }
 //! }
@@ -405,7 +404,11 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     #[cfg(feature = "egui")]
     egui_support::finish_frame(world);
 
-    if let Some(builder) = world.resources.pending_state.take() {
+    if let Some(builder) = world
+        .expect_resource_mut::<crate::state::PendingState>()
+        .0
+        .take()
+    {
         return Some(builder(world));
     }
 
