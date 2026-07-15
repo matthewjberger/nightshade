@@ -137,6 +137,6 @@ pub struct PhysicsPlugin;
 #[cfg(feature = "physics")]
 impl crate::app::Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.add_system(crate::app::Stage::Startup, install);
+        install(&mut app.world);
     }
 }

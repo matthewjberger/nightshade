@@ -148,6 +148,6 @@ pub struct NavmeshPlugin;
 #[cfg(feature = "navmesh")]
 impl crate::app::Plugin for NavmeshPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.add_system(crate::app::Stage::Startup, install);
+        install(&mut app.world);
     }
 }

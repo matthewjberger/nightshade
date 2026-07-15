@@ -592,6 +592,7 @@ impl App {
             stages.add_stage(stage.name());
         }
         let mut world = World::default();
+        world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
         world.resources.window.start_hidden = true;
         world.resources.window.create_renderer = false;
         Self {

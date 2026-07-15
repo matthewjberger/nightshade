@@ -63,7 +63,9 @@ pub fn initialize_offscreen(
         tracing::error!("Failed to configure renderer with state: {error}");
     }
 
-    world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
+    if world.resources.schedules.frame.is_empty() {
+        world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
+    }
 
     state.initialize(world);
 }

@@ -685,7 +685,10 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         #[cfg(target_arch = "wasm32")]
         if !self.world.resources.window.create_renderer && !self.initialized {
-            self.world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
+            if self.world.resources.schedules.frame.is_empty() {
+                self.world.resources.schedules.frame =
+                    crate::schedule::build_default_frame_schedule();
+            }
             self.state.initialize(&mut self.world);
             sync_min_window_size(&mut self.world);
             crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
@@ -695,8 +698,10 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if !self.initialized {
-                self.world.resources.schedules.frame =
-                    crate::schedule::build_default_frame_schedule();
+                if self.world.resources.schedules.frame.is_empty() {
+                    self.world.resources.schedules.frame =
+                        crate::schedule::build_default_frame_schedule();
+                }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]
@@ -743,8 +748,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
-                self.world.resources.schedules.frame =
-                    crate::schedule::build_default_frame_schedule();
+                if self.world.resources.schedules.frame.is_empty() {
+                    self.world.resources.schedules.frame =
+                        crate::schedule::build_default_frame_schedule();
+                }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]

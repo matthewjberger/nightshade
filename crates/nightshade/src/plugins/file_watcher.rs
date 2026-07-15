@@ -102,6 +102,6 @@ pub struct FileWatcherPlugin;
 
 impl crate::app::Plugin for FileWatcherPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.add_system(crate::app::Stage::Startup, install);
+        install(&mut app.world);
     }
 }

@@ -104,6 +104,6 @@ impl crate::app::Plugin for AudioPlugin {
             crate::app::Stage::First,
             systems::lazy_initialize_audio_system,
         );
-        app.add_system(crate::app::Stage::Startup, install);
+        install(&mut app.world);
     }
 }
