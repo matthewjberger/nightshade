@@ -142,6 +142,7 @@
 pub mod commands;
 pub mod components;
 pub mod resources;
+pub mod spec_gloss;
 
 pub use commands::*;
 pub use components::*;

@@ -172,8 +172,9 @@ pub fn swap_events_system(world: &mut World) {
 #[cfg(feature = "physics")]
 pub fn emit_collision_events_system(world: &mut World) {
     use crate::plugins::physics::events::CollisionEventKind;
+    use crate::plugins::physics::resources::PhysicsWorld;
     let collisions = crate::plugins::physics::resources::physics_world_collision_events(
-        &world.resources.physics,
+        world.plugin_resource::<PhysicsWorld>(),
     )
     .to_vec();
     for collision in collisions {

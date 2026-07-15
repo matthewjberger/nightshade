@@ -46,7 +46,7 @@ fn solve_foot_to_ground(world: &mut World, body: Entity, chain: IkChain) {
     };
     let probe_origin = ankle_position + Vec3::new(0.0, FOOT_PROBE_RISE, 0.0);
     let Some(hit) = physics_world_cast_ray(
-        &world.resources.physics,
+        world.plugin_resource::<PhysicsWorld>(),
         probe_origin,
         Vec3::new(0.0, -1.0, 0.0),
         FOOT_PROBE_DISTANCE,

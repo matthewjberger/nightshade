@@ -5,6 +5,7 @@ use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::text::components::TextProperties;
 use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::ecs::ui::state::UiBase;
+use nightshade::plugins::navmesh::resources::NavMeshWorld;
 use nightshade::prelude::*;
 use std::collections::HashSet;
 
@@ -384,7 +385,7 @@ impl NavMeshDemo {
         if let Some(index) = algorithm_change
             && let Some(algorithm) = PathfindingAlgorithm::all().get(index)
         {
-            world.resources.navmesh.algorithm = *algorithm;
+            world.plugin_resource_mut::<NavMeshWorld>().algorithm = *algorithm;
         }
 
         if spawn_clicked {
@@ -428,7 +429,7 @@ impl NavMeshDemo {
             self.ui.triangles_label,
             &format!(
                 "NavMesh Triangles: {}",
-                world.resources.navmesh.triangles.len()
+                world.plugin_resource::<NavMeshWorld>().triangles.len()
             ),
         );
         ui_set_text(
@@ -668,7 +669,7 @@ impl NavMeshDemo {
                     navmesh.triangles.len(),
                     navmesh.adjacency.values().map(|v| v.len()).sum::<usize>()
                 );
-                world.resources.navmesh = navmesh;
+                *world.plugin_resource_mut::<NavMeshWorld>() = navmesh;
             }
             None => {
                 tracing::warn!("Failed to generate navmesh from terrain");

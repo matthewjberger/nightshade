@@ -75,7 +75,7 @@
 //! Get the walkable height at a world position:
 //!
 //! ```ignore
-//! if let Some(height) = sample_navmesh_height(&world.resources.navmesh, x, z) {
+//! if let Some(height) = sample_navmesh_height(world.plugin_resource::<NavMeshWorld>(), x, z) {
 //!     let ground_pos = Vec3::new(x, height, z);
 //! }
 //! ```

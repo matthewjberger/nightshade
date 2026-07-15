@@ -585,7 +585,7 @@ fn move_character(
     };
 
     let inputs = read_inputs(world, camera);
-    let gravity_y = world.resources.physics.gravity.y;
+    let gravity_y = world.plugin_resource::<PhysicsWorld>().gravity.y;
     let camera_aim = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(camera)
         .map(|transform| transform.forward_vector())
@@ -740,7 +740,7 @@ fn move_character(
     let mut wall_contact_normal: Option<Vec3> = None;
     for _ in 0..BUMPER_RESOLVE_ITERATIONS {
         let contacts = physics_world_capsule_contacts(
-            &world.resources.physics,
+            world.plugin_resource::<PhysicsWorld>(),
             position + Vec3::new(0.0, BUMPER_CENTER_HEIGHT, 0.0),
             BUMPER_HALF_HEIGHT,
             BUMPER_RADIUS,
@@ -797,7 +797,7 @@ fn move_character(
                 + Vec3::new(0.0, HANG_PROBE_RISE, 0.0)
                 + (-wall_normal) * HANG_PROBE_FORWARD;
             if let Some(hit) = physics_world_cast_ray(
-                &world.resources.physics,
+                world.plugin_resource::<PhysicsWorld>(),
                 probe_origin,
                 Vec3::new(0.0, -1.0, 0.0),
                 HANG_PROBE_DOWN,
@@ -920,7 +920,7 @@ fn hang_update(
             + Vec3::new(0.0, HANG_PROBE_RISE, 0.0)
             + (-state.hang_normal) * HANG_PROBE_FORWARD;
         if let Some(hit) = physics_world_cast_ray(
-            &world.resources.physics,
+            world.plugin_resource::<PhysicsWorld>(),
             probe_origin,
             Vec3::new(0.0, -1.0, 0.0),
             HANG_PROBE_DOWN,
@@ -956,7 +956,7 @@ fn sample_ground_distance(world: &World, probe_origin: Vec3) -> Option<f32> {
     let mut nearest: Option<f32> = None;
     for offset in offsets {
         if let Some(hit) = physics_world_cast_ray(
-            &world.resources.physics,
+            world.plugin_resource::<PhysicsWorld>(),
             probe_origin + offset,
             Vec3::new(0.0, -1.0, 0.0),
             max_distance,

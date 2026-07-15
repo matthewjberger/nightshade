@@ -52,7 +52,7 @@ pub fn enter(sandbox_world: &mut SandboxResources, world: &mut World, screen: Sc
 
     apply_visibility(sandbox_world, world, screen);
 
-    world.resources.physics.enabled = config.physics_enabled;
+    world.plugin_resource_mut::<PhysicsWorld>().enabled = config.physics_enabled;
     set_cursor_locked(world, config.cursor_locked);
     set_cursor_visible(world, !config.cursor_locked);
     world.resources.retained_ui.gamepad_nav.enabled = config.gamepad_nav;

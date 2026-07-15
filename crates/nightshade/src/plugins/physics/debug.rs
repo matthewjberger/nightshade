@@ -15,8 +15,9 @@ const JOINT_ANCHOR_COLOR: Vec4 = Vec4::new(1.0, 0.2, 0.8, 1.0);
 const CIRCLE_SEGMENTS: usize = 24;
 
 pub fn physics_debug_draw_system(world: &mut World) {
-    if !world.resources.physics.debug_draw {
-        if let Some(entity) = world.resources.physics.debug_entity
+    if !world.plugin_resource::<PhysicsWorld>().debug_draw {
+        let debug_entity = world.plugin_resource::<PhysicsWorld>().debug_entity;
+        if let Some(entity) = debug_entity
             && let Some(visibility) = world.get_mut::<crate::ecs::primitives::Visibility>(entity)
         {
             visibility.visible = false;
@@ -24,7 +25,8 @@ pub fn physics_debug_draw_system(world: &mut World) {
         return;
     }
 
-    let debug_entity = match world.resources.physics.debug_entity {
+    let existing_debug_entity = world.plugin_resource::<PhysicsWorld>().debug_entity;
+    let debug_entity = match existing_debug_entity {
         Some(entity) => entity,
         None => {
             let entity = spawn_entities(
@@ -33,7 +35,7 @@ pub fn physics_debug_draw_system(world: &mut World) {
                 1,
             )[0];
             world.set(entity, Name("Physics Debug Gizmo".to_string()));
-            world.resources.physics.debug_entity = Some(entity);
+            world.plugin_resource_mut::<PhysicsWorld>().debug_entity = Some(entity);
             entity
         }
     };
@@ -42,22 +44,35 @@ pub fn physics_debug_draw_system(world: &mut World) {
         visibility.visible = true;
     }
 
-    let current_version = world.resources.physics.debug_version;
-    let version_changed = current_version != world.resources.physics.debug_last_version;
+    let current_version = world.plugin_resource::<PhysicsWorld>().debug_version;
+    let version_changed =
+        current_version != world.plugin_resource::<PhysicsWorld>().debug_last_version;
 
     if version_changed {
-        world.resources.physics.debug_static_lines_cache.clear();
-        world.resources.physics.debug_last_version = current_version;
+        world
+            .plugin_resource_mut::<PhysicsWorld>()
+            .debug_static_lines_cache
+            .clear();
+        world
+            .plugin_resource_mut::<PhysicsWorld>()
+            .debug_last_version = current_version;
     }
 
     let mut has_dynamic_or_kinematic = false;
     let mut all_static_cached = !version_changed;
 
     if all_static_cached {
-        for (collider_handle, collider) in world.resources.physics.collider_set.iter() {
+        for (collider_handle, collider) in
+            world.plugin_resource::<PhysicsWorld>().collider_set.iter()
+        {
             let parent_handle = collider.parent();
             let body_type = parent_handle
-                .and_then(|h| world.resources.physics.rigid_body_set.get(h))
+                .and_then(|h| {
+                    world
+                        .plugin_resource::<PhysicsWorld>()
+                        .rigid_body_set
+                        .get(h)
+                })
                 .map(|rb| rb.body_type());
 
             let is_static = matches!(body_type, Some(rapier3d::prelude::RigidBodyType::Fixed));
@@ -68,8 +83,7 @@ pub fn physics_debug_draw_system(world: &mut World) {
             }
 
             if !world
-                .resources
-                .physics
+                .plugin_resource::<PhysicsWorld>()
                 .debug_static_lines_cache
                 .contains_key(&collider_handle)
             {
@@ -78,10 +92,17 @@ pub fn physics_debug_draw_system(world: &mut World) {
             }
         }
     } else {
-        for (_collider_handle, collider) in world.resources.physics.collider_set.iter() {
+        for (_collider_handle, collider) in
+            world.plugin_resource::<PhysicsWorld>().collider_set.iter()
+        {
             let parent_handle = collider.parent();
             let body_type = parent_handle
-                .and_then(|h| world.resources.physics.rigid_body_set.get(h))
+                .and_then(|h| {
+                    world
+                        .plugin_resource::<PhysicsWorld>()
+                        .rigid_body_set
+                        .get(h)
+                })
                 .map(|rb| rb.body_type());
 
             if !matches!(body_type, Some(rapier3d::prelude::RigidBodyType::Fixed)) {
@@ -98,18 +119,22 @@ pub fn physics_debug_draw_system(world: &mut World) {
     let mut lines = Vec::new();
     let mut static_colliders_to_cache = Vec::new();
 
-    for (collider_handle, collider) in world.resources.physics.collider_set.iter() {
+    for (collider_handle, collider) in world.plugin_resource::<PhysicsWorld>().collider_set.iter() {
         let parent_handle = collider.parent();
         let body_type = parent_handle
-            .and_then(|h| world.resources.physics.rigid_body_set.get(h))
+            .and_then(|h| {
+                world
+                    .plugin_resource::<PhysicsWorld>()
+                    .rigid_body_set
+                    .get(h)
+            })
             .map(|rb| rb.body_type());
 
         let is_static = matches!(body_type, Some(rapier3d::prelude::RigidBodyType::Fixed));
 
         if is_static
             && let Some(cached_lines) = world
-                .resources
-                .physics
+                .plugin_resource::<PhysicsWorld>()
                 .debug_static_lines_cache
                 .get(&collider_handle)
         {
@@ -146,8 +171,7 @@ pub fn physics_debug_draw_system(world: &mut World) {
 
     for (handle, collider_lines) in static_colliders_to_cache {
         world
-            .resources
-            .physics
+            .plugin_resource_mut::<PhysicsWorld>()
             .debug_static_lines_cache
             .insert(handle, collider_lines);
     }
@@ -163,14 +187,26 @@ pub fn physics_debug_draw_system(world: &mut World) {
 }
 
 fn generate_joint_lines(lines: &mut Vec<Line>, world: &World) {
-    for (_handle, joint) in world.resources.physics.impulse_joint_set.iter() {
+    for (_handle, joint) in world
+        .plugin_resource::<PhysicsWorld>()
+        .impulse_joint_set
+        .iter()
+    {
         let body1_handle = joint.body1;
         let body2_handle = joint.body2;
 
-        let Some(body1) = world.resources.physics.rigid_body_set.get(body1_handle) else {
+        let Some(body1) = world
+            .plugin_resource::<PhysicsWorld>()
+            .rigid_body_set
+            .get(body1_handle)
+        else {
             continue;
         };
-        let Some(body2) = world.resources.physics.rigid_body_set.get(body2_handle) else {
+        let Some(body2) = world
+            .plugin_resource::<PhysicsWorld>()
+            .rigid_body_set
+            .get(body2_handle)
+        else {
             continue;
         };
 

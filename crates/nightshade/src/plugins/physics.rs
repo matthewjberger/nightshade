@@ -68,14 +68,14 @@
 //! For advanced queries and direct Rapier access:
 //!
 //! ```ignore
-//! let physics = &world.resources.physics;
+//! let physics = world.plugin_resource::<PhysicsWorld>();
 //! // Ray casting, overlap queries, etc. via physics.rigid_body_set, physics.collider_set
 //! ```
 //!
 //! # Fixed Timestep
 //!
 //! Physics runs at a fixed 60 Hz timestep with interpolation for smooth rendering.
-//! Configure via `world.resources.physics.fixed_timestep`.
+//! Configure via `world.plugin_resource_mut::<PhysicsWorld>().fixed_timestep`.
 
 pub mod components;
 pub mod types;
@@ -118,7 +118,7 @@ pub use systems::*;
 #[cfg(feature = "physics")]
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
-    world.resources.physics.enabled = true;
+    world.plugin_resource_mut::<PhysicsWorld>().enabled = true;
     let schedule = &mut world.resources.schedules.frame;
     schedule_push(schedule, FramePhase::Update, systems::run_physics_systems);
     schedule_push(
@@ -129,7 +129,7 @@ pub fn install(world: &mut crate::ecs::world::World) {
 }
 
 /// Installs the physics simulation through [`install`]. Pause and resume
-/// at runtime through `world.resources.physics.enabled`, the way games
+/// at runtime through `world.plugin_resource_mut::<PhysicsWorld>().enabled`, the way games
 /// gate physics per screen.
 #[cfg(feature = "physics")]
 pub struct PhysicsPlugin;

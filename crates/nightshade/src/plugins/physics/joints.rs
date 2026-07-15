@@ -1,3 +1,4 @@
+use crate::plugins::physics::resources::PhysicsWorld;
 use freecs::Entity;
 use nalgebra_glm::Vec3;
 use rapier3d::prelude::*;
@@ -549,17 +550,22 @@ fn create_joint_internal(
 
     match (parent_handle, child_handle) {
         (Some(parent_h), Some(child_h)) => {
-            let joint_handle = world.resources.physics.impulse_joint_set.insert(
-                super::types::rigid_body_handle_to_rapier(parent_h),
-                super::types::rigid_body_handle_to_rapier(child_h),
-                joint,
-                collisions_enabled,
-            );
+            let joint_handle = world
+                .plugin_resource_mut::<PhysicsWorld>()
+                .impulse_joint_set
+                .insert(
+                    super::types::rigid_body_handle_to_rapier(parent_h),
+                    super::types::rigid_body_handle_to_rapier(child_h),
+                    joint,
+                    collisions_enabled,
+                );
             Some(joint_handle_from_rapier(joint_handle))
         }
         _ => {
-            world.resources.physics.pending_joints.push(
-                crate::plugins::physics::resources::PendingJoint {
+            world
+                .plugin_resource_mut::<PhysicsWorld>()
+                .pending_joints
+                .push(crate::plugins::physics::resources::PendingJoint {
                     parent_entity,
                     child_entity,
                     joint,
@@ -568,8 +574,7 @@ fn create_joint_internal(
                     spring_rest_length: None,
                     spring_stiffness: None,
                     spring_damping: None,
-                },
-            );
+                });
             None
         }
     }

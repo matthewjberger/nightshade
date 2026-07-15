@@ -277,7 +277,7 @@ pub fn pick_entities_trimesh(
     );
 
     let mut results = Vec::new();
-    let picking_world = &world.resources.picking_world;
+    let picking_world = world.plugin_resource::<crate::ecs::picking::resources::PickingWorld>();
 
     for (handle, collider) in picking_world.collider_set.iter() {
         let entity = match picking_world.get_entity(handle) {

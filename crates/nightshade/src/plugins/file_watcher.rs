@@ -5,7 +5,7 @@ use std::sync::mpsc;
 
 pub struct FileWatcher {
     watcher: Option<notify::RecommendedWatcher>,
-    receiver: mpsc::Receiver<Result<Event, notify::Error>>,
+    receiver: std::sync::Mutex<mpsc::Receiver<Result<Event, notify::Error>>>,
     sender: mpsc::Sender<Result<Event, notify::Error>>,
     path_to_key: HashMap<PathBuf, String>,
     key_to_path: HashMap<String, PathBuf>,
@@ -19,7 +19,7 @@ impl Default for FileWatcher {
         let watcher = notify::recommended_watcher(watcher_sender).ok();
         Self {
             watcher,
-            receiver,
+            receiver: std::sync::Mutex::new(receiver),
             sender,
             path_to_key: HashMap::new(),
             key_to_path: HashMap::new(),
@@ -43,10 +43,13 @@ impl FileWatcher {
     }
 
     pub fn poll(&mut self) {
-        while let Ok(event_result) = self.receiver.try_recv() {
-            let Ok(event) = event_result else {
-                continue;
-            };
+        let mut events = Vec::new();
+        while let Ok(event_result) = self.receiver.lock().unwrap().try_recv() {
+            if let Ok(event) = event_result {
+                events.push(event);
+            }
+        }
+        for event in events {
             if !matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
                 continue;
             }
@@ -75,7 +78,7 @@ impl FileWatcher {
 }
 
 pub fn poll_file_watcher_system(world: &mut crate::ecs::world::World) {
-    world.resources.file_watcher.poll();
+    world.plugin_resource_mut::<FileWatcher>().poll();
 }
 
 /// Registers the file and asset watcher polls at the end of the frame,
@@ -93,8 +96,8 @@ pub fn install(world: &mut crate::ecs::world::World) {
 }
 
 /// Installs hot-reload file watching through [`install`]. Watch a file
-/// with `world.resources.file_watcher.watch(key, path)` and consume
-/// changes with `take_change(key)`.
+/// with `world.plugin_resource_mut::<FileWatcher>().watch(key, path)` and
+/// consume changes with `take_change(key)`.
 pub struct FileWatcherPlugin;
 
 impl crate::app::Plugin for FileWatcherPlugin {

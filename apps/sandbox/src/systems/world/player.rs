@@ -2,6 +2,7 @@ use crate::ecs::SandboxResources;
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::plugins::physics::commands::spawn_first_person_player;
 use nightshade::prelude::*;
+use nightshade::render::terrain_config::TerrainSettings;
 
 pub const PLAYER_TAG: &str = "player";
 
@@ -21,7 +22,7 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxResources, world: &mut World) {
     else {
         return;
     };
-    let ground = if world.resources.terrain.enabled {
+    let ground = if world.plugin_resource::<TerrainSettings>().enabled {
         world
             .resources
             .terrain_render

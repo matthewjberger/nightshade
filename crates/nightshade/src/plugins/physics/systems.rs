@@ -1,7 +1,7 @@
 use super::events::{CollisionEvent, CollisionEventKind, ContactForceEvent};
 use super::resources::{
-    physics_world_add_collider, physics_world_add_rigid_body, physics_world_clear_events,
-    physics_world_get_rigid_body_mut, physics_world_remove_rigid_body,
+    PhysicsWorld, physics_world_add_collider, physics_world_add_rigid_body,
+    physics_world_clear_events, physics_world_get_rigid_body_mut, physics_world_remove_rigid_body,
     physics_world_set_collision_events, physics_world_set_contact_force_events, physics_world_step,
 };
 use crate::ecs::world::World;
@@ -10,29 +10,30 @@ use rapier3d::prelude::*;
 
 use crate::prelude::*;
 pub fn run_physics_systems(world: &mut World) {
-    let rigid_body_count = world.resources.physics.rigid_body_set.len();
+    let rigid_body_count = world.plugin_resource::<PhysicsWorld>().rigid_body_set.len();
     let _span = tracing::info_span!("physics", rigid_bodies = rigid_body_count).entered();
 
-    physics_world_clear_events(&mut world.resources.physics);
+    physics_world_clear_events(world.plugin_resource_mut::<PhysicsWorld>());
 
     initialize_physics_bodies_system(world);
     sync_collision_listener_system(world);
     process_pending_joints_system(world);
 
-    if !world.resources.physics.enabled {
+    if !world.plugin_resource::<PhysicsWorld>().enabled {
         return;
     }
 
-    let fixed_timestep = world.resources.physics.fixed_timestep;
-    let max_substeps = world.resources.physics.max_substeps;
+    let fixed_timestep = world.plugin_resource::<PhysicsWorld>().fixed_timestep;
+    let max_substeps = world.plugin_resource::<PhysicsWorld>().max_substeps;
     let max_frame_time = max_substeps as f32 * fixed_timestep;
     let frame_time = world.resources.window.timing.delta_time.min(max_frame_time);
 
-    world.resources.physics.accumulator += frame_time;
+    world.plugin_resource_mut::<PhysicsWorld>().accumulator += frame_time;
 
     let mut substeps_performed = 0;
 
-    while world.resources.physics.accumulator >= fixed_timestep && substeps_performed < max_substeps
+    while world.plugin_resource::<PhysicsWorld>().accumulator >= fixed_timestep
+        && substeps_performed < max_substeps
     {
         advance_interpolation_previous_and_restore_transform(world);
 
@@ -41,11 +42,11 @@ pub fn run_physics_systems(world: &mut World) {
         super::character_controller::character_controller_input_system(world);
         super::character_controller::character_controller_system(world);
 
-        physics_world_step(&mut world.resources.physics);
+        physics_world_step(world.plugin_resource_mut::<PhysicsWorld>());
 
         sync_interpolation_current_from_physics(world);
 
-        world.resources.physics.accumulator -= fixed_timestep;
+        world.plugin_resource_mut::<PhysicsWorld>().accumulator -= fixed_timestep;
         substeps_performed += 1;
     }
 
@@ -53,8 +54,11 @@ pub fn run_physics_systems(world: &mut World) {
 
     tracing::trace!(substeps = substeps_performed);
 
-    world.resources.physics.interpolation_alpha =
-        (world.resources.physics.accumulator / fixed_timestep).clamp(0.0, 1.0);
+    let interpolation_alpha =
+        (world.plugin_resource::<PhysicsWorld>().accumulator / fixed_timestep).clamp(0.0, 1.0);
+    world
+        .plugin_resource_mut::<PhysicsWorld>()
+        .interpolation_alpha = interpolation_alpha;
 
     sync_transforms_from_physics_system(world);
     physics_interpolation_system(world);
@@ -72,11 +76,15 @@ fn advance_interpolation_previous_and_restore_transform(world: &mut World) {
 
     for entity in entities {
         let body_type = world
-            .resources
-            .physics
+            .plugin_resource::<PhysicsWorld>()
             .entity_to_handle
             .get(&entity)
-            .and_then(|handle| world.resources.physics.rigid_body_set.get(*handle))
+            .and_then(|handle| {
+                world
+                    .plugin_resource::<PhysicsWorld>()
+                    .rigid_body_set
+                    .get(*handle)
+            })
             .map(|rb| rb.body_type());
 
         let kinematic = matches!(
@@ -111,13 +119,29 @@ fn advance_interpolation_previous_and_restore_transform(world: &mut World) {
 }
 
 fn sync_interpolation_current_from_physics(world: &mut World) {
-    let active_count = world.resources.physics.island_manager.active_bodies().len();
+    let active_count = world
+        .plugin_resource::<PhysicsWorld>()
+        .island_manager
+        .active_bodies()
+        .len();
     let mut updates = Vec::with_capacity(active_count);
-    for handle in world.resources.physics.island_manager.active_bodies() {
-        let Some(&entity) = world.resources.physics.handle_to_entity.get(handle) else {
+    for handle in world
+        .plugin_resource::<PhysicsWorld>()
+        .island_manager
+        .active_bodies()
+    {
+        let Some(&entity) = world
+            .plugin_resource::<PhysicsWorld>()
+            .handle_to_entity
+            .get(handle)
+        else {
             continue;
         };
-        let Some(rb) = world.resources.physics.rigid_body_set.get(*handle) else {
+        let Some(rb) = world
+            .plugin_resource::<PhysicsWorld>()
+            .rigid_body_set
+            .get(*handle)
+        else {
             continue;
         };
         let translation = rb.translation();
@@ -152,15 +176,31 @@ fn transforms_approximately_equal(
 }
 
 pub fn sync_transforms_from_physics_system(world: &mut World) {
-    let active_count = world.resources.physics.island_manager.active_bodies().len();
+    let active_count = world
+        .plugin_resource::<PhysicsWorld>()
+        .island_manager
+        .active_bodies()
+        .len();
     let mut updates = Vec::with_capacity(active_count);
 
-    for handle in world.resources.physics.island_manager.active_bodies() {
-        let Some(&entity) = world.resources.physics.handle_to_entity.get(handle) else {
+    for handle in world
+        .plugin_resource::<PhysicsWorld>()
+        .island_manager
+        .active_bodies()
+    {
+        let Some(&entity) = world
+            .plugin_resource::<PhysicsWorld>()
+            .handle_to_entity
+            .get(handle)
+        else {
             continue;
         };
 
-        let Some(rb) = world.resources.physics.rigid_body_set.get(*handle) else {
+        let Some(rb) = world
+            .plugin_resource::<PhysicsWorld>()
+            .rigid_body_set
+            .get(*handle)
+        else {
             continue;
         };
 
@@ -227,7 +267,7 @@ pub fn sync_transforms_to_physics_system(world: &mut World) {
             ));
 
             if let Some(rb) = physics_world_get_rigid_body_mut(
-                &mut world.resources.physics,
+                world.plugin_resource_mut::<PhysicsWorld>(),
                 super::types::rigid_body_handle_to_rapier(handle),
             ) {
                 if rb.body_type() == RigidBodyType::KinematicPositionBased {
@@ -271,8 +311,10 @@ pub fn initialize_physics_bodies_system(world: &mut World) {
 
         if let Some(rigid_body_comp) = rigid_body_data {
             let rigid_body = rigid_body_comp.to_rapier_rigid_body();
-            let rapier_handle =
-                physics_world_add_rigid_body(&mut world.resources.physics, rigid_body);
+            let rapier_handle = physics_world_add_rigid_body(
+                world.plugin_resource_mut::<PhysicsWorld>(),
+                rigid_body,
+            );
             let has_listener = world
                 .get::<crate::plugins::physics::components::CollisionListener>(entity)
                 .is_some();
@@ -284,7 +326,11 @@ pub fn initialize_physics_bodies_system(world: &mut World) {
                         ActiveEvents::COLLISION_EVENTS | ActiveEvents::CONTACT_FORCE_EVENTS,
                     );
                 }
-                physics_world_add_collider(&mut world.resources.physics, collider, rapier_handle);
+                physics_world_add_collider(
+                    world.plugin_resource_mut::<PhysicsWorld>(),
+                    collider,
+                    rapier_handle,
+                );
             }
 
             if let Some(rigid_body_mut) =
@@ -295,13 +341,11 @@ pub fn initialize_physics_bodies_system(world: &mut World) {
             }
 
             world
-                .resources
-                .physics
+                .plugin_resource_mut::<PhysicsWorld>()
                 .handle_to_entity
                 .insert(rapier_handle, entity);
             world
-                .resources
-                .physics
+                .plugin_resource_mut::<PhysicsWorld>()
                 .entity_to_handle
                 .insert(entity, rapier_handle);
 
@@ -325,59 +369,73 @@ pub fn initialize_physics_bodies_system(world: &mut World) {
 }
 
 pub fn process_pending_joints_system(world: &mut World) {
-    let mut indices_to_remove = Vec::new();
-    let mut joints_to_register = Vec::new();
+    use freecs::dynamic::ResourceHostExt;
+    world.resource_scope::<PhysicsWorld, _>(|world, physics| {
+        let mut indices_to_remove = Vec::new();
+        let mut joints_to_register = Vec::new();
 
-    for (index, pending) in world.resources.physics.pending_joints.iter().enumerate() {
-        let parent_rb = world
-            .get::<crate::plugins::physics::components::RigidBodyComponent>(pending.parent_entity);
-        let child_rb = world
-            .get::<crate::plugins::physics::components::RigidBodyComponent>(pending.child_entity);
+        for (index, pending) in physics.pending_joints.iter().enumerate() {
+            let parent_rb = world.get::<crate::plugins::physics::components::RigidBodyComponent>(
+                pending.parent_entity,
+            );
+            let child_rb = world.get::<crate::plugins::physics::components::RigidBodyComponent>(
+                pending.child_entity,
+            );
 
-        match (parent_rb, child_rb) {
-            (Some(parent), Some(child)) => {
-                if let (Some(parent_handle), Some(child_handle)) = (parent.handle, child.handle) {
-                    let joint_handle = world.resources.physics.impulse_joint_set.insert(
-                        super::types::rigid_body_handle_to_rapier(parent_handle),
-                        super::types::rigid_body_handle_to_rapier(child_handle),
-                        pending.joint,
-                        pending.collisions_enabled,
-                    );
-                    joints_to_register.push((
-                        joint_handle,
-                        super::resources::JointInfo {
-                            parent_entity: pending.parent_entity,
-                            child_entity: pending.child_entity,
-                            joint_type: pending.joint_type,
-                            collisions_enabled: pending.collisions_enabled,
-                            spring_rest_length: pending.spring_rest_length,
-                            spring_stiffness: pending.spring_stiffness,
-                            spring_damping: pending.spring_damping,
-                        },
-                    ));
+            match (parent_rb, child_rb) {
+                (Some(parent), Some(child)) => {
+                    if let (Some(parent_handle), Some(child_handle)) = (parent.handle, child.handle)
+                    {
+                        let joint_handle = physics.impulse_joint_set.insert(
+                            super::types::rigid_body_handle_to_rapier(parent_handle),
+                            super::types::rigid_body_handle_to_rapier(child_handle),
+                            pending.joint,
+                            pending.collisions_enabled,
+                        );
+                        joints_to_register.push((
+                            joint_handle,
+                            super::resources::JointInfo {
+                                parent_entity: pending.parent_entity,
+                                child_entity: pending.child_entity,
+                                joint_type: pending.joint_type,
+                                collisions_enabled: pending.collisions_enabled,
+                                spring_rest_length: pending.spring_rest_length,
+                                spring_stiffness: pending.spring_stiffness,
+                                spring_damping: pending.spring_damping,
+                            },
+                        ));
+                        indices_to_remove.push(index);
+                    }
+                }
+                (None, _) | (_, None) => {
                     indices_to_remove.push(index);
                 }
             }
-            (None, _) | (_, None) => {
-                indices_to_remove.push(index);
-            }
         }
-    }
 
-    for (handle, info) in joints_to_register {
-        world.resources.physics.joint_registry.insert(handle, info);
-    }
+        for (handle, info) in joints_to_register {
+            physics.joint_registry.insert(handle, info);
+        }
 
-    for index in indices_to_remove.into_iter().rev() {
-        world.resources.physics.pending_joints.swap_remove(index);
-    }
+        for index in indices_to_remove.into_iter().rev() {
+            physics.pending_joints.swap_remove(index);
+        }
+    });
 }
 
 pub fn cleanup_physics_bodies_system(world: &mut World) {
     let mut to_remove = Vec::new();
 
-    for (rapier_handle, _) in world.resources.physics.rigid_body_set.iter() {
-        if let Some(&entity) = world.resources.physics.handle_to_entity.get(&rapier_handle) {
+    for (rapier_handle, _) in world
+        .plugin_resource::<PhysicsWorld>()
+        .rigid_body_set
+        .iter()
+    {
+        if let Some(&entity) = world
+            .plugin_resource::<PhysicsWorld>()
+            .handle_to_entity
+            .get(&rapier_handle)
+        {
             let has_component = world
                 .get::<crate::plugins::physics::components::RigidBodyComponent>(entity)
                 .is_some();
@@ -388,12 +446,12 @@ pub fn cleanup_physics_bodies_system(world: &mut World) {
     }
 
     for rapier_handle in to_remove {
-        physics_world_remove_rigid_body(&mut world.resources.physics, rapier_handle);
+        physics_world_remove_rigid_body(world.plugin_resource_mut::<PhysicsWorld>(), rapier_handle);
     }
 }
 
 pub fn physics_interpolation_system(world: &mut World) {
-    let alpha = physics_world_get_interpolation_alpha(&world.resources.physics);
+    let alpha = physics_world_get_interpolation_alpha(world.plugin_resource::<PhysicsWorld>());
 
     let interpolation_entities: Vec<_> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::PHYSICS_INTERPOLATION)
@@ -446,8 +504,7 @@ fn sync_collision_listener_system(world: &mut World) {
             .and_then(|c| c.handle);
         if let Some(handle) = collider_handle
             && let Some(collider) = world
-                .resources
-                .physics
+                .plugin_resource_mut::<PhysicsWorld>()
                 .collider_set
                 .get_mut(super::types::collider_handle_to_rapier(handle))
             && !collider
@@ -463,13 +520,11 @@ fn sync_collision_listener_system(world: &mut World) {
 
 fn drain_collision_events(world: &mut World) {
     let raw_collisions = world
-        .resources
-        .physics
+        .plugin_resource_mut::<PhysicsWorld>()
         .event_collector
         .drain_raw_collisions();
     let raw_forces = world
-        .resources
-        .physics
+        .plugin_resource_mut::<PhysicsWorld>()
         .event_collector
         .drain_raw_contact_forces();
 
@@ -520,19 +575,27 @@ fn drain_collision_events(world: &mut World) {
         }
     }
 
-    physics_world_set_collision_events(&mut world.resources.physics, collision_events);
-    physics_world_set_contact_force_events(&mut world.resources.physics, contact_force_events);
+    physics_world_set_collision_events(
+        world.plugin_resource_mut::<PhysicsWorld>(),
+        collision_events,
+    );
+    physics_world_set_contact_force_events(
+        world.plugin_resource_mut::<PhysicsWorld>(),
+        contact_force_events,
+    );
 }
 
 fn resolve_collider_to_entity(
     world: &World,
     collider_handle: ColliderHandle,
 ) -> Option<freecs::Entity> {
-    let collider = world.resources.physics.collider_set.get(collider_handle)?;
+    let collider = world
+        .plugin_resource::<PhysicsWorld>()
+        .collider_set
+        .get(collider_handle)?;
     let rb_handle = collider.parent()?;
     world
-        .resources
-        .physics
+        .plugin_resource::<PhysicsWorld>()
         .handle_to_entity
         .get(&rb_handle)
         .copied()

@@ -1,4 +1,4 @@
-use super::resources::physics_world_query_pipeline;
+use super::resources::{PhysicsWorld, physics_world_query_pipeline};
 use crate::ecs::world::World;
 use rapier3d::prelude::*;
 
@@ -8,7 +8,7 @@ pub fn character_controller_input_system(world: &mut World) {
         .query_entities(crate::ecs::world::CHARACTER_CONTROLLER)
         .collect();
 
-    let delta_time = world.resources.physics.fixed_timestep;
+    let delta_time = world.plugin_resource::<PhysicsWorld>().fixed_timestep;
 
     for entity in entities {
         let (
@@ -287,8 +287,8 @@ pub fn character_controller_system(world: &mut World) {
         )
         .collect();
 
-    let delta_time = world.resources.physics.fixed_timestep;
-    let gravity_y = world.resources.physics.gravity.y;
+    let delta_time = world.plugin_resource::<PhysicsWorld>().fixed_timestep;
+    let gravity_y = world.plugin_resource::<PhysicsWorld>().gravity.y;
 
     for entity in entities {
         let (mut velocity, shape, controller_config, scale, position, disable_gravity) = {
@@ -353,7 +353,7 @@ pub fn character_controller_system(world: &mut World) {
 
         let rapier_controller = controller_config.to_rapier(scale);
         let corrected_movement = {
-            let physics = &world.resources.physics;
+            let physics = world.plugin_resource::<PhysicsWorld>();
             let query_pipeline = physics_world_query_pipeline(physics);
             rapier_controller.move_shape(
                 delta_time,
@@ -384,11 +384,14 @@ pub fn character_controller_system(world: &mut World) {
         }
 
         for collision in &collisions {
-            if let Some(collider) = world.resources.physics.collider_set.get(collision.handle)
-                && let Some(parent_handle) = collider.parent()
+            let parent_handle = world
+                .plugin_resource::<PhysicsWorld>()
+                .collider_set
+                .get(collision.handle)
+                .and_then(|collider| collider.parent());
+            if let Some(parent_handle) = parent_handle
                 && let Some(rb) = world
-                    .resources
-                    .physics
+                    .plugin_resource_mut::<PhysicsWorld>()
                     .rigid_body_set
                     .get_mut(parent_handle)
                 && rb.body_type() == RigidBodyType::Dynamic

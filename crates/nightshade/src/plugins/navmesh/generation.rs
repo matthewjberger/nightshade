@@ -1,6 +1,8 @@
 use super::resources::{NavMeshConnection, NavMeshTriangle, NavMeshWorld, SpatialHash};
 #[cfg(feature = "physics")]
 use crate::ecs::world::World;
+#[cfg(feature = "physics")]
+use crate::plugins::physics::resources::PhysicsWorld;
 use glam::{UVec3, Vec3A};
 use rerecast::{
     AreaType, BuildContoursFlags, ConfigBuilder, DetailNavmesh, HeightfieldBuilder, PolygonNavmesh,
@@ -290,12 +292,11 @@ pub fn generate_navmesh_from_world(world: &mut World, config: &RecastNavMeshConf
     let mut vertices: Vec<[f32; 3]> = Vec::new();
     let mut indices: Vec<[u32; 3]> = Vec::new();
 
-    for (_, collider) in world.resources.physics.collider_set.iter() {
+    for (_, collider) in world.plugin_resource::<PhysicsWorld>().collider_set.iter() {
         let parent_handle = collider.parent();
         let is_static = if let Some(parent_handle) = parent_handle {
             world
-                .resources
-                .physics
+                .plugin_resource::<PhysicsWorld>()
                 .rigid_body_set
                 .get(parent_handle)
                 .is_some_and(|rb| !rb.is_dynamic())
@@ -373,6 +374,6 @@ pub fn generate_navmesh_from_world(world: &mut World, config: &RecastNavMeshConf
     }
 
     if let Some(navmesh) = generate_navmesh_recast(&vertices, &indices, config) {
-        world.resources.navmesh = navmesh;
+        *world.plugin_resource_mut::<NavMeshWorld>() = navmesh;
     }
 }

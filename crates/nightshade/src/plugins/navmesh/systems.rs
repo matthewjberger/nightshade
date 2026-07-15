@@ -29,7 +29,7 @@ pub fn update_agent_triangles_system(world: &mut World) {
             None => continue,
         };
 
-        let triangle = find_containing_triangle(&world.resources.navmesh, position);
+        let triangle = find_containing_triangle(world.plugin_resource::<NavMeshWorld>(), position);
 
         if let Some(agent) =
             world.get_mut::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
@@ -69,13 +69,14 @@ pub fn process_path_requests_system(world: &mut World) {
         };
 
         let request = PathRequest::new(start, target).with_radius(radius);
-        let algorithm = world.resources.navmesh.algorithm;
-        let result = find_path_with_algorithm(&world.resources.navmesh, &request, algorithm);
+        let algorithm = world.plugin_resource::<NavMeshWorld>().algorithm;
+        let result =
+            find_path_with_algorithm(world.plugin_resource::<NavMeshWorld>(), &request, algorithm);
 
         match result.status {
             PathStatus::Found | PathStatus::PartialPath => {
                 let smoothed = smooth_path(
-                    &world.resources.navmesh,
+                    world.plugin_resource::<NavMeshWorld>(),
                     &result.triangle_path,
                     start,
                     target,
@@ -188,12 +189,14 @@ pub fn snap_idle_agents_to_navmesh(world: &mut World) {
                 None => continue,
             };
 
-        if let Some(height) = sample_navmesh_height_near(
-            &world.resources.navmesh,
+        let sampled_height = sample_navmesh_height_near(
+            world.plugin_resource::<NavMeshWorld>(),
             current_pos.x,
             current_pos.z,
             Some(current_pos.y),
-        ) && (height - current_pos.y).abs() > 0.01
+        );
+        if let Some(height) = sampled_height
+            && (height - current_pos.y).abs() > 0.01
             && let Some(transform) =
                 world.get_mut::<crate::ecs::transform::components::LocalTransform>(entity)
         {
@@ -315,7 +318,7 @@ pub fn agent_movement_system(world: &mut World) {
                 .unwrap_or(new_position.y);
 
             let final_position = if let Some(height) = sample_navmesh_height_near(
-                &world.resources.navmesh,
+                world.plugin_resource::<NavMeshWorld>(),
                 new_position.x,
                 new_position.z,
                 Some(current_y),

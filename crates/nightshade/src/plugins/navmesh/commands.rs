@@ -76,11 +76,11 @@ pub fn set_agent_speed(world: &mut World, entity: freecs::Entity, speed: f32) {
 }
 
 pub fn clear_navmesh(world: &mut World) {
-    world.resources.navmesh.clear();
+    world.plugin_resource_mut::<NavMeshWorld>().clear();
 }
 
 pub fn set_navmesh_debug_draw(world: &mut World, enabled: bool) {
-    world.resources.navmesh.debug_draw = enabled;
+    world.plugin_resource_mut::<NavMeshWorld>().debug_draw = enabled;
 }
 
 pub fn get_agent_state(world: &World, entity: freecs::Entity) -> Option<NavMeshAgentState> {

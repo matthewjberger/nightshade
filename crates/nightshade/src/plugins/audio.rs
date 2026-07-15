@@ -15,7 +15,7 @@
 //!
 //! ```ignore
 //! let sound_data = load_sound_from_bytes(include_bytes!("../assets/music.ogg"));
-//! audio_engine_load_sound(&mut world.resources.audio, "background_music", sound_data);
+//! audio_engine_load_sound(world.plugin_resource_mut::<AudioEngine>(), "background_music", sound_data);
 //! ```
 //!
 //! # Playing Non-Spatial Audio

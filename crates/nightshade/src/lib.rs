@@ -231,7 +231,7 @@
 //! ```ignore
 //! // Decode and register a sound by name
 //! let data = load_sound_from_bytes(include_bytes!("sound.ogg")).unwrap();
-//! audio_engine_load_sound(&mut world.resources.audio, "shot", data);
+//! audio_engine_load_sound(world.plugin_resource_mut::<AudioEngine>(), "shot", data);
 //!
 //! // 3D spatial audio: play it through an AudioSource component
 //! let source = spawn_entities(world, AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
@@ -258,7 +258,8 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     physics_world_step(&mut world.resources.physics, world.resources.window.timing.delta_time);
+//!     let delta_time = world.resources.window.timing.delta_time;
+//!     physics_world_step(world.plugin_resource_mut::<PhysicsWorld>(), delta_time);
 //!     sync_physics_transforms(world);
 //! }
 //! ```
@@ -328,14 +329,14 @@
 //!
 //! ### Immediate Mode UI (`egui` feature)
 //!
-//! Opt in with the `egui` feature and `EguiPlugin` (or set `world.resources.egui.enabled`). The pass opens
+//! Opt in with the `egui` feature and `EguiPlugin` (or set `world.plugin_resource_mut::<EguiState>().enabled`). The pass opens
 //! before the app stages each frame, so draw from any system by pulling the frame's context
 //! with `egui_context`. The tessellated output composites over the scene and the retained UI.
 //!
 //! ```ignore
 //! impl Plugin for DebugUiPlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.resources.egui.enabled = true;
+//!         app.world.plugin_resource_mut::<EguiState>().enabled = true;
 //!         app.add_system(Stage::Update, |world| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {

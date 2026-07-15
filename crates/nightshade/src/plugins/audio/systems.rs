@@ -2,7 +2,7 @@ use crate::ecs::world::CORE;
 use crate::ecs::world::{Entity, World};
 use crate::plugins::audio::components::{AudioBus, AudioSource};
 use crate::plugins::audio::resources::{
-    audio_engine_get_sound, audio_engine_has_handle, audio_engine_initialize,
+    AudioEngine, audio_engine_get_sound, audio_engine_has_handle, audio_engine_initialize,
     audio_engine_is_initialized, audio_engine_pause_sound, audio_engine_resume_sound,
     audio_engine_stop_sound,
 };
@@ -27,8 +27,9 @@ const VOICE_DUCKING_DEPTH_DB: f32 = -18.0;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn initialize_audio_system(world: &mut World) {
     let _span = tracing::info_span!("audio_init").entered();
-    if !audio_engine_is_initialized(&world.resources.audio)
-        && let Err(error) = audio_engine_initialize(&mut world.resources.audio)
+    let is_initialized = audio_engine_is_initialized(world.plugin_resource::<AudioEngine>());
+    if !is_initialized
+        && let Err(error) = audio_engine_initialize(world.plugin_resource_mut::<AudioEngine>())
     {
         tracing::error!("Failed to initialize audio: {}", error);
     }
@@ -39,7 +40,7 @@ pub fn initialize_audio_system(world: &mut World) {
 /// until the first keyboard or mouse event and once the device exists.
 #[cfg(target_arch = "wasm32")]
 pub fn lazy_initialize_audio_system(world: &mut World) {
-    if audio_engine_is_initialized(&world.resources.audio) {
+    if audio_engine_is_initialized(world.plugin_resource::<AudioEngine>()) {
         return;
     }
     let gestured = world.resources.input.events.iter().any(|event| {
@@ -52,16 +53,16 @@ pub fn lazy_initialize_audio_system(world: &mut World) {
     if !gestured {
         return;
     }
-    if let Err(error) = audio_engine_initialize(&mut world.resources.audio) {
+    if let Err(error) = audio_engine_initialize(world.plugin_resource_mut::<AudioEngine>()) {
         tracing::error!("Failed to initialize audio (WASM): {}", error);
     }
 }
 
 pub fn build_audio_buses_system(world: &mut World) {
-    if world.resources.audio.buses_built {
+    if world.plugin_resource::<AudioEngine>().buses_built {
         return;
     }
-    let audio = &mut world.resources.audio;
+    let audio = world.plugin_resource_mut::<AudioEngine>();
     let Some(manager) = audio.manager.as_mut() else {
         return;
     };
@@ -152,7 +153,7 @@ fn bus_handle_mut(
 }
 
 pub fn set_audio_bus_volume(world: &mut World, bus: AudioBus, decibels: f32, fade_seconds: f32) {
-    if let Some(handle) = bus_handle_mut(&mut world.resources.audio, bus) {
+    if let Some(handle) = bus_handle_mut(world.plugin_resource_mut::<AudioEngine>(), bus) {
         handle.set_volume(
             Decibels(decibels),
             Tween {
@@ -164,7 +165,11 @@ pub fn set_audio_bus_volume(world: &mut World, bus: AudioBus, decibels: f32, fad
 }
 
 pub fn set_voice_ducking(world: &mut World, ducking: f32, fade_seconds: f32) {
-    if let Some(tweener) = world.resources.audio.voice_ducking.as_mut() {
+    if let Some(tweener) = world
+        .plugin_resource_mut::<AudioEngine>()
+        .voice_ducking
+        .as_mut()
+    {
         tweener.set(
             ducking.clamp(0.0, 1.0) as f64,
             Tween {
@@ -181,10 +186,10 @@ pub fn update_audio_system(world: &mut World) {
         .count();
     let _span = tracing::info_span!("audio", sources = source_count).entered();
 
-    if !audio_engine_is_initialized(&world.resources.audio) {
+    if !audio_engine_is_initialized(world.plugin_resource::<AudioEngine>()) {
         return;
     }
-    if !world.resources.audio.buses_built {
+    if !world.plugin_resource::<AudioEngine>().buses_built {
         return;
     }
 
@@ -195,7 +200,7 @@ pub fn update_audio_system(world: &mut World) {
     let has_listener_entity = listener_entity.is_some();
 
     if has_listener_entity {
-        if world.resources.audio.listener.is_none() {
+        if world.plugin_resource::<AudioEngine>().listener.is_none() {
             let position = if let Some(entity) = listener_entity
                 && let Some(transform) =
                     world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
@@ -223,10 +228,15 @@ pub fn update_audio_system(world: &mut World) {
                 s: orientation.coords.w,
             };
 
-            if let Some(manager) = &mut world.resources.audio.manager {
-                match manager.add_listener(position, kira_orientation) {
+            let listener_result = world
+                .plugin_resource_mut::<AudioEngine>()
+                .manager
+                .as_mut()
+                .map(|manager| manager.add_listener(position, kira_orientation));
+            if let Some(result) = listener_result {
+                match result {
                     Ok(listener) => {
-                        world.resources.audio.listener = Some(listener);
+                        world.plugin_resource_mut::<AudioEngine>().listener = Some(listener);
                         tracing::info!("Created audio listener");
                     }
                     Err(error) => {
@@ -261,7 +271,7 @@ pub fn update_audio_system(world: &mut World) {
         };
 
         if let (Some(pos), Some(quat)) = (position, kira_orientation)
-            && let Some(listener_handle) = &mut world.resources.audio.listener
+            && let Some(listener_handle) = &mut world.plugin_resource_mut::<AudioEngine>().listener
         {
             listener_handle.set_position(pos, Tween::default());
             listener_handle.set_orientation(quat, Tween::default());
@@ -294,7 +304,7 @@ pub fn update_audio_system(world: &mut World) {
         };
 
         let is_spatial = source.spatial;
-        let has_handle = audio_engine_has_handle(&world.resources.audio, *entity);
+        let has_handle = audio_engine_has_handle(world.plugin_resource::<AudioEngine>(), *entity);
         let is_playing = source.playing;
         let audio_ref = pick_active_clip(
             source,
@@ -313,7 +323,8 @@ pub fn update_audio_system(world: &mut World) {
         if is_playing
             && !has_handle
             && let Some(ref audio_ref) = audio_ref
-            && let Some(sound_data) = audio_engine_get_sound(&world.resources.audio, audio_ref)
+            && let Some(sound_data) =
+                audio_engine_get_sound(world.plugin_resource::<AudioEngine>(), audio_ref)
         {
             let mut sound_data = sound_data.clone();
             if looping {
@@ -360,7 +371,10 @@ pub fn update_audio_system(world: &mut World) {
         }
 
         if is_spatial
-            && world.resources.audio.spatial_tracks.contains_key(entity)
+            && world
+                .plugin_resource::<AudioEngine>()
+                .spatial_tracks
+                .contains_key(entity)
             && let Some(transform) =
                 world.get::<crate::ecs::transform::components::GlobalTransform>(*entity)
         {
@@ -374,7 +388,7 @@ pub fn update_audio_system(world: &mut World) {
     }
 
     for intent in sounds_to_play {
-        let audio = &mut world.resources.audio;
+        let audio = world.plugin_resource_mut::<AudioEngine>();
 
         if intent.is_spatial && audio.listener.is_none() {
             tracing::warn!("Spatial audio requested but no listener exists");
@@ -473,13 +487,17 @@ pub fn update_audio_system(world: &mut World) {
     }
 
     for (entity, position) in spatial_tracks_to_update {
-        if let Some(spatial_track) = world.resources.audio.spatial_tracks.get_mut(&entity) {
+        if let Some(spatial_track) = world
+            .plugin_resource_mut::<AudioEngine>()
+            .spatial_tracks
+            .get_mut(&entity)
+        {
             spatial_track.set_position(position, Tween::default());
         }
     }
 
     for entity in sounds_to_stop {
-        audio_engine_stop_sound(&mut world.resources.audio, entity);
+        audio_engine_stop_sound(world.plugin_resource_mut::<AudioEngine>(), entity);
     }
 
     for entity in &audio_entities {
@@ -487,17 +505,26 @@ pub fn update_audio_system(world: &mut World) {
         else {
             continue;
         };
-        if !audio_engine_has_handle(&world.resources.audio, *entity) {
+        if !audio_engine_has_handle(world.plugin_resource::<AudioEngine>(), *entity) {
             continue;
         }
         let wants_pause = source.paused && source.playing;
-        let currently_paused = world.resources.audio.paused_handles.contains(entity);
+        let currently_paused = world
+            .plugin_resource::<AudioEngine>()
+            .paused_handles
+            .contains(entity);
         if wants_pause && !currently_paused {
-            audio_engine_pause_sound(&mut world.resources.audio, *entity);
-            world.resources.audio.paused_handles.insert(*entity);
+            audio_engine_pause_sound(world.plugin_resource_mut::<AudioEngine>(), *entity);
+            world
+                .plugin_resource_mut::<AudioEngine>()
+                .paused_handles
+                .insert(*entity);
         } else if !wants_pause && currently_paused {
-            audio_engine_resume_sound(&mut world.resources.audio, *entity);
-            world.resources.audio.paused_handles.remove(entity);
+            audio_engine_resume_sound(world.plugin_resource_mut::<AudioEngine>(), *entity);
+            world
+                .plugin_resource_mut::<AudioEngine>()
+                .paused_handles
+                .remove(entity);
         }
     }
 }

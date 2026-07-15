@@ -87,7 +87,9 @@ pub fn update(sandbox_world: &mut SandboxResources, world: &mut World, body: Ent
     sync_bones_from_bodies(sandbox_world, world, body);
 
     let hips_velocity = hips_link(sandbox_world)
-        .and_then(|link| physics_world_linear_velocity(&world.resources.physics, link.body))
+        .and_then(|link| {
+            physics_world_linear_velocity(world.plugin_resource::<PhysicsWorld>(), link.body)
+        })
         .unwrap_or_else(Vec3::zeros);
     let state = &mut sandbox_world.ragdoll;
     if state.auto_recover {
@@ -251,8 +253,11 @@ fn teardown(sandbox_world: &mut SandboxResources, world: &mut World) {
             .map(|position| {
                 (
                     position,
-                    physics_world_linear_velocity(&world.resources.physics, link.body)
-                        .unwrap_or_else(Vec3::zeros),
+                    physics_world_linear_velocity(
+                        world.plugin_resource::<PhysicsWorld>(),
+                        link.body,
+                    )
+                    .unwrap_or_else(Vec3::zeros),
                 )
             })
     });
@@ -319,7 +324,9 @@ fn drive_toward_captured_targets(sandbox_world: &SandboxResources, world: &mut W
 fn drive_toward_pose(sandbox_world: &SandboxResources, world: &mut World, body: Entity) {
     let pose = &sandbox_world.pose;
     let velocity = hips_link(sandbox_world)
-        .and_then(|link| physics_world_linear_velocity(&world.resources.physics, link.body))
+        .and_then(|link| {
+            physics_world_linear_velocity(world.plugin_resource::<PhysicsWorld>(), link.body)
+        })
         .unwrap_or_else(Vec3::zeros);
     let speed = velocity.norm();
     let horizontal_speed = Vec3::new(velocity.x, 0.0, velocity.z).norm();
@@ -377,11 +384,16 @@ fn apply_match_torque(world: &mut World, link: &RagdollLink, target_world: nalge
     }
     let error =
         quat_to_rotation_vector(&(target * nalgebra_glm::quat_inverse(&current_bone_world)));
-    let angular_velocity = physics_world_angular_velocity(&world.resources.physics, link.body)
-        .unwrap_or_else(Vec3::zeros);
+    let angular_velocity =
+        physics_world_angular_velocity(world.plugin_resource::<PhysicsWorld>(), link.body)
+            .unwrap_or_else(Vec3::zeros);
     let torque =
         error * (MATCH_STIFFNESS * link.mass) - angular_velocity * (MATCH_DAMPING * link.mass);
-    physics_world_apply_torque(&mut world.resources.physics, link.body, torque);
+    physics_world_apply_torque(
+        world.plugin_resource_mut::<PhysicsWorld>(),
+        link.body,
+        torque,
+    );
 }
 
 /// World rotations the mapped bones would have if the given keyframe

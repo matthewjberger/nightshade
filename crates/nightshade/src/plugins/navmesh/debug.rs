@@ -12,8 +12,9 @@ const WAYPOINT_COLOR: Vec4 = Vec4::new(1.0, 0.5, 0.0, 1.0);
 const DESTINATION_COLOR: Vec4 = Vec4::new(1.0, 0.0, 0.5, 1.0);
 
 pub fn navmesh_debug_draw_system(world: &mut World) {
-    if !world.resources.navmesh.debug_draw {
-        if let Some(entity) = world.resources.navmesh.debug_entity
+    if !world.plugin_resource::<NavMeshWorld>().debug_draw {
+        let debug_entity = world.plugin_resource::<NavMeshWorld>().debug_entity;
+        if let Some(entity) = debug_entity
             && let Some(visibility) = world.get_mut::<crate::ecs::primitives::Visibility>(entity)
         {
             visibility.visible = false;
@@ -21,7 +22,8 @@ pub fn navmesh_debug_draw_system(world: &mut World) {
         return;
     }
 
-    let debug_entity = match world.resources.navmesh.debug_entity {
+    let existing_debug_entity = world.plugin_resource::<NavMeshWorld>().debug_entity;
+    let debug_entity = match existing_debug_entity {
         Some(entity) => entity,
         None => {
             let entity = spawn_entities(
@@ -29,7 +31,7 @@ pub fn navmesh_debug_draw_system(world: &mut World) {
                 LINES | VISIBILITY | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
                 1,
             )[0];
-            world.resources.navmesh.debug_entity = Some(entity);
+            world.plugin_resource_mut::<NavMeshWorld>().debug_entity = Some(entity);
             entity
         }
     };
@@ -54,11 +56,11 @@ pub fn navmesh_debug_draw_system(world: &mut World) {
 fn draw_navmesh_triangles(world: &World, lines: &mut Vec<Line>) {
     let offset = vec3(0.0, 0.15, 0.0);
 
-    for triangle in &world.resources.navmesh.triangles {
+    for triangle in &world.plugin_resource::<NavMeshWorld>().triangles {
         let vertices = [
-            world.resources.navmesh.vertices[triangle.vertex_indices[0]] + offset,
-            world.resources.navmesh.vertices[triangle.vertex_indices[1]] + offset,
-            world.resources.navmesh.vertices[triangle.vertex_indices[2]] + offset,
+            world.plugin_resource::<NavMeshWorld>().vertices[triangle.vertex_indices[0]] + offset,
+            world.plugin_resource::<NavMeshWorld>().vertices[triangle.vertex_indices[1]] + offset,
+            world.plugin_resource::<NavMeshWorld>().vertices[triangle.vertex_indices[2]] + offset,
         ];
 
         lines.push(Line {
@@ -78,10 +80,12 @@ fn draw_navmesh_triangles(world: &World, lines: &mut Vec<Line>) {
         });
     }
 
-    for edge in &world.resources.navmesh.edges {
+    for edge in &world.plugin_resource::<NavMeshWorld>().edges {
         if edge.is_shared() {
-            let start = world.resources.navmesh.vertices[edge.vertex_indices[0]] + offset;
-            let end = world.resources.navmesh.vertices[edge.vertex_indices[1]] + offset;
+            let start =
+                world.plugin_resource::<NavMeshWorld>().vertices[edge.vertex_indices[0]] + offset;
+            let end =
+                world.plugin_resource::<NavMeshWorld>().vertices[edge.vertex_indices[1]] + offset;
 
             lines.push(Line {
                 start,

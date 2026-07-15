@@ -5,7 +5,7 @@
 
 use crate::app::{App, Plugin, Stage};
 use crate::ecs::world::World;
-use crate::schedule::{FramePhase, SystemFn, schedule_push};
+use crate::schedule::{FramePhase, SystemFn, schedule_push_after};
 
 /// The UI pipeline in run order. Gamepad navigation has to run after
 /// picking: picking resets every entity's `interaction.clicked` flag at
@@ -42,15 +42,17 @@ pub fn run_retained_ui_schedule(world: &mut World) {
 }
 
 /// Builds the UI sub-schedule and registers the frame-schedule entry that
-/// runs it, after the transform propagation the layout depends on, with
+/// runs it, explicitly after the transform propagation the layout depends
+/// on so the ordering holds regardless of plugin composition order, with
 /// the tree shown.
 pub fn install(world: &mut World) {
     world.resources.retained_ui.visible = true;
     world.resources.schedules.retained_ui = build_default_retained_ui_schedule();
-    schedule_push(
+    schedule_push_after(
         &mut world.resources.schedules.frame,
         FramePhase::PostUpdate,
         run_retained_ui_schedule,
+        crate::ecs::transform::systems::run_systems,
     );
 }
 

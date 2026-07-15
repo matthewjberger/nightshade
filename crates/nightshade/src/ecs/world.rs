@@ -248,15 +248,7 @@ freecs::dynamic_schema! {
 #[derive(Default)]
 pub struct Resources {
     pub active_camera: Option<freecs::Entity>,
-    #[cfg(all(
-        feature = "assets",
-        feature = "file_watcher",
-        not(target_arch = "wasm32")
-    ))]
-    pub asset_watcher: crate::ecs::asset_watcher::AssetWatcher,
     pub assets: crate::ecs::asset_state::AssetState,
-    #[cfg(feature = "audio")]
-    pub audio: crate::plugins::audio::resources::AudioEngine,
     pub cleanup: crate::ecs::world::cleanup::CleanupState,
     pub cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
     pub commands: crate::ecs::world::commands::CommandQueues,
@@ -264,8 +256,6 @@ pub struct Resources {
     pub component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
     pub entities: crate::ecs::entity_registry::EntityRegistry,
     pub event_bus: crate::ecs::event_bus::resources::EventBus,
-    #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-    pub file_watcher: crate::plugins::file_watcher::FileWatcher,
     pub gpu_picking: crate::ecs::gpu_picking::GpuPicking,
     #[cfg(feature = "grass")]
     pub grass: crate::render::grass_config::GrassSettings,
@@ -278,23 +268,13 @@ pub struct Resources {
     pub loading: crate::ecs::loading::LoadingState,
     pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
     pub monitors: crate::ecs::window::resources::Monitors,
-    #[cfg(feature = "navmesh")]
-    pub navmesh: crate::plugins::navmesh::resources::NavMeshWorld,
-    #[cfg(feature = "physics")]
-    pub physics: crate::plugins::physics::resources::PhysicsWorld,
-    #[cfg(feature = "physics")]
-    pub picking_world: crate::ecs::picking::resources::PickingWorld,
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
-    #[cfg(feature = "egui")]
-    pub egui: crate::plugins::egui::EguiState,
     pub events: crate::ecs::event::Events,
     pub schedules: crate::schedule::Schedules,
     pub global_scripts: crate::ecs::script::components::GlobalScripts,
     pub scratch: crate::ecs::world::scratch::Scratch,
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub steam: crate::plugins::steam::SteamResources,
-    #[cfg(feature = "terrain")]
-    pub terrain: crate::render::terrain_config::TerrainSettings,
     #[cfg(feature = "terrain")]
     pub terrain_render: crate::render::terrain_config::TerrainRenderState,
     pub text: crate::ecs::text::resources::TextState,
@@ -336,10 +316,76 @@ pub struct World {
 
 impl Default for World {
     fn default() -> Self {
+        #[cfg(not(any(
+            feature = "physics",
+            feature = "audio",
+            feature = "navmesh",
+            feature = "terrain",
+            feature = "egui",
+            all(feature = "file_watcher", not(target_arch = "wasm32")),
+        )))]
+        let ecs = build_engine_ecs();
+        #[cfg(any(
+            feature = "physics",
+            feature = "audio",
+            feature = "navmesh",
+            feature = "terrain",
+            feature = "egui",
+            all(feature = "file_watcher", not(target_arch = "wasm32")),
+        ))]
+        let ecs = {
+            let mut ecs = build_engine_ecs();
+            #[cfg(feature = "physics")]
+            ecs.insert_resource(crate::ecs::picking::resources::PickingWorld::default());
+            #[cfg(feature = "physics")]
+            ecs.insert_resource(crate::plugins::physics::resources::PhysicsWorld::default());
+            #[cfg(feature = "navmesh")]
+            ecs.insert_resource(crate::plugins::navmesh::resources::NavMeshWorld::default());
+            #[cfg(feature = "terrain")]
+            ecs.insert_resource(crate::render::terrain_config::TerrainSettings::default());
+            #[cfg(feature = "egui")]
+            ecs.insert_resource(crate::plugins::egui::EguiState::default());
+            #[cfg(feature = "audio")]
+            ecs.insert_resource(crate::plugins::audio::resources::AudioEngine::default());
+            #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
+            ecs.insert_resource(crate::plugins::file_watcher::FileWatcher::default());
+            #[cfg(all(
+                feature = "assets",
+                feature = "file_watcher",
+                not(target_arch = "wasm32")
+            ))]
+            ecs.insert_resource(crate::ecs::asset_watcher::AssetWatcher::default());
+            ecs
+        };
         Self {
-            ecs: build_engine_ecs(),
+            ecs,
             resources: Resources::default(),
         }
+    }
+}
+
+impl World {
+    /// Borrows a plugin-owned resource stored in the ECS resource map,
+    /// panicking with the type name if the owning plugin was never composed.
+    pub fn plugin_resource<T: Send + Sync + 'static>(&self) -> &T {
+        self.ecs.resource::<T>().unwrap_or_else(|| {
+            panic!(
+                "plugin resource {} is missing; compose the plugin that owns it",
+                std::any::type_name::<T>()
+            )
+        })
+    }
+
+    /// Mutably borrows a plugin-owned resource stored in the ECS resource
+    /// map, panicking with the type name if the owning plugin was never
+    /// composed.
+    pub fn plugin_resource_mut<T: Send + Sync + 'static>(&mut self) -> &mut T {
+        self.ecs.resource_mut::<T>().unwrap_or_else(|| {
+            panic!(
+                "plugin resource {} is missing; compose the plugin that owns it",
+                std::any::type_name::<T>()
+            )
+        })
     }
 }
 

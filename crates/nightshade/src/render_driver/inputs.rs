@@ -1,5 +1,7 @@
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
+#[cfg(feature = "terrain")]
+use crate::render::terrain_config::TerrainSettings;
 use crate::render::wgpu::render_configs::{
     CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
     LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
@@ -239,6 +241,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .map(render_entity)
         .collect();
 
+    #[cfg(feature = "terrain")]
+    let terrain = std::mem::take(world.plugin_resource_mut::<TerrainSettings>());
+    #[cfg(feature = "terrain")]
+    let terrain_render = std::mem::take(&mut world.resources.terrain_render);
+
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
@@ -294,9 +301,9 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         #[cfg(feature = "grass")]
         grass: std::mem::take(&mut resources.grass),
         #[cfg(feature = "terrain")]
-        terrain: std::mem::take(&mut resources.terrain),
+        terrain,
         #[cfg(feature = "terrain")]
-        terrain_render: std::mem::take(&mut resources.terrain_render),
+        terrain_render,
     }
 }
 
@@ -308,6 +315,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
 /// and anything the engine queued mid-frame is appended after them,
 /// preserving the upload cursor the particle pass keeps into that list.
 pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: FrameOutputs) {
+    #[cfg(feature = "terrain")]
+    {
+        *world.plugin_resource_mut::<TerrainSettings>() = inputs.terrain;
+        world.resources.terrain_render = inputs.terrain_render;
+    }
     let resources = &mut world.resources;
     resources.render_settings = inputs.settings;
     resources.debug_draw = inputs.debug_draw;
@@ -334,12 +346,6 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     {
         resources.grass = inputs.grass;
     }
-    #[cfg(feature = "terrain")]
-    {
-        resources.terrain = inputs.terrain;
-        resources.terrain_render = inputs.terrain_render;
-    }
-
     if outputs.frame_executed {
         resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
     }

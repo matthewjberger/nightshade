@@ -207,12 +207,13 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
 
     if let Some(rigid_body_comp) = rigid_body_comp {
         let rapier_body = rigid_body_comp.to_rapier_rigid_body();
-        let rapier_handle = physics_world_add_rigid_body(&mut world.resources.physics, rapier_body);
+        let rapier_handle =
+            physics_world_add_rigid_body(world.plugin_resource_mut::<PhysicsWorld>(), rapier_body);
 
         if let Some(collider_comp) = collider_comp {
             let rapier_collider = collider_comp.to_rapier_collider();
             physics_world_add_collider(
-                &mut world.resources.physics,
+                world.plugin_resource_mut::<PhysicsWorld>(),
                 rapier_collider,
                 rapier_handle,
             );
@@ -226,8 +227,7 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
         }
 
         world
-            .resources
-            .physics
+            .plugin_resource_mut::<PhysicsWorld>()
             .handle_to_entity
             .insert(rapier_handle, entity);
     }
