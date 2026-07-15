@@ -799,7 +799,7 @@ pub mod prelude {
     };
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::resources::{
-        audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
+        AudioEngine, audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
         audio_engine_has_handle, audio_engine_initialize, audio_engine_is_initialized,
         audio_engine_load_sound, audio_engine_pause_sound, audio_engine_resume_sound,
         audio_engine_stop_sound,
@@ -809,7 +809,7 @@ pub mod prelude {
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
     };
     #[cfg(feature = "egui")]
-    pub use crate::plugins::egui::egui_context;
+    pub use crate::plugins::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     #[cfg(feature = "gamepad")]
