@@ -397,19 +397,19 @@
 //!
 //! ```ignore
 //! fn initialize(world: &mut World) {
-//!     steam_initialize(&mut world.resources.steam).ok();
-//!     steam_request_stats(&mut world.resources.steam);
+//!     steam_initialize(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>()).ok();
+//!     steam_request_stats(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
 //! }
 //!
 //! fn tick(game: &mut MyGame, world: &mut World) {
 //!     // Unlock achievement
 //!     if game.score >= 1000 {
-//!         steam_unlock_achievement(&world.resources.steam, "ACH_HIGH_SCORE").ok();
-//!         steam_store_stats(&world.resources.steam).ok();
+//!         steam_unlock_achievement(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "ACH_HIGH_SCORE").ok();
+//!         steam_store_stats(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>()).ok();
 //!     }
 //!
 //!     // Update stat
-//!     steam_set_stat_int(&world.resources.steam, "total_score", game.score).ok();
+//!     steam_set_stat_int(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "total_score", game.score).ok();
 //! }
 //! ```
 //!

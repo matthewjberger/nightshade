@@ -266,8 +266,6 @@ pub struct Resources {
     pub renderer_state: crate::render::config::RendererState,
     pub is_runtime: bool,
     pub schedules: crate::schedule::Schedules,
-    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub steam: crate::plugins::steam::SteamResources,
     #[cfg(feature = "terrain")]
     pub terrain_render: crate::render::terrain_config::TerrainRenderState,
     pub texture_cache: crate::render::wgpu::texture_cache::TextureCache,
@@ -362,6 +360,8 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
         ecs.insert_resource(crate::ecs::loading::LoadingState::default());
+        #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
+        ecs.insert_resource(crate::plugins::steam::SteamResources::default());
         Self {
             ecs,
             resources: Resources::default(),
