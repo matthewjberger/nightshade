@@ -50,11 +50,9 @@ pub fn mesh_cache_iter(cache: &MeshCache) -> impl Iterator<Item = (&String, &Mes
         .iter()
         .enumerate()
         .filter_map(|(index, name_opt)| {
-            name_opt.as_ref().and_then(|name| {
-                cache.registry.entries[index]
-                    .as_ref()
-                    .map(|mesh| (name, mesh))
-            })
+            name_opt
+                .as_ref()
+                .zip(cache.registry.entries[index].as_ref())
         })
 }
 

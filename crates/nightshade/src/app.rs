@@ -337,6 +337,23 @@ where
     }
 }
 
+/// Marks a freecs system-parameter function, `fn(Res<A>, ResMut<B>, &mut
+/// World)`, whose resource arguments resolve out of the ECS resource map
+/// while `&mut World` stays free for queries. `World` implements
+/// [`freecs::dynamic::ResourceHost`], so these register alongside the plain
+/// and game system shapes.
+pub struct ParamSystemMarker<Marker>(std::marker::PhantomData<Marker>);
+
+impl<Marker, F> SystemCollection<ParamSystemMarker<Marker>> for F
+where
+    F: freecs::system_param::IntoSystem<World, Marker>,
+{
+    fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+        let name = std::any::type_name_of_val(&self);
+        schedule.push(name, self.into_runner());
+    }
+}
+
 macro_rules! impl_system_collection_for_tuple {
     ($(($marker:ident, $system_type:ident, $system_value:ident)),+) => {
         impl<$($marker),+, $($system_type: SystemCollection<$marker>),+>
