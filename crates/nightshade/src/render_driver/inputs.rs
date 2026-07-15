@@ -277,6 +277,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let window_active_viewport_rect = world
         .expect_resource_mut::<crate::ecs::window::resources::Window>()
         .active_viewport_rect;
+    let loading_particle_textures = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .pending_particle_textures,
+    );
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
@@ -288,7 +293,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         wind,
         mesh_cache: std::mem::take(&mut resources.assets.mesh_cache),
         texture_cache: std::mem::take(&mut resources.texture_cache),
-        pending_particle_textures: std::mem::take(&mut resources.loading.pending_particle_textures),
+        pending_particle_textures: loading_particle_textures,
         ui: UiFrameInputs {
             rects: std::mem::take(&mut retained.frame.rects),
             rect_entities: std::mem::take(&mut retained.frame.rect_entities)
@@ -354,15 +359,19 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
             .force_render_cameras
             .remove(&scene_entity(entity));
     }
+    let mut pending = inputs.pending_particle_textures;
+    pending.extend(std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .pending_particle_textures,
+    ));
+    world
+        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .pending_particle_textures = pending;
     let resources = &mut world.resources;
     resources.renderer_state = inputs.scene;
     resources.texture_cache = inputs.texture_cache;
     resources.assets.mesh_cache = inputs.mesh_cache;
-    let mut pending = inputs.pending_particle_textures;
-    pending.extend(std::mem::take(
-        &mut resources.loading.pending_particle_textures,
-    ));
-    resources.loading.pending_particle_textures = pending;
     let retained = &mut resources.retained_ui;
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs

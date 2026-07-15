@@ -68,7 +68,12 @@ pub fn update_with_state(
     state: &mut dyn crate::run::State,
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    for pending_load in world.resources.loading.pending_font_loads.drain(..) {
+    let pending_font_loads: Vec<_> = world
+        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .pending_font_loads
+        .drain(..)
+        .collect();
+    for pending_load in pending_font_loads {
         world
             .resources
             .text
@@ -184,17 +189,27 @@ pub(crate) fn drain_loading_tasks(
     // Collect images the worker pool finished decoding. The GPU upload below
     // is the only throttled step; decoding already ran off this thread.
     loading_pipeline_poll_decodes(
-        &mut world.resources.loading.pipeline,
+        &mut world
+            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .pipeline,
         crate::ecs::loading::DECODE_POLL_BUDGET,
     );
 
-    let budget = world.resources.loading.pipeline.tasks_per_frame.max(1);
+    let budget = world
+        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .pipeline
+        .tasks_per_frame
+        .max(1);
     let mut uploaded_textures: Vec<crate::render::asset_id::TextureId> = Vec::new();
     let mut deferred: Vec<crate::ecs::loading::LoadingTask> = Vec::new();
     let mut reserved_any = false;
     let mut uploads = 0usize;
     while uploads < budget {
-        let Some(task) = loading_pipeline_pop(&mut world.resources.loading.pipeline) else {
+        let Some(task) = loading_pipeline_pop(
+            &mut world
+                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .pipeline,
+        ) else {
             break;
         };
         let category = task.category();
@@ -260,7 +275,12 @@ pub(crate) fn drain_loading_tasks(
             } => {
                 // Hold the task until every source image it samples has finished
                 // decoding in the worker pool, then upload into the reserved layer.
-                if !loading_pipeline_recipe_ready(&world.resources.loading.pipeline, &recipe) {
+                if !loading_pipeline_recipe_ready(
+                    &world
+                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .pipeline,
+                    &recipe,
+                ) {
                     deferred.push(crate::ecs::loading::LoadingTask::MaterializeTexture {
                         texture,
                         recipe,
@@ -271,10 +291,15 @@ pub(crate) fn drain_loading_tasks(
                 }
                 let produced = crate::ecs::loading::execute_texture_recipe(
                     &recipe,
-                    &world.resources.loading.pipeline.decoded_images,
+                    &world
+                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .pipeline
+                        .decoded_images,
                 );
                 loading_pipeline_release_recipe_sources(
-                    &mut world.resources.loading.pipeline,
+                    &mut world
+                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .pipeline,
                     &recipe,
                 );
                 if let Some(decoded) = produced {
@@ -324,10 +349,21 @@ pub(crate) fn drain_loading_tasks(
                 uploads += 1;
             }
         }
-        loading_pipeline_mark_completed(&mut world.resources.loading.pipeline, label, category);
+        loading_pipeline_mark_completed(
+            &mut world
+                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .pipeline,
+            label,
+            category,
+        );
     }
     for task in deferred.into_iter().rev() {
-        loading_pipeline_requeue_front(&mut world.resources.loading.pipeline, task);
+        loading_pipeline_requeue_front(
+            &mut world
+                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .pipeline,
+            task,
+        );
     }
     // Stable layers mean a streamed pixel upload never changes a material's layer
     // index, so only a fresh reservation (or a freshly inserted material) needs the
@@ -347,8 +383,16 @@ pub(crate) fn drain_loading_tasks(
         );
         world.resources.mesh_render_state.request_full_rebuild();
     }
-    if !loading_pipeline_is_active(&world.resources.loading.pipeline) {
-        loading_pipeline_reset_source_arena(&mut world.resources.loading.pipeline);
+    if !loading_pipeline_is_active(
+        &world
+            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .pipeline,
+    ) {
+        loading_pipeline_reset_source_arena(
+            &mut world
+                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .pipeline,
+        );
     }
 
     let evicted = crate::render::wgpu::texture_cache::texture_cache_remove_unused(

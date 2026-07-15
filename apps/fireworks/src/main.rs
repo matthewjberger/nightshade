@@ -1780,8 +1780,7 @@ impl FireworksDemo {
             .to_rgba8();
         let (width, height) = img.dimensions();
         world
-            .resources
-            .loading
+            .expect_resource_mut::<LoadingState>()
             .pending_particle_textures
             .push(ParticleTextureUpload {
                 slot,

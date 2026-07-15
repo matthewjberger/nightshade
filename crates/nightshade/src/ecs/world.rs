@@ -266,7 +266,6 @@ pub struct Resources {
     pub grass: crate::render::grass_config::GrassSettings,
     pub renderer_state: crate::render::config::RendererState,
     pub is_runtime: bool,
-    pub loading: crate::ecs::loading::LoadingState,
     pub schedules: crate::schedule::Schedules,
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub steam: crate::plugins::steam::SteamResources,
@@ -362,6 +361,7 @@ impl Default for World {
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
+        ecs.insert_resource(crate::ecs::loading::LoadingState::default());
         Self {
             ecs,
             resources: Resources::default(),
