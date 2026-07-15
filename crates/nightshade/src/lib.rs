@@ -839,9 +839,11 @@ pub mod prelude {
     #[cfg(feature = "egui")]
     pub use crate::plugins::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
+    pub use crate::plugins::gamepad::Gamepad;
+    #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     #[cfg(feature = "gamepad")]
-    pub use crate::plugins::gamepad::query_active_gamepad;
+    pub use crate::plugins::gamepad::with_active_gamepad;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
     #[cfg(feature = "navmesh")]
     pub use crate::plugins::navmesh::{

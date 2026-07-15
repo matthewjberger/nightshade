@@ -249,7 +249,6 @@ freecs::dynamic_schema! {
 #[derive(Default)]
 pub struct Resources {
     pub active_camera: Option<freecs::Entity>,
-    pub gamepad: crate::ecs::input::resources::Gamepad,
     pub pending_state: Option<crate::state::NextStateBuilder>,
     pub assets: crate::ecs::asset_state::AssetState,
     pub commands: crate::ecs::world::commands::CommandQueues,
@@ -358,6 +357,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::ui::resources::UiImageLayerAllocator::default());
         ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
         ecs.insert_resource(crate::ecs::input::resources::Input::default());
+        ecs.insert_resource(crate::ecs::input::resources::Gamepad::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
         ecs.insert_resource(crate::ecs::time::Time::default());

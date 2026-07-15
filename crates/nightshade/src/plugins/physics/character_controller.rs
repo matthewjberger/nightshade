@@ -77,7 +77,7 @@ pub fn character_controller_input_system(world: &mut World) {
 
         #[cfg(feature = "gamepad")]
         let (gamepad_movement, gamepad_jump, gamepad_crouch, gamepad_sprint) =
-            if let Some(gamepad) = crate::plugins::gamepad::query_active_gamepad(world) {
+            crate::plugins::gamepad::with_active_gamepad(world, |gamepad| {
                 let left_stick_x = gamepad.value(gilrs::Axis::LeftStickX);
                 let left_stick_y = gamepad.value(gilrs::Axis::LeftStickY);
                 let jump_button = gamepad.is_pressed(gilrs::Button::South);
@@ -95,9 +95,8 @@ pub fn character_controller_input_system(world: &mut World) {
                 };
 
                 (movement, jump_button, crouch_button, sprint_button)
-            } else {
-                (nalgebra_glm::vec2(0.0, 0.0), false, false, false)
-            };
+            })
+            .unwrap_or((nalgebra_glm::vec2(0.0, 0.0), false, false, false));
         #[cfg(not(feature = "gamepad"))]
         let (gamepad_movement, gamepad_jump, gamepad_crouch, gamepad_sprint) =
             (nalgebra_glm::vec2(0.0, 0.0), false, false, false);

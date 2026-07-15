@@ -1,7 +1,7 @@
 use crate::ecs::{CharacterState, RagdollMode, SandboxResources};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::lines::components::{Line, Lines};
-use nightshade::plugins::gamepad::query_active_gamepad;
+use nightshade::plugins::gamepad::with_active_gamepad;
 use nightshade::prelude::*;
 
 const BUMPER_RADIUS: f32 = 0.55;
@@ -504,7 +504,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     };
 
     let mut gamepad_crouch_held = false;
-    if let Some(gamepad) = query_active_gamepad(world) {
+    if let Some(crouch_held) = with_active_gamepad(world, |gamepad| {
         let stick_x = gamepad.value(gilrs::Axis::LeftStickX);
         let stick_y = gamepad.value(gilrs::Axis::LeftStickY);
         let magnitude = (stick_x * stick_x + stick_y * stick_y).sqrt();
@@ -513,7 +513,9 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
             direction += forward * (stick_y * normalized / magnitude)
                 + right * (stick_x * normalized / magnitude);
         }
-        gamepad_crouch_held = gamepad.is_pressed(gilrs::Button::East);
+        gamepad.is_pressed(gilrs::Button::East)
+    }) {
+        gamepad_crouch_held = crouch_held;
     }
 
     if direction.norm() > 1.0 {
@@ -521,13 +523,11 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     }
 
     let gamepad_jump = world
-        .resources
-        .gamepad
+        .expect_resource::<nightshade::plugins::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::South);
     let gamepad_flip = world
-        .resources
-        .gamepad
+        .expect_resource::<nightshade::plugins::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::West);
     let flip_key_pressed = world

@@ -497,14 +497,11 @@ pub fn look_camera_system(world: &mut World) {
         .raw_mouse_delta;
 
     #[cfg(feature = "gamepad")]
-    let gamepad_input = if let Some(gamepad) = crate::plugins::gamepad::query_active_gamepad(world)
-    {
+    let gamepad_input = crate::plugins::gamepad::with_active_gamepad(world, |gamepad| {
         let right_stick_x = gamepad.value(gilrs::Axis::RightStickX);
         let right_stick_y = gamepad.value(gilrs::Axis::RightStickY);
-        Some((right_stick_x, right_stick_y))
-    } else {
-        None
-    };
+        (right_stick_x, right_stick_y)
+    });
     #[cfg(not(feature = "gamepad"))]
     let gamepad_input: Option<(f32, f32)> = None;
 
