@@ -6,7 +6,7 @@
 //! for that camera's tile. The renderer reads it together with the global
 //! [`RenderSettings`](crate::render::config::RenderSettings) defaults to
 //! produce an [`EffectiveShading`] for the camera, then writes it into
-//! `world.resources.renderer_state.active_view` while the camera's render
+//! `world.expect_resource_mut::<crate::render::config::RendererState>().active_view` while the camera's render
 //! graph executes. Passes read from `renderer_state.active_view`, never from
 //! the user-set defaults on `RenderSettings` directly, so each camera renders
 //! with its own view-local shading without the renderer having to

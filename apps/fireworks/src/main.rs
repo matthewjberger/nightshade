@@ -219,7 +219,7 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
             ..Default::default()
         },
     );
-    world.resources.active_camera = Some(camera);
+    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
 
     fireworks.auto_launch = true;
     fireworks.launch_interval = 0.3;

@@ -27,7 +27,7 @@ fn time(args: &[&str], world: &mut World, context: &mut SandboxShellContext) -> 
     match args {
         [] => format!(
             "time of day: {:.2}",
-            world.resources.renderer_state.day_night.hour
+            world.expect_resource_mut::<RendererState>().day_night.hour
         ),
         [hour] => match hour.parse::<f32>() {
             Ok(value) => {
@@ -42,7 +42,12 @@ fn time(args: &[&str], world: &mut World, context: &mut SandboxShellContext) -> 
 
 fn time_pause(args: &[&str], world: &mut World, context: &mut SandboxShellContext) -> String {
     let paused = match args {
-        [] => world.resources.renderer_state.day_night.auto_cycle,
+        [] => {
+            world
+                .expect_resource_mut::<RendererState>()
+                .day_night
+                .auto_cycle
+        }
         ["on"] => true,
         ["off"] => false,
         _ => return TIME_PAUSE.usage.to_string(),

@@ -50,8 +50,12 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
 fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
-    let camera_entity = world.resources.active_camera;
-    let mesh_cache = &world.resources.assets.mesh_cache;
+    let camera_entity = world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0;
+    let mesh_cache = &world
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .mesh_cache;
 
     for entity in world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH | crate::ecs::world::GLOBAL_TRANSFORM)
@@ -99,7 +103,10 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
         push_mesh_wireframe_edges(line_data, entity.id, &global_transform.0, mesh);
     }
 
-    for (entity, instanced) in &world.resources.renderer_state.render_instanced_objects {
+    for (entity, instanced) in &world
+        .expect_resource::<crate::render::config::RendererState>()
+        .render_instanced_objects
+    {
         let entity = *entity;
         let mesh = {
             let mut found_mesh = None;
@@ -175,8 +182,12 @@ pub fn gather_bounding_volume_data(
         return None;
     }
 
-    let camera_entity = world.resources.active_camera;
-    let mesh_cache = &world.resources.assets.mesh_cache;
+    let camera_entity = world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0;
+    let mesh_cache = &world
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .mesh_cache;
     let mut bv_data = Vec::new();
 
     for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::BOUNDING_VOLUME) {
@@ -395,8 +406,12 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
     let view_proj = camera_matrices.projection * camera_matrices.view;
     let frustum_planes = extract_frustum_planes(&view_proj);
 
-    let camera_entity = world.resources.active_camera;
-    let mesh_cache = &world.resources.assets.mesh_cache;
+    let camera_entity = world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0;
+    let mesh_cache = &world
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .mesh_cache;
     let mut normal_data = Vec::new();
 
     for entity in world.ecs.worlds[CORE]

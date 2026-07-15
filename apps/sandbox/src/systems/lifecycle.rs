@@ -10,9 +10,12 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
 
     world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::DayNight;
     world.expect_resource_mut::<DebugDraw>().show_grid = false;
-    world.resources.renderer_state.use_fullscreen = true;
-    world.resources.renderer_state.day_night.hour = 9.5;
-    world.resources.renderer_state.day_night.auto_cycle = false;
+    world.expect_resource_mut::<RendererState>().use_fullscreen = true;
+    world.expect_resource_mut::<RendererState>().day_night.hour = 9.5;
+    world
+        .expect_resource_mut::<RendererState>()
+        .day_night
+        .auto_cycle = false;
 
     textures::load_prototype_textures(world);
     level::load_or_build_level(world);

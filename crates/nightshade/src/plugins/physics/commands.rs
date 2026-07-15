@@ -70,20 +70,24 @@ pub fn spawn_static_physics_cube_with_material(
 
     let fallback_name = format!("StaticPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -161,20 +165,24 @@ pub fn spawn_dynamic_physics_sphere_with_material(
 
     let fallback_name = format!("DynamicPhysicsSphere_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -252,20 +260,24 @@ pub fn spawn_dynamic_physics_cube_with_material(
 
     let fallback_name = format!("DynamicPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -344,20 +356,24 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
 
     let fallback_name = format!("DynamicPhysicsCylinder_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -473,13 +489,18 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
         });
     }
 
-    world.resources.active_camera = Some(camera_entity);
+    world
+        .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+        .0 = Some(camera_entity);
 
     (player_entity, camera_entity)
 }
 
 pub fn look_camera_system(world: &mut World) {
-    let Some(camera_entity) = world.resources.active_camera else {
+    let Some(camera_entity) = world
+        .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+        .0
+    else {
         return;
     };
 

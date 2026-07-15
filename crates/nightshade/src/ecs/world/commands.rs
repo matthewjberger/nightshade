@@ -184,20 +184,24 @@ pub fn register_material(
     material: crate::render::material::Material,
 ) {
     material_registry_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         name.clone(),
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -270,7 +274,9 @@ fn reload_material_command(
     let new_textures: Vec<String> = new_material.texture_names().map(str::to_string).collect();
 
     crate::ecs::material::resources::material_registry_mutate(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         &name,
         |existing| *existing = new_material,
     );
@@ -309,14 +315,19 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         if let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
             let mesh_name = render_mesh.name.clone();
             if let Some(&index) = world
-                .resources
-                .assets
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
                 .get(&mesh_name)
             {
-                registry_remove_reference(&mut world.resources.assets.mesh_cache.registry, index);
+                registry_remove_reference(
+                    &mut world
+                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .mesh_cache
+                        .registry,
+                    index,
+                );
             }
             world
                 .resources
@@ -329,14 +340,19 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let mesh_name = instanced_mesh.mesh_name.clone();
             if let Some(&index) = world
-                .resources
-                .assets
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
                 .get(&mesh_name)
             {
-                registry_remove_reference(&mut world.resources.assets.mesh_cache.registry, index);
+                registry_remove_reference(
+                    &mut world
+                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .mesh_cache
+                        .registry,
+                    index,
+                );
             }
             world
                 .resources
@@ -351,15 +367,17 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let material_name = material_ref.name.clone();
             if let Some(&index) = world
-                .resources
-                .assets
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry
                 .name_to_index
                 .get(&material_name)
             {
                 registry_remove_reference(
-                    &mut world.resources.assets.material_registry.registry,
+                    &mut world
+                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .material_registry
+                        .registry,
                     index,
                 );
             }
@@ -489,8 +507,7 @@ pub fn spawn_mesh_at(
     let render_mesh = components::RenderMesh::new(mesh_name);
 
     if !world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
@@ -508,7 +525,9 @@ pub fn spawn_mesh_at(
         };
         if let Some(mesh) = mesh {
             mesh_cache_insert(
-                &mut world.resources.assets.mesh_cache,
+                &mut world
+                    .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                    .mesh_cache,
                 mesh_name.to_string(),
                 mesh,
             );
@@ -516,26 +535,33 @@ pub fn spawn_mesh_at(
     }
 
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
         .get(&render_mesh.name)
     {
-        registry_add_reference(&mut world.resources.assets.mesh_cache.registry, index);
+        registry_add_reference(
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .mesh_cache
+                .registry,
+            index,
+        );
     }
 
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get("Default")
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -693,8 +719,16 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
 
     if world.resources.cleanup.frame_counter >= CLEANUP_INTERVAL_FRAMES {
         world.resources.cleanup.frame_counter = 0;
-        mesh_cache_remove_unused(&mut world.resources.assets.mesh_cache);
-        material_registry_remove_unused(&mut world.resources.assets.material_registry);
+        mesh_cache_remove_unused(
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .mesh_cache,
+        );
+        material_registry_remove_unused(
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry,
+        );
         texture_cache_remove_unused(&mut world.resources.texture_cache);
     }
 }
@@ -717,7 +751,9 @@ pub fn set_material_with_textures(
 
     if let Some(ref mat_ref) = material_ref {
         crate::ecs::material::resources::material_registry_mutate(
-            &mut world.resources.assets.material_registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry,
             &mat_ref.name,
             |existing_mat| *existing_mat = material,
         );
@@ -728,20 +764,24 @@ pub fn set_material_with_textures(
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(
-            &mut world.resources.assets.material_registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry,
             material_name.clone(),
             material,
         );
         if let Some(&index) = world
-            .resources
-            .assets
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .registry
             .name_to_index
             .get(&material_name)
         {
             registry_add_reference(
-                &mut world.resources.assets.material_registry.registry,
+                &mut world
+                    .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                    .material_registry
+                    .registry,
                 index,
             );
         }
@@ -943,15 +983,17 @@ pub fn spawn_instanced_mesh(
     );
 
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get("Default")
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
@@ -1004,21 +1046,26 @@ pub fn spawn_instanced_mesh_with_material(
     );
 
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }
 
     let texture_names: Vec<String> = registry_entry_by_name(
-        &world.resources.assets.material_registry.registry,
+        &world
+            .expect_resource::<crate::ecs::asset_state::AssetState>()
+            .material_registry
+            .registry,
         material_name,
     )
     .map(|mat| mat.texture_names().map(str::to_string).collect())
@@ -1053,20 +1100,24 @@ pub fn spawn_material(
     material: crate::render::material::Material,
 ) {
     material_registry_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         name.clone(),
         material,
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }

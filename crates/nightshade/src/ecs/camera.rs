@@ -29,7 +29,7 @@
 //!     translation: Vec3::new(0.0, 5.0, 10.0),
 //!     ..Default::default()
 //! });
-//! world.resources.active_camera = Some(entity);
+//! world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(entity);
 //! ```
 //!
 //! # Pan-Orbit Camera (Editor-Style)
@@ -51,7 +51,7 @@
 //!     .with_smoothness(0.1, 0.02, 0.1)  // Orbit, pan, zoom smoothing
 //! );
 //!
-//! world.resources.active_camera = Some(entity);
+//! world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(entity);
 //! ```
 //!
 //! # Mouse and Gamepad Controls
@@ -157,6 +157,7 @@
 pub mod commands;
 pub mod components;
 pub mod queries;
+pub mod resources;
 pub mod systems;
 
 pub use commands::*;

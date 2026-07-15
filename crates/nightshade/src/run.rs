@@ -55,7 +55,7 @@
 //!
 //!     // Spawn camera
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.resources.active_camera = Some(camera);
+//!     world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!
 //!     // Spawn lighting
 //!     spawn_sun(world);
@@ -188,7 +188,9 @@ pub fn launch_with_world(
 
 #[cfg(not(target_arch = "wasm32"))]
 fn sync_min_window_size(world: &mut World) {
-    let desired = world.resources.renderer_state.min_window_size;
+    let desired = world
+        .expect_resource_mut::<crate::render::config::RendererState>()
+        .min_window_size;
     if world
         .expect_resource_mut::<crate::ecs::window::resources::Window>()
         .applied_min_window_size
@@ -819,14 +821,20 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .expect_resource::<crate::ecs::window::resources::Window>()
                 .handle
                 .clone();
-            if self.world.resources.renderer_state.use_fullscreen
+            if self
+                .world
+                .expect_resource_mut::<crate::render::config::RendererState>()
+                .use_fullscreen
                 && let Some(window_handle) = &window_handle
             {
                 window_handle.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
             }
 
             if let Some(window_handle) = &window_handle {
-                let show_cursor = self.world.resources.renderer_state.show_cursor;
+                let show_cursor = self
+                    .world
+                    .expect_resource_mut::<crate::render::config::RendererState>()
+                    .show_cursor;
                 window_handle.set_cursor_visible(show_cursor);
                 if !self
                     .world
@@ -866,7 +874,10 @@ impl winit::application::ApplicationHandler for WindowContext {
                 #[cfg(target_arch = "wasm32")]
                 crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
 
-                let show_cursor = self.world.resources.renderer_state.show_cursor;
+                let show_cursor = self
+                    .world
+                    .expect_resource_mut::<crate::render::config::RendererState>()
+                    .show_cursor;
                 if let Some(window_handle) = &self
                     .world
                     .expect_resource::<crate::ecs::window::resources::Window>()

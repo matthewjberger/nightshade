@@ -158,10 +158,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .iter()
         .map(|&entity| snapshot_camera(world, entity))
         .collect();
-    let active_camera_frame = world
-        .resources
-        .active_camera
-        .map(|entity| snapshot_camera(world, entity));
+    let active_camera = world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0;
+    let active_camera_frame = active_camera.map(|entity| snapshot_camera(world, entity));
     let fallback_shading = crate::ecs::camera::components::effective_shading_from_graphics(
         world.expect_resource::<crate::render::config::RenderSettings>(),
         world.expect_resource::<crate::render::config::DebugDraw>(),
@@ -196,7 +196,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .is_some();
 
     let dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)> = {
-        let scene = &world.resources.renderer_state;
+        let scene = world.expect_resource::<crate::render::config::RendererState>();
         let mut spheres = Vec::new();
         for entity in world
             .resources
@@ -246,6 +246,9 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .map(render_entity)
         .collect();
 
+    #[cfg(feature = "grass")]
+    let grass =
+        std::mem::take(world.expect_resource_mut::<crate::render::grass_config::GrassSettings>());
     #[cfg(feature = "terrain")]
     let terrain = std::mem::take(world.plugin_resource_mut::<TerrainSettings>());
     #[cfg(feature = "terrain")]
@@ -282,16 +285,22 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             .expect_resource_mut::<crate::ecs::loading::LoadingState>()
             .pending_particle_textures,
     );
+    let scene = std::mem::take(world.expect_resource_mut::<crate::render::config::RendererState>());
+    let mesh_cache = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .mesh_cache,
+    );
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
         settings,
         debug_draw,
-        scene: std::mem::take(&mut resources.renderer_state),
+        scene,
         ibl_views: Default::default(),
         shadow_atlas: Default::default(),
         wind,
-        mesh_cache: std::mem::take(&mut resources.assets.mesh_cache),
+        mesh_cache,
         texture_cache: std::mem::take(&mut resources.texture_cache),
         pending_particle_textures: loading_particle_textures,
         ui: UiFrameInputs {
@@ -306,7 +315,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             background_color: retained.background_color,
         },
         view: ViewInputs {
-            active_camera: resources.active_camera.map(render_entity),
+            active_camera: active_camera.map(render_entity),
             uptime_milliseconds: window_uptime_milliseconds,
             delta_time: window_delta_time,
             viewport_size: window_cached_viewport_size,
@@ -330,7 +339,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             debug_lines,
         },
         #[cfg(feature = "grass")]
-        grass: std::mem::take(&mut resources.grass),
+        grass,
         #[cfg(feature = "terrain")]
         terrain,
         #[cfg(feature = "terrain")]
@@ -368,10 +377,16 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     world
         .expect_resource_mut::<crate::ecs::loading::LoadingState>()
         .pending_particle_textures = pending;
+    #[cfg(feature = "grass")]
+    {
+        *world.expect_resource_mut::<crate::render::grass_config::GrassSettings>() = inputs.grass;
+    }
+    *world.expect_resource_mut::<crate::render::config::RendererState>() = inputs.scene;
+    world
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .mesh_cache = inputs.mesh_cache;
     let resources = &mut world.resources;
-    resources.renderer_state = inputs.scene;
     resources.texture_cache = inputs.texture_cache;
-    resources.assets.mesh_cache = inputs.mesh_cache;
     let retained = &mut resources.retained_ui;
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs
@@ -383,10 +398,6 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     retained.frame.ui_images = inputs.ui.images;
     retained.frame.text_meshes = inputs.ui.text_meshes;
     retained.render_slots = inputs.ui.render_slots;
-    #[cfg(feature = "grass")]
-    {
-        resources.grass = inputs.grass;
-    }
     if outputs.frame_executed {
         resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
     }

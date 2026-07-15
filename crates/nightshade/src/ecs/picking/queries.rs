@@ -27,7 +27,9 @@ impl PickingRay {
                 (screen_pos, width as f32, height as f32)
             };
 
-        let camera_entity = world.resources.active_camera?;
+        let camera_entity = world
+            .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+            .0?;
 
         let camera = world.get::<crate::ecs::camera::components::Camera>(camera_entity)?;
         let global_transform =
@@ -188,7 +190,10 @@ pub fn get_ground_position_from_screen(
 }
 
 pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entity> {
-    let camera_entity = match world.resources.active_camera {
+    let camera_entity = match world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0
+    {
         Some(entity) => entity,
         None => return Vec::new(),
     };

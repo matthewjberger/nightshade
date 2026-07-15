@@ -8,7 +8,9 @@ pub struct CameraMatrices {
 }
 
 pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
-    let active_camera = world.resources.active_camera?;
+    let active_camera = world
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+        .0?;
     query_camera_matrices(world, active_camera)
 }
 

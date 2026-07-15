@@ -74,13 +74,13 @@ pub fn set_fly(sandbox_world: &mut SandboxResources, world: &mut World, enabled:
             transform.rotation = rotation;
         }
         sandbox_world.player.fly_camera = Some(fly_camera);
-        world.resources.active_camera = Some(fly_camera);
+        world.expect_resource_mut::<ActiveCamera>().0 = Some(fly_camera);
         if let Some(player_entity) = sandbox_world.player.player_entity {
             world.remove_tag_type::<TerrainColliderAnchor>(player_entity);
         }
         world.add_tag_type::<TerrainColliderAnchor>(fly_camera);
     } else {
-        world.resources.active_camera = gameplay_camera;
+        world.expect_resource_mut::<ActiveCamera>().0 = gameplay_camera;
         if let Some(fly_camera) = sandbox_world.player.fly_camera.take() {
             world.remove_tag_type::<TerrainColliderAnchor>(fly_camera);
             despawn_entities_with_cache_cleanup(world, &[fly_camera]);
@@ -104,7 +104,7 @@ pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     world.add_tag_type::<TerrainColliderAnchor>(player_entity);
     sandbox_world.player.player_entity = Some(player_entity);
     sandbox_world.player.camera_entity = Some(camera_entity);
-    world.resources.active_camera = Some(camera_entity);
+    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera_entity);
 }
 
 /// Teleport the player back to the spawn marker. Mirrors the game

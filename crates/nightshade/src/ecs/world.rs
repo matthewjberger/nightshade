@@ -12,7 +12,7 @@
 //! - `world.expect_resource::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
 //! - `world.expect_resource_mut::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
 //! - `world.expect_resource_mut::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
-//! - `world.resources.active_camera` â€” current camera entity
+//! - `world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
 //! - `world.resources.entities.names` â€” name-to-entity mapping
 
 pub mod components {
@@ -73,6 +73,7 @@ pub mod components {
 
 pub mod resources {
     pub use crate::ecs::asset_state::AssetState;
+    pub use crate::ecs::camera::resources::ActiveCamera;
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
@@ -248,8 +249,6 @@ freecs::dynamic_schema! {
 
 #[derive(Default)]
 pub struct Resources {
-    pub active_camera: Option<freecs::Entity>,
-    pub assets: crate::ecs::asset_state::AssetState,
     pub commands: crate::ecs::world::commands::CommandQueues,
     pub event_bus: crate::ecs::event_bus::resources::EventBus,
     pub events: crate::ecs::event::Events,
@@ -260,9 +259,6 @@ pub struct Resources {
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
     pub text: crate::ecs::text::resources::TextState,
     pub user_interface: crate::ecs::ui::UserInterface,
-    #[cfg(feature = "grass")]
-    pub grass: crate::render::grass_config::GrassSettings,
-    pub renderer_state: crate::render::config::RendererState,
     pub is_runtime: bool,
     pub schedules: crate::schedule::Schedules,
     #[cfg(feature = "terrain")]
@@ -339,6 +335,11 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(crate::ecs::asset_state::AssetState::default());
+        ecs.insert_resource(crate::render::config::RendererState::default());
+        ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
+        #[cfg(feature = "grass")]
+        ecs.insert_resource(crate::render::grass_config::GrassSettings::default());
         ecs.insert_resource(crate::render::wind::Wind::default());
         ecs.insert_resource(crate::ecs::cloth::resources::ClothMeshSync::default());
         ecs.insert_resource(crate::ecs::gpu_picking::GpuPicking::default());

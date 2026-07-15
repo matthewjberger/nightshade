@@ -257,7 +257,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
         }
         set_model_visible(sandbox_world, world, true);
         if !fly {
-            world.resources.active_camera = sandbox_world.character.camera;
+            world.expect_resource_mut::<ActiveCamera>().0 = sandbox_world.character.camera;
         }
     } else {
         if let Some(controller) =
@@ -283,7 +283,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
         }
         set_model_visible(sandbox_world, world, false);
         if !fly {
-            world.resources.active_camera = sandbox_world.player.camera_entity;
+            world.expect_resource_mut::<ActiveCamera>().0 = sandbox_world.player.camera_entity;
         }
     }
 }

@@ -10,6 +10,7 @@ use crate::render::wgpu::presentation;
 use crate::render::wgpu::render_configs::FrameOutputs;
 use crate::render::wgpu::texture_uploads;
 use crate::render_driver::scene_entity;
+use freecs::dynamic::ResourceHostExt;
 
 /// Renders one frame: the pre-frame steps that need both the world and the
 /// renderer run first, then the frame inputs are composed, the renderer's
@@ -316,8 +317,7 @@ pub(crate) fn drain_loading_tasks(
                         .map(str::to_string);
                     if let Some(name) = texture_name {
                         world
-                            .resources
-                            .assets
+                            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
                             .texture_sources
                             .entry(name)
                             .or_insert_with(|| crate::ecs::asset_state::TextureSourceBytes {
@@ -370,17 +370,18 @@ pub(crate) fn drain_loading_tasks(
     // resolve plus instance rebuild.
     let needs_resolve = reserved_any
         || !world
-            .resources
-            .assets
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .pending_resolve
             .is_empty();
     if needs_resolve {
-        crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
-            &mut world.resources.assets.material_registry,
-            &world.resources.texture_cache,
-            &uploaded_textures,
-        );
+        world.resource_scope(|world, assets: &mut crate::ecs::asset_state::AssetState| {
+            crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
+                &mut assets.material_registry,
+                &world.resources.texture_cache,
+                &uploaded_textures,
+            );
+        });
         world.resources.mesh_render_state.request_full_rebuild();
     }
     if !loading_pipeline_is_active(
@@ -401,7 +402,10 @@ pub(crate) fn drain_loading_tasks(
     if !evicted.is_empty() {
         texture_uploads::unregister_evicted_textures(renderer, &evicted);
         for name in &evicted {
-            world.resources.assets.texture_sources.remove(name);
+            world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .texture_sources
+                .remove(name);
         }
         world.resources.mesh_render_state.request_full_rebuild();
     }

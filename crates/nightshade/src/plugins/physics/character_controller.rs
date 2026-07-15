@@ -101,7 +101,10 @@ pub fn character_controller_input_system(world: &mut World) {
         let (gamepad_movement, gamepad_jump, gamepad_crouch, gamepad_sprint) =
             (nalgebra_glm::vec2(0.0, 0.0), false, false, false);
 
-        let (forward, right) = if let Some(camera_entity) = world.resources.active_camera {
+        let (forward, right) = if let Some(camera_entity) = world
+            .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+            .0
+        {
             if let Some(camera_transform) =
                 world.get::<crate::ecs::transform::components::LocalTransform>(camera_entity)
             {

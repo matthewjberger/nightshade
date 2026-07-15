@@ -18,7 +18,7 @@
 //! ```ignore
 //! // Returns the player body and its attached first-person camera.
 //! let (player, camera) = spawn_first_person_player(world, Vec3::new(0.0, 2.0, 0.0));
-//! world.resources.active_camera = Some(camera);
+//! world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //! ```
 //!
 //! Then run the controller system each frame:

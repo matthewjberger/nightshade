@@ -40,7 +40,7 @@
 //!     spawn_sun(world);
 //!
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.resources.active_camera = Some(camera);
+//!     world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!     game.camera = Some(camera);
 //!
 //!     spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
@@ -141,7 +141,7 @@
 //! let dt = world.expect_resource::<crate::ecs::time::Time>().delta_time;
 //! let fps = world.expect_resource::<crate::ecs::time::Time>().frames_per_second;
 //! let uptime_ms = world.expect_resource::<crate::ecs::time::Time>().uptime_milliseconds;
-//! world.resources.active_camera = Some(camera_entity);
+//! world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera_entity);
 //! ```
 //!
 //! ### Render Graph
@@ -152,7 +152,7 @@
 //! ## Troubleshooting
 //!
 //! **Black Screen**
-//! - Set `world.resources.active_camera` to a valid camera
+//! - Set `world.expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>().0` to a valid camera
 //! - Ensure camera can see objects (position/orientation)
 //! - Add lighting: `spawn_sun(world)`
 //!

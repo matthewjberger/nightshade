@@ -46,8 +46,7 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
         return;
     }
     let baseline = world
-        .resources
-        .renderer_state
+        .expect_resource_mut::<crate::render::config::RendererState>()
         .auto_frame_rate_limit_baseline;
     if world
         .expect_resource_mut::<crate::render::config::RenderSettings>()
@@ -64,8 +63,7 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
                     .frame_rate_limit = None;
             }
             world
-                .resources
-                .renderer_state
+                .expect_resource_mut::<crate::render::config::RendererState>()
                 .auto_frame_rate_limit_baseline = None;
         }
         return;
@@ -92,8 +90,7 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
         .expect_resource_mut::<crate::render::config::RenderSettings>()
         .frame_rate_limit = Some(target);
     world
-        .resources
-        .renderer_state
+        .expect_resource_mut::<crate::render::config::RendererState>()
         .auto_frame_rate_limit_baseline = Some(target);
 }
 
@@ -115,8 +112,7 @@ pub(crate) fn refresh_macos_frame_rate_limit(
         return;
     }
     let baseline = world
-        .resources
-        .renderer_state
+        .expect_resource_mut::<crate::render::config::RendererState>()
         .auto_frame_rate_limit_baseline;
     if baseline.is_none() {
         return;
@@ -135,8 +131,7 @@ pub(crate) fn refresh_macos_frame_rate_limit(
         .expect_resource_mut::<crate::render::config::RenderSettings>()
         .frame_rate_limit = Some(target);
     world
-        .resources
-        .renderer_state
+        .expect_resource_mut::<crate::render::config::RendererState>()
         .auto_frame_rate_limit_baseline = Some(target);
 }
 

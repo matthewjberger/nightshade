@@ -159,10 +159,14 @@ pub fn skinning_cache_collect_bone_transforms_into(
 /// transforms. The static layout rebuilds only when the skinned set changes
 /// (bumping `static_generation`); bone transforms refresh every frame.
 pub fn render_sync_skinning_system(world: &mut World) {
-    let mut cache = std::mem::take(&mut world.resources.renderer_state.render_skinning.cache);
+    let mut cache = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::render::config::RendererState>()
+            .render_skinning
+            .cache,
+    );
     let mut generation = world
-        .resources
-        .renderer_state
+        .expect_resource_mut::<crate::render::config::RendererState>()
         .render_skinning
         .static_generation;
     if skinning_cache_needs_rebuild(&cache, world) {
@@ -171,14 +175,15 @@ pub fn render_sync_skinning_system(world: &mut World) {
     }
     let mut bone_transforms = std::mem::take(
         &mut world
-            .resources
-            .renderer_state
+            .expect_resource_mut::<crate::render::config::RendererState>()
             .render_skinning
             .bone_transforms,
     );
     let bones_changed =
         skinning_cache_collect_bone_transforms_into(&cache, world, &mut bone_transforms);
-    let skinning = &mut world.resources.renderer_state.render_skinning;
+    let skinning = &mut world
+        .expect_resource_mut::<crate::render::config::RendererState>()
+        .render_skinning;
     skinning.cache = cache;
     skinning.bone_transforms = bone_transforms;
     skinning.static_generation = generation;

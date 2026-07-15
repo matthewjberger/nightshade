@@ -42,8 +42,7 @@ pub fn render_sync_animation_system(world: &mut World) {
 
     let mut player_runtime = std::mem::take(
         &mut world
-            .resources
-            .renderer_state
+            .expect_resource_mut::<crate::render::config::RendererState>()
             .render_animation
             .player_runtime,
     );
@@ -75,7 +74,9 @@ pub fn render_sync_animation_system(world: &mut World) {
         );
     }
 
-    let skinned_generation = world.resources.renderer_state.skinned_objects_generation;
+    let skinned_generation = world
+        .expect_resource_mut::<crate::render::config::RendererState>()
+        .skinned_objects_generation;
     let gate_fired = {
         let sync =
             &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
@@ -94,15 +95,27 @@ pub fn render_sync_animation_system(world: &mut World) {
         let mut skin_entities: Vec<Entity> = world.ecs.worlds[CORE].query_entities(SKIN).collect();
         skin_entities.sort_by_key(|entity| (entity.id, entity.generation));
         let signature = static_signature(world, &skin_entities, &joint_to_player, &player_clips);
-        let snapshot = &mut world.resources.renderer_state.render_animation;
+        let snapshot = &mut world
+            .expect_resource_mut::<crate::render::config::RendererState>()
+            .render_animation;
         if signature != snapshot.signature {
             snapshot.signature = signature;
             build_skeletons(world, &skin_entities, &joint_to_player)
         } else {
-            std::mem::take(&mut world.resources.renderer_state.render_animation.skeletons)
+            std::mem::take(
+                &mut world
+                    .expect_resource_mut::<crate::render::config::RendererState>()
+                    .render_animation
+                    .skeletons,
+            )
         }
     } else {
-        std::mem::take(&mut world.resources.renderer_state.render_animation.skeletons)
+        std::mem::take(
+            &mut world
+                .expect_resource_mut::<crate::render::config::RendererState>()
+                .render_animation
+                .skeletons,
+        )
     };
 
     {
@@ -114,16 +127,14 @@ pub fn render_sync_animation_system(world: &mut World) {
 
     let mut layer_runtime = std::mem::take(
         &mut world
-            .resources
-            .renderer_state
+            .expect_resource_mut::<crate::render::config::RendererState>()
             .render_animation
             .layer_runtime,
     );
     layer_runtime.clear();
     let mut armature_roots = std::mem::take(
         &mut world
-            .resources
-            .renderer_state
+            .expect_resource_mut::<crate::render::config::RendererState>()
             .render_animation
             .armature_roots,
     );
@@ -152,7 +163,9 @@ pub fn render_sync_animation_system(world: &mut World) {
         }
     }
 
-    let snapshot = &mut world.resources.renderer_state.render_animation;
+    let snapshot = &mut world
+        .expect_resource_mut::<crate::render::config::RendererState>()
+        .render_animation;
     snapshot.skeletons = skeletons;
     snapshot.player_runtime = player_runtime;
     snapshot.layer_runtime = layer_runtime;

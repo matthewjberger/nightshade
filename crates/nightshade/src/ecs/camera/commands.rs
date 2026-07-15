@@ -145,7 +145,9 @@ pub fn spawn_ortho_camera(world: &mut World, position: Vec2) -> Entity {
         };
     }
 
-    world.resources.active_camera = Some(camera);
+    world
+        .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+        .0 = Some(camera);
     camera
 }
 

@@ -149,7 +149,7 @@ fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
         0.4,
         "Picking Demo Camera".to_string(),
     );
-    world.resources.active_camera = Some(camera);
+    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
 
     let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
     world.set(preview_entity, Lines::default());

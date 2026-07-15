@@ -38,20 +38,24 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         .mark_entity_added(render_entity(entity));
     let material_name = format!("Mesh_{}", entity.id);
     material_registry_insert(
-        &mut world.resources.assets.material_registry,
+        &mut world
+            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .material_registry,
         material_name.clone(),
         Material::default(),
     );
     if let Some(&index) = world
-        .resources
-        .assets
+        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry
+                .registry,
             index,
         );
     }

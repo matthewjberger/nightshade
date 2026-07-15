@@ -207,7 +207,7 @@ fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
 
     let focus = nalgebra_glm::vec3(0.0, 2.0, 0.0);
     let camera = spawn_pan_orbit_camera(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
-    world.resources.active_camera = Some(camera);
+    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
     navmesh_demo.camera_entity = Some(camera);
 
     navmesh_demo.spawn_terrain(world);
