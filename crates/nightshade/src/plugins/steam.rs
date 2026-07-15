@@ -232,6 +232,7 @@ impl From<FriendState> for PersonaState {
             FriendState::Snooze => PersonaState::Snooze,
             FriendState::LookingToTrade => PersonaState::LookingToTrade,
             FriendState::LookingToPlay => PersonaState::LookingToPlay,
+            FriendState::Invisible => PersonaState::Offline,
         }
     }
 }
@@ -870,12 +871,15 @@ pub struct SteamPlugin;
 
 impl crate::app::Plugin for SteamPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.add_system(crate::app::Stage::Startup, |world| {
-            if let Err(error) = steam_initialize(&mut world.resources.steam) {
-                tracing::warn!("Steam unavailable: {error}");
-            }
-        });
-        app.add_system(crate::app::Stage::First, |world| {
+        app.add_system(
+            crate::app::Stage::Startup,
+            |world: &mut crate::ecs::World| {
+                if let Err(error) = steam_initialize(&mut world.resources.steam) {
+                    tracing::warn!("Steam unavailable: {error}");
+                }
+            },
+        );
+        app.add_system(crate::app::Stage::First, |world: &mut crate::ecs::World| {
             steam_run_callbacks(&world.resources.steam);
         });
     }

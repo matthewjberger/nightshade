@@ -14,17 +14,20 @@ pub fn new_shell() -> ShellState<SandboxShellContext> {
 pub fn run(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
     if shell.visible {
         let alt_held = world
-            .resources
-            .input
+            .expect_resource::<nightshade::ecs::input::resources::Input>()
             .keyboard
             .is_key_pressed(KeyCode::AltLeft)
             || world
-                .resources
-                .input
+                .expect_resource::<nightshade::ecs::input::resources::Input>()
                 .keyboard
                 .is_key_pressed(KeyCode::AltRight);
         if !alt_held {
-            for character in world.resources.input.keyboard.frame_chars.clone() {
+            for character in world
+                .expect_resource::<nightshade::ecs::input::resources::Input>()
+                .keyboard
+                .frame_chars
+                .clone()
+            {
                 if !character.is_control() {
                     shell.input_buffer.push(character);
                 }
@@ -32,13 +35,18 @@ pub fn run(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
         }
         handle_pick_click(shell, world);
     }
-    let delta_time = world.resources.window.timing.delta_time;
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
     shell.update_animation(delta_time);
     shell_retained_ui(shell, world);
 }
 
 fn handle_pick_click(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
-    let mouse = &world.resources.input.mouse;
+    let mouse = &world
+        .expect_resource::<nightshade::ecs::input::resources::Input>()
+        .mouse;
     if !mouse
         .state
         .contains(nightshade::ecs::input::resources::MouseState::LEFT_JUST_PRESSED)
@@ -63,13 +71,11 @@ pub fn handle_key(
     let pressed = key_state == ElementState::Pressed;
     if pressed {
         let alt_pressed = world
-            .resources
-            .input
+            .expect_resource::<nightshade::ecs::input::resources::Input>()
             .keyboard
             .is_key_pressed(KeyCode::AltLeft)
             || world
-                .resources
-                .input
+                .expect_resource::<nightshade::ecs::input::resources::Input>()
                 .keyboard
                 .is_key_pressed(KeyCode::AltRight);
         if (key_code == KeyCode::KeyC && alt_pressed) || key_code == KeyCode::Backquote {

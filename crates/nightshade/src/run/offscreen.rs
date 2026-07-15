@@ -56,8 +56,12 @@ pub fn initialize_offscreen(
     viewport: (u32, u32),
     scale_factor: f32,
 ) {
-    world.resources.window.cached_viewport_size = Some(viewport);
-    world.resources.window.cached_scale_factor = scale_factor;
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .cached_viewport_size = Some(viewport);
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .cached_scale_factor = scale_factor;
 
     if let Err(error) = crate::render_driver::configure_with_state(renderer, state) {
         tracing::error!("Failed to configure renderer with state: {error}");
@@ -76,7 +80,9 @@ pub fn resize_offscreen(world: &mut World, renderer: &mut WgpuRenderer, width: u
     if let Err(error) = renderer.resize_surface(width, height) {
         tracing::error!("Failed to resize surface: {error}");
     }
-    world.resources.window.cached_viewport_size = Some((width, height));
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .cached_viewport_size = Some((width, height));
 }
 
 /// Advances and renders one offscreen frame.
@@ -85,7 +91,7 @@ pub fn resize_offscreen(world: &mut World, renderer: &mut WgpuRenderer, width: u
 /// ([`run_frame_body`](crate::run::run_frame_body)): per-frame engine systems,
 /// [`State::run_systems`], the frame schedule, and the render graph. Returns the
 /// next [`State`] when one was requested through
-/// `world.resources.window.next_state`.
+/// `world.resources.pending_state`.
 pub fn tick_offscreen(
     world: &mut World,
     state: &mut dyn State,
@@ -98,7 +104,9 @@ pub fn tick_offscreen(
 /// Injects an absolute cursor position (in physical pixels), updating the
 /// per-frame position delta the same way the winit loop does.
 pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
-    let mouse = &mut world.resources.input.mouse;
+    let mouse = &mut world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse;
     if mouse.position_initialized {
         mouse.position_delta += position - mouse.position;
     } else {
@@ -111,7 +119,10 @@ pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
 /// Accumulates raw mouse motion for first-person look, matching the winit
 /// device-event path.
 pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
-    world.resources.input.mouse.raw_mouse_delta += delta;
+    world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse
+        .raw_mouse_delta += delta;
 }
 
 /// Injects a mouse button press or release, maintaining the just-pressed and
@@ -119,7 +130,9 @@ pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
 pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: ElementState) {
     let pressed = state == ElementState::Pressed;
     let released = state == ElementState::Released;
-    let mouse = &mut world.resources.input.mouse;
+    let mouse = &mut world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse;
     match button {
         MouseButton::Left => {
             let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
@@ -157,7 +170,9 @@ pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: 
 
 /// Injects a mouse wheel delta in lines.
 pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
-    let mouse = &mut world.resources.input.mouse;
+    let mouse = &mut world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse;
     mouse.wheel_delta = delta;
     mouse.state.set(MouseState::SCROLLED, true);
 }
@@ -168,7 +183,9 @@ pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
 /// orbit, two-finger pan, pinch zoom). Mouse emulation, if a caller also wants
 /// pointer-style picking from touch, is left to the caller.
 pub fn input_inject_touch(world: &mut World, id: u64, phase: TouchPhase, position: Vec2) {
-    let touch = &mut world.resources.input.touch;
+    let touch = &mut world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .touch;
     match phase {
         TouchPhase::Started => {
             touch.touches.insert(
@@ -223,16 +240,14 @@ pub fn input_inject_keyboard(
     use crate::ecs::world::events::{InputEvent, KeyState, Message};
 
     let was_pressed = world
-        .resources
-        .input
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .keyboard
         .keystates
         .get(&key_code)
         .is_some_and(|previous| *previous == ElementState::Pressed);
 
     *world
-        .resources
-        .input
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .keyboard
         .keystates
         .entry(key_code)
@@ -240,23 +255,20 @@ pub fn input_inject_keyboard(
 
     let pressed = state == ElementState::Pressed;
     world
-        .resources
-        .input
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .keyboard
         .frame_keys
         .push((key_code, pressed));
 
     if pressed && !was_pressed {
         world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .keyboard
             .just_pressed_keys
             .insert(key_code);
     } else if !pressed && was_pressed {
         world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .keyboard
             .just_released_keys
             .insert(key_code);
@@ -264,7 +276,11 @@ pub fn input_inject_keyboard(
 
     if pressed && let Some(text) = text {
         for character in text.chars() {
-            world.resources.input.keyboard.frame_chars.push(character);
+            world
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                .keyboard
+                .frame_chars
+                .push(character);
         }
     }
 

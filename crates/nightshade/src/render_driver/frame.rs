@@ -141,14 +141,16 @@ pub(crate) fn poll_depth_pick_readback(
     drop(data);
     renderer.depth_pick.staging_buffer.unmap();
 
-    world.resources.gpu_picking.set_depth_samples(
-        depth_values,
-        entity_id_values,
-        DEPTH_PICK_SAMPLE_SIZE,
-        DEPTH_PICK_SAMPLE_SIZE,
-        renderer.depth_pick.center.0,
-        renderer.depth_pick.center.1,
-    );
+    world
+        .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+        .set_depth_samples(
+            depth_values,
+            entity_id_values,
+            DEPTH_PICK_SAMPLE_SIZE,
+            DEPTH_PICK_SAMPLE_SIZE,
+            renderer.depth_pick.center.0,
+            renderer.depth_pick.center.1,
+        );
 
     if let Some(camera_entity) = renderer.depth_pick.camera
         && let Some(matrices) =
@@ -159,11 +161,13 @@ pub(crate) fn poll_depth_pick_readback(
             .try_inverse()
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
 
-        world.resources.gpu_picking.compute_result(
-            &inverse_view_proj,
-            texture_width as f32,
-            texture_height as f32,
-        );
+        world
+            .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+            .compute_result(
+                &inverse_view_proj,
+                texture_width as f32,
+                texture_height as f32,
+            );
     }
 
     renderer.depth_pick.pending = false;

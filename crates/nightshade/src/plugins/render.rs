@@ -46,12 +46,18 @@ pub struct RenderPlugin {
 
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.window.create_renderer = true;
+        app.world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .create_renderer = true;
         if let Some(vsync) = self.vsync {
-            app.world.resources.render_settings.vsync_enabled = vsync;
+            app.world
+                .expect_resource_mut::<crate::render::config::RenderSettings>()
+                .vsync_enabled = vsync;
         }
         if let Some(limit) = self.frame_rate_limit {
-            app.world.resources.render_settings.frame_rate_limit = Some(limit);
+            app.world
+                .expect_resource_mut::<crate::render::config::RenderSettings>()
+                .frame_rate_limit = Some(limit);
         }
         install(&mut app.world);
     }
@@ -83,7 +89,8 @@ pub fn render_sync_materials_system(world: &mut World) {
     let registry_version = world.resources.assets.material_registry.version;
     let registry_names_version = world.resources.assets.material_registry.names_version;
     let (rebuild_entity_maps, first_run) = {
-        let sync = &mut world.resources.render_scene_sync;
+        let sync =
+            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         let entities_dirty = std::mem::take(&mut sync.materials_dirty);
         let version_dirty = sync.materials_version_seen != registry_version;
         let names_dirty = sync.materials_names_version_seen != registry_names_version;

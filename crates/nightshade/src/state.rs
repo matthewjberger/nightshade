@@ -41,7 +41,7 @@ pub struct RenderResources {
 
 /// Builder closure that constructs the next [`State`] when the engine
 /// transitions. Stored on the `Window` resource as
-/// `world.resources.window.next_state` and invoked at the end of the frame.
+/// `world.resources.pending_state` and invoked at the end of the frame.
 pub type NextStateBuilder = Box<dyn FnOnce(&mut World) -> Box<dyn State>>;
 
 /// Application state trait for game logic and rendering.

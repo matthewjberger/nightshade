@@ -5,10 +5,10 @@ use crate::systems::{
 };
 use nightshade::prelude::*;
 
-pub fn input_system(game_world: &mut TowerDefenseResources, world: &mut World) {
+pub fn input_system(game_world: &mut TowerDefenseResources, input: &Input, world: &mut World) {
     apply_ui_actions(game_world);
 
-    game_world.mouse_grid_pos = get_grid_position_from_mouse(world);
+    game_world.mouse_grid_pos = get_grid_position_from_mouse(input, world);
 
     if let Some(prev_text) = game_world.hover_tower_text.take() {
         queue_ecs_command(world, EcsCommand::DespawnRecursive { entity: prev_text });
@@ -66,8 +66,8 @@ pub fn input_system(game_world: &mut TowerDefenseResources, world: &mut World) {
         .interaction
         .hovered_entity
         .is_some();
-    let mouse_state = world.resources.input.mouse.state;
-    let mouse_position = world.resources.input.mouse.position;
+    let mouse_state = input.mouse.state;
+    let mouse_position = input.mouse.position;
     let left_just_pressed = mouse_state.contains(MouseState::LEFT_JUST_PRESSED);
     let left_just_released = mouse_state.contains(MouseState::LEFT_JUST_RELEASED);
     let right_just_pressed = mouse_state.contains(MouseState::RIGHT_JUST_PRESSED);
@@ -117,7 +117,7 @@ pub fn input_system(game_world: &mut TowerDefenseResources, world: &mut World) {
         sell_tower(game_world, world, tower_entity, grid_x, grid_z);
     }
 
-    let keyboard = &world.resources.input.keyboard;
+    let keyboard = &input.keyboard;
     if keyboard.is_key_pressed(KeyCode::Digit1) {
         game_world.selected_tower_type = TowerType::Basic;
     } else if keyboard.is_key_pressed(KeyCode::Digit2) {

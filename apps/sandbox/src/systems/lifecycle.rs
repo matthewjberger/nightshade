@@ -8,8 +8,12 @@ use nightshade::prelude::*;
 pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
     world.ecs.add_world_at(GAME, register_sandbox_components());
 
-    world.resources.render_settings.atmosphere = Atmosphere::DayNight;
-    world.resources.debug_draw.show_grid = false;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .atmosphere = Atmosphere::DayNight;
+    world
+        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
+        .show_grid = false;
     world.resources.renderer_state.use_fullscreen = true;
     world.resources.renderer_state.day_night.hour = 9.5;
     world.resources.renderer_state.day_night.auto_cycle = false;

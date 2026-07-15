@@ -1,8 +1,8 @@
 use crate::ecs::{GRID_CELL, GridCell, TowerDefenseResources};
 use nightshade::prelude::*;
 
-pub fn get_grid_position_from_mouse(world: &World) -> Option<(i32, i32)> {
-    let mouse = &world.resources.input.mouse;
+pub fn get_grid_position_from_mouse(input: &Input, world: &World) -> Option<(i32, i32)> {
+    let mouse = &input.mouse;
     let mouse_pos = nalgebra_glm::vec2(mouse.position.x, mouse.position.y);
 
     if let Some(intersection) = get_ground_position_from_screen(world, mouse_pos, 0.0) {

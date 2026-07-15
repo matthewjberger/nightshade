@@ -9,9 +9,9 @@
 //!
 //! Key resource paths:
 //!
-//! - `world.resources.window.timing` â€” frame timing ([`WindowTiming`](resources::WindowTiming))
-//! - `world.resources.input` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
-//! - `world.resources.render_settings` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
+//! - `world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing` â€” frame timing ([`WindowTiming`](resources::WindowTiming))
+//! - `world.expect_resource_mut::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
+//! - `world.expect_resource_mut::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.resources.active_camera` â€” current camera entity
 //! - `world.resources.entities.names` â€” name-to-entity mapping
 
@@ -248,45 +248,30 @@ freecs::dynamic_schema! {
 #[derive(Default)]
 pub struct Resources {
     pub active_camera: Option<freecs::Entity>,
+    pub gamepad: crate::ecs::input::resources::Gamepad,
+    pub pending_state: Option<crate::state::NextStateBuilder>,
     pub assets: crate::ecs::asset_state::AssetState,
-    pub cleanup: crate::ecs::world::cleanup::CleanupState,
-    pub cloth_sync: crate::ecs::cloth::resources::ClothMeshSync,
     pub commands: crate::ecs::world::commands::CommandQueues,
-    pub cutscene: crate::ecs::cutscene::resources::CutsceneDirector,
-    pub component_types: crate::ecs::scene::typed::ComponentTypeRegistry,
-    pub entities: crate::ecs::entity_registry::EntityRegistry,
     pub event_bus: crate::ecs::event_bus::resources::EventBus,
-    pub gpu_picking: crate::ecs::gpu_picking::GpuPicking,
+    pub events: crate::ecs::event::Events,
+    pub hierarchy: freecs::dynamic::HierarchyIndex,
+    pub cleanup: crate::ecs::world::cleanup::CleanupState,
+    pub entities: crate::ecs::entity_registry::EntityRegistry,
+    pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
+    pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
+    pub text: crate::ecs::text::resources::TextState,
+    pub user_interface: crate::ecs::ui::UserInterface,
     #[cfg(feature = "grass")]
     pub grass: crate::render::grass_config::GrassSettings,
-    pub render_settings: crate::render::config::RenderSettings,
-    pub debug_draw: crate::render::config::DebugDraw,
-    pub selection: crate::ecs::graphics::selection::Selection,
     pub renderer_state: crate::render::config::RendererState,
-    pub input: crate::ecs::input::resources::Input,
     pub is_runtime: bool,
     pub loading: crate::ecs::loading::LoadingState,
-    pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
-    pub monitors: crate::ecs::window::resources::Monitors,
-    pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
-    pub events: crate::ecs::event::Events,
     pub schedules: crate::schedule::Schedules,
-    pub global_scripts: crate::ecs::script::components::GlobalScripts,
-    pub scratch: crate::ecs::world::scratch::Scratch,
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub steam: crate::plugins::steam::SteamResources,
     #[cfg(feature = "terrain")]
     pub terrain_render: crate::render::terrain_config::TerrainRenderState,
-    pub text: crate::ecs::text::resources::TextState,
     pub texture_cache: crate::render::wgpu::texture_cache::TextureCache,
-    pub transform_state: crate::ecs::transform::resources::TransformState,
-    pub hierarchy: freecs::dynamic::HierarchyIndex,
-    pub render_scene_sync: crate::ecs::graphics::scene_sync::RenderSceneSync,
-    pub tweens: crate::ecs::tween::Tweens,
-    pub ui_image_allocator: crate::ecs::ui::resources::UiImageLayerAllocator,
-    pub user_interface: crate::ecs::ui::UserInterface,
-    pub wind: crate::render::wind::Wind,
-    pub window: crate::ecs::window::resources::Window,
     pub world_id: u64,
 }
 
@@ -357,6 +342,24 @@ impl Default for World {
             ecs.insert_resource(crate::ecs::asset_watcher::AssetWatcher::default());
             ecs
         };
+        let mut ecs = ecs;
+        ecs.insert_resource(crate::render::wind::Wind::default());
+        ecs.insert_resource(crate::ecs::cloth::resources::ClothMeshSync::default());
+        ecs.insert_resource(crate::ecs::gpu_picking::GpuPicking::default());
+        ecs.insert_resource(crate::ecs::window::resources::Monitors::default());
+        ecs.insert_resource(crate::ecs::tween::Tweens::default());
+        ecs.insert_resource(crate::ecs::script::components::GlobalScripts::default());
+        ecs.insert_resource(crate::ecs::graphics::selection::Selection::default());
+        ecs.insert_resource(crate::render::config::DebugDraw::default());
+        ecs.insert_resource(crate::ecs::cutscene::resources::CutsceneDirector::default());
+        ecs.insert_resource(crate::ecs::transform::resources::TransformState::default());
+        ecs.insert_resource(crate::ecs::graphics::scene_sync::RenderSceneSync::default());
+        ecs.insert_resource(crate::ecs::world::scratch::Scratch::default());
+        ecs.insert_resource(crate::ecs::ui::resources::UiImageLayerAllocator::default());
+        ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
+        ecs.insert_resource(crate::ecs::input::resources::Input::default());
+        ecs.insert_resource(crate::render::config::RenderSettings::default());
+        ecs.insert_resource(crate::ecs::window::resources::Window::default());
         Self {
             ecs,
             resources: Resources::default(),

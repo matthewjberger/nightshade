@@ -91,7 +91,10 @@ pub fn queue_render_command(world: &mut World, command: RenderCommand) {
 
 /// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
 pub fn set_cursor_locked(world: &mut World, locked: bool) {
-    if let Some(window_handle) = &world.resources.window.handle {
+    if let Some(window_handle) = &world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .handle
+    {
         if locked {
             if window_handle
                 .set_cursor_grab(winit::window::CursorGrabMode::Locked)
@@ -105,7 +108,9 @@ pub fn set_cursor_locked(world: &mut World, locked: bool) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        world.resources.window.cursor_locked = locked;
+        world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .cursor_locked = locked;
     }
 }
 
@@ -120,12 +125,17 @@ pub fn sync_cursor_lock_state(world: &mut World) {
         .and_then(|window| window.document())
         .and_then(|document| document.pointer_lock_element())
         .is_some();
-    world.resources.window.cursor_locked = locked;
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .cursor_locked = locked;
 }
 
 /// Show or hide the OS cursor.
 pub fn set_cursor_visible(world: &mut World, visible: bool) {
-    if let Some(window_handle) = &world.resources.window.handle {
+    if let Some(window_handle) = &world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .handle
+    {
         window_handle.set_cursor_visible(visible);
     }
 }
@@ -135,33 +145,51 @@ pub fn set_cursor_visible(world: &mut World, visible: bool) {
 /// values clamp to zero. Systems that read the scaled delta time follow it;
 /// unscaled work reads `raw_delta_time` instead.
 pub fn set_time_scale(world: &mut World, scale: f32) {
-    world.resources.window.timing.time_speed = scale.max(0.0);
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .time_speed = scale.max(0.0);
 }
 
 /// The current global time scale.
 pub fn time_scale(world: &World) -> f32 {
-    world.resources.window.timing.time_speed
+    world
+        .expect_resource::<crate::ecs::window::resources::Window>()
+        .timing
+        .time_speed
 }
 
 /// Pause game time, so the scaled delta time reports zero until resumed. The
 /// time scale is preserved, so resuming returns to the previous speed.
 pub fn pause(world: &mut World) {
-    world.resources.window.timing.paused = true;
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .paused = true;
 }
 
 /// Resume game time after a pause.
 pub fn unpause(world: &mut World) {
-    world.resources.window.timing.paused = false;
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .paused = false;
 }
 
 /// Set whether game time is paused.
 pub fn set_paused(world: &mut World, paused: bool) {
-    world.resources.window.timing.paused = paused;
+    world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .paused = paused;
 }
 
 /// Whether game time is currently paused.
 pub fn is_paused(world: &World) -> bool {
-    world.resources.window.timing.paused
+    world
+        .expect_resource::<crate::ecs::window::resources::Window>()
+        .timing
+        .paused
 }
 
 /// Insert a material into the registry, ref-count it, and attach it to `entity` via [`MaterialRef`].

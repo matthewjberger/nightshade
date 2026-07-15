@@ -55,8 +55,7 @@ pub(crate) fn process_dropped_files(world: &mut World) {
     let dropped_files: Vec<_> = world.resources.loading.dropped_files.drain(..).collect();
     for file in dropped_files {
         world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .events
             .push(crate::ecs::input::events::AppEvent::FileDropped(file));
     }

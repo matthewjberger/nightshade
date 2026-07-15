@@ -354,6 +354,48 @@ where
     }
 }
 
+/// Marks a game system that takes its state first, then freecs resource
+/// parameters, then `&mut World`: `fn(&mut T, Res<A>, ResMut<B>, &mut
+/// World)`. [`game_scope`] lifts the state `T` out of the map, the resource
+/// parameters resolve out of what remains, and `&mut World` stays free for
+/// queries. This is the state-and-world game shape with `Res`/`ResMut`
+/// arguments spliced in, so a system reads `Res<Input>` instead of fetching
+/// the resource by hand.
+pub struct GameParamSystemMarker<T, Params>(std::marker::PhantomData<(T, Params)>);
+
+macro_rules! impl_game_param_system {
+    ($($resource:ident $binding:ident),+) => {
+        impl<T, F, $($resource,)+>
+            SystemCollection<GameParamSystemMarker<T, ($($resource,)+)>> for F
+        where
+            T: Send + Sync + 'static,
+            $($resource: freecs::system_param::ResourceParam,)+
+            F: FnMut(&mut T, $($resource,)+ &mut World)
+                + for<'world> FnMut(&mut T, $($resource::Item<'world>,)+ &'world mut World)
+                + Send
+                + 'static,
+        {
+            #[allow(non_snake_case)]
+            fn push_onto(mut self, schedule: &mut freecs::Schedule<World>) {
+                let name = std::any::type_name_of_val(&self);
+                schedule.push(name, move |world: &mut World| {
+                    game_scope(world, |state: &mut T, world| {
+                        world.resources_scope::<($($resource::Resource,)+), _>(|world, bundle| {
+                            let ($($binding,)+) = bundle;
+                            self(state, $($resource::build($binding),)+ world);
+                        });
+                    });
+                });
+            }
+        }
+    };
+}
+
+impl_game_param_system!(R0 r0);
+impl_game_param_system!(R0 r0, R1 r1);
+impl_game_param_system!(R0 r0, R1 r1, R2 r2);
+impl_game_param_system!(R0 r0, R1 r1, R2 r2, R3 r3);
+
 macro_rules! impl_system_collection_for_tuple {
     ($(($marker:ident, $system_type:ident, $system_value:ident)),+) => {
         impl<$($marker),+, $($system_type: SystemCollection<$marker>),+>
@@ -610,8 +652,12 @@ impl App {
         }
         let mut world = World::default();
         world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
-        world.resources.window.start_hidden = true;
-        world.resources.window.create_renderer = false;
+        world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .start_hidden = true;
+        world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .create_renderer = false;
         Self {
             world,
             startup: freecs::Schedule::new(),
@@ -674,6 +720,19 @@ impl App {
         };
         systems.push_onto(schedule);
         self
+    }
+
+    /// Registers a tuple of systems onto a [`Stage`] in one call, in tuple
+    /// order, so `app.add_systems(Stage::Update, (input, movement, render))`
+    /// stands in for one [`add_system`](App::add_system) per system. Each
+    /// tuple member is any shape [`add_system`](App::add_system) accepts, and
+    /// the members may mix shapes freely.
+    pub fn add_systems<Marker>(
+        &mut self,
+        stage: Stage,
+        systems: impl SystemCollection<Marker>,
+    ) -> &mut Self {
+        self.add_system(stage, systems)
     }
 
     /// Inserts a group-level resource, readable from any system through
@@ -754,7 +813,14 @@ impl App {
             return runner(self);
         }
 
-        if self.world.resources.window.start_hidden && !self.world.resources.window.create_renderer
+        if self
+            .world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .start_hidden
+            && !self
+                .world
+                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .create_renderer
         {
             let mut world = self.world;
             self.startup.run(&mut world);
@@ -890,11 +956,17 @@ impl Default for WindowPlugin {
 
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.window.title = self.title.clone();
+        app.world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .title = self.title.clone();
         if self.size.is_some() {
-            app.world.resources.window.initial_size = self.size;
+            app.world
+                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .initial_size = self.size;
         }
-        app.world.resources.window.start_hidden = false;
+        app.world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .start_hidden = false;
     }
 }
 

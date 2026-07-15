@@ -621,8 +621,7 @@ pub fn apply_softness(sandbox_world: &mut SandboxResources, world: &mut World) {
         return;
     }
     let delta_time = world
-        .resources
-        .window
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
         .timing
         .delta_time
         .min(SOFTNESS_MAX_STEP);
@@ -815,7 +814,10 @@ pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
         None
     };
 
-    let delta_time = world.resources.window.timing.delta_time;
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
     let sharpness = POSE_BLEND_SHARPNESS + GAIT_TRACKING_SHARPNESS_BOOST * gait_weight;
     let blend = 1.0 - (-sharpness * delta_time).exp();
 

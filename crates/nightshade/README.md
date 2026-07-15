@@ -41,12 +41,12 @@ impl Plugin for SpinCubePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(SpinCube::default());
         app.add_system(Stage::Startup, initialize);
-        app.add_system(Stage::Update, spin);
+        app.add_systems(Stage::Update, (pan_orbit_camera_system, spin));
     }
 }
 
 fn initialize(game: &mut SpinCube, world: &mut World) {
-    world.resources.render_settings.atmosphere = Atmosphere::Nebula;
+    world.expect_resource_mut::<nightshade::render::config::RenderSettings>().atmosphere = Atmosphere::Nebula;
     let camera = spawn_pan_orbit_camera(
         world,
         Vec3::zeros(), 5.0, 0.5, 0.3,
@@ -58,8 +58,7 @@ fn initialize(game: &mut SpinCube, world: &mut World) {
 }
 
 fn spin(game: &mut SpinCube, world: &mut World) {
-    pan_orbit_camera_system(world);
-    game.time += world.resources.window.timing.delta_time;
+    game.time += world.expect_resource::<nightshade::ecs::window::resources::Window>().timing.delta_time;
     if let Some(entity) = game.cube
         && let Some(transform) = world.get_mut::<LocalTransform>(entity)
     {

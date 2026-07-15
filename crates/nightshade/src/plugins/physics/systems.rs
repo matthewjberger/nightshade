@@ -26,7 +26,11 @@ pub fn run_physics_systems(world: &mut World) {
     let fixed_timestep = world.plugin_resource::<PhysicsWorld>().fixed_timestep;
     let max_substeps = world.plugin_resource::<PhysicsWorld>().max_substeps;
     let max_frame_time = max_substeps as f32 * fixed_timestep;
-    let frame_time = world.resources.window.timing.delta_time.min(max_frame_time);
+    let frame_time = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .delta_time
+        .min(max_frame_time);
 
     world.plugin_resource_mut::<PhysicsWorld>().accumulator += frame_time;
 

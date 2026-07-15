@@ -43,13 +43,17 @@ pub fn lazy_initialize_audio_system(world: &mut World) {
     if audio_engine_is_initialized(world.plugin_resource::<AudioEngine>()) {
         return;
     }
-    let gestured = world.resources.input.events.iter().any(|event| {
-        matches!(
-            event,
-            crate::ecs::input::events::AppEvent::Keyboard { .. }
-                | crate::ecs::input::events::AppEvent::Mouse { .. }
-        )
-    });
+    let gestured = world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .events
+        .iter()
+        .any(|event| {
+            matches!(
+                event,
+                crate::ecs::input::events::AppEvent::Keyboard { .. }
+                    | crate::ecs::input::events::AppEvent::Mouse { .. }
+            )
+        });
     if !gestured {
         return;
     }
@@ -309,7 +313,10 @@ pub fn update_audio_system(world: &mut World) {
         let audio_ref = pick_active_clip(
             source,
             *entity,
-            world.resources.window.timing.uptime_milliseconds,
+            world
+                .expect_resource::<crate::ecs::window::resources::Window>()
+                .timing
+                .uptime_milliseconds,
         );
         let bus = source.bus;
         let min_distance = source.min_distance;

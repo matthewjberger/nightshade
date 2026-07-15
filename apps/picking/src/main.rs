@@ -87,17 +87,38 @@ struct PickingPlugin;
 
 impl Plugin for PickingPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.window.title = "Picking Demo".to_string();
+        app.world
+            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+            .title = "Picking Demo".to_string();
         app.insert_resource(PickingDemo::default());
         app.add_system(Stage::Startup, initialize);
-        app.add_system(Stage::Update, update);
+        app.add_systems(
+            Stage::Update,
+            (
+                pan_orbit_camera_system,
+                poll_panel_state,
+                spin_meshes,
+                sync_debug_volumes,
+                update_hover,
+                apply_click,
+                apply_outline,
+                refresh_panel_text,
+                drain_keyboard,
+            ),
+        );
     }
 }
 
 fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
-    world.resources.debug_draw.show_grid = true;
-    world.resources.render_settings.atmosphere = Atmosphere::Sky;
-    world.resources.selection.outline_enabled = true;
+    world
+        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
+        .show_grid = true;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .atmosphere = Atmosphere::Sky;
+    world
+        .expect_resource_mut::<nightshade::ecs::graphics::selection::Selection>()
+        .outline_enabled = true;
     picking_demo.show_debug_volumes = true;
     picking_demo.spin_speed = 1.0;
 
@@ -166,23 +187,43 @@ fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
     );
 }
 
-fn update(picking_demo: &mut PickingDemo, world: &mut World) {
-    pan_orbit_camera_system(world);
-
+fn poll_panel_state(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.poll_panel(world);
+}
+
+fn spin_meshes(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.tick_rotation(world);
+}
+
+fn sync_debug_volumes(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.sync_debug_volume_visibility(world);
+}
 
+fn update_hover(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
     match picking_demo.mode {
-        PickingMode::GpuHover => picking_demo.update_gpu_hover(world),
-        PickingMode::CpuHover => picking_demo.update_cpu_hover(world),
+        PickingMode::GpuHover => picking_demo.update_gpu_hover(&input, world),
+        PickingMode::CpuHover => picking_demo.update_cpu_hover(&input, world),
     }
+}
 
-    picking_demo.handle_click(world);
+fn apply_click(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
+    picking_demo.handle_click(&input, world);
+}
+
+fn apply_outline(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.sync_outline(world);
-    picking_demo.sync_panel(world);
+}
 
-    let events = std::mem::take(&mut world.resources.input.events);
+fn refresh_panel_text(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
+    picking_demo.sync_panel(&input, world);
+}
+
+fn drain_keyboard(picking_demo: &mut PickingDemo, world: &mut World) {
+    let events = std::mem::take(
+        &mut world
+            .expect_resource_mut::<nightshade::ecs::input::resources::Input>()
+            .events,
+    );
     for event in events {
         if let AppEvent::Keyboard {
             key,
@@ -190,7 +231,11 @@ fn update(picking_demo: &mut PickingDemo, world: &mut World) {
         } = event
         {
             match key {
-                KeyCode::Escape => world.resources.window.should_exit = true,
+                KeyCode::Escape => {
+                    world
+                        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+                        .should_exit = true
+                }
                 KeyCode::F1 => {
                     let panel = picking_demo.handles.panel;
                     ui_set_visible(world, panel, !ui_node_visible(world, panel));
@@ -228,7 +273,11 @@ impl PickingDemo {
     }
 
     fn tick_rotation(&mut self, world: &mut World) {
-        let delta = world.resources.window.timing.delta_time.max(0.0);
+        let delta = world
+            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+            .timing
+            .delta_time
+            .max(0.0);
         if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {
             return;
         }
@@ -267,12 +316,15 @@ impl PickingDemo {
         }
     }
 
-    fn update_gpu_hover(&mut self, world: &mut World) {
-        if let Some(result) = world.resources.gpu_picking.take_result() {
+    fn update_gpu_hover(&mut self, input: &Input, world: &mut World) {
+        if let Some(result) = world
+            .expect_resource_mut::<nightshade::ecs::gpu_picking::GpuPicking>()
+            .take_result()
+        {
             self.last_pick_result = Some(result);
         }
 
-        let mouse = world.resources.input.mouse;
+        let mouse = input.mouse;
         let mouse_pos = mouse.position;
         let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
         let ui_capturing = world.resources.user_interface.hud_wants_pointer
@@ -293,8 +345,7 @@ impl PickingDemo {
             self.highlighted_entity = None;
         } else if !ui_capturing && current_mouse_pos != self.last_mouse_pos {
             world
-                .resources
-                .gpu_picking
+                .expect_resource_mut::<nightshade::ecs::gpu_picking::GpuPicking>()
                 .request_pick(current_mouse_pos.0, current_mouse_pos.1);
             self.last_mouse_pos = current_mouse_pos;
         }
@@ -333,12 +384,12 @@ impl PickingDemo {
         });
     }
 
-    fn update_cpu_hover(&mut self, world: &mut World) {
+    fn update_cpu_hover(&mut self, input: &Input, world: &mut World) {
         if let Some(preview_entity) = self.preview_lines_entity {
             world.set(preview_entity, Lines::new(vec![]));
         }
 
-        let mouse = world.resources.input.mouse;
+        let mouse = input.mouse;
         if mouse.state.contains(MouseState::LEFT_CLICKED) {
             self.highlighted_entity = None;
             return;
@@ -352,8 +403,8 @@ impl PickingDemo {
             .map(|hit| hit.entity);
     }
 
-    fn handle_click(&mut self, world: &mut World) {
-        let mouse = world.resources.input.mouse;
+    fn handle_click(&mut self, input: &Input, world: &mut World) {
+        let mouse = input.mouse;
         if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
             return;
         }
@@ -382,10 +433,12 @@ impl PickingDemo {
     }
 
     fn sync_outline(&self, world: &mut World) {
-        world.resources.selection.active_entity = self.highlighted_entity.or(self.selected_entity);
+        world
+            .expect_resource_mut::<nightshade::ecs::graphics::selection::Selection>()
+            .active_entity = self.highlighted_entity.or(self.selected_entity);
     }
 
-    fn sync_panel(&self, world: &mut World) {
+    fn sync_panel(&self, input: &Input, world: &mut World) {
         ui_button_set_text(world, self.handles.mode_button, mode_label(self.mode));
         let label_for = |entity: Entity| -> String {
             self.meshes
@@ -409,7 +462,7 @@ impl PickingDemo {
         };
         ui_set_text(world, self.handles.status_label, &status);
 
-        let mouse = world.resources.input.mouse.position;
+        let mouse = input.mouse.position;
         let detail = match &self.last_pick_result {
             Some(result) if result.depth > 0.0 => format!(
                 "Mouse {:.0}, {:.0}    Hit ({:.2}, {:.2}, {:.2})",

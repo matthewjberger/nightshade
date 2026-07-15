@@ -60,7 +60,9 @@ pub fn character_controller_input_system(world: &mut World) {
             crouch_key_pressed,
             sprint_key_pressed,
         ) = {
-            let keyboard = &world.resources.input.keyboard;
+            let keyboard = &world
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                .keyboard;
             (
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyA),
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyD),

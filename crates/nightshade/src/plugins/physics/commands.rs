@@ -483,14 +483,19 @@ pub fn look_camera_system(world: &mut World) {
         return;
     };
 
-    let delta_time = world.resources.window.timing.delta_time;
+    let delta_time = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
     let right_clicked = world
-        .resources
-        .input
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .mouse
         .state
         .contains(crate::ecs::input::resources::MouseState::RIGHT_CLICKED);
-    let raw_mouse_delta = world.resources.input.mouse.raw_mouse_delta;
+    let raw_mouse_delta = world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse
+        .raw_mouse_delta;
 
     #[cfg(feature = "gamepad")]
     let gamepad_input = if let Some(gamepad) = crate::plugins::gamepad::query_active_gamepad(world)

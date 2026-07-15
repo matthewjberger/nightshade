@@ -28,15 +28,15 @@
 //!
 //! impl Plugin for MyGamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.resources.window.title = "My Game".to_string();
+//!         app.world.expect_resource_mut::<crate::ecs::window::resources::Window>().title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
 //!         app.add_system(Stage::Startup, initialize);
-//!         app.add_system(Stage::Update, tick);
+//!         app.add_systems(Stage::Update, (tick, spawn_on_space));
 //!     }
 //! }
 //!
 //! fn initialize(game: &mut MyGame, world: &mut World) {
-//!     world.resources.render_settings.atmosphere = Atmosphere::Sky;
+//!     world.expect_resource_mut::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
 //!     spawn_sun(world);
 //!
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
@@ -46,8 +46,18 @@
 //!     spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
 //! }
 //!
-//! fn tick(game: &mut MyGame, world: &mut World) {
-//!     let delta_time = world.resources.window.timing.delta_time;
+//! // Systems take resources as `Res<T>` / `ResMut<T>` parameters, resolved out
+//! // of the resource map. The game state comes first and a trailing `&mut World`
+//! // stays free for spawning, queries, and anything the parameters don't name.
+//! fn tick(game: &mut MyGame, input: Res<Input>, world: &mut World) {
+//!     if input.keyboard.just_pressed(KeyCode::Space) {
+//!         spawn_cube_at(world, Vec3::new(0.0, 5.0, 0.0));
+//!     }
+//! }
+//!
+//! // A system that only needs resources drops `&mut World` entirely.
+//! fn spawn_on_space(mut settings: ResMut<crate::render::config::RenderSettings>, input: Res<Input>) {
+//!     settings.bloom_enabled = input.keyboard.is_key_pressed(KeyCode::KeyB);
 //! }
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -80,7 +90,7 @@
 //!
 //! - **Entities**: Unsigned integer handles (`Entity`) identifying objects
 //! - **Components**: Data attached to entities (transforms, meshes, physics, etc.)
-//! - **Resources**: Global singletons (`world.resources.window.timing`, `.input`, `.graphics`, `.physics`)
+//! - **Resources**: Global singletons read as `Res<T>` / `ResMut<T>` system parameters (for example [`Input`](ecs::input::resources::Input), [`Window`](ecs::window::resources::Window), [`RenderSettings`](render::config::RenderSettings)), or through `world.expect_resource::<T>()` inside a `&mut World` system
 //!
 //! ### Component Flags
 //!
@@ -111,21 +121,26 @@
 //!
 //! ### Resources
 //!
+//! Systems reach resources as `Res<T>` / `ResMut<T>` parameters:
+//!
 //! ```ignore
-//! // Timing
-//! let dt = world.resources.window.timing.delta_time;
-//! let fps = world.resources.window.timing.frames_per_second;
-//! let uptime_ms = world.resources.window.timing.uptime_milliseconds;
+//! fn example(mut settings: ResMut<crate::render::config::RenderSettings>, input: Res<Input>) {
+//!     settings.bloom_enabled = true;
+//!     settings.atmosphere = Atmosphere::Sky;
 //!
-//! // Input
-//! let keyboard = &world.resources.input.keyboard;
-//! let mouse = &world.resources.input.mouse;
+//!     let keyboard = &input.keyboard;
+//!     let mouse = &input.mouse;
+//! }
+//! ```
 //!
-//! // Graphics
-//! world.resources.render_settings.bloom_enabled = true;
-//! world.resources.render_settings.atmosphere = Atmosphere::Sky;
+//! The same resources are reachable through `&mut World` for the ad-hoc access a
+//! parameter list cannot name (one field of a resource, a resource held next to a
+//! query, or a helper deep in a call graph):
 //!
-//! // Camera
+//! ```ignore
+//! let dt = world.expect_resource::<crate::ecs::window::resources::Window>().timing.delta_time;
+//! let fps = world.expect_resource::<crate::ecs::window::resources::Window>().timing.frames_per_second;
+//! let uptime_ms = world.expect_resource::<crate::ecs::window::resources::Window>().timing.uptime_milliseconds;
 //! world.resources.active_camera = Some(camera_entity);
 //! ```
 //!
@@ -258,7 +273,7 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     let delta_time = world.resources.window.timing.delta_time;
+//!     let delta_time = world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.delta_time;
 //!     physics_world_step(world.plugin_resource_mut::<PhysicsWorld>(), delta_time);
 //!     sync_physics_transforms(world);
 //! }
@@ -280,7 +295,7 @@
 //!
 //! // Update each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     run_navmesh_systems(world, world.resources.window.timing.delta_time);
+//!     run_navmesh_systems(world, world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.delta_time);
 //! }
 //! ```
 //!
@@ -288,15 +303,15 @@
 //!
 //! ```ignore
 //! // Bounding-box picking under the cursor
-//! let mouse_pos = world.resources.input.mouse.position;
+//! let mouse_pos = world.expect_resource_mut::<crate::ecs::input::resources::Input>().mouse.position;
 //! if let Some(hit) = pick_closest_entity(world, mouse_pos) {
 //!     println!("Hit {:?} at distance {}", hit.entity, hit.distance);
 //! }
 //!
 //! // GPU picking (pixel-perfect)
-//! world.resources.gpu_picking.request_pick(mouse_pos.x as u32, mouse_pos.y as u32);
+//! world.expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>().request_pick(mouse_pos.x as u32, mouse_pos.y as u32);
 //! // Next frame:
-//! if let Some(result) = world.resources.gpu_picking.take_result() {
+//! if let Some(result) = world.expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>().take_result() {
 //!     let world_pos = result.world_position;
 //!     let normal = result.world_normal;
 //! }
@@ -340,7 +355,7 @@
 //!         app.add_system(Stage::Update, |world| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
-//!                     ui.label(format!("FPS: {:.0}", world.resources.window.timing.frames_per_second));
+//!                     ui.label(format!("FPS: {:.0}", world.expect_resource_mut::<crate::ecs::window::resources::Window>().timing.frames_per_second));
 //!                     if ui.button("Spawn Cube").clicked() {
 //!                         spawn_cube_at(world, Vec3::zeros());
 //!                     }
@@ -357,7 +372,7 @@
 //!
 //! ```ignore
 //! fn tick(world: &mut World) {
-//!     if let Some(gamepad) = &world.resources.input.gamepad {
+//!     if let Some(gamepad) = &world.resources.gamepad {
 //!         // Analog sticks
 //!         let move_x = gamepad.left_stick.x;
 //!         let move_y = gamepad.left_stick.y;
@@ -487,7 +502,7 @@
 //!
 //! impl Plugin for GamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.resources.window.title = "My Game".to_string();
+//!         app.world.expect_resource_mut::<crate::ecs::window::resources::Window>().title = "My Game".to_string();
 //!     }
 //! }
 //!
@@ -581,17 +596,21 @@ pub use systems::*;
 /// `State` trait escape hatch), math types from `nalgebra_glm`, schedule helpers, command
 /// queue free functions ([`queue_ecs_command`], [`queue_render_command`]),
 /// spawn helpers ([`spawn_cube_at`], [`spawn_sphere_at`], [`spawn_sun`],
-/// [`spawn_camera`], etc.), input types, transform helpers, material and
-/// mesh registry helpers, and retained UI builders.
+/// [`spawn_camera`], etc.), the `Res`/`ResMut`/`Query` system parameters with
+/// the [`Input`](crate::ecs::input::resources::Input) resource, input types,
+/// transform helpers, material and mesh registry helpers, and retained UI
+/// builders.
 ///
 /// Items not in the prelude live in their submodules and can be imported
 /// individually when needed.
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, GameSystemMarker, Plugin, PluginGroup, PluginGroupBuilder, Stage,
-        SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
+        App, DefaultPlugins, GameParamSystemMarker, GameSystemMarker, ParamSystemMarker, Plugin,
+        PluginGroup, PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker,
+        game_scope,
     };
+    pub use crate::ecs::input::resources::Input;
     pub use crate::ecs::window::resources::{
         Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
@@ -634,6 +653,7 @@ pub mod prelude {
         AppState, GateableSystem, current_state, in_state, next_state, while_in,
     };
     pub use crate::systems::*;
+    pub use freecs::system_param::{ParamSet, Query, Res, ResMut};
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");

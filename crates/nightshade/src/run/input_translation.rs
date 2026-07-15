@@ -4,10 +4,17 @@ use winit::event::WindowEvent;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn recenter_locked_cursor(world: &mut World) {
-    if !world.resources.window.cursor_locked {
+    if !world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .cursor_locked
+    {
         return;
     }
-    let Some(window_handle) = world.resources.window.handle.as_ref() else {
+    let Some(window_handle) = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .handle
+        .as_ref()
+    else {
         return;
     };
     let size = window_handle.inner_size();
@@ -24,8 +31,14 @@ pub(crate) fn recenter_locked_cursor(world: &mut World) {
         ))
         .is_ok()
     {
-        world.resources.input.mouse.position = nalgebra_glm::vec2(center_x, center_y);
-        world.resources.input.mouse.position_delta = nalgebra_glm::vec2(0.0, 0.0);
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .mouse
+            .position = nalgebra_glm::vec2(center_x, center_y);
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .mouse
+            .position_delta = nalgebra_glm::vec2(0.0, 0.0);
     }
 }
 
@@ -47,16 +60,14 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
     } = window_event
     {
         let was_pressed = world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .keyboard
             .keystates
             .get(key_code)
             .is_some_and(|previous| *previous == winit::event::ElementState::Pressed);
 
         *world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .keyboard
             .keystates
             .entry(*key_code)
@@ -64,23 +75,20 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
 
         let pressed = *state == winit::event::ElementState::Pressed;
         world
-            .resources
-            .input
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
             .keyboard
             .frame_keys
             .push((*key_code, pressed));
 
         if pressed && !was_pressed {
             world
-                .resources
-                .input
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
                 .keyboard
                 .just_pressed_keys
                 .insert(*key_code);
         } else if !pressed && was_pressed {
             world
-                .resources
-                .input
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
                 .keyboard
                 .just_released_keys
                 .insert(*key_code);
@@ -88,7 +96,11 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
 
         if pressed && let Some(text) = text {
             for character in text.chars() {
-                world.resources.input.keyboard.frame_chars.push(character);
+                world
+                    .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                    .keyboard
+                    .frame_chars
+                    .push(character);
             }
         }
 
@@ -107,7 +119,10 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
     }
 
     if let winit::event::WindowEvent::Ime(ime_event) = window_event {
-        let ime = &mut world.resources.input.keyboard.ime;
+        let ime = &mut world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .keyboard
+            .ime;
         match ime_event {
             winit::event::Ime::Enabled => {
                 ime.preedit = None;
@@ -127,8 +142,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
 
     #[cfg(target_arch = "wasm32")]
     let cursor_scale = world
-        .resources
-        .window
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
         .map(|w| w.scale_factor() as f32)
@@ -136,9 +150,13 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
     #[cfg(not(target_arch = "wasm32"))]
     let cursor_scale = 1.0_f32;
 
-    let pointer_scale = world.resources.window.pointer_viewport_scale;
+    let pointer_scale = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .pointer_viewport_scale;
 
-    let mouse = &mut world.resources.input.mouse;
+    let mouse = &mut world
+        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .mouse;
     match window_event {
         winit::event::WindowEvent::MouseInput { button, state, .. } => {
             let pressed = *state == winit::event::ElementState::Pressed;
@@ -211,8 +229,12 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
     use crate::ecs::world::Vec2;
 
     if let winit::event::WindowEvent::Touch(touch) = window_event {
-        let pointer_scale = world.resources.window.pointer_viewport_scale;
-        let touch_input = &mut world.resources.input.touch;
+        let pointer_scale = world
+            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .pointer_viewport_scale;
+        let touch_input = &mut world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .touch;
         let id = touch.id;
         let position = Vec2::new(touch.location.x as f32, touch.location.y as f32) * pointer_scale;
 
@@ -259,7 +281,9 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
         touch_input.update_gesture();
 
         let is_primary = touch_input.primary_touch_id == Some(id);
-        let mouse = &mut world.resources.input.mouse;
+        let mouse = &mut world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .mouse;
         match touch.phase {
             winit::event::TouchPhase::Started if is_primary => {
                 if mouse.position_initialized {
@@ -309,23 +333,20 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
                     super::file_drop::collect_directory_files(path, path, &mut files);
                     if files.is_empty() {
                         world
-                            .resources
-                            .input
+                            .expect_resource_mut::<crate::ecs::input::resources::Input>()
                             .events
                             .push(AppEvent::FileDroppedPath(path.clone()));
                     } else {
                         for file in files {
                             world
-                                .resources
-                                .input
+                                .expect_resource_mut::<crate::ecs::input::resources::Input>()
                                 .events
                                 .push(AppEvent::FileDropped(file));
                         }
                     }
                 } else {
                     world
-                        .resources
-                        .input
+                        .expect_resource_mut::<crate::ecs::input::resources::Input>()
                         .events
                         .push(AppEvent::FileDroppedPath(path.clone()));
                 }
@@ -333,23 +354,20 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
             #[cfg(target_arch = "wasm32")]
             {
                 world
-                    .resources
-                    .input
+                    .expect_resource_mut::<crate::ecs::input::resources::Input>()
                     .events
                     .push(AppEvent::FileDroppedPath(path.clone()));
             }
         }
         WindowEvent::HoveredFile(path) => {
             world
-                .resources
-                .input
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
                 .events
                 .push(AppEvent::FileHovered(path.clone()));
         }
         WindowEvent::HoveredFileCancelled => {
             world
-                .resources
-                .input
+                .expect_resource_mut::<crate::ecs::input::resources::Input>()
                 .events
                 .push(AppEvent::FileHoverCancelled);
         }
@@ -370,10 +388,13 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         ..
     } = event
     {
-        world.resources.input.events.push(AppEvent::Keyboard {
-            key: *key_code,
-            state: *key_state,
-        });
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .events
+            .push(AppEvent::Keyboard {
+                key: *key_code,
+                state: *key_state,
+            });
     }
 
     if let WindowEvent::MouseInput {
@@ -382,9 +403,12 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         ..
     } = event
     {
-        world.resources.input.events.push(AppEvent::Mouse {
-            button: *button,
-            state: *mouse_state,
-        });
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .events
+            .push(AppEvent::Mouse {
+                button: *button,
+                state: *mouse_state,
+            });
     }
 }

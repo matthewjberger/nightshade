@@ -177,12 +177,16 @@ impl Plugin for LogPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
         {
-            app.world.resources.window.log_config = self.config.clone();
+            app.world
+                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .log_config = self.config.clone();
         }
-        let title = self
-            .title
-            .clone()
-            .unwrap_or_else(|| app.world.resources.window.title.clone());
+        let title = self.title.clone().unwrap_or_else(|| {
+            app.world
+                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .title
+                .clone()
+        });
         let guards = initialize_logging(&title, &self.config);
         app.log_guards.extend(guards);
     }

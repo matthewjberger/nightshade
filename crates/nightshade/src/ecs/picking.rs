@@ -15,7 +15,7 @@
 //!
 //! ```ignore
 //! // Each frame, pick the entity under the cursor:
-//! let mouse_pos = world.resources.input.mouse.position;
+//! let mouse_pos = world.expect_resource_mut::<crate::ecs::input::resources::Input>().mouse.position;
 //! if let Some(result) = pick_closest_entity(world, mouse_pos) {
 //!     println!("Hit entity {:?} at distance {}", result.entity, result.distance);
 //!     self.selected = Some(result.entity);

@@ -3,7 +3,10 @@ use nightshade::prelude::*;
 use crate::ecs::GalleryResources;
 
 pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) {
-    let timing = world.resources.window.timing.clone();
+    let timing = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .clone();
     let fps = timing.frames_per_second;
     let uptime_ms = timing.uptime_milliseconds;
     let delta = timing.delta_time;

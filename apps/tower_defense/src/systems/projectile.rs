@@ -5,7 +5,11 @@ use crate::systems::{
 use nightshade::prelude::*;
 
 pub fn projectile_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world.resources.window.timing.delta_time * game_world.game_speed;
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time
+        * game_world.game_speed;
     let mut projectiles_to_remove = Vec::new();
 
     for projectile_entity in game_world.projectiles_list.clone() {

@@ -57,21 +57,35 @@ const OBJECT_STRUCTURAL_MASK: u64 = crate::ecs::world::RENDER_MESH
 fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     let mut dirt = SceneDirt::default();
 
-    if !world.resources.render_scene_sync.initialized {
+    if !world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .initialized
+    {
         dirt.full = true;
     }
 
+    let structural_cursor = world
+        .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .structural_cursor;
     let changes: Vec<freecs::StructuralChange> = world.ecs.worlds[CORE]
-        .structural_changes_since(world.resources.render_scene_sync.structural_cursor)
+        .structural_changes_since(structural_cursor)
         .to_vec();
     if let Some(first) = changes.first()
-        && world.resources.render_scene_sync.initialized
-        && first.sequence != world.resources.render_scene_sync.structural_cursor + 1
+        && world
+            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .initialized
+        && first.sequence
+            != world
+                .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+                .structural_cursor
+                + 1
     {
         dirt.full = true;
     }
     if let Some(last) = changes.last() {
-        world.resources.render_scene_sync.structural_cursor = last.sequence;
+        world
+            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .structural_cursor = last.sequence;
         world.ecs.worlds[CORE].trim_structural_log(last.sequence);
     }
 
@@ -83,7 +97,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             dirt.mesh_name_refresh.insert(entity);
             dirt.instanced_refresh.insert(entity);
             dirt.entity_lists = true;
-            world.resources.render_scene_sync.materials_dirty = true;
+            world
+                .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+                .materials_dirty = true;
         }
         if mask & OBJECT_STRUCTURAL_MASK != 0 {
             dirt.object_refresh.insert(entity);
@@ -145,7 +161,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             dirt.texts = true;
         }
         if mask & crate::ecs::world::MATERIAL_REF != 0 {
-            world.resources.render_scene_sync.materials_dirty = true;
+            world
+                .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+                .materials_dirty = true;
             world
                 .resources
                 .mesh_render_state
@@ -153,7 +171,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         }
     }
 
-    let since = world.resources.render_scene_sync.data_cursor;
+    let since = world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .data_cursor;
     let visibility_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::VISIBILITY, since)
         .collect();
@@ -207,7 +227,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         .query_entities_changed_since(crate::ecs::world::MATERIAL_REF, since)
         .collect();
     if !material_ref_changed.is_empty() {
-        world.resources.render_scene_sync.materials_dirty = true;
+        world
+            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .materials_dirty = true;
         for entity in material_ref_changed {
             world
                 .resources
@@ -215,7 +237,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .mark_material_dirty(render_entity(entity));
         }
     }
-    world.resources.render_scene_sync.data_cursor = world.ecs.worlds[CORE].current_tick();
+    world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .data_cursor = world.ecs.worlds[CORE].current_tick();
     world.ecs.worlds[CORE].increment_tick();
 
     for entity in visibility_changed {
@@ -293,7 +317,9 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         dirt.texts |= mask & crate::ecs::world::TEXT != 0;
     }
 
-    world.resources.render_scene_sync.initialized = true;
+    world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .initialized = true;
     dirt
 }
 
@@ -930,10 +956,16 @@ fn sync_selection_outline(world: &mut World) {
         .selection_outline_enabled
     {
         let mut seeds: Vec<crate::ecs::world::Entity> = Vec::new();
-        if let Some(active) = world.resources.selection.active_entity {
+        if let Some(active) = world
+            .expect_resource_mut::<crate::ecs::graphics::selection::Selection>()
+            .active_entity
+        {
             seeds.push(active);
         }
-        for entity in &world.resources.selection.entities {
+        for entity in &world
+            .expect_resource_mut::<crate::ecs::graphics::selection::Selection>()
+            .entities
+        {
             if !seeds.contains(entity) {
                 seeds.push(*entity);
             }
@@ -953,7 +985,9 @@ fn sync_selection_outline(world: &mut World) {
     world
         .resources
         .renderer_state
-        .render_selection_outline_color = world.resources.selection.outline_color;
+        .render_selection_outline_color = world
+        .expect_resource_mut::<crate::ecs::graphics::selection::Selection>()
+        .outline_color;
 }
 
 /// Keeps the scene collections in `renderer_state` current. On the first run
@@ -964,7 +998,9 @@ pub fn render_sync_system(world: &mut World) {
     let dirt = collect_scene_dirt(world);
 
     if dirt.full {
-        world.resources.render_scene_sync.materials_dirty = true;
+        world
+            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .materials_dirty = true;
         world.resources.mesh_render_state.request_full_rebuild();
         world.resources.renderer_state.skinned_objects_generation = world
             .resources

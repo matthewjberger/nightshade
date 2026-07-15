@@ -234,7 +234,7 @@ pub fn build_gallery_ui(gallery: &mut GalleryResources, world: &mut World) {
     state.nav_slider_target_y = state.nav_slider_y;
 }
 
-pub fn poll_gallery(gallery: &mut GalleryResources, world: &mut World) {
+pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut World) {
     let nav_buttons = gallery.state.nav_buttons.clone();
     let nav_labels = gallery.state.nav_labels.clone();
     let screen_roots = gallery.state.screen_roots.clone();
@@ -373,7 +373,11 @@ pub fn poll_gallery(gallery: &mut GalleryResources, world: &mut World) {
     let slider_entity = ui_named_entity(world, "nav_slider");
     let mut slider_y = gallery.state.nav_slider_y;
     let slider_target = gallery.state.nav_slider_target_y;
-    let delta_time = world.resources.window.timing.delta_time.clamp(0.0, 0.05);
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time
+        .clamp(0.0, 0.05);
     let stiffness = 220.0_f32;
     let displacement = slider_y - slider_target;
     let damping_factor = (-stiffness * delta_time * 0.5).exp();
@@ -389,19 +393,11 @@ pub fn poll_gallery(gallery: &mut GalleryResources, world: &mut World) {
     if let Some(target) = focus_request {
         ui_focus(world, target);
     }
-    let ctrl_p = world
-        .resources
-        .input
-        .keyboard
-        .just_pressed(winit::keyboard::KeyCode::KeyP)
-        && (world
-            .resources
-            .input
+    let ctrl_p = input.keyboard.just_pressed(winit::keyboard::KeyCode::KeyP)
+        && (input
             .keyboard
             .is_key_pressed(winit::keyboard::KeyCode::ControlLeft)
-            || world
-                .resources
-                .input
+            || input
                 .keyboard
                 .is_key_pressed(winit::keyboard::KeyCode::ControlRight));
     if ctrl_p && let Some(palette) = palette_entity {

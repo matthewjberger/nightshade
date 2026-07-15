@@ -5,9 +5,16 @@ use crate::render_driver::render_entity;
 pub fn update_instanced_mesh_caches_system(world: &mut World) {
     let _span = tracing::info_span!("instanced_meshes").entered();
 
-    let mut transform_dirty = std::mem::take(&mut world.resources.scratch.transform_dirty);
-    let mut local_matrices_dirty =
-        std::mem::take(&mut world.resources.scratch.local_matrices_dirty);
+    let mut transform_dirty = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+            .transform_dirty,
+    );
+    let mut local_matrices_dirty = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+            .local_matrices_dirty,
+    );
     transform_dirty.clear();
     local_matrices_dirty.clear();
     let mut needs_compute_dispatch = false;
@@ -58,6 +65,10 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
             .mark_instanced_compute_dispatch_needed();
     }
 
-    world.resources.scratch.transform_dirty = transform_dirty;
-    world.resources.scratch.local_matrices_dirty = local_matrices_dirty;
+    world
+        .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+        .transform_dirty = transform_dirty;
+    world
+        .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+        .local_matrices_dirty = local_matrices_dirty;
 }

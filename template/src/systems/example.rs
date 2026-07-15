@@ -12,5 +12,8 @@ use nightshade::prelude::*;
 pub fn tick(template_resources: &mut TemplateResources, world: &mut World) {
     template_resources.example.frame_count =
         template_resources.example.frame_count.saturating_add(1);
-    template_resources.example.elapsed_seconds += world.resources.window.timing.delta_time;
+    template_resources.example.elapsed_seconds += world
+        .expect_resource::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
 }

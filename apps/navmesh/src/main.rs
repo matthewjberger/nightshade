@@ -175,16 +175,34 @@ struct NavMeshDemoPlugin;
 
 impl Plugin for NavMeshDemoPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.window.title = "NavMesh Pathfinding".to_string();
+        app.world
+            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+            .title = "NavMesh Pathfinding".to_string();
         app.insert_resource(NavMeshDemo::default());
         app.add_system(Stage::Startup, initialize);
-        app.add_system(Stage::Update, update);
+        app.add_systems(
+            Stage::Update,
+            (
+                orbit_camera,
+                poll_ui_events,
+                handle_mouse_input,
+                update_wander_mode,
+                sync_foxes_to_agents,
+                update_fox_animations,
+                update_follow_camera,
+                update_ui_labels,
+            ),
+        );
     }
 }
 
 fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
-    world.resources.render_settings.atmosphere = Atmosphere::Hdr;
-    world.resources.debug_draw.show_grid = false;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .atmosphere = Atmosphere::Hdr;
+    world
+        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
+        .show_grid = false;
 
     load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 
@@ -210,16 +228,38 @@ fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.build_ui(world);
 }
 
-fn update(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
-    if !navmesh_demo.follow_mode {
-        pan_orbit_camera_system(world);
+fn orbit_camera(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
+    if navmesh_demo.follow_mode {
+        return;
     }
+    pan_orbit_camera_system(world);
+}
+
+fn poll_ui_events(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.poll_ui_events(world);
-    navmesh_demo.handle_mouse_input(world);
+}
+
+fn handle_mouse_input(navmesh_demo: &mut NavMeshDemo, input: Res<Input>, world: &mut World) {
+    navmesh_demo.handle_mouse_input(&input, world);
+}
+
+fn update_wander_mode(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.update_wander_mode(world);
+}
+
+fn sync_foxes_to_agents(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.sync_foxes_to_agents(world);
+}
+
+fn update_fox_animations(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.update_fox_animations(world);
+}
+
+fn update_follow_camera(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.update_follow_camera(world);
+}
+
+fn update_ui_labels(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.update_ui_labels(world);
 }
 
@@ -437,7 +477,10 @@ impl NavMeshDemo {
             self.ui.fps_label,
             &format!(
                 "FPS: {:.1}",
-                world.resources.window.timing.frames_per_second
+                world
+                    .expect_resource::<nightshade::ecs::window::resources::Window>()
+                    .timing
+                    .frames_per_second
             ),
         );
 
@@ -914,7 +957,10 @@ impl NavMeshDemo {
     }
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
-        let delta_time = world.resources.window.timing.delta_time;
+        let delta_time = world
+            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+            .timing
+            .delta_time;
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {
@@ -1102,29 +1148,19 @@ impl NavMeshDemo {
         }
     }
 
-    fn handle_mouse_input(&mut self, world: &mut World) {
+    fn handle_mouse_input(&mut self, input: &Input, world: &mut World) {
         if world.resources.user_interface.hud_wants_pointer || ui_pointer_over_widget(world) {
             return;
         }
 
-        let left_clicked = world
-            .resources
-            .input
-            .mouse
-            .state
-            .contains(MouseState::LEFT_JUST_PRESSED);
-        let right_clicked = world
-            .resources
-            .input
-            .mouse
-            .state
-            .contains(MouseState::RIGHT_JUST_PRESSED);
+        let left_clicked = input.mouse.state.contains(MouseState::LEFT_JUST_PRESSED);
+        let right_clicked = input.mouse.state.contains(MouseState::RIGHT_JUST_PRESSED);
 
         if !left_clicked && !right_clicked {
             return;
         }
 
-        let mouse_position = world.resources.input.mouse.position;
+        let mouse_position = input.mouse.position;
 
         let ground_position = get_ground_position_from_screen(world, mouse_position, 0.0);
 

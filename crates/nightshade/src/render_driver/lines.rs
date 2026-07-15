@@ -165,8 +165,12 @@ pub fn gather_bounding_volume_data(
     world: &World,
     show_bounding_volumes: bool,
 ) -> Option<Vec<GpuBoundingVolumeData>> {
-    let show_selected_bounding_volume = world.resources.debug_draw.show_selected_bounding_volume;
-    let selected_entity = world.resources.selection.active_entity;
+    let show_selected_bounding_volume = world
+        .expect_resource::<crate::render::config::DebugDraw>()
+        .show_selected_bounding_volume;
+    let selected_entity = world
+        .expect_resource::<crate::ecs::graphics::selection::Selection>()
+        .active_entity;
     if !show_bounding_volumes && !show_selected_bounding_volume {
         return None;
     }
@@ -376,8 +380,12 @@ fn world_position_bounds(
 }
 
 pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNormalData>> {
-    let normal_line_length = world.resources.debug_draw.normal_line_length;
-    let normal_line_color = world.resources.debug_draw.normal_line_color;
+    let normal_line_length = world
+        .expect_resource::<crate::render::config::DebugDraw>()
+        .normal_line_length;
+    let normal_line_color = world
+        .expect_resource::<crate::render::config::DebugDraw>()
+        .normal_line_color;
     if !show_normals {
         return None;
     }

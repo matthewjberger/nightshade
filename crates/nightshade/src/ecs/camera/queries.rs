@@ -47,7 +47,10 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 }
 
 pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f32> {
-    let rect = world.resources.window.camera_tile_rects.get(&entity)?;
+    let rect = world
+        .expect_resource::<crate::ecs::window::resources::Window>()
+        .camera_tile_rects
+        .get(&entity)?;
     if rect.height <= 0.0 {
         return None;
     }
@@ -55,7 +58,9 @@ pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f
 }
 
 pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {
-    let (width, height) = world.resources.window.cached_viewport_size?;
+    let (width, height) = world
+        .expect_resource::<crate::ecs::window::resources::Window>()
+        .cached_viewport_size?;
     let aspect_ratio = width as f32 / height.max(1) as f32;
     Some(aspect_ratio)
 }

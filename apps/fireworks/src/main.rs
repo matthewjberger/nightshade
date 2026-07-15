@@ -151,19 +151,42 @@ struct FireworksPlugin;
 
 impl Plugin for FireworksPlugin {
     fn build(&self, app: &mut App) {
-        app.world.resources.window.title = "Fireworks".to_string();
+        app.world
+            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+            .title = "Fireworks".to_string();
         app.insert_resource(FireworksDemo::default());
         app.add_system(Stage::Startup, initialize);
-        app.add_system(Stage::Update, update);
+        app.add_systems(
+            Stage::Update,
+            (
+                FireworksDemo::poll_ui_events,
+                FireworksDemo::update_ui_state,
+                advance_show,
+                advance_shells,
+                advance_sub_shells,
+                cleanup_effects,
+                handle_keyboard_input,
+            ),
+        );
     }
 }
 
 fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
-    world.resources.render_settings.atmosphere = Atmosphere::Space;
-    world.resources.debug_draw.show_grid = true;
-    world.resources.render_settings.clear_color = [0.01, 0.01, 0.02, 1.0];
-    world.resources.render_settings.bloom_enabled = true;
-    world.resources.render_settings.bloom_intensity = 0.05;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .atmosphere = Atmosphere::Space;
+    world
+        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
+        .show_grid = true;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .clear_color = [0.01, 0.01, 0.02, 1.0];
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .bloom_enabled = true;
+    world
+        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+        .bloom_intensity = 0.05;
 
     let camera = spawn_entities(
         world,
@@ -248,12 +271,12 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
     fireworks.build_ui(world);
 }
 
-fn update(fireworks: &mut FireworksDemo, world: &mut World) {
-    fireworks.poll_ui_events(world);
-    fireworks.update_ui_state(world);
-
-    let delta_time = world.resources.window.timing.delta_time;
-    let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+fn advance_show(fireworks: &mut FireworksDemo, world: &mut World) {
+    let uptime = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .uptime_milliseconds as f32
+        / 1000.0;
 
     if fireworks.show_active {
         fireworks.update_fireworks_show(world, uptime);
@@ -265,12 +288,38 @@ fn update(fireworks: &mut FireworksDemo, world: &mut World) {
         }
         fireworks.next_launch_time = uptime + fireworks.launch_interval;
     }
+}
 
+fn advance_shells(fireworks: &mut FireworksDemo, world: &mut World) {
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
     fireworks.update_shells(world, delta_time);
-    fireworks.update_sub_shells(world, delta_time);
-    fireworks.cleanup_expired_effects(world, delta_time);
+}
 
-    let events = std::mem::take(&mut world.resources.input.events);
+fn advance_sub_shells(fireworks: &mut FireworksDemo, world: &mut World) {
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
+    fireworks.update_sub_shells(world, delta_time);
+}
+
+fn cleanup_effects(fireworks: &mut FireworksDemo, world: &mut World) {
+    let delta_time = world
+        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
+    fireworks.cleanup_expired_effects(world, delta_time);
+}
+
+fn handle_keyboard_input(
+    fireworks: &mut FireworksDemo,
+    mut input: ResMut<Input>,
+    world: &mut World,
+) {
+    let events = std::mem::take(&mut input.events);
     for event in events {
         let AppEvent::Keyboard {
             key,
@@ -332,7 +381,9 @@ impl FireworksDemo {
         let launch_interval_initial = self.launch_interval;
         let salvo_mode_initial = self.salvo_mode;
         let salvo_count_initial = self.salvo_count as f32;
-        let bloom_intensity_initial = world.resources.render_settings.bloom_intensity;
+        let bloom_intensity_initial = world
+            .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+            .bloom_intensity;
 
         let mut tree = UiTreeBuilder::new(world);
         let panel = tree.add_docked_panel_left("fireworks", "Fireworks", 260.0);
@@ -507,7 +558,9 @@ impl FireworksDemo {
             self.salvo_count = value.round().clamp(3.0, 15.0) as u32;
         }
         if let Some(value) = ui_slider_value(world, self.ui.bloom_intensity) {
-            world.resources.render_settings.bloom_intensity = value;
+            world
+                .expect_resource_mut::<nightshade::render::config::RenderSettings>()
+                .bloom_intensity = value;
         }
 
         if launch_single {
@@ -526,7 +579,11 @@ impl FireworksDemo {
             if self.show_active {
                 self.show_active = false;
             } else {
-                let uptime = world.resources.window.timing.uptime_milliseconds as f32 / 1000.0;
+                let uptime = world
+                    .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
+                    .timing
+                    .uptime_milliseconds as f32
+                    / 1000.0;
                 self.start_fireworks_show(uptime);
             }
         }

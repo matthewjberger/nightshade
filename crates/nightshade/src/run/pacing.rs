@@ -4,13 +4,20 @@ use crate::ecs::world::World;
 pub(crate) fn throttle_to_frame_rate_limit(world: &mut World) {
     use web_time::Instant;
 
-    let Some(target_fps) = world.resources.render_settings.frame_rate_limit else {
+    let Some(target_fps) = world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .frame_rate_limit
+    else {
         return;
     };
     if !target_fps.is_finite() || target_fps <= 0.0 {
         return;
     }
-    let Some(last_frame_start) = world.resources.window.timing.last_frame_start_instant else {
+    let Some(last_frame_start) = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .last_frame_start_instant
+    else {
         return;
     };
 
@@ -43,10 +50,19 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
         .resources
         .renderer_state
         .auto_frame_rate_limit_baseline;
-    if world.resources.render_settings.vsync_enabled {
+    if world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .vsync_enabled
+    {
         if baseline.is_some() {
-            if world.resources.render_settings.frame_rate_limit == baseline {
-                world.resources.render_settings.frame_rate_limit = None;
+            if world
+                .expect_resource_mut::<crate::render::config::RenderSettings>()
+                .frame_rate_limit
+                == baseline
+            {
+                world
+                    .expect_resource_mut::<crate::render::config::RenderSettings>()
+                    .frame_rate_limit = None;
             }
             world
                 .resources
@@ -55,16 +71,27 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
         }
         return;
     }
-    if baseline.is_some() || world.resources.render_settings.frame_rate_limit.is_some() {
+    if baseline.is_some()
+        || world
+            .expect_resource_mut::<crate::render::config::RenderSettings>()
+            .frame_rate_limit
+            .is_some()
+    {
         return;
     }
-    let Some(window_handle) = world.resources.window.handle.clone() else {
+    let Some(window_handle) = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .handle
+        .clone()
+    else {
         return;
     };
     let Some(target) = current_monitor_frame_rate_target(&window_handle) else {
         return;
     };
-    world.resources.render_settings.frame_rate_limit = Some(target);
+    world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .frame_rate_limit = Some(target);
     world
         .resources
         .renderer_state
@@ -82,7 +109,10 @@ pub(crate) fn refresh_macos_frame_rate_limit(
     if !cfg!(target_os = "macos") {
         return;
     }
-    if world.resources.render_settings.vsync_enabled {
+    if world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .vsync_enabled
+    {
         return;
     }
     let baseline = world
@@ -92,13 +122,19 @@ pub(crate) fn refresh_macos_frame_rate_limit(
     if baseline.is_none() {
         return;
     }
-    if world.resources.render_settings.frame_rate_limit != baseline {
+    if world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .frame_rate_limit
+        != baseline
+    {
         return;
     }
     let Some(target) = current_monitor_frame_rate_target(window_handle) else {
         return;
     };
-    world.resources.render_settings.frame_rate_limit = Some(target);
+    world
+        .expect_resource_mut::<crate::render::config::RenderSettings>()
+        .frame_rate_limit = Some(target);
     world
         .resources
         .renderer_state

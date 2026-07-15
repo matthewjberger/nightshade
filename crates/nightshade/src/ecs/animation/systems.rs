@@ -9,7 +9,10 @@ use std::collections::HashMap;
 use crate::prelude::*;
 pub fn update_animation_players(world: &mut World) {
     let _span = tracing::info_span!("animation").entered();
-    let delta_time = world.resources.window.timing.delta_time;
+    let delta_time = world
+        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .timing
+        .delta_time;
     let mut finished: Vec<Entity> = Vec::new();
     let mut markers: Vec<(Entity, String)> = Vec::new();
     let player_key =

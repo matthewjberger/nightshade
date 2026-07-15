@@ -24,29 +24,24 @@ impl Gamepad {
 }
 
 pub fn query_active_gamepad(world: &mut World) -> Option<gilrs::Gamepad<'_>> {
-    let gilrs = world.resources.input.gamepad.gilrs.as_mut()?;
-    world
-        .resources
-        .input
-        .gamepad
-        .gamepad
-        .map(|id| gilrs.gamepad(id))
+    let gilrs = world.resources.gamepad.gilrs.as_mut()?;
+    world.resources.gamepad.gamepad.map(|id| gilrs.gamepad(id))
 }
 
 pub fn gamepad_input_system(world: &mut World) {
     let _span = tracing::info_span!("gamepad_input").entered();
-    if world.resources.input.gamepad.gilrs.is_none() {
+    if world.resources.gamepad.gilrs.is_none() {
         if let Ok(gilrs) = gilrs::Gilrs::new() {
-            world.resources.input.gamepad.gilrs = Some(gilrs);
+            world.resources.gamepad.gilrs = Some(gilrs);
         } else {
             return;
         }
     }
 
-    world.resources.input.gamepad.events.clear();
-    world.resources.input.gamepad.just_pressed_buttons.clear();
+    world.resources.gamepad.events.clear();
+    world.resources.gamepad.just_pressed_buttons.clear();
 
-    let Some(gilrs) = &mut world.resources.input.gamepad.gilrs else {
+    let Some(gilrs) = &mut world.resources.gamepad.gilrs else {
         return;
     };
 
@@ -59,16 +54,11 @@ pub fn gamepad_input_system(world: &mut World) {
             connection_events.push((event.id.into(), false));
         }
         if let gilrs::EventType::ButtonPressed(button, _) = event.event {
-            world
-                .resources
-                .input
-                .gamepad
-                .just_pressed_buttons
-                .insert(button);
+            world.resources.gamepad.just_pressed_buttons.insert(button);
         }
 
-        world.resources.input.gamepad.gamepad = Some(event.id);
-        world.resources.input.gamepad.events.push(event);
+        world.resources.gamepad.gamepad = Some(event.id);
+        world.resources.gamepad.events.push(event);
     }
 
     for (gamepad_id, connected) in connection_events {
@@ -135,17 +125,29 @@ pub fn detect_input_mode_system(world: &mut World) {
         false
     };
 
-    if has_gamepad_input && world.resources.input.input_mode != InputMode::Gamepad {
-        world.resources.input.input_mode = InputMode::Gamepad;
-    } else if (has_keyboard_input || has_mouse_input)
-        && world.resources.input.input_mode != InputMode::MouseKeyboard
+    if has_gamepad_input
+        && world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .input_mode
+            != InputMode::Gamepad
     {
-        world.resources.input.input_mode = InputMode::MouseKeyboard;
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .input_mode = InputMode::Gamepad;
+    } else if (has_keyboard_input || has_mouse_input)
+        && world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .input_mode
+            != InputMode::MouseKeyboard
+    {
+        world
+            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .input_mode = InputMode::MouseKeyboard;
     }
 }
 
 /// Installs gamepad input: polls devices at the top of every frame and
-/// forwards connection and button events onto `world.resources.input.events`.
+/// forwards connection and button events onto `world.expect_resource_mut::<crate::ecs::input::resources::Input>().events`.
 /// Without this plugin the engine never opens the gilrs context.
 pub struct GamepadPlugin;
 
@@ -153,11 +155,10 @@ impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(Stage::First, |world: &mut World| {
             gamepad_input_system(world);
-            let gamepad_events = world.resources.input.gamepad.events.clone();
+            let gamepad_events = world.resources.gamepad.events.clone();
             for event in gamepad_events {
                 world
-                    .resources
-                    .input
+                    .expect_resource_mut::<crate::ecs::input::resources::Input>()
                     .events
                     .push(crate::ecs::input::events::AppEvent::Gamepad(event));
             }

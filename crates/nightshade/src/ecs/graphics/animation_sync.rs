@@ -23,7 +23,9 @@ const PROPERTY_SCALE: u32 = 2;
 /// payload rebuilds only when that signature actually moved. The runtime maps
 /// refresh every frame into reused allocations.
 pub fn render_sync_animation_system(world: &mut World) {
-    let since = world.resources.render_scene_sync.animation_cursor;
+    let since = world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .animation_cursor;
     let players_ticked = world.ecs.worlds[CORE]
         .query_entities_changed_since(ANIMATION_PLAYER, since)
         .next()
@@ -32,8 +34,11 @@ pub fn render_sync_animation_system(world: &mut World) {
         .query_entities_changed_since(SKIN, since)
         .next()
         .is_some();
-    world.resources.render_scene_sync.animation_cursor =
-        world.resources.render_scene_sync.data_cursor;
+    world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .animation_cursor = world
+        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .data_cursor;
 
     let mut player_runtime = std::mem::take(
         &mut world
@@ -45,8 +50,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     player_runtime.clear();
     let mut player_clips = std::mem::take(
         &mut world
-            .resources
-            .render_scene_sync
+            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
             .animation_player_clips_scratch,
     );
     player_clips.clear();
@@ -73,7 +77,8 @@ pub fn render_sync_animation_system(world: &mut World) {
 
     let skinned_generation = world.resources.renderer_state.skinned_objects_generation;
     let gate_fired = {
-        let sync = &mut world.resources.render_scene_sync;
+        let sync =
+            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         let gate_fired = !sync.animation_initialized
             || players_ticked
             || skins_ticked
@@ -101,7 +106,8 @@ pub fn render_sync_animation_system(world: &mut World) {
     };
 
     {
-        let sync = &mut world.resources.render_scene_sync;
+        let sync =
+            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         sync.animation_player_clips_scratch =
             std::mem::replace(&mut sync.animation_player_clips, player_clips);
     }

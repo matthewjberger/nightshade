@@ -43,35 +43,53 @@ pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Optio
 pub fn update_global_transforms_system(world: &mut World) {
     sync_hierarchy_index(world);
 
-    let initial_pass = !world.resources.transform_state.initial_pass_done;
+    let initial_pass = !world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .initial_pass_done;
 
-    let mut dirty_entities = std::mem::take(&mut world.resources.transform_state.dirty_scratch);
+    let mut dirty_entities = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .dirty_scratch,
+    );
     dirty_entities.clear();
 
     if initial_pass {
         dirty_entities
             .extend(world.ecs.worlds[CORE].query_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM));
-        world.resources.transform_state.initial_pass_done = true;
+        world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .initial_pass_done = true;
     } else {
-        let since_tick = world.resources.transform_state.last_consumed_tick;
+        let since_tick = world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .last_consumed_tick;
         dirty_entities.extend(
             world.ecs.worlds[CORE].query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
         );
         dirty_entities
             .extend(world.ecs.worlds[CORE].query_entities_changed_since(PARENT, since_tick));
     }
-    world.resources.transform_state.last_consumed_tick = world.ecs.worlds[CORE].current_tick();
+    world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .last_consumed_tick = world.ecs.worlds[CORE].current_tick();
     world.ecs.worlds[CORE].increment_tick();
 
     if dirty_entities.is_empty() {
-        world.resources.transform_state.dirty_scratch = dirty_entities;
+        world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .dirty_scratch = dirty_entities;
         return;
     }
 
     dirty_entities.sort_unstable_by_key(|entity| (entity.id, entity.generation));
     dirty_entities.dedup();
 
-    let mut seen = std::mem::take(&mut world.resources.transform_state.expansion_seen);
+    let mut seen = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .expansion_seen,
+    );
     seen.clear();
     seen.extend(dirty_entities.iter().copied());
     {
@@ -90,9 +108,16 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     let _span = tracing::info_span!("transforms", dirty_count = dirty_entities.len()).entered();
 
-    let mut stack = std::mem::take(&mut world.resources.transform_state.traversal_stack);
-    let mut render_dirty_entities =
-        std::mem::take(&mut world.resources.transform_state.render_dirty_scratch);
+    let mut stack = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .traversal_stack,
+    );
+    let mut render_dirty_entities = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .render_dirty_scratch,
+    );
     stack.clear();
     render_dirty_entities.clear();
 
@@ -144,10 +169,18 @@ pub fn update_global_transforms_system(world: &mut World) {
     seen.clear();
     stack.clear();
     dirty_entities.clear();
-    world.resources.transform_state.expansion_seen = seen;
-    world.resources.transform_state.traversal_stack = stack;
-    world.resources.transform_state.render_dirty_scratch = render_dirty_entities;
-    world.resources.transform_state.dirty_scratch = dirty_entities;
+    world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .expansion_seen = seen;
+    world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .traversal_stack = stack;
+    world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .render_dirty_scratch = render_dirty_entities;
+    world
+        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .dirty_scratch = dirty_entities;
 }
 
 fn computed_global_transform(world: &World, current: Entity) -> nalgebra_glm::Mat4 {
