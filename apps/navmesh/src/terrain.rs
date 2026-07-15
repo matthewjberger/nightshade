@@ -1,6 +1,4 @@
 use nalgebra_glm::{Quat, Vec3, vec3};
-use nightshade::ecs::material::components::MaterialRef;
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::mesh::components::{Mesh, RenderMesh, Vertex};
 use nightshade::plugins::physics::components::{
     ColliderComponent, ColliderShape, RigidBodyComponent,
@@ -8,7 +6,6 @@ use nightshade::plugins::physics::components::{
 use nightshade::plugins::physics::types::InteractionGroups;
 use nightshade::prelude::*;
 use nightshade::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
-use nightshade::render::generational_registry::registry_add_reference;
 use nightshade::render::material::Material;
 use nightshade::render::mesh_cache::mesh_cache_insert;
 use noise::{Billow, Fbm, MultiFractal, NoiseFn, Perlin, RidgedMulti, Simplex};
@@ -262,26 +259,12 @@ pub fn spawn_terrain(
     world.set(entity, CastsShadow);
     world.set(entity, Visibility { visible: true });
 
-    let material_name = format!("TerrainMaterial_{}", entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        entity,
+        format!("TerrainMaterial_{}", entity.id),
         material,
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(entity, MaterialRef::new(material_name));
 
     entity
 }

@@ -3,7 +3,6 @@ use crate::ecs::{
     TowerType,
 };
 use crate::systems::{create_muzzle_flash, spawn_money_popup};
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
 pub fn spawn_tower(
@@ -23,29 +22,15 @@ pub fn spawn_tower(
         nalgebra_glm::vec3(0.4, 0.8, 0.4),
     );
 
-    let material_name = format!("Tower_{}", tower_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        tower_entity,
+        format!("Tower_{}", tower_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(tower_entity, MaterialRef::new(material_name));
 
     world.set(tower_entity, Position(position));
     world.set(
@@ -184,10 +169,7 @@ pub fn sell_tower(
 }
 
 pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::time::Time>()
-        .delta_time
-        * game_world.game_speed;
+    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {
@@ -289,10 +271,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
 }
 
 pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::time::Time>()
-        .delta_time
-        * game_world.game_speed;
+    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {
@@ -329,10 +308,10 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
                         nalgebra_glm::vec3(0.15, 0.15, 0.15),
                     );
 
-                    let material_name = format!("Projectile_{}", projectile_entity.id);
-                    material_registry_insert(
-                        &mut world.resources.assets.material_registry,
-                        material_name.clone(),
+                    set_material(
+                        world,
+                        projectile_entity,
+                        format!("Projectile_{}", projectile_entity.id),
                         Material {
                             base_color: tower.tower_type.color().into(),
                             emissive_factor: [
@@ -343,20 +322,6 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
                             ..Default::default()
                         },
                     );
-                    if let Some(&index) = world
-                        .resources
-                        .assets
-                        .material_registry
-                        .registry
-                        .name_to_index
-                        .get(&material_name)
-                    {
-                        registry_add_reference(
-                            &mut world.resources.assets.material_registry.registry,
-                            index,
-                        );
-                    }
-                    world.set(projectile_entity, MaterialRef::new(material_name));
 
                     world.set(
                         projectile_entity,
@@ -413,17 +378,13 @@ pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut
                     } else {
                         0.0
                     };
-                    material_registry_mutate(
-                        &mut world.resources.assets.material_registry,
-                        &material_ref.name,
-                        |material| {
-                            material.emissive_factor = [
-                                tower.tower_type.color().x * 0.5 + flash_intensity,
-                                tower.tower_type.color().y * 0.5 + flash_intensity,
-                                tower.tower_type.color().z * 0.5 + flash_intensity,
-                            ];
-                        },
-                    );
+                    mutate_material(world, &material_ref.name, |material| {
+                        material.emissive_factor = [
+                            tower.tower_type.color().x * 0.5 + flash_intensity,
+                            tower.tower_type.color().y * 0.5 + flash_intensity,
+                            tower.tower_type.color().z * 0.5 + flash_intensity,
+                        ];
+                    });
                 }
             }
 

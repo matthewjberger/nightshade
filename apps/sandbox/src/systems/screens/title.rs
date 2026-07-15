@@ -119,8 +119,6 @@ pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
         next_state(world, Screen::InGame);
     }
     if clicked_quit {
-        world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .should_exit = true;
+        world.expect_resource_mut::<Window>().should_exit = true;
     }
 }

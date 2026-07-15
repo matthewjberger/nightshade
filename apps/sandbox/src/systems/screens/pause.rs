@@ -345,8 +345,6 @@ pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
         enemies::despawn(world);
         next_state(world, Screen::Title);
     } else if clicked_quit {
-        world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .should_exit = true;
+        world.expect_resource_mut::<Window>().should_exit = true;
     }
 }

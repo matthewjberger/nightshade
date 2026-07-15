@@ -20,9 +20,7 @@ pub fn handle_global(sandbox: &mut Sandbox, input: Res<Input>, world: &mut World
     match current_state::<Screen>(world) {
         Screen::Title => {
             if escape {
-                world
-                    .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-                    .should_exit = true;
+                world.expect_resource_mut::<Window>().should_exit = true;
             }
         }
         Screen::InGame => {

@@ -1,7 +1,6 @@
 mod terrain;
 
 use nightshade::ecs::animation::components::{AnimationClip, AnimationProperty};
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::ecs::text::components::TextProperties;
 use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::ecs::ui::state::UiBase;
@@ -175,9 +174,7 @@ struct NavMeshDemoPlugin;
 
 impl Plugin for NavMeshDemoPlugin {
     fn build(&self, app: &mut App) {
-        app.world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .title = "NavMesh Pathfinding".to_string();
+        app.world.expect_resource_mut::<Window>().title = "NavMesh Pathfinding".to_string();
         app.insert_resource(NavMeshDemo::default());
         app.add_system(Stage::Startup, initialize);
         app.add_systems(
@@ -197,12 +194,8 @@ impl Plugin for NavMeshDemoPlugin {
 }
 
 fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
-    world
-        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
-        .atmosphere = Atmosphere::Hdr;
-    world
-        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
-        .show_grid = false;
+    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::Hdr;
+    world.expect_resource_mut::<DebugDraw>().show_grid = false;
 
     load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 
@@ -477,9 +470,7 @@ impl NavMeshDemo {
             self.ui.fps_label,
             &format!(
                 "FPS: {:.1}",
-                world
-                    .expect_resource::<nightshade::ecs::time::Time>()
-                    .frames_per_second
+                world.expect_resource::<Time>().frames_per_second
             ),
         );
 
@@ -551,10 +542,9 @@ impl NavMeshDemo {
                 height: trunk_height + 2.0,
             });
 
-            let trunk_material_name = format!("TreeTrunk_{}", index);
-            material_registry_insert(
-                &mut world.resources.assets.material_registry,
-                trunk_material_name.clone(),
+            let trunk_material_name = insert_material(
+                world,
+                format!("TreeTrunk_{}", index),
                 Material {
                     base_color: [0.35, 0.22, 0.12, 1.0],
                     roughness: 0.95,
@@ -562,19 +552,6 @@ impl NavMeshDemo {
                     ..Default::default()
                 },
             );
-            if let Some(&mat_index) = world
-                .resources
-                .assets
-                .material_registry
-                .registry
-                .name_to_index
-                .get(&trunk_material_name)
-            {
-                nightshade::render::generational_registry::registry_add_reference(
-                    &mut world.resources.assets.material_registry.registry,
-                    mat_index,
-                );
-            }
 
             let trunk = spawn_entities(
                 world,
@@ -609,10 +586,9 @@ impl NavMeshDemo {
                 let height = tier_heights[tier];
                 let y_pos = terrain_y + trunk_height + tier_y_offsets[tier] + height / 2.0;
 
-                let cone_material_name = format!("TreeCone_{}_{}", index, tier);
-                material_registry_insert(
-                    &mut world.resources.assets.material_registry,
-                    cone_material_name.clone(),
+                let cone_material_name = insert_material(
+                    world,
+                    format!("TreeCone_{}_{}", index, tier),
                     Material {
                         base_color: [0.1, 0.38 + green_variation, 0.08, 1.0],
                         roughness: 0.95,
@@ -620,19 +596,6 @@ impl NavMeshDemo {
                         ..Default::default()
                     },
                 );
-                if let Some(&mat_index) = world
-                    .resources
-                    .assets
-                    .material_registry
-                    .registry
-                    .name_to_index
-                    .get(&cone_material_name)
-                {
-                    nightshade::render::generational_registry::registry_add_reference(
-                        &mut world.resources.assets.material_registry.registry,
-                        mat_index,
-                    );
-                }
 
                 let cone = spawn_entities(
                     world,
@@ -956,9 +919,7 @@ impl NavMeshDemo {
     }
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
-        let delta_time = world
-            .expect_resource_mut::<nightshade::ecs::time::Time>()
-            .delta_time;
+        let delta_time = world.expect_resource_mut::<Time>().delta_time;
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {

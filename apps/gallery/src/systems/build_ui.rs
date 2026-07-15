@@ -374,7 +374,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
     let mut slider_y = gallery.state.nav_slider_y;
     let slider_target = gallery.state.nav_slider_target_y;
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::time::Time>()
+        .expect_resource_mut::<Time>()
         .delta_time
         .clamp(0.0, 0.05);
     let stiffness = 220.0_f32;

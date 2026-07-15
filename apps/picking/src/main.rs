@@ -3,7 +3,6 @@ use nightshade::ecs::camera::systems::pan_orbit_camera_system;
 use nightshade::ecs::gpu_picking::GpuPickResult;
 use nightshade::ecs::input::resources::MouseState;
 use nightshade::ecs::lines::components::{Line, Lines};
-use nightshade::ecs::material::material_registry_insert;
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -87,9 +86,7 @@ struct PickingPlugin;
 
 impl Plugin for PickingPlugin {
     fn build(&self, app: &mut App) {
-        app.world
-            .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-            .title = "Picking Demo".to_string();
+        app.world.expect_resource_mut::<Window>().title = "Picking Demo".to_string();
         app.insert_resource(PickingDemo::default());
         app.add_system(Stage::Startup, initialize);
         app.add_systems(
@@ -110,15 +107,9 @@ impl Plugin for PickingPlugin {
 }
 
 fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
-    world
-        .expect_resource_mut::<nightshade::render::config::DebugDraw>()
-        .show_grid = true;
-    world
-        .expect_resource_mut::<nightshade::render::config::RenderSettings>()
-        .atmosphere = Atmosphere::Sky;
-    world
-        .expect_resource_mut::<nightshade::ecs::graphics::selection::Selection>()
-        .outline_enabled = true;
+    world.expect_resource_mut::<DebugDraw>().show_grid = true;
+    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::Sky;
+    world.expect_resource_mut::<Selection>().outline_enabled = true;
     picking_demo.show_debug_volumes = true;
     picking_demo.spin_speed = 1.0;
 
@@ -127,28 +118,15 @@ fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
     for (mesh_type, position, color) in MESH_LAYOUT {
         let entity = spawn_mesh(world, mesh_type, position, Vec3::new(1.0, 1.0, 1.0));
         let material_name = format!("{}_{}", mesh_type, entity.id);
-        material_registry_insert(
-            &mut world.resources.assets.material_registry,
-            material_name.clone(),
+        set_material(
+            world,
+            entity,
+            material_name,
             Material {
                 base_color: color.into(),
                 ..Default::default()
             },
         );
-        if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .name_to_index
-            .get(&material_name)
-        {
-            registry_add_reference(
-                &mut world.resources.assets.material_registry.registry,
-                index,
-            );
-        }
-        world.set(entity, MaterialRef::new(material_name));
 
         let bounding_radius = world
             .get::<nightshade::render::bounding_volume::BoundingVolume>(entity)
@@ -219,11 +197,7 @@ fn refresh_panel_text(picking_demo: &mut PickingDemo, input: Res<Input>, world: 
 }
 
 fn drain_keyboard(picking_demo: &mut PickingDemo, world: &mut World) {
-    let events = std::mem::take(
-        &mut world
-            .expect_resource_mut::<nightshade::ecs::input::resources::Input>()
-            .events,
-    );
+    let events = std::mem::take(&mut world.expect_resource_mut::<Input>().events);
     for event in events {
         if let AppEvent::Keyboard {
             key,
@@ -231,11 +205,7 @@ fn drain_keyboard(picking_demo: &mut PickingDemo, world: &mut World) {
         } = event
         {
             match key {
-                KeyCode::Escape => {
-                    world
-                        .expect_resource_mut::<nightshade::ecs::window::resources::Window>()
-                        .should_exit = true
-                }
+                KeyCode::Escape => world.expect_resource_mut::<Window>().should_exit = true,
                 KeyCode::F1 => {
                     let panel = picking_demo.handles.panel;
                     ui_set_visible(world, panel, !ui_node_visible(world, panel));
@@ -273,10 +243,7 @@ impl PickingDemo {
     }
 
     fn tick_rotation(&mut self, world: &mut World) {
-        let delta = world
-            .expect_resource_mut::<nightshade::ecs::time::Time>()
-            .delta_time
-            .max(0.0);
+        let delta = world.expect_resource_mut::<Time>().delta_time.max(0.0);
         if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {
             return;
         }
@@ -316,10 +283,7 @@ impl PickingDemo {
     }
 
     fn update_gpu_hover(&mut self, input: &Input, world: &mut World) {
-        if let Some(result) = world
-            .expect_resource_mut::<nightshade::ecs::gpu_picking::GpuPicking>()
-            .take_result()
-        {
+        if let Some(result) = world.expect_resource_mut::<GpuPicking>().take_result() {
             self.last_pick_result = Some(result);
         }
 
@@ -344,7 +308,7 @@ impl PickingDemo {
             self.highlighted_entity = None;
         } else if !ui_capturing && current_mouse_pos != self.last_mouse_pos {
             world
-                .expect_resource_mut::<nightshade::ecs::gpu_picking::GpuPicking>()
+                .expect_resource_mut::<GpuPicking>()
                 .request_pick(current_mouse_pos.0, current_mouse_pos.1);
             self.last_mouse_pos = current_mouse_pos;
         }
@@ -432,9 +396,8 @@ impl PickingDemo {
     }
 
     fn sync_outline(&self, world: &mut World) {
-        world
-            .expect_resource_mut::<nightshade::ecs::graphics::selection::Selection>()
-            .active_entity = self.highlighted_entity.or(self.selected_entity);
+        world.expect_resource_mut::<Selection>().active_entity =
+            self.highlighted_entity.or(self.selected_entity);
     }
 
     fn sync_panel(&self, input: &Input, world: &mut World) {

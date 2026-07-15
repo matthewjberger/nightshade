@@ -352,7 +352,7 @@
 //! impl Plugin for DebugUiPlugin {
 //!     fn build(&self, app: &mut App) {
 //!         app.world.plugin_resource_mut::<EguiState>().enabled = true;
-//!         app.add_system(Stage::Update, |world| {
+//!         app.add_system(Stage::Update, |world: &mut World| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
 //!                     ui.label(format!("FPS: {:.0}", world.expect_resource_mut::<crate::ecs::time::Time>().frames_per_second));
@@ -610,10 +610,12 @@ pub mod prelude {
         PluginGroup, PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker,
         game_scope,
     };
+    pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::input::resources::Input;
+    pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
     pub use crate::ecs::window::resources::{
-        Monitor, Monitors, refresh_monitors_from_event_loop, window_scale_factor,
+        Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
     pub use crate::ecs::world::components::*;
@@ -644,6 +646,8 @@ pub mod prelude {
     pub use crate::plugins::ui::{
         UiPlugin, build_default_retained_ui_schedule, run_retained_ui_schedule,
     };
+    pub use crate::render::config::{DebugDraw, RenderSettings};
+    pub use crate::render::wind::Wind;
     pub use crate::run::*;
     pub use crate::schedule::{
         FramePhase, FrameSchedule, Schedules, SystemFn, schedule_push, schedule_remove,
@@ -707,7 +711,10 @@ pub mod prelude {
     pub use crate::ecs::loading::{
         load_texture_from_image_bytes, load_texture_pack_from_image_bytes,
     };
-    pub use crate::ecs::material::resources::{material_registry_insert, material_registry_mutate};
+    pub use crate::ecs::material::resources::{
+        insert_material, material_registry_insert, material_registry_mutate, mutate_material,
+        set_material,
+    };
     pub use crate::ecs::mesh::commands::spawn_mesh;
     pub use crate::ecs::mesh::systems::update_instanced_mesh_caches_system;
     pub use crate::ecs::particles::systems::update_particle_emitters;
@@ -778,8 +785,8 @@ pub mod prelude {
     };
     pub use crate::ecs::ui::resources::{
         BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
-        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent, UiViewport,
-        WindowChrome, WindowShortcut, blend_color,
+        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent,
+        UiImageLayerAllocator, UiViewport, WindowChrome, WindowShortcut, blend_color,
     };
     pub use crate::ecs::ui::testing::{
         UiTestDriver, UiTestResult, create_test_root, setup_test_scene,

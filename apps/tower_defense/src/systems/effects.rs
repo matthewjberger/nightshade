@@ -1,6 +1,5 @@
 use crate::ecs::{EffectType, TowerDefenseResources, VISUAL_EFFECT, VisualEffect};
 use crate::systems::despawn_entity;
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
 pub fn create_explosion_effect(
@@ -22,10 +21,10 @@ pub fn create_explosion_effect(
             nalgebra_glm::vec3(0.15, 0.15, 0.15),
         );
 
-        let material_name = format!("ExplosionParticle_{}", particle.id);
-        material_registry_insert(
-            &mut world.resources.assets.material_registry,
-            material_name.clone(),
+        set_material(
+            world,
+            particle,
+            format!("ExplosionParticle_{}", particle.id),
             Material {
                 base_color: [1.0, 0.5, 0.0, 0.8],
                 emissive_factor: [1.0, 0.3, 0.0],
@@ -33,20 +32,6 @@ pub fn create_explosion_effect(
                 ..Default::default()
             },
         );
-        if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .name_to_index
-            .get(&material_name)
-        {
-            registry_add_reference(
-                &mut world.resources.assets.material_registry.registry,
-                index,
-            );
-        }
-        world.set(particle, MaterialRef::new(material_name));
 
         world.set(
             particle,
@@ -95,30 +80,16 @@ pub fn create_poison_bubble_effect(
         nalgebra_glm::vec3(0.08, 0.08, 0.08),
     );
 
-    let material_name = format!("PoisonBubble_{}", particle.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        particle,
+        format!("PoisonBubble_{}", particle.id),
         Material {
             base_color: [0.5, 0.0, 0.8, 0.6],
             alpha_mode: AlphaMode::Blend,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(particle, MaterialRef::new(material_name));
 
     world.set(
         particle,
@@ -138,30 +109,16 @@ pub fn create_muzzle_flash(
 ) {
     let flash = spawn_mesh(world, "Sphere", position, nalgebra_glm::vec3(0.6, 0.6, 0.6));
 
-    let material_name = format!("MuzzleFlash_{}", flash.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        flash,
+        format!("MuzzleFlash_{}", flash.id),
         Material {
             base_color: [1.0, 1.0, 0.0, 1.0],
             emissive_factor: [2.0, 2.0, 0.0],
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(flash, MaterialRef::new(material_name));
 
     world.set(
         flash,
@@ -184,30 +141,16 @@ pub fn create_muzzle_flash(
             nalgebra_glm::vec3(0.4, 0.4, 0.4),
         );
 
-        let material_name = format!("MuzzleSmoke_{}", smoke.id);
-        material_registry_insert(
-            &mut world.resources.assets.material_registry,
-            material_name.clone(),
+        set_material(
+            world,
+            smoke,
+            format!("MuzzleSmoke_{}", smoke.id),
             Material {
                 base_color: [0.3, 0.3, 0.3, 0.8],
                 alpha_mode: AlphaMode::Blend,
                 ..Default::default()
             },
         );
-        if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .name_to_index
-            .get(&material_name)
-        {
-            registry_add_reference(
-                &mut world.resources.assets.material_registry.registry,
-                index,
-            );
-        }
-        world.set(smoke, MaterialRef::new(material_name));
 
         world.set(
             smoke,
@@ -262,14 +205,10 @@ pub fn update_visual_effects(
                         .get::<nightshade::ecs::material::components::MaterialRef>(entity)
                         .cloned()
                     {
-                        material_registry_mutate(
-                            &mut world.resources.assets.material_registry,
-                            &material_ref.name,
-                            |material| {
-                                let alpha = 1.0 - progress;
-                                material.base_color[3] = alpha * 0.8;
-                            },
-                        );
+                        mutate_material(world, &material_ref.name, |material| {
+                            let alpha = 1.0 - progress;
+                            material.base_color[3] = alpha * 0.8;
+                        });
                     }
                 }
                 EffectType::PoisonBubble => {
@@ -284,15 +223,11 @@ pub fn update_visual_effects(
                         .get::<nightshade::ecs::material::components::MaterialRef>(entity)
                         .cloned()
                     {
-                        material_registry_mutate(
-                            &mut world.resources.assets.material_registry,
-                            &material_ref.name,
-                            |material| {
-                                let progress = effect.age / effect.lifetime;
-                                let alpha = 1.0 - progress;
-                                material.base_color[3] = alpha * 0.6;
-                            },
-                        );
+                        mutate_material(world, &material_ref.name, |material| {
+                            let progress = effect.age / effect.lifetime;
+                            let alpha = 1.0 - progress;
+                            material.base_color[3] = alpha * 0.6;
+                        });
                     }
                 }
             }

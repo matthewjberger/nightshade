@@ -484,9 +484,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
 
     let mut direction = Vec3::zeros();
     let (jump_key_pressed, crouch_key_held) = {
-        let keyboard = &world
-            .expect_resource::<nightshade::ecs::input::resources::Input>()
-            .keyboard;
+        let keyboard = &world.expect_resource::<Input>().keyboard;
         if keyboard.is_key_pressed(KeyCode::KeyW) {
             direction += forward;
         }
@@ -533,7 +531,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
         .just_pressed_buttons
         .contains(&gilrs::Button::West);
     let flip_key_pressed = world
-        .expect_resource::<nightshade::ecs::input::resources::Input>()
+        .expect_resource::<Input>()
         .keyboard
         .just_pressed(KeyCode::KeyF);
 
@@ -575,7 +573,7 @@ fn move_character(
     camera: Entity,
 ) {
     let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::time::Time>()
+        .expect_resource_mut::<Time>()
         .delta_time
         .min(MAX_STEP_SECONDS);
     let Some(mut position) = world

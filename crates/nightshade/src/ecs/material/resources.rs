@@ -568,3 +568,46 @@ pub fn material_registry_find_or_insert(
     material_registry_insert(registry, fallback_name.clone(), material);
     fallback_name
 }
+
+/// Inserts a named material into the world's registry and takes a reference to
+/// it so it stays resident, returning the name. Wraps the registry drilling so
+/// a system never reaches into `world.resources.assets.material_registry`.
+pub fn insert_material(
+    world: &mut crate::ecs::world::World,
+    name: impl Into<String>,
+    material: Material,
+) -> String {
+    let name = name.into();
+    let registry = &mut world.resources.assets.material_registry;
+    material_registry_insert(registry, name.clone(), material);
+    if let Some(&index) = registry.registry.name_to_index.get(&name) {
+        registry_add_reference(&mut registry.registry, index);
+    }
+    name
+}
+
+/// Mutates an existing named material in place, returning whether it was found.
+/// Wraps the registry drilling so a system never reaches into
+/// `world.resources.assets.material_registry`.
+pub fn mutate_material(
+    world: &mut crate::ecs::world::World,
+    name: &str,
+    mutate: impl FnOnce(&mut Material),
+) -> bool {
+    material_registry_mutate(&mut world.resources.assets.material_registry, name, mutate)
+}
+
+/// Inserts a named material and assigns it to `entity` in one call: the common
+/// spawn-then-material pattern without any registry drilling.
+pub fn set_material(
+    world: &mut crate::ecs::world::World,
+    entity: crate::ecs::world::Entity,
+    name: impl Into<String>,
+    material: Material,
+) {
+    let name = insert_material(world, name, material);
+    world.set(
+        entity,
+        crate::ecs::material::components::MaterialRef::new(name),
+    );
+}

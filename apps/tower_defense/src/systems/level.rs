@@ -1,5 +1,4 @@
 use crate::ecs::{GridCell, TowerDefenseResources};
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -177,29 +176,15 @@ fn spawn_tile(world: &mut World, x: i32, z: i32, is_path: bool) {
         nalgebra_glm::vec3(0.9, 0.1, 0.9),
     );
     world.set(entity, Name(format!("Tile_{x}_{z}")));
-    let material_name = format!("Tile_{x}_{z}_{}", entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        entity,
+        format!("Tile_{x}_{z}_{}", entity.id),
         Material {
             base_color: color,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, TILE_TAG);
 }
 
@@ -214,30 +199,16 @@ fn spawn_marker(
 ) {
     let entity = spawn_mesh(world, "Cube", position, scale);
     world.set(entity, Name(name.to_string()));
-    let material_name = format!("{name}_{}", entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        entity,
+        format!("{name}_{}", entity.id),
         Material {
             base_color,
             emissive_factor: emissive,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(entity, MaterialRef::new(material_name));
     push_tag(world, entity, tag);
 }
 

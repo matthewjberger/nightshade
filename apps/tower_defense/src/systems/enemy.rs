@@ -2,7 +2,6 @@ use crate::ecs::{Enemy, EnemyType, GameState, Position, TowerDefenseResources};
 use crate::systems::{
     create_death_effect, create_poison_bubble_effect, despawn_entity, spawn_money_popup,
 };
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
 pub fn spawn_enemy(
@@ -56,29 +55,15 @@ fn spawn_normal_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.25, 0.3, 0.2),
     );
-    let material_name = format!("GoblinBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("GoblinBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -115,29 +100,15 @@ fn spawn_fast_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.22, 0.4, 0.22),
     );
-    let material_name = format!("FastBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("FastBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -158,29 +129,15 @@ fn spawn_tank_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.35, 0.4, 0.3),
     );
-    let material_name = format!("TankBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("TankBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cube(
         world,
@@ -217,30 +174,16 @@ fn spawn_flying_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.22, 0.28, 0.22),
     );
-    let material_name = format!("FlyingBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("FlyingBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             emissive_factor: [color.x * 0.35, color.y * 0.35, color.z * 0.35],
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cone_rotated(
         world,
@@ -271,29 +214,15 @@ fn spawn_shielded_enemy(world: &mut World, position: Vec3, base_y: f32, color: V
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.25, 0.3, 0.2),
     );
-    let material_name = format!("ShieldedBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("ShieldedBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere(
         world,
@@ -323,30 +252,16 @@ fn spawn_healer_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.25, 0.25, 0.25),
     );
-    let material_name = format!("HealerBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("HealerBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             emissive_factor: [color.x * 0.5, color.y * 0.5, color.z * 0.5],
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_sphere_emissive(
         world,
@@ -368,29 +283,15 @@ fn spawn_boss_enemy(world: &mut World, position: Vec3, base_y: f32, color: Vec4)
         position + nalgebra_glm::vec3(0.0, base_y, 0.0),
         nalgebra_glm::vec3(0.5, 0.6, 0.4),
     );
-    let material_name = format!("BossBody_{}", main_entity.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        main_entity,
+        format!("BossBody_{}", main_entity.id),
         Material {
             base_color: color.into(),
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(main_entity, MaterialRef::new(material_name));
 
     spawn_child_cube(
         world,
@@ -458,29 +359,15 @@ fn spawn_child_sphere(
     );
     world.set(child, GlobalTransform::default());
     world.set(child, RenderMesh::new("Sphere"));
-    let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        format!("{}_{}", name.replace(' ', ""), child.id),
         Material {
             base_color: color,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Sphere"));
     world.set(child, ChildOf(parent));
 }
@@ -515,30 +402,16 @@ fn spawn_child_sphere_emissive(
     );
     world.set(child, GlobalTransform::default());
     world.set(child, RenderMesh::new("Sphere"));
-    let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        format!("{}_{}", name.replace(' ', ""), child.id),
         Material {
             base_color: color,
             emissive_factor: emissive,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Sphere"));
     world.set(child, ChildOf(parent));
 }
@@ -572,29 +445,15 @@ fn spawn_child_cube(
     );
     world.set(child, GlobalTransform::default());
     world.set(child, RenderMesh::new("Cube"));
-    let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        format!("{}_{}", name.replace(' ', ""), child.id),
         Material {
             base_color: color,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Cube"));
     world.set(child, ChildOf(parent));
 }
@@ -640,9 +499,10 @@ fn spawn_child_cylinder(
     } else {
         [0.0, 0.0, 0.0]
     };
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        material_name,
         Material {
             base_color: color,
             alpha_mode,
@@ -650,20 +510,6 @@ fn spawn_child_cylinder(
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Cylinder"));
     world.set(child, ChildOf(parent));
 }
@@ -698,30 +544,16 @@ fn spawn_child_cone_rotated(
     );
     world.set(child, GlobalTransform::default());
     world.set(child, RenderMesh::new("Cone"));
-    let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        format!("{}_{}", name.replace(' ', ""), child.id),
         Material {
             base_color: color,
             alpha_mode: AlphaMode::Blend,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Cone"));
     world.set(child, ChildOf(parent));
 }
@@ -756,39 +588,22 @@ fn spawn_child_cone_emissive(
     );
     world.set(child, GlobalTransform::default());
     world.set(child, RenderMesh::new("Cone"));
-    let material_name = format!("{}_{}", name.replace(' ', ""), child.id);
-    material_registry_insert(
-        &mut world.resources.assets.material_registry,
-        material_name.clone(),
+    set_material(
+        world,
+        child,
+        format!("{}_{}", name.replace(' ', ""), child.id),
         Material {
             base_color: color,
             emissive_factor: emissive,
             ..Default::default()
         },
     );
-    if let Some(&index) = world
-        .resources
-        .assets
-        .material_registry
-        .registry
-        .name_to_index
-        .get(&material_name)
-    {
-        registry_add_reference(
-            &mut world.resources.assets.material_registry.registry,
-            index,
-        );
-    }
-    world.set(child, MaterialRef::new(material_name));
     world.set(child, BoundingVolume::from_mesh_type("Cone"));
     world.set(child, ChildOf(parent));
 }
 
 pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world
-        .expect_resource_mut::<nightshade::ecs::time::Time>()
-        .delta_time
-        * game_world.game_speed;
+    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
     let path = game_world.path.clone();
     let mut enemies_to_remove = Vec::new();
 

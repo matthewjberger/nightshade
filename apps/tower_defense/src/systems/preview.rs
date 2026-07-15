@@ -1,6 +1,5 @@
 use crate::ecs::{RANGE_INDICATOR, RangeIndicator, TowerDefenseResources};
 use crate::systems::can_place_tower_at;
-use nightshade::ecs::material::resources::material_registry_insert;
 use nightshade::prelude::*;
 
 pub fn range_indicator_system(game_world: &mut TowerDefenseResources, world: &mut World) {
@@ -69,10 +68,10 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
             nalgebra_glm::vec3(0.4, 0.8, 0.4),
         );
 
-        let material_name = format!("Preview_{}", preview.id);
-        material_registry_insert(
-            &mut world.resources.assets.material_registry,
-            material_name.clone(),
+        set_material(
+            world,
+            preview,
+            format!("Preview_{}", preview.id),
             Material {
                 base_color: [
                     tower_type.color().x,
@@ -83,20 +82,6 @@ pub fn placement_preview_system(game_world: &mut TowerDefenseResources, world: &
                 ..Default::default()
             },
         );
-        if let Some(&index) = world
-            .resources
-            .assets
-            .material_registry
-            .registry
-            .name_to_index
-            .get(&material_name)
-        {
-            registry_add_reference(
-                &mut world.resources.assets.material_registry.registry,
-                index,
-            );
-        }
-        world.set(preview, MaterialRef::new(material_name));
 
         game_world.preview_entity = Some(preview);
 
