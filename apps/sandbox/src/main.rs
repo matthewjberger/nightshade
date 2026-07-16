@@ -1,10 +1,10 @@
 mod ecs;
-mod state;
+mod plugin;
 mod systems;
 mod theme;
 
 use nightshade::prelude::{App, DefaultPlugins, GamepadPlugin, PhysicsPlugin, TerrainPlugin};
-use state::SandboxPlugin;
+use plugin::SandboxPlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()

@@ -1,10 +1,10 @@
 mod ecs;
+mod plugin;
 mod retained_ui;
-mod state;
 mod systems;
 
 use nightshade::prelude::{App, CameraControllerPlugin, DefaultPlugins, ExitOnEscapePlugin};
-use state::TowerDefensePlugin;
+use plugin::TowerDefensePlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()

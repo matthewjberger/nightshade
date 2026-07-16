@@ -1,9 +1,9 @@
 mod ecs;
-mod state;
+mod plugin;
 mod systems;
 
 use nightshade::prelude::{App, DefaultPlugins};
-use state::GalleryPlugin;
+use plugin::GalleryPlugin;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()
