@@ -9,7 +9,7 @@
 //!
 //! impl State for MyGame {
 //!     fn initialize(&mut self, world: &mut World) {
-//!         world.expect_resource::<crate::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!         // Set up camera, lights, entities
 //!     }
 //!

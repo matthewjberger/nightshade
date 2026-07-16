@@ -37,6 +37,7 @@ egui-wgpu = { workspace = true, optional = true }
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
+wgpu = { workspace = true, optional = true, features = ["fragile-send-sync-non-atomic-wasm"] }
 
 [features]
 default = ["wgpu"]

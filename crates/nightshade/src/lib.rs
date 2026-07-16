@@ -28,7 +28,7 @@
 //!
 //! impl Plugin for MyGamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.expect_resource::<crate::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
 //!         app.add_system(Stage::Startup, initialize);
 //!         app.add_systems(Stage::Update, (tick, spawn_on_space));
@@ -503,7 +503,7 @@
 //!
 //! impl Plugin for GamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.expect_resource::<crate::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!     }
 //! }
 //!
