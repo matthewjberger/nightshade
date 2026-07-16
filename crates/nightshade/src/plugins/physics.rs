@@ -113,24 +113,30 @@ pub use resources::*;
 #[cfg(feature = "physics")]
 pub use systems::*;
 
-/// Registers the physics step and collision-event systems into the frame
-/// schedule's update phase, stepping from the start.
+/// Enables the simulation. Pause and resume through
+/// `world.plugin_resource_mut::<PhysicsWorld>().enabled`.
 #[cfg(feature = "physics")]
 pub fn install(world: &mut crate::ecs::world::World) {
-    use crate::schedule::{FramePhase, schedule_push};
     world.plugin_resource_mut::<PhysicsWorld>().enabled = true;
-    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
-    schedule_push(schedule, FramePhase::Update, systems::run_physics_systems);
-    schedule_push(
-        schedule,
-        FramePhase::Update,
+}
+
+/// Registers the physics step and collision-event systems into the frame
+/// update stage, stepping from the start.
+#[cfg(feature = "physics")]
+pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+    use crate::app::{Stage, push_frame_system};
+    push_frame_system(stages, Stage::FrameUpdate, systems::run_physics_systems);
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
         crate::ecs::event::emit_collision_events_system,
     );
 }
 
-/// Installs the physics simulation through [`install`]. Pause and resume
-/// at runtime through `world.plugin_resource_mut::<PhysicsWorld>().enabled`, the way games
-/// gate physics per screen.
+/// Installs the physics simulation: [`install`] enables it and
+/// [`register_frame_systems`] adds the step. Pause and resume at runtime
+/// through `world.plugin_resource_mut::<PhysicsWorld>().enabled`, the way
+/// games gate physics per screen.
 #[cfg(feature = "physics")]
 pub struct PhysicsPlugin;
 
@@ -138,5 +144,6 @@ pub struct PhysicsPlugin;
 impl crate::app::Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::app::App) {
         install(&mut app.world);
+        register_frame_systems(&mut app.stages);
     }
 }

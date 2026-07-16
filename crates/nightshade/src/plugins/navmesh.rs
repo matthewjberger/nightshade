@@ -127,27 +127,23 @@ pub use resources::*;
 #[cfg(feature = "navmesh")]
 pub use systems::run_navmesh_systems;
 
-/// Registers the pathfinding and agent-steering pass into the frame
-/// schedule's update phase, before transform propagation picks up the
-/// agents' writes.
+/// Registers the pathfinding and agent-steering pass into the frame update
+/// stage, before transform propagation picks up the agents' writes.
 #[cfg(feature = "navmesh")]
-pub fn install(world: &mut crate::ecs::world::World) {
-    use crate::schedule::{FramePhase, schedule_push};
-    schedule_push(
-        &mut world.res_mut::<crate::schedule::Schedules>().frame,
-        FramePhase::Update,
-        systems::run_navmesh_systems,
-    );
+pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+    use crate::app::{Stage, push_frame_system};
+    push_frame_system(stages, Stage::FrameUpdate, systems::run_navmesh_systems);
 }
 
-/// Installs navmesh pathfinding through [`install`]. Without this plugin
-/// the frame schedule carries no navigation work and agents stand still.
+/// Installs navmesh pathfinding through [`register_frame_systems`]. Without
+/// this plugin the frame stages carry no navigation work and agents stand
+/// still.
 #[cfg(feature = "navmesh")]
 pub struct NavmeshPlugin;
 
 #[cfg(feature = "navmesh")]
 impl crate::app::Plugin for NavmeshPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        install(&mut app.world);
+        register_frame_systems(&mut app.stages);
     }
 }

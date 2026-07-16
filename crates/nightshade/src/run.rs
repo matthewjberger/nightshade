@@ -329,8 +329,8 @@ pub(crate) fn step(
     }
 }
 
-/// Runs a single rendered frame: the per-frame engine systems, the user
-/// [`State::run_systems`], the frame schedule, and the render graph.
+/// Runs a single rendered frame: the user [`State::run_systems`] (which
+/// runs the per-frame stages, engine systems included) and the render graph.
 ///
 /// This is the shared body behind both the winit event loop ([`step`]) and the
 /// offscreen driver ([`tick_offscreen`]). It renders whenever a viewport size is
@@ -377,9 +377,10 @@ pub fn run_frame_body(
     None
 }
 
-/// Runs the renderer-free portion of a frame: the per-frame engine systems,
-/// the user [`State::run_systems`], and the frame schedule. This is the whole
-/// frame for app compositions that omit the render plugin.
+/// Runs the renderer-free portion of a frame: the user
+/// [`State::run_systems`], which drives the per-frame stages (engine systems
+/// included). This is the whole frame for app compositions that omit the
+/// render plugin.
 pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Option<Box<dyn State>> {
     world.ecs.worlds[CORE].increment_tick();
 
@@ -397,8 +398,6 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .res_mut::<crate::ecs::input::resources::Input>()
         .events
         .clear();
-
-    run_frame_systems(world);
 
     #[cfg(feature = "egui")]
     egui_support::finish_frame(world);
@@ -453,12 +452,6 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     egui_support::handle_window_event(world, event);
     input_event_system(world, event);
     timing_system(world, event);
-}
-
-pub(crate) fn run_frame_systems(world: &mut World) {
-    let schedule = std::mem::take(&mut world.res_mut::<crate::schedule::Schedules>().frame);
-    crate::schedule::schedule_run(&schedule, world);
-    world.res_mut::<crate::schedule::Schedules>().frame = schedule;
 }
 
 fn timing_system(world: &mut World, event: &WindowEvent) {
@@ -789,15 +782,6 @@ impl winit::application::ApplicationHandler for WindowContext {
             .create_renderer
             && !self.initialized
         {
-            if self
-                .world
-                .res::<crate::schedule::Schedules>()
-                .frame
-                .is_empty()
-            {
-                self.world.res_mut::<crate::schedule::Schedules>().frame =
-                    crate::schedule::build_default_frame_schedule();
-            }
             self.state.initialize(&mut self.world);
             sync_min_window_size(&mut self.world);
             crate::ecs::camera::systems::sync_wasm_canvas_size(&mut self.world);
@@ -807,15 +791,6 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if !self.initialized {
-                if self
-                    .world
-                    .res::<crate::schedule::Schedules>()
-                    .frame
-                    .is_empty()
-                {
-                    self.world.res_mut::<crate::schedule::Schedules>().frame =
-                        crate::schedule::build_default_frame_schedule();
-                }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]
@@ -877,15 +852,6 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
-                if self
-                    .world
-                    .res::<crate::schedule::Schedules>()
-                    .frame
-                    .is_empty()
-                {
-                    self.world.res_mut::<crate::schedule::Schedules>().frame =
-                        crate::schedule::build_default_frame_schedule();
-                }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
                 #[cfg(target_arch = "wasm32")]

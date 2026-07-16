@@ -529,28 +529,193 @@ impl_system_collection_for_tuple!(
 
 /// When a system runs. [`Stage::Startup`] runs once, after the window and
 /// renderer come up (or immediately for an app with no runner). The rest
-/// are the per-frame stages, in run order, all before the engine frame
-/// schedule. Game logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`]
-/// is for systems that must observe every update system's writes.
+/// are the per-frame stages, in run order. Game logic belongs in
+/// [`Stage::Update`]; [`Stage::LateUpdate`] is for systems that must observe
+/// every update system's writes. The `Frame*`, [`Stage::Render`], and
+/// [`Stage::Last`] stages carry the engine's own per-frame systems and run
+/// after the game stages, where the frame schedule ran historically.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
     Startup,
     First,
     Update,
     LateUpdate,
+    FrameStart,
+    FrameUpdate,
+    FramePostUpdate,
+    Render,
+    Last,
 }
 
 impl Stage {
-    const PER_FRAME: [Stage; 3] = [Stage::First, Stage::Update, Stage::LateUpdate];
+    const PER_FRAME: [Stage; 8] = [
+        Stage::First,
+        Stage::Update,
+        Stage::LateUpdate,
+        Stage::FrameStart,
+        Stage::FrameUpdate,
+        Stage::FramePostUpdate,
+        Stage::Render,
+        Stage::Last,
+    ];
 
-    fn name(self) -> &'static str {
+    const FRAME_STAGES: [Stage; 5] = [
+        Stage::FrameStart,
+        Stage::FrameUpdate,
+        Stage::FramePostUpdate,
+        Stage::Render,
+        Stage::Last,
+    ];
+
+    pub(crate) fn name(self) -> &'static str {
         match self {
             Stage::Startup => "startup",
             Stage::First => "first",
             Stage::Update => "update",
             Stage::LateUpdate => "late_update",
+            Stage::FrameStart => "frame_start",
+            Stage::FrameUpdate => "frame_update",
+            Stage::FramePostUpdate => "frame_post_update",
+            Stage::Render => "render",
+            Stage::Last => "last",
         }
     }
+}
+
+/// Pushes a plain per-frame system into a named frame stage of `stages`,
+/// naming it the same way [`App::add_system`] does so the App and
+/// runner-owned frame stages register systems identically.
+pub(crate) fn push_frame_system<F>(stages: &mut freecs::Stages<World>, stage: Stage, system: F)
+where
+    F: FnMut(&mut World) + Send + 'static,
+{
+    stages
+        .stage_mut(stage.name())
+        .push(std::any::type_name_of_val(&system), system);
+}
+
+/// Registers the engine's default per-frame systems into the frame stages
+/// of `stages`, which must already declare the [`Stage::FRAME_STAGES`]. Both
+/// [`App::new`] and [`build_default_frame_stages`] populate through this, so
+/// the App and runner-owned schedules stay in lock-step.
+pub(crate) fn register_default_frame_systems(stages: &mut freecs::Stages<World>) {
+    push_frame_system(
+        stages,
+        Stage::FrameStart,
+        crate::ecs::event::advance_event_frame_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::graphics::systems::day_night_cycle_system,
+    );
+    #[cfg(target_arch = "wasm32")]
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::camera::systems::sync_wasm_canvas_size,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::bounding_volume::systems::ensure_bounding_volumes,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::animation::systems::update_animation_players,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::animation::systems::apply_animations,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::tween::update_tweens_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::particles::systems::update_particle_emitters,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::cloth::systems::sync_cloth_meshes_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::vfx::systems::update_vfx_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::FramePostUpdate,
+        crate::ecs::transform::systems::run_systems,
+    );
+    push_frame_system(
+        stages,
+        Stage::FramePostUpdate,
+        crate::ecs::mesh::systems::update_instanced_mesh_caches_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::input::systems::apply_ime_allowed_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::input::systems::reset_mouse_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::input::systems::reset_keyboard_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::input::systems::reset_touch_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::world::process_commands_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::Last,
+        crate::ecs::world::cleanup_unused_resources_system,
+    );
+}
+
+/// Builds a [`freecs::Stages`] holding only the engine's frame stages,
+/// populated with the default per-frame systems, for runners that drive
+/// their own [`State`] loop instead of composing an [`App`]. The stage
+/// order matches the tail of [`App`]'s stages, so a runner that runs these
+/// after its own logic reproduces the App's per-frame order.
+pub fn build_default_frame_stages() -> freecs::Stages<World> {
+    let mut stages = freecs::Stages::new();
+    for stage in Stage::FRAME_STAGES {
+        stages.add_stage(stage.name());
+    }
+    register_default_frame_systems(&mut stages);
+    stages
+}
+
+/// Removes every occurrence of the named system from the frame stages,
+/// returning whether anything was removed. Runners that pull a system out
+/// of their own frame stages (the caller-owned loop lifting the input reset
+/// so edge-triggered input survives the frame boundary) call this.
+pub fn remove_frame_system(stages: &mut freecs::Stages<World>, name: &str) -> bool {
+    let mut removed = false;
+    for (_, schedule) in &mut stages.stages {
+        removed |= schedule.remove(name);
+    }
+    removed
 }
 
 type RenderGraphConfigFn = Box<
@@ -577,13 +742,13 @@ type UpdateRenderGraphFn = Box<
 /// The plugin-composed application: the world, a startup schedule that
 /// runs once, and per-frame [`Stage`]s that plugins push systems into.
 ///
-/// The stages run in [`Stage`] declaration order each frame BEFORE the
-/// engine's frame schedule (physics, animation, transforms, retained
-/// UI) and rendering, exactly where game logic ran historically. Game
+/// The stages run in [`Stage`] declaration order each frame. The game
+/// stages ([`Stage::First`], [`Stage::Update`], [`Stage::LateUpdate`]) run
+/// first, then the engine's own per-frame stages ([`Stage::FrameStart`]
+/// through [`Stage::Last`]: physics, animation, transforms, retained UI,
+/// render sync), exactly where the frame schedule ran historically. Game
 /// logic belongs in [`Stage::Update`]; [`Stage::LateUpdate`] is for
-/// systems that must observe every update system's writes; work that
-/// must follow the engine systems registers into a frame schedule phase
-/// with `schedule_push`.
+/// systems that must observe every update system's writes.
 pub struct App {
     pub world: World,
     pub startup: freecs::Schedule<World>,
@@ -608,9 +773,8 @@ impl App {
         for stage in Stage::PER_FRAME {
             stages.add_stage(stage.name());
         }
+        register_default_frame_systems(&mut stages);
         let mut world = World::default();
-        world.res_mut::<crate::schedule::Schedules>().frame =
-            crate::schedule::build_default_frame_schedule();
         world
             .res_mut::<crate::ecs::window::resources::Window>()
             .start_hidden = true;

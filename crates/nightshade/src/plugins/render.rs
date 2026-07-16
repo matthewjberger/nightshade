@@ -10,34 +10,34 @@ use crate::ecs::world::World;
 use crate::render_driver::render_entity;
 
 /// Registers the scene, material, animation, and skinning sync systems
-/// into the frame schedule's render phase, after every system that writes
-/// render-facing state.
-pub fn install(world: &mut World) {
-    use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
-    schedule_push(
-        schedule,
-        FramePhase::Render,
+/// into the render stage, after every system that writes render-facing
+/// state.
+pub fn register_frame_systems(stages: &mut freecs::Stages<World>) {
+    use crate::app::{Stage, push_frame_system};
+    push_frame_system(
+        stages,
+        Stage::Render,
         crate::ecs::graphics::scene_sync::render_sync_system,
     );
-    schedule_push(schedule, FramePhase::Render, render_sync_materials_system);
-    schedule_push(
-        schedule,
-        FramePhase::Render,
+    push_frame_system(stages, Stage::Render, render_sync_materials_system);
+    push_frame_system(
+        stages,
+        Stage::Render,
         crate::ecs::graphics::animation_sync::render_sync_animation_system,
     );
-    schedule_push(
-        schedule,
-        FramePhase::Render,
+    push_frame_system(
+        stages,
+        Stage::Render,
         crate::ecs::skin::systems::render_sync_skinning_system,
     );
 }
 
 /// Adds the renderer: the surface comes up (against a hidden window
 /// without `WindowPlugin`, the headless capture path), and the sync
-/// systems from [`install`] join the frame schedule to feed it. Without
-/// this plugin the engine does no render work at all. The optional fields
-/// override the engine's vsync and frame rate defaults at composition.
+/// systems from [`register_frame_systems`] join the frame stages to feed
+/// it. Without this plugin the engine does no render work at all. The
+/// optional fields override the engine's vsync and frame rate defaults at
+/// composition.
 #[derive(Default)]
 pub struct RenderPlugin {
     pub vsync: Option<bool>,
@@ -59,7 +59,7 @@ impl Plugin for RenderPlugin {
                 .res_mut::<crate::render::config::RenderSettings>()
                 .frame_rate_limit = Some(limit);
         }
-        install(&mut app.world);
+        register_frame_systems(&mut app.stages);
     }
 }
 

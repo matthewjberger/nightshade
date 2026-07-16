@@ -76,21 +76,16 @@ pub use systems::*;
 /// Registers the bus construction and per-frame source sync at the start
 /// of the frame, right after the event swap, where they have always run.
 #[cfg(feature = "audio")]
-pub fn install(world: &mut crate::ecs::world::World) {
-    use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
-    schedule_push(
-        schedule,
-        FramePhase::Start,
-        systems::build_audio_buses_system,
-    );
-    schedule_push(schedule, FramePhase::Start, systems::update_audio_system);
+pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+    use crate::app::{Stage, push_frame_system};
+    push_frame_system(stages, Stage::FrameStart, systems::build_audio_buses_system);
+    push_frame_system(stages, Stage::FrameStart, systems::update_audio_system);
 }
 
 /// Installs the audio engine: on native the device opens at startup, on
-/// the web at the first user gesture, and [`install`] adds the audio
-/// systems to the frame schedule. Without this plugin the engine never
-/// opens the audio device and the frame schedule carries no audio work.
+/// the web at the first user gesture, and [`register_frame_systems`] adds
+/// the audio systems to the frame stages. Without this plugin the engine
+/// never opens the audio device and the frame carries no audio work.
 #[cfg(feature = "audio")]
 pub struct AudioPlugin;
 
@@ -104,6 +99,6 @@ impl crate::app::Plugin for AudioPlugin {
             crate::app::Stage::First,
             systems::lazy_initialize_audio_system,
         );
-        install(&mut app.world);
+        register_frame_systems(&mut app.stages);
     }
 }

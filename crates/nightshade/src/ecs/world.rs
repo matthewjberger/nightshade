@@ -330,7 +330,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
         ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
         ecs.insert_resource(freecs::dynamic::HierarchyIndex::default());
-        ecs.insert_resource(crate::schedule::Schedules::default());
+        ecs.insert_resource(crate::schedule::RetainedUiSchedule::default());
         ecs.insert_resource(crate::render::wgpu::texture_cache::TextureCache::default());
         ecs.insert_resource(crate::ecs::world::commands::CommandQueues::default());
         ecs.insert_resource(crate::ecs::event_bus::resources::EventBus::default());

@@ -81,27 +81,20 @@ pub fn poll_file_watcher_system(world: &mut crate::ecs::world::World) {
     world.plugin_resource_mut::<FileWatcher>().poll();
 }
 
-/// Registers the file and asset watcher polls at the end of the frame,
-/// alongside the other housekeeping passes.
-pub fn install(world: &mut crate::ecs::world::World) {
-    use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world.res::<crate::schedule::Schedules>().frame;
-    schedule_push(schedule, FramePhase::Last, poll_file_watcher_system);
-    #[cfg(feature = "assets")]
-    schedule_push(
-        schedule,
-        FramePhase::Last,
-        crate::ecs::asset_watcher::poll_asset_watcher_system,
-    );
-}
-
-/// Installs hot-reload file watching through [`install`]. Watch a file
-/// with `world.plugin_resource_mut::<FileWatcher>().watch(key, path)` and
-/// consume changes with `take_change(key)`.
+/// Installs hot-reload file watching: the file and asset watcher polls run
+/// at the end of the frame, alongside the other housekeeping passes. Watch
+/// a file with `world.plugin_resource_mut::<FileWatcher>().watch(key, path)`
+/// and consume changes with `take_change(key)`.
 pub struct FileWatcherPlugin;
 
 impl crate::app::Plugin for FileWatcherPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        install(&mut app.world);
+        use crate::app::Stage;
+        app.add_system(Stage::Last, poll_file_watcher_system);
+        #[cfg(feature = "assets")]
+        app.add_system(
+            Stage::Last,
+            crate::ecs::asset_watcher::poll_asset_watcher_system,
+        );
     }
 }

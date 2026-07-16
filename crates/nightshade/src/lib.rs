@@ -522,24 +522,22 @@
 //! 1. Process window/input events
 //! 2. Update keyboard/mouse/gamepad state
 //! 3. Calculate delta time
-//! 4. Run the app stages (`first`, `update`, `late_update`)
-//! 5. Dispatch event bus messages
-//! 6. Run [`FrameSchedule`](schedule::FrameSchedule) (engine systems):
-//!    - `Start`: swap event buffers, audio (when `AudioPlugin` is composed)
-//!    - `Update`: simulation (physics, animation, tweens, particles, cloth, vfx)
-//!    - `PostUpdate`: transform propagation, instanced mesh caches, retained UI
-//!    - `Render`: the render sync systems (when `RenderPlugin` is composed)
-//!    - `Last`: input reset, deferred commands, cleanup
-//! 7. Execute render graph passes
+//! 4. Run the app's per-frame stages, in order:
+//!    - Game stages `first`, `update`, `late_update`
+//!    - `frame_start`: event bus swap, audio (when `AudioPlugin` is composed)
+//!    - `frame_update`: simulation (physics, animation, tweens, particles, cloth, vfx)
+//!    - `frame_post_update`: transform propagation, instanced mesh caches, retained UI
+//!    - `render`: the render sync systems (when `RenderPlugin` is composed)
+//!    - `last`: input reset, deferred commands, cleanup
+//! 5. Execute render graph passes
 //!
-//! The frame schedule is a resource at `world.res::<crate::schedule::Schedules>().frame`, with
-//! the retained UI sub-schedule at `world.res::<crate::schedule::Schedules>().retained_ui`.
-//! Within a [`FramePhase`](schedule::FramePhase), systems run in registration
-//! order: the core systems land first, then each plugin's in composition
-//! order. Register your own from a startup system with
-//! [`schedule_push`](schedule::schedule_push), or drop an engine system with
-//! [`schedule_remove`](schedule::schedule_remove) by passing the function
-//! itself.
+//! The engine's per-frame systems live in the same
+//! [`Stage`](app::Stage)s as game logic: they are registered by
+//! [`App::new`](app::App::new) and the capability plugins, after the game
+//! stages, so they run every frame through the one scheduler. Within a stage,
+//! systems run in registration order: the core systems land first, then each
+//! plugin's in composition order. Register your own with
+//! [`App::add_system`](app::App::add_system).
 //!
 //! ## Threading Model
 //!
@@ -650,10 +648,7 @@ pub mod prelude {
     pub use crate::render::config::{DebugDraw, RenderSettings};
     pub use crate::render::wind::Wind;
     pub use crate::run::*;
-    pub use crate::schedule::{
-        FramePhase, FrameSchedule, Schedules, SystemFn, schedule_push, schedule_remove,
-        schedule_run,
-    };
+    pub use crate::schedule::{RetainedUiSchedule, SystemFn};
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::current_state;
     pub use crate::systems::*;
