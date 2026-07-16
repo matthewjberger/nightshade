@@ -657,7 +657,8 @@ pub mod prelude {
     };
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::{
-        AppState, GateableSystem, current_state, in_state, next_state, while_in,
+        AppState, GateableSystem, StateGate, StateHookSystem, current_state, in_state, next_state,
+        run_if, while_in, while_in_any, while_not_in,
     };
     pub use crate::systems::*;
     pub use freecs::system_param::{ParamSet, Query, Res, ResMut};

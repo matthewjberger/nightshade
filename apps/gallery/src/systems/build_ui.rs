@@ -234,7 +234,7 @@ pub fn build_gallery_ui(gallery: &mut GalleryResources, world: &mut World) {
     state.nav_slider_target_y = state.nav_slider_y;
 }
 
-pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut World) {
+pub fn poll_gallery(gallery: &mut GalleryResources, input: Res<Input>, world: &mut World) {
     let nav_buttons = gallery.state.nav_buttons.clone();
     let nav_labels = gallery.state.nav_labels.clone();
     let screen_roots = gallery.state.screen_roots.clone();

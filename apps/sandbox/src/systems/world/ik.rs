@@ -8,7 +8,7 @@ const HAND_EDGE_FORWARD: f32 = 0.5;
 const HAND_EDGE_SPREAD: f32 = 0.22;
 const HAND_EDGE_LIFT: f32 = 0.03;
 
-pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
     if sandbox_world.ragdoll.mode != crate::ecs::RagdollMode::Off {
         return;
     }

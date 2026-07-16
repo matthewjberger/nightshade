@@ -41,7 +41,7 @@ pub fn build(tree: &mut UiTreeBuilder) -> HudHandles {
     }
 }
 
-pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
     let fps_label = sandbox_world.ui_handles.hud.fps_label;
     let show_fps = sandbox_world.screen.show_fps;
     ui_set_visible(world, fps_label, show_fps);

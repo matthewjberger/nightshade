@@ -736,7 +736,7 @@ pub fn set_pose(sandbox_world: &mut SandboxResources, world: &mut World, name: &
     true
 }
 
-pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
+pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
     if sandbox_world.ragdoll.mode != crate::ecs::RagdollMode::Off {
         return;
     }
