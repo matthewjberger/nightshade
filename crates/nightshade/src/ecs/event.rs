@@ -23,6 +23,7 @@
 //!    one.
 
 use crate::ecs::world::{Entity, World};
+use freecs::system_param::EventHost;
 
 /// Schema for an [`Entity`] field. The engine entity is a foreign type that
 /// cannot derive `Schema`, so this matches its serde form, the same `{ id,
@@ -116,13 +117,13 @@ pub fn emit_event(world: &mut World, event: Event) {
         };
         record(events, entry);
     }
-    world.ecs.events.send(event);
+    world.event_bus_mut().send(event);
 }
 
 /// The events visible to participants this cycle: the set frozen at frame
 /// start on the freecs bus, broadcast to every reader.
 pub fn events(world: &World) -> &[Event] {
-    world.ecs.events.read_frame::<Event>()
+    world.event_bus().read_frame::<Event>()
 }
 
 /// The current cycle counter, for stamping a journal entry.
@@ -161,7 +162,7 @@ fn record(events: &mut Events, entry: JournalEntry) {
 /// cycle become this cycle's frozen readable set and older ones expire, and
 /// steps the cycle counter. [`events`] reads the settled set through the bus.
 pub fn advance_event_frame_system(world: &mut World) {
-    world.ecs.events.update();
+    world.event_bus_mut().update();
     let events = world.res_mut::<crate::ecs::event::Events>();
     events.cycle = events.cycle.wrapping_add(1);
 }

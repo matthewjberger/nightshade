@@ -861,6 +861,14 @@ impl App {
         self.add_system(stage, systems)
     }
 
+    /// Removes an engine frame system by passing the same function value it was
+    /// registered with, returning whether anything was removed. Drops one of
+    /// the default frame systems (the input reset, say) that a custom runner
+    /// would rather drive itself.
+    pub fn remove_frame_system<F>(&mut self, system: F) -> bool {
+        remove_frame_system(&mut self.stages, system)
+    }
+
     /// Inserts a group-level resource, readable from any system through
     /// [`game_scope`] or `world.ecs.resource`/`resource_mut`.
     pub fn insert_resource<T: Send + Sync + 'static>(&mut self, value: T) -> &mut Self {

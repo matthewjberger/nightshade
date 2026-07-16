@@ -424,6 +424,10 @@ impl freecs::system_param::EventHost for World {
     fn event_bus_mut(&mut self) -> &mut freecs::dynamic::EventBus {
         &mut self.ecs.events
     }
+
+    fn event_bus(&self) -> &freecs::dynamic::EventBus {
+        &self.ecs.events
+    }
 }
 
 pub use crate::ecs::input::resources::DroppedFile;
