@@ -232,7 +232,8 @@ fn poll_ui_events(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     navmesh_demo.poll_ui_events(world);
 }
 
-fn handle_mouse_input(navmesh_demo: &mut NavMeshDemo, input: Res<Input>, world: &mut World) {
+fn handle_mouse_input(mut navmesh_demo: ResMut<NavMeshDemo>, input: Res<Input>, world: &mut World) {
+    let navmesh_demo = &mut *navmesh_demo;
     navmesh_demo.handle_mouse_input(&input, world);
 }
 

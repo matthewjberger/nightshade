@@ -177,14 +177,16 @@ fn sync_debug_volumes(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.sync_debug_volume_visibility(world);
 }
 
-fn update_hover(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
+fn update_hover(mut picking_demo: ResMut<PickingDemo>, input: Res<Input>, world: &mut World) {
+    let picking_demo = &mut *picking_demo;
     match picking_demo.mode {
         PickingMode::GpuHover => picking_demo.update_gpu_hover(&input, world),
         PickingMode::CpuHover => picking_demo.update_cpu_hover(&input, world),
     }
 }
 
-fn apply_click(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
+fn apply_click(mut picking_demo: ResMut<PickingDemo>, input: Res<Input>, world: &mut World) {
+    let picking_demo = &mut *picking_demo;
     picking_demo.handle_click(&input, world);
 }
 
@@ -192,16 +194,18 @@ fn apply_outline(picking_demo: &mut PickingDemo, world: &mut World) {
     picking_demo.sync_outline(world);
 }
 
-fn refresh_panel_text(picking_demo: &mut PickingDemo, input: Res<Input>, world: &mut World) {
+fn refresh_panel_text(mut picking_demo: ResMut<PickingDemo>, input: Res<Input>, world: &mut World) {
+    let picking_demo = &mut *picking_demo;
     picking_demo.sync_panel(&input, world);
 }
 
 fn drain_keyboard(
-    picking_demo: &mut PickingDemo,
+    mut picking_demo: ResMut<PickingDemo>,
     reader: EventReader<AppEvent>,
     world: &mut World,
 ) {
-    for event in reader.read() {
+    let picking_demo = &mut *picking_demo;
+    for event in reader.iter() {
         if let AppEvent::Keyboard {
             key,
             state: KeyState::Pressed,

@@ -290,11 +290,12 @@ fn cleanup_effects(fireworks: &mut FireworksDemo, world: &mut World) {
 }
 
 fn handle_keyboard_input(
-    fireworks: &mut FireworksDemo,
+    mut fireworks: ResMut<FireworksDemo>,
     reader: EventReader<AppEvent>,
     world: &mut World,
 ) {
-    for event in reader.read() {
+    let fireworks = &mut *fireworks;
+    for event in reader.iter() {
         let AppEvent::Keyboard {
             key,
             state: KeyState::Pressed,

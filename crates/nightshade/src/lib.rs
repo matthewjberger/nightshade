@@ -607,11 +607,10 @@ pub use systems::*;
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, GameParamSystemMarker, GameSystemMarker, ParamSystemMarker, Plugin,
-        PluginGroup, PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker,
-        game_scope,
+        App, DefaultPlugins, GameSystemMarker, ParamSystemMarker, Plugin, PluginGroup,
+        PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
     };
-    pub use crate::ecs::events::{EventQueue, EventReader, EventWriter};
+    pub use crate::ecs::events::{EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::input::resources::Input;
     pub use crate::ecs::script::components::GlobalScripts;
@@ -656,11 +655,11 @@ pub mod prelude {
         schedule_run,
     };
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
-    pub use crate::states::{
-        AppState, GateableSystem, StateGate, StateHookSystem, current_state, in_state, next_state,
-        run_if, while_in, while_in_any, while_not_in,
-    };
+    pub use crate::states::current_state;
     pub use crate::systems::*;
+    pub use freecs::state::{
+        in_state, next_state, on_enter, on_exit, run_if, while_in, while_in_any,
+    };
     pub use freecs::system_param::{ParamSet, Query, Res, ResMut};
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

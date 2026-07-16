@@ -46,7 +46,8 @@ fn apply_ground_height(sandbox_world: &mut SandboxResources, world: &mut World) 
     }
 }
 
-pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
+pub fn update(mut sandbox_world: ResMut<SandboxResources>, world: &mut World) {
+    let sandbox_world = &mut *sandbox_world;
     if !sandbox_world.infinite_world.enabled || sandbox_world.infinite_world.suppressed {
         return;
     }

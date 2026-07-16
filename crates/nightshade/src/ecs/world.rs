@@ -359,9 +359,6 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::ui::resources::UiImageLayerAllocator::default());
         ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
         ecs.insert_resource(crate::ecs::input::resources::Input::default());
-        ecs.insert_resource(crate::ecs::events::EventQueue::<
-            crate::ecs::input::events::AppEvent,
-        >::default());
         ecs.insert_resource(crate::ecs::input::resources::Gamepad::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
@@ -416,6 +413,16 @@ impl std::ops::DerefMut for World {
 impl freecs::dynamic::ResourceHost for World {
     fn resource_map_mut(&mut self) -> &mut freecs::dynamic::ResourceMap {
         &mut self.ecs.resources
+    }
+
+    fn resource_map(&self) -> &freecs::dynamic::ResourceMap {
+        &self.ecs.resources
+    }
+}
+
+impl freecs::system_param::EventHost for World {
+    fn event_bus_mut(&mut self) -> &mut freecs::dynamic::EventBus {
+        &mut self.ecs.events
     }
 }
 

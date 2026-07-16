@@ -5,7 +5,12 @@ use crate::systems::{
 };
 use nightshade::prelude::*;
 
-pub fn input_system(game_world: &mut TowerDefenseResources, input: Res<Input>, world: &mut World) {
+pub fn input_system(
+    mut game_world: ResMut<TowerDefenseResources>,
+    input: Res<Input>,
+    world: &mut World,
+) {
+    let game_world = &mut *game_world;
     apply_ui_actions(game_world);
 
     game_world.mouse_grid_pos = get_grid_position_from_mouse(&input, world);

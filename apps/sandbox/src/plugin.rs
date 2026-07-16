@@ -17,8 +17,8 @@ impl Plugin for SandboxPlugin {
         for screen in [Screen::Title, Screen::Paused, Screen::InGame] {
             app.on_enter(
                 screen,
-                move |sandbox_world: &mut SandboxResources, world: &mut World| {
-                    crate::systems::lifecycle::enter(sandbox_world, world, screen);
+                move |mut sandbox_world: ResMut<SandboxResources>, world: &mut World| {
+                    crate::systems::lifecycle::enter(&mut sandbox_world, world, screen);
                 },
             );
         }
@@ -30,14 +30,17 @@ impl Plugin for SandboxPlugin {
                 crate::systems::save::handle_save_load,
                 crate::systems::screens::title::handle_input,
                 crate::systems::screens::pause::handle_input,
-                while_in(Screen::InGame).run((
-                    update_cursor_lock,
-                    camera_control,
-                    crate::systems::world::enemies::update,
-                    crate::systems::world::infinite::update,
-                    crate::systems::world::grass::update,
-                    crate::systems::world::rocks::update,
-                )),
+                while_in(
+                    Screen::InGame,
+                    (
+                        update_cursor_lock,
+                        camera_control,
+                        crate::systems::world::enemies::update,
+                        crate::systems::world::infinite::update,
+                        crate::systems::world::grass::update,
+                        crate::systems::world::rocks::update,
+                    ),
+                ),
                 crate::systems::world::pose::update,
                 crate::systems::world::pose::apply_softness,
                 crate::systems::world::ik::update,
@@ -49,10 +52,11 @@ impl Plugin for SandboxPlugin {
 }
 
 fn initialize(
-    sandbox_world: &mut SandboxResources,
+    mut sandbox_world: ResMut<SandboxResources>,
     mut shell_state: ResMut<ShellState<SandboxShellContext>>,
     world: &mut World,
 ) {
+    let sandbox_world = &mut *sandbox_world;
     crate::systems::lifecycle::initialize(sandbox_world, world);
     shell_state.context.pose_names = sandbox_world
         .pose
@@ -73,7 +77,8 @@ fn update_cursor_lock(world: &mut World) {
     }
 }
 
-fn camera_control(sandbox_world: &mut SandboxResources, world: &mut World) {
+fn camera_control(mut sandbox_world: ResMut<SandboxResources>, world: &mut World) {
+    let sandbox_world = &mut *sandbox_world;
     if world
         .ecs
         .resource::<ShellState<SandboxShellContext>>()
@@ -93,17 +98,18 @@ fn camera_control(sandbox_world: &mut SandboxResources, world: &mut World) {
 }
 
 fn run_shell(
-    sandbox_world: &mut SandboxResources,
+    mut sandbox_world: ResMut<SandboxResources>,
     mut shell_state: ResMut<ShellState<SandboxShellContext>>,
     reader: EventReader<AppEvent>,
     world: &mut World,
 ) {
+    let sandbox_world = &mut *sandbox_world;
     shell::run(&mut shell_state, world);
     for action in shell::drain_queue(&mut shell_state) {
         shell::apply_shell_actions(sandbox_world, world, action);
     }
 
-    for event in reader.read() {
+    for event in reader.iter() {
         if let AppEvent::Keyboard { key, state } = event {
             shell::handle_key(&mut shell_state, world, *key, *state);
         }

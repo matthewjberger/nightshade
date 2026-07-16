@@ -354,48 +354,6 @@ where
     }
 }
 
-/// Marks a game system that takes its state first, then freecs resource
-/// parameters, then `&mut World`: `fn(&mut T, Res<A>, ResMut<B>, &mut
-/// World)`. [`game_scope`] lifts the state `T` out of the map, the resource
-/// parameters resolve out of what remains, and `&mut World` stays free for
-/// queries. This is the state-and-world game shape with `Res`/`ResMut`
-/// arguments spliced in, so a system reads `Res<Input>` instead of fetching
-/// the resource by hand.
-pub struct GameParamSystemMarker<T, Params>(std::marker::PhantomData<(T, Params)>);
-
-macro_rules! impl_game_param_system {
-    ($($resource:ident $binding:ident),+) => {
-        impl<T, F, $($resource,)+>
-            SystemCollection<GameParamSystemMarker<T, ($($resource,)+)>> for F
-        where
-            T: Send + Sync + 'static,
-            $($resource: freecs::system_param::ResourceParam,)+
-            F: FnMut(&mut T, $($resource,)+ &mut World)
-                + for<'world> FnMut(&mut T, $($resource::Item<'world>,)+ &'world mut World)
-                + Send
-                + 'static,
-        {
-            #[allow(non_snake_case)]
-            fn push_onto(mut self, schedule: &mut freecs::Schedule<World>) {
-                let name = std::any::type_name_of_val(&self);
-                schedule.push(name, move |world: &mut World| {
-                    game_scope(world, |state: &mut T, world| {
-                        world.resources_scope::<($($resource::Resource,)+), _>(|world, bundle| {
-                            let ($($binding,)+) = bundle;
-                            self(state, $($resource::build($binding),)+ world);
-                        });
-                    });
-                });
-            }
-        }
-    };
-}
-
-impl_game_param_system!(R0 r0);
-impl_game_param_system!(R0 r0, R1 r1);
-impl_game_param_system!(R0 r0, R1 r1, R2 r2);
-impl_game_param_system!(R0 r0, R1 r1, R2 r2, R3 r3);
-
 macro_rules! impl_system_collection_for_tuple {
     ($(($marker:ident, $system_type:ident, $system_value:ident)),+) => {
         impl<$($marker),+, $($system_type: SystemCollection<$marker>),+>

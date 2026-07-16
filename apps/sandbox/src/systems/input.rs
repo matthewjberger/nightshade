@@ -5,11 +5,12 @@ use nightshade::prelude::*;
 use nightshade::shell::ShellState;
 
 pub fn handle_global(
-    sandbox_world: &mut SandboxResources,
+    mut sandbox_world: ResMut<SandboxResources>,
     input: Res<Input>,
     shell_state: Res<ShellState<SandboxShellContext>>,
     world: &mut World,
 ) {
+    let sandbox_world = &mut *sandbox_world;
     if shell::is_capturing_input(&shell_state) {
         return;
     }

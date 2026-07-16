@@ -121,11 +121,12 @@ fn money_popups(world: &mut World) {
 }
 
 fn camera_reset(
-    game_world: &mut TowerDefenseResources,
+    mut game_world: ResMut<TowerDefenseResources>,
     reader: EventReader<AppEvent>,
     world: &mut World,
 ) {
-    for event in reader.read() {
+    let game_world = &mut *game_world;
+    for event in reader.iter() {
         if let AppEvent::Keyboard {
             key,
             state: KeyState::Pressed,
