@@ -297,14 +297,12 @@ impl PickingDemo {
             .expect_resource_mut::<UserInterface>()
             .hud_wants_pointer
             || world
-                .resources
-                .retained_ui
+                .expect_resource_mut::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .resources
-                .retained_ui
+                .expect_resource_mut::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();
@@ -380,14 +378,12 @@ impl PickingDemo {
             .expect_resource_mut::<UserInterface>()
             .hud_wants_pointer
             || world
-                .resources
-                .retained_ui
+                .expect_resource_mut::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .resources
-                .retained_ui
+                .expect_resource_mut::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();

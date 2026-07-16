@@ -26,12 +26,13 @@ pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) 
     }
 
     let theme = world
-        .resources
-        .retained_ui
+        .expect_resource_mut::<RetainedUiState>()
         .theme_state
         .active_theme()
         .clone();
-    world.resources.retained_ui.background_color = Some(theme.background_color);
+    world
+        .expect_resource_mut::<RetainedUiState>()
+        .background_color = Some(theme.background_color);
     let accent_dim = vec4(
         theme.accent_color.x,
         theme.accent_color.y,

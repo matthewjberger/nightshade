@@ -67,7 +67,12 @@ pub(crate) fn prepare_text_meshes(
         }
     }
 
-    let mut frame_text = std::mem::take(&mut world.resources.retained_ui.frame.text_meshes);
+    let mut frame_text = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .frame
+            .text_meshes,
+    );
     let mut active_entities: std::collections::HashSet<crate::render::entity::RenderEntity> =
         std::collections::HashSet::new();
     for instance in &mut frame_text {
@@ -124,7 +129,10 @@ pub(crate) fn prepare_text_meshes(
     for entity in stale {
         renderer.frame_state.text_mesh_signatures.remove(&entity);
     }
-    world.resources.retained_ui.frame.text_meshes = frame_text;
+    world
+        .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .frame
+        .text_meshes = frame_text;
 
     if renderer.glyph_atlas.revision != pre_revision {
         rebind_glyph_atlas(renderer);

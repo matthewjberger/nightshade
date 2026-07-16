@@ -52,7 +52,9 @@ pub fn run_retained_ui_schedule(world: &mut World) {
 /// on so the ordering holds regardless of plugin composition order, with
 /// the tree shown.
 pub fn install(world: &mut World) {
-    world.resources.retained_ui.visible = true;
+    world
+        .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .visible = true;
     world
         .expect_resource_mut::<crate::schedule::Schedules>()
         .retained_ui = build_default_retained_ui_schedule();
@@ -67,7 +69,7 @@ pub fn install(world: &mut World) {
 }
 
 /// Installs the retained UI through [`install`]. Hide and show the whole
-/// tree at runtime through `world.resources.retained_ui.visible`.
+/// tree at runtime through `world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>().visible`.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {

@@ -97,7 +97,7 @@ pub fn resize_offscreen(world: &mut World, renderer: &mut WgpuRenderer, width: u
 /// ([`run_frame_body`](crate::run::run_frame_body)): per-frame engine systems,
 /// [`State::run_systems`], the frame schedule, and the render graph. Returns the
 /// next [`State`] when one was requested through
-/// `world.resources.pending_state`.
+/// `world.expect_resource::<crate::state::PendingState>()`.
 pub fn tick_offscreen(
     world: &mut World,
     state: &mut dyn State,

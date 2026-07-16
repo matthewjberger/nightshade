@@ -302,8 +302,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let texture_cache = std::mem::take(
         world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
     );
-    let resources = &mut world.resources;
-    let retained = &mut resources.retained_ui;
+    let retained = world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>();
     RenderInputs {
         settings,
         debug_draw,
@@ -399,8 +398,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         .mesh_cache = inputs.mesh_cache;
     *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
         inputs.texture_cache;
-    let resources = &mut world.resources;
-    let retained = &mut resources.retained_ui;
+    let retained = world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>();
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs
         .ui

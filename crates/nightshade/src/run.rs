@@ -341,7 +341,7 @@ pub(crate) fn step(
 /// `OffscreenCanvas` inside a web worker exactly as it drives a real window.
 ///
 /// Returns the next [`State`] when [`State::run_systems`] requested a transition
-/// through `world.resources.pending_state`.
+/// through `world.expect_resource::<crate::state::PendingState>()`.
 pub fn run_frame_body(
     world: &mut World,
     state: &mut dyn State,
@@ -422,23 +422,36 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
         .clone();
-    if world.resources.retained_ui.visible
+    if world
+        .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .visible
         && let Some(window_handle) = window_handle
     {
-        let requested = world.resources.retained_ui.interaction.requested_cursor;
-        let applied = world.resources.retained_ui.interaction.applied_cursor;
+        let requested = world
+            .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .interaction
+            .requested_cursor;
+        let applied = world
+            .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .interaction
+            .applied_cursor;
         if requested.is_some() && requested != applied {
             if let Some(cursor) = requested {
                 window_handle.set_cursor(cursor);
             }
-            world.resources.retained_ui.interaction.applied_cursor = requested;
+            world
+                .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .interaction
+                .applied_cursor = requested;
         } else if requested.is_none()
             && applied.is_some()
             && applied != Some(winit::window::CursorIcon::Default)
         {
             window_handle.set_cursor(winit::window::CursorIcon::Default);
-            world.resources.retained_ui.interaction.applied_cursor =
-                Some(winit::window::CursorIcon::Default);
+            world
+                .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .interaction
+                .applied_cursor = Some(winit::window::CursorIcon::Default);
         }
     }
 

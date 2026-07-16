@@ -372,7 +372,8 @@
 //!
 //! ```ignore
 //! fn tick(world: &mut World) {
-//!     if let Some(gamepad) = &world.resources.gamepad {
+//!     let gamepad = world.expect_resource::<Gamepad>();
+//!     {
 //!         // Analog sticks
 //!         let move_x = gamepad.left_stick.x;
 //!         let move_y = gamepad.left_stick.y;

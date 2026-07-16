@@ -875,7 +875,7 @@ impl crate::app::Plugin for SteamPlugin {
             crate::app::Stage::Startup,
             |world: &mut crate::ecs::World| {
                 if let Err(error) = steam_initialize(
-                    &mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
+                    world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
                 ) {
                     tracing::warn!("Steam unavailable: {error}");
                 }
@@ -883,7 +883,7 @@ impl crate::app::Plugin for SteamPlugin {
         );
         app.add_system(crate::app::Stage::First, |world: &mut crate::ecs::World| {
             steam_run_callbacks(
-                &world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
+                world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
             );
         });
     }

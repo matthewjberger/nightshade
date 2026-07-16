@@ -5,7 +5,7 @@
 //!
 //! - **Entities**: Created with `spawn_entities(world, flags, count)`, identified by [`Entity`] (u64)
 //! - **Components**: Bitflag-selected data (e.g., `LOCAL_TRANSFORM | RENDER_MESH`)
-//! - **Resources**: Global singletons accessed via `world.resources`
+//! - **Resources**: Global singletons in the ECS resource map, reached via `Res<T>` / `world.expect_resource::<T>()`
 //!
 //! Key resource paths:
 //!
@@ -89,6 +89,7 @@ pub mod resources {
     pub use crate::ecs::time::Time;
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
+    pub use crate::ecs::ui::resources::RetainedUiState;
     pub use crate::ecs::window::resources::Window;
     pub use crate::ecs::world::WorldId;
     pub use crate::ecs::world::cleanup::CleanupState;
@@ -251,11 +252,6 @@ freecs::dynamic_schema! {
     }
 }
 
-#[derive(Default)]
-pub struct Resources {
-    pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
-}
-
 /// The renderer-facing identifier of the world whose scene is being composed,
 /// handed to each frame's `RenderInputs`.
 #[derive(Default)]
@@ -282,7 +278,6 @@ pub const GAME: usize = 2;
 /// directly on `World` through deref.
 pub struct World {
     pub ecs: freecs::dynamic::DynEcs,
-    pub resources: Resources,
 }
 
 impl Default for World {
@@ -329,6 +324,7 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(crate::ecs::ui::resources::RetainedUiState::default());
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
         ecs.insert_resource(crate::ecs::ui::UserInterface::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
@@ -374,10 +370,7 @@ impl Default for World {
         ecs.insert_resource(crate::state::PendingState::default());
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         ecs.insert_resource(crate::plugins::steam::SteamResources::default());
-        Self {
-            ecs,
-            resources: Resources::default(),
-        }
+        Self { ecs }
     }
 }
 

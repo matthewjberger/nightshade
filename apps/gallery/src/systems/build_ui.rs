@@ -361,7 +361,9 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
     }
 
     if let Some(action) = progress_action {
-        let bar = &mut world.resources.retained_ui.top_progress_bar;
+        let bar = &mut world
+            .expect_resource_mut::<RetainedUiState>()
+            .top_progress_bar;
         match action {
             ProgressAction::Set(value) => bar.set(value),
             ProgressAction::Indeterminate => bar.set_indeterminate(),
@@ -466,8 +468,7 @@ enum ProgressAction {
 fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool) {
     let Some(label) = label else { return };
     let theme = world
-        .resources
-        .retained_ui
+        .expect_resource_mut::<RetainedUiState>()
         .theme_state
         .active_theme()
         .clone();

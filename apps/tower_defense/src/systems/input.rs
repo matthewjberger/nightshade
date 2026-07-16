@@ -60,8 +60,7 @@ pub fn input_system(game_world: &mut TowerDefenseResources, input: &Input, world
     }
 
     let pointer_over_ui = world
-        .resources
-        .retained_ui
+        .expect_resource_mut::<RetainedUiState>()
         .interaction
         .hovered_entity
         .is_some();

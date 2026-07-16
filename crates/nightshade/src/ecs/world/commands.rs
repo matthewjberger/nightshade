@@ -301,7 +301,7 @@ fn reload_material_command(
 
     for entity in referencing_entities {
         texture_cache_acquire(
-            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             TextureOwner::EntityMaterial(render_entity(entity)),
             new_textures.clone(),
         );
@@ -373,7 +373,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         }
 
         texture_cache_release_entity(
-            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             render_entity(entity),
         );
 
@@ -757,7 +757,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
                 .material_registry,
         );
         texture_cache_remove_unused(
-            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         );
     }
 }
@@ -773,7 +773,7 @@ pub fn set_material_with_textures(
 
     let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
     texture_cache_acquire(
-        &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
@@ -859,7 +859,7 @@ pub fn load_procedural_textures(world: &mut World) {
 
     for name in ["checkerboard", "gradient", "uv_test"] {
         crate::render::wgpu::texture_cache::texture_cache_protect(
-            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             name.to_string(),
         );
     }
@@ -1099,7 +1099,7 @@ pub fn spawn_instanced_mesh_with_material(
     .map(|mat| mat.texture_names().map(str::to_string).collect())
     .unwrap_or_default();
     texture_cache_acquire(
-        &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );

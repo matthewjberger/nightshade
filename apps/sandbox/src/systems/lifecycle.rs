@@ -58,13 +58,24 @@ pub fn enter(sandbox_world: &mut SandboxResources, world: &mut World, screen: Sc
     world.plugin_resource_mut::<PhysicsWorld>().enabled = config.physics_enabled;
     set_cursor_locked(world, config.cursor_locked);
     set_cursor_visible(world, !config.cursor_locked);
-    world.resources.retained_ui.gamepad_nav.enabled = config.gamepad_nav;
+    world
+        .expect_resource_mut::<RetainedUiState>()
+        .gamepad_nav
+        .enabled = config.gamepad_nav;
 
-    let interaction = world.resources.retained_ui.interaction_for_active_mut();
+    let interaction = world
+        .expect_resource_mut::<RetainedUiState>()
+        .interaction_for_active_mut();
     interaction.focused_entity = config.focus;
-    world.resources.retained_ui.overlays.focus_ring_visible = config.focus.is_some();
+    world
+        .expect_resource_mut::<RetainedUiState>()
+        .overlays
+        .focus_ring_visible = config.focus.is_some();
     if config.focus.is_none() {
-        world.resources.retained_ui.gamepad_nav.held_direction = None;
+        world
+            .expect_resource_mut::<RetainedUiState>()
+            .gamepad_nav
+            .held_direction = None;
     }
 }
 
