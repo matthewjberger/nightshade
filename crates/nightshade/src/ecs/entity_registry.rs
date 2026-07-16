@@ -19,20 +19,31 @@ pub struct EntityRegistry {
 pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives::Guid {
     if let Some(existing) = world.get::<crate::ecs::primitives::Guid>(entity).copied() {
         world
-            .resources
-            .entities
+            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
             .guid_index
             .entry(existing.0)
             .or_insert(entity);
         return existing;
     }
-    world.resources.entities.next_guid = world.resources.entities.next_guid.saturating_add(1);
-    let guid = crate::ecs::primitives::Guid(world.resources.entities.next_guid);
+    world
+        .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+        .next_guid = world
+        .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+        .next_guid
+        .saturating_add(1);
+    let guid = crate::ecs::primitives::Guid(
+        world
+            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .next_guid,
+    );
     if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
         world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
     world.set(entity, guid);
-    world.resources.entities.guid_index.insert(guid.0, entity);
+    world
+        .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+        .guid_index
+        .insert(guid.0, entity);
     guid
 }
 
@@ -44,12 +55,25 @@ pub fn assign_guid(world: &mut World, entity: Entity, guid: crate::ecs::primitiv
         world.ecs.worlds[CORE].add_components(entity, crate::ecs::world::GUID);
     }
     world.set(entity, guid);
-    world.resources.entities.guid_index.insert(guid.0, entity);
-    if guid.0 > world.resources.entities.next_guid {
-        world.resources.entities.next_guid = guid.0;
+    world
+        .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+        .guid_index
+        .insert(guid.0, entity);
+    if guid.0
+        > world
+            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .next_guid
+    {
+        world
+            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .next_guid = guid.0;
     }
 }
 
 pub fn find_entity_by_guid(world: &World, guid: crate::ecs::primitives::Guid) -> Option<Entity> {
-    world.resources.entities.guid_index.get(&guid.0).copied()
+    world
+        .expect_resource::<crate::ecs::entity_registry::EntityRegistry>()
+        .guid_index
+        .get(&guid.0)
+        .copied()
 }

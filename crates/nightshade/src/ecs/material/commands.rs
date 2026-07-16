@@ -32,7 +32,9 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
         world.set(entity, MaterialRef::new(name));
     }
     if count > 0 {
-        world.resources.mesh_render_state.request_full_rebuild();
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .request_full_rebuild();
     }
     count
 }

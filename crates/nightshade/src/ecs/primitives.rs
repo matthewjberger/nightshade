@@ -39,7 +39,7 @@ impl enum2schema::Schema for CastsShadow {
 /// Stable engine-side identity for entities that round-trip through a
 /// save file or that other entities cross-reference. Opt-in: omit on
 /// transient entities (particles, projectiles, popups). Engine mints
-/// values from `world.resources.entities.next_guid`, which is itself
+/// values from `world.expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>().next_guid`, which is itself
 /// persisted in the scene file so freshly-loaded scenes don't collide
 /// with the writer's ids.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

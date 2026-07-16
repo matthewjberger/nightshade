@@ -213,8 +213,7 @@ pub fn register_material(
     }
     world.set(entity, MaterialRef::new(name));
     world
-        .resources
-        .mesh_render_state
+        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 }
 
@@ -307,8 +306,7 @@ fn reload_material_command(
             new_textures.clone(),
         );
         world
-            .resources
-            .mesh_render_state
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_material_dirty(render_entity(entity));
     }
 }
@@ -317,9 +315,15 @@ fn reload_material_command(
 /// Does not walk the hierarchy; use [`despawn_recursive_immediate`] or [`EcsCommand::DespawnRecursive`] for that.
 pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     for &entity in entities {
-        world.resources.entities.tags.remove(&entity);
+        world
+            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .tags
+            .remove(&entity);
         if let Some(guid) = world.get::<crate::ecs::primitives::Guid>(entity).copied() {
-            world.resources.entities.guid_index.remove(&guid.0);
+            world
+                .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+                .guid_index
+                .remove(&guid.0);
         }
 
         if let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
@@ -340,8 +344,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 );
             }
             world
-                .resources
-                .mesh_render_state
+                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_entity_removed(render_entity(entity));
         }
 
@@ -365,8 +368,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 );
             }
             world
-                .resources
-                .mesh_render_state
+                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_instanced_meshes_changed();
         }
 
@@ -596,8 +598,7 @@ pub fn spawn_mesh_at(
         crate::ecs::primitives::Visibility { visible: true },
     ));
     world
-        .resources
-        .mesh_render_state
+        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -783,8 +784,7 @@ pub fn set_material_with_textures(
             |existing_mat| *existing_mat = material,
         );
         world
-            .resources
-            .mesh_render_state
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_material_dirty(render_entity(entity));
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);

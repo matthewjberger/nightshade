@@ -386,7 +386,9 @@ pub(crate) fn drain_loading_tasks(
         );
         *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
             texture_cache;
-        world.resources.mesh_render_state.request_full_rebuild();
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .request_full_rebuild();
     }
     if !loading_pipeline_is_active(
         &world
@@ -411,6 +413,8 @@ pub(crate) fn drain_loading_tasks(
                 .texture_sources
                 .remove(name);
         }
-        world.resources.mesh_render_state.request_full_rebuild();
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .request_full_rebuild();
     }
 }

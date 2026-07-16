@@ -165,8 +165,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
                 .materials_dirty = true;
             world
-                .resources
-                .mesh_render_state
+                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_material_dirty(render_entity(entity));
         }
     }
@@ -232,8 +231,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             .materials_dirty = true;
         for entity in material_ref_changed {
             world
-                .resources
-                .mesh_render_state
+                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_material_dirty(render_entity(entity));
         }
     }
@@ -284,7 +282,11 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
             != 0;
     }
 
-    for &entity in &world.resources.mesh_render_state.inner.transform_dirty {
+    for &entity in &world
+        .expect_resource::<crate::render::mesh_state::MeshRenderState>()
+        .inner
+        .transform_dirty
+    {
         let mask = world.ecs.worlds[CORE]
             .component_mask(scene_entity(entity))
             .unwrap_or(0);
@@ -628,8 +630,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
     for &entity in &dirt.object_state_dirty {
         if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
             world
-                .resources
-                .mesh_render_state
+                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_object_state_dirty(render_entity(entity));
         }
     }
@@ -1015,7 +1016,9 @@ pub fn render_sync_system(world: &mut World) {
         world
             .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
             .materials_dirty = true;
-        world.resources.mesh_render_state.request_full_rebuild();
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .request_full_rebuild();
         world
             .expect_resource_mut::<crate::render::config::RendererState>()
             .skinned_objects_generation = world

@@ -214,8 +214,7 @@ fn spawn_marker(
 
 fn push_tag(world: &mut World, entity: Entity, tag: &str) {
     world
-        .resources
-        .entities
+        .expect_resource_mut::<EntityRegistry>()
         .tags
         .entry(entity)
         .or_default()
@@ -224,8 +223,7 @@ fn push_tag(world: &mut World, entity: Entity, tag: &str) {
 
 fn link_path_from_world(game_world: &mut TowerDefenseResources, world: &World) {
     let mut waypoints: Vec<(u32, Vec3)> = world
-        .resources
-        .entities
+        .expect_resource::<EntityRegistry>()
         .tags
         .iter()
         .filter_map(|(entity, tags)| {
@@ -251,8 +249,7 @@ fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut Worl
     game_world.tile_original_colors.clear();
 
     let tile_entries: Vec<(Entity, i32, i32, bool, Vec4)> = world
-        .resources
-        .entities
+        .expect_resource::<EntityRegistry>()
         .tags
         .iter()
         .filter_map(|(entity, tags)| {

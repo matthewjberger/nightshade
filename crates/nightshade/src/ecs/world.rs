@@ -13,7 +13,7 @@
 //! - `world.expect_resource_mut::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
 //! - `world.expect_resource_mut::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
-//! - `world.resources.entities.names` â€” name-to-entity mapping
+//! - `world.expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
 
 pub mod components {
     pub use crate::ecs::animation::components::{
@@ -103,6 +103,7 @@ pub mod resources {
         VertexSnap,
     };
     pub use crate::render::mesh_cache::MeshCache;
+    pub use crate::render::mesh_state::MeshRenderState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
     pub use crate::render::wind::Wind;
     pub use freecs::dynamic::HierarchyIndex;
@@ -252,8 +253,6 @@ freecs::dynamic_schema! {
 
 #[derive(Default)]
 pub struct Resources {
-    pub entities: crate::ecs::entity_registry::EntityRegistry,
-    pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
     pub text: crate::ecs::text::resources::TextState,
     pub user_interface: crate::ecs::ui::UserInterface,
@@ -332,6 +331,8 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
+        ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
         ecs.insert_resource(freecs::dynamic::HierarchyIndex::default());
         ecs.insert_resource(crate::schedule::Schedules::default());
         ecs.insert_resource(crate::render::wgpu::texture_cache::TextureCache::default());

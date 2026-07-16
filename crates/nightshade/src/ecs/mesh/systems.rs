@@ -48,20 +48,17 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
 
     for entity in transform_dirty.drain(..) {
         world
-            .resources
-            .mesh_render_state
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_transform_dirty(render_entity(entity));
     }
     for entity in local_matrices_dirty.drain(..) {
         world
-            .resources
-            .mesh_render_state
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_instanced_local_matrices_dirty(render_entity(entity));
     }
     if needs_compute_dispatch {
         world
-            .resources
-            .mesh_render_state
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_instanced_compute_dispatch_needed();
     }
 

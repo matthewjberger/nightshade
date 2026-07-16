@@ -203,8 +203,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         let scene = world.expect_resource::<crate::render::config::RendererState>();
         let mut spheres = Vec::new();
         for entity in world
-            .resources
-            .mesh_render_state
+            .expect_resource::<crate::render::mesh_state::MeshRenderState>()
             .dirty_entities_for_culling()
         {
             let Some(dynamic) = scene.render_dynamic_objects.get(&entity) else {
@@ -234,10 +233,13 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         spheres
     };
     let global_dirty_signal = world
-        .resources
-        .mesh_render_state
+        .expect_resource::<crate::render::mesh_state::MeshRenderState>()
         .requires_full_invalidation();
-    let mesh_frame_state = Some(world.resources.mesh_render_state.take_frame_state());
+    let mesh_frame_state = Some(
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .take_frame_state(),
+    );
     let mouse_position = world
         .expect_resource_mut::<crate::ecs::input::resources::Input>()
         .mouse
@@ -414,7 +416,9 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {
-        resources.mesh_render_state.restore_unconsumed(unconsumed);
+        world
+            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .restore_unconsumed(unconsumed);
     }
     if let Some((screen_x, screen_y)) = inputs.frame.pick_request
         && world

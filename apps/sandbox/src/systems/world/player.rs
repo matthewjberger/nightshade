@@ -94,8 +94,7 @@ pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     let position = find_player_spawn(world).unwrap_or_else(default_spawn_position);
     let (player_entity, camera_entity) = spawn_first_person_player(world, position);
     world
-        .resources
-        .entities
+        .expect_resource_mut::<EntityRegistry>()
         .tags
         .entry(player_entity)
         .or_default()
