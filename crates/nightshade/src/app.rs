@@ -706,11 +706,14 @@ pub fn build_default_frame_stages() -> freecs::Stages<World> {
     stages
 }
 
-/// Removes every occurrence of the named system from the frame stages,
-/// returning whether anything was removed. Runners that pull a system out
-/// of their own frame stages (the caller-owned loop lifting the input reset
-/// so edge-triggered input survives the frame boundary) call this.
-pub fn remove_frame_system(stages: &mut freecs::Stages<World>, name: &str) -> bool {
+/// Removes `system` from the frame stages, returning whether anything was
+/// removed. Pass the same function value that was registered with
+/// [`add_system`](App::add_system); the name is derived from it exactly as
+/// registration does, so the caller never spells one out. Runners that pull a
+/// system out of their own frame stages (the caller-owned loop lifting the
+/// input reset so edge-triggered input survives the frame boundary) call this.
+pub fn remove_frame_system<F>(stages: &mut freecs::Stages<World>, system: F) -> bool {
+    let name = std::any::type_name_of_val(&system);
     let mut removed = false;
     for (_, schedule) in &mut stages.stages {
         removed |= schedule.remove(name);
