@@ -310,7 +310,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
                     let label = text_slot
                         .and_then(|slot| {
                             world
-                                .expect_resource::<TextState>()
+                                .res::<TextState>()
                                 .cache
                                 .get_text(slot)
                                 .map(|s| s.to_string())
@@ -361,9 +361,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
     }
 
     if let Some(action) = progress_action {
-        let bar = &mut world
-            .expect_resource_mut::<RetainedUiState>()
-            .top_progress_bar;
+        let bar = &mut world.res_mut::<RetainedUiState>().top_progress_bar;
         match action {
             ProgressAction::Set(value) => bar.set(value),
             ProgressAction::Indeterminate => bar.set_indeterminate(),
@@ -374,7 +372,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
     let slider_entity = ui_named_entity(world, "nav_slider");
     let mut slider_y = gallery.state.nav_slider_y;
     let slider_target = gallery.state.nav_slider_target_y;
-    let delta_time = world.expect_resource::<Time>().delta_time.clamp(0.0, 0.05);
+    let delta_time = world.res::<Time>().delta_time.clamp(0.0, 0.05);
     let stiffness = 220.0_f32;
     let displacement = slider_y - slider_target;
     let damping_factor = (-stiffness * delta_time * 0.5).exp();
@@ -418,10 +416,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
                 world.get::<nightshade::ecs::ui::components::UiNodeContent>(log_entity)
             {
                 let slot = *text_slot;
-                world
-                    .expect_resource_mut::<TextState>()
-                    .cache
-                    .set_text(slot, &message);
+                world.res_mut::<TextState>().cache.set_text(slot, &message);
             }
         }
     }
@@ -465,7 +460,7 @@ enum ProgressAction {
 fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool) {
     let Some(label) = label else { return };
     let theme = world
-        .expect_resource::<RetainedUiState>()
+        .res::<RetainedUiState>()
         .theme_state
         .active_theme()
         .clone();

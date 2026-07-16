@@ -33,7 +33,7 @@ pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> 
     }
     if count > 0 {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .request_full_rebuild();
     }
     count

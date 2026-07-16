@@ -42,7 +42,7 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     let dt = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+//!     let dt = world.res::<crate::ecs::time::Time>().delta_time;
 //!
 //!     if let Some(weights) = world.get_mut::<crate::ecs::morph::components::MorphWeights>(face_entity) {
 //!         // Animate smile weight

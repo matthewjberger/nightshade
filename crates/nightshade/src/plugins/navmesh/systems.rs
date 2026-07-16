@@ -206,7 +206,7 @@ pub fn snap_idle_agents_to_navmesh(world: &mut World) {
 }
 
 pub fn agent_movement_system(world: &mut World) {
-    let delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+    let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
 
     let entities: Vec<_> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)

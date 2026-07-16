@@ -8,14 +8,11 @@ use nightshade::prelude::*;
 pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
     world.ecs.add_world_at(GAME, register_sandbox_components());
 
-    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::DayNight;
-    world.expect_resource_mut::<DebugDraw>().show_grid = false;
-    world.expect_resource_mut::<RendererState>().use_fullscreen = true;
-    world.expect_resource_mut::<RendererState>().day_night.hour = 9.5;
-    world
-        .expect_resource_mut::<RendererState>()
-        .day_night
-        .auto_cycle = false;
+    world.res_mut::<RenderSettings>().atmosphere = Atmosphere::DayNight;
+    world.res_mut::<DebugDraw>().show_grid = false;
+    world.res_mut::<RendererState>().use_fullscreen = true;
+    world.res_mut::<RendererState>().day_night.hour = 9.5;
+    world.res_mut::<RendererState>().day_night.auto_cycle = false;
 
     textures::load_prototype_textures(world);
     level::load_or_build_level(world);
@@ -58,22 +55,19 @@ pub fn enter(sandbox_world: &mut SandboxResources, world: &mut World, screen: Sc
     world.plugin_resource_mut::<PhysicsWorld>().enabled = config.physics_enabled;
     set_cursor_locked(world, config.cursor_locked);
     set_cursor_visible(world, !config.cursor_locked);
-    world
-        .expect_resource_mut::<RetainedUiState>()
-        .gamepad_nav
-        .enabled = config.gamepad_nav;
+    world.res_mut::<RetainedUiState>().gamepad_nav.enabled = config.gamepad_nav;
 
     let interaction = world
-        .expect_resource_mut::<RetainedUiState>()
+        .res_mut::<RetainedUiState>()
         .interaction_for_active_mut();
     interaction.focused_entity = config.focus;
     world
-        .expect_resource_mut::<RetainedUiState>()
+        .res_mut::<RetainedUiState>()
         .overlays
         .focus_ring_visible = config.focus.is_some();
     if config.focus.is_none() {
         world
-            .expect_resource_mut::<RetainedUiState>()
+            .res_mut::<RetainedUiState>()
             .gamepad_nav
             .held_direction = None;
     }

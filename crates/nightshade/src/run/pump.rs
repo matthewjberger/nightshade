@@ -67,7 +67,7 @@ pub fn pump_shell_ready(shell: &PumpShell) -> bool {
 /// Pumps pending window events, rendering at most one frame.
 ///
 /// Returns false once the event loop has exited, from a close request or
-/// `world.expect_resource::<crate::ecs::window::resources::Window>().should_exit`. Sleeps briefly when nothing can
+/// `world.res::<crate::ecs::window::resources::Window>().should_exit`. Sleeps briefly when nothing can
 /// render (no window or renderer yet, or a zero-sized window) so a caller
 /// loop never spins hot.
 pub fn pump_frame(shell: &mut PumpShell) -> bool {
@@ -82,7 +82,7 @@ pub fn pump_frame(shell: &mut PumpShell) -> bool {
         && shell
             .context
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .handle
             .as_ref()
             .is_some_and(|handle| {

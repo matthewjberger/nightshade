@@ -57,9 +57,9 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         .get::<crate::ecs::camera::components::CameraEnvironment>(entity)
         .copied();
     let effective_shading = crate::ecs::camera::components::effective_shading_for_camera(
-        world.expect_resource::<crate::render::config::RenderSettings>(),
-        world.expect_resource::<crate::render::config::DebugDraw>(),
-        world.expect_resource::<crate::ecs::graphics::selection::Selection>(),
+        world.res::<crate::render::config::RenderSettings>(),
+        world.res::<crate::render::config::DebugDraw>(),
+        world.res::<crate::ecs::graphics::selection::Selection>(),
         &shading,
         post_process.as_ref(),
         culling_mask.as_ref(),
@@ -86,7 +86,7 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
 fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
     std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+            .res_mut::<crate::ecs::world::commands::CommandQueues>()
             .render,
     )
     .into_iter()
@@ -156,26 +156,22 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let commands = map_render_commands(world);
 
     let cameras: Vec<CameraFrameInputs> = world
-        .expect_resource::<crate::ecs::ui::UserInterface>()
+        .res::<crate::ecs::ui::UserInterface>()
         .required_cameras
         .iter()
         .map(|&entity| snapshot_camera(world, entity))
         .collect();
-    let active_camera = world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0;
+    let active_camera = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let active_camera_frame = active_camera.map(|entity| snapshot_camera(world, entity));
     let fallback_shading = crate::ecs::camera::components::effective_shading_from_graphics(
-        world.expect_resource::<crate::render::config::RenderSettings>(),
-        world.expect_resource::<crate::render::config::DebugDraw>(),
-        world.expect_resource::<crate::ecs::graphics::selection::Selection>(),
+        world.res::<crate::render::config::RenderSettings>(),
+        world.res::<crate::render::config::DebugDraw>(),
+        world.res::<crate::ecs::graphics::selection::Selection>(),
     );
 
-    let mut wants_normals = world
-        .expect_resource::<crate::render::config::DebugDraw>()
-        .show_normals;
+    let mut wants_normals = world.res::<crate::render::config::DebugDraw>().show_normals;
     let mut wants_bounds = world
-        .expect_resource::<crate::render::config::DebugDraw>()
+        .res::<crate::render::config::DebugDraw>()
         .show_bounding_volumes;
     let mut wants_wireframe = false;
     for camera in cameras.iter().chain(active_camera_frame.iter()) {
@@ -190,7 +186,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     };
 
     let pick_request = world
-        .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+        .res_mut::<crate::ecs::gpu_picking::GpuPicking>()
         .take_pending_request()
         .map(|request| (request.screen_x, request.screen_y));
     let has_skinned_meshes = world.ecs.worlds[CORE]
@@ -199,10 +195,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .is_some();
 
     let dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)> = {
-        let scene = world.expect_resource::<crate::render::config::RendererState>();
+        let scene = world.res::<crate::render::config::RendererState>();
         let mut spheres = Vec::new();
         for entity in world
-            .expect_resource::<crate::render::mesh_state::MeshRenderState>()
+            .res::<crate::render::mesh_state::MeshRenderState>()
             .dirty_entities_for_culling()
         {
             let Some(dynamic) = scene.render_dynamic_objects.get(&entity) else {
@@ -232,19 +228,19 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         spheres
     };
     let global_dirty_signal = world
-        .expect_resource::<crate::render::mesh_state::MeshRenderState>()
+        .res::<crate::render::mesh_state::MeshRenderState>()
         .requires_full_invalidation();
     let mesh_frame_state = Some(
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .take_frame_state(),
     );
     let mouse_position = world
-        .expect_resource::<crate::ecs::input::resources::Input>()
+        .res::<crate::ecs::input::resources::Input>()
         .mouse
         .position;
     let force_render_cameras = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .force_render_cameras
         .iter()
         .copied()
@@ -252,55 +248,48 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .collect();
 
     #[cfg(feature = "grass")]
-    let grass =
-        std::mem::take(world.expect_resource_mut::<crate::render::grass_config::GrassSettings>());
+    let grass = std::mem::take(world.res_mut::<crate::render::grass_config::GrassSettings>());
     #[cfg(feature = "terrain")]
     let terrain = std::mem::take(world.plugin_resource_mut::<TerrainSettings>());
     #[cfg(feature = "terrain")]
-    let terrain_render = std::mem::take(
-        world.expect_resource_mut::<crate::render::terrain_config::TerrainRenderState>(),
-    );
+    let terrain_render =
+        std::mem::take(world.res_mut::<crate::render::terrain_config::TerrainRenderState>());
 
-    let wind = *world.expect_resource::<crate::render::wind::Wind>();
-    let debug_draw =
-        std::mem::take(world.expect_resource_mut::<crate::render::config::DebugDraw>());
-    let settings =
-        std::mem::take(world.expect_resource_mut::<crate::render::config::RenderSettings>());
-    let window_uptime_milliseconds = world
-        .expect_resource::<crate::ecs::time::Time>()
-        .uptime_milliseconds;
-    let window_delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+    let wind = *world.res::<crate::render::wind::Wind>();
+    let debug_draw = std::mem::take(world.res_mut::<crate::render::config::DebugDraw>());
+    let settings = std::mem::take(world.res_mut::<crate::render::config::RenderSettings>());
+    let window_uptime_milliseconds = world.res::<crate::ecs::time::Time>().uptime_milliseconds;
+    let window_delta_time = world.res::<crate::ecs::time::Time>().delta_time;
     let window_cached_viewport_size = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .cached_viewport_size;
     let window_camera_tile_rects: std::collections::HashMap<_, _> = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .camera_tile_rects
         .iter()
         .map(|(entity, rect)| (render_entity(*entity), *rect))
         .collect();
     let window_camera_tile_render_iteration = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .camera_tile_render_iteration;
     let window_active_viewport_rect = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .active_viewport_rect;
     let loading_particle_textures = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::ecs::loading::LoadingState>()
             .pending_particle_textures,
     );
-    let scene = std::mem::take(world.expect_resource_mut::<crate::render::config::RendererState>());
+    let scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
     let mesh_cache = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .mesh_cache,
     );
-    let world_id = world.expect_resource::<crate::ecs::world::WorldId>().0;
-    let texture_cache = std::mem::take(
-        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-    );
-    let retained = world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>();
+    let world_id = world.res::<crate::ecs::world::WorldId>().0;
+    let texture_cache =
+        std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
+    let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     RenderInputs {
         settings,
         debug_draw,
@@ -366,37 +355,36 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     #[cfg(feature = "terrain")]
     {
         *world.plugin_resource_mut::<TerrainSettings>() = inputs.terrain;
-        *world.expect_resource_mut::<crate::render::terrain_config::TerrainRenderState>() =
+        *world.res_mut::<crate::render::terrain_config::TerrainRenderState>() =
             inputs.terrain_render;
     }
-    *world.expect_resource_mut::<crate::render::config::DebugDraw>() = inputs.debug_draw;
-    *world.expect_resource_mut::<crate::render::config::RenderSettings>() = inputs.settings;
+    *world.res_mut::<crate::render::config::DebugDraw>() = inputs.debug_draw;
+    *world.res_mut::<crate::render::config::RenderSettings>() = inputs.settings;
     for entity in outputs.force_render_cleared {
         world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .force_render_cameras
             .remove(&scene_entity(entity));
     }
     let mut pending = inputs.pending_particle_textures;
     pending.extend(std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::ecs::loading::LoadingState>()
             .pending_particle_textures,
     ));
     world
-        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .res_mut::<crate::ecs::loading::LoadingState>()
         .pending_particle_textures = pending;
     #[cfg(feature = "grass")]
     {
-        *world.expect_resource_mut::<crate::render::grass_config::GrassSettings>() = inputs.grass;
+        *world.res_mut::<crate::render::grass_config::GrassSettings>() = inputs.grass;
     }
-    *world.expect_resource_mut::<crate::render::config::RendererState>() = inputs.scene;
+    *world.res_mut::<crate::render::config::RendererState>() = inputs.scene;
     world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .res_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache = inputs.mesh_cache;
-    *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
-        inputs.texture_cache;
-    let retained = world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>();
+    *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = inputs.texture_cache;
+    let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs
         .ui
@@ -409,22 +397,22 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     retained.render_slots = inputs.ui.render_slots;
     if outputs.frame_executed {
         world
-            .expect_resource_mut::<crate::ecs::ui::UserInterface>()
+            .res_mut::<crate::ecs::ui::UserInterface>()
             .viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .restore_unconsumed(unconsumed);
     }
     if let Some((screen_x, screen_y)) = inputs.frame.pick_request
         && world
-            .expect_resource::<crate::ecs::gpu_picking::GpuPicking>()
+            .res::<crate::ecs::gpu_picking::GpuPicking>()
             .pending_request
             .is_none()
     {
         world
-            .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+            .res_mut::<crate::ecs::gpu_picking::GpuPicking>()
             .pending_request = Some(crate::ecs::gpu_picking::GpuPickRequest { screen_x, screen_y });
     }
 }

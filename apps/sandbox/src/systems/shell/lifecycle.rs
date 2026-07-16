@@ -14,20 +14,15 @@ pub fn new_shell() -> ShellState<SandboxShellContext> {
 pub fn run(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
     if shell.visible {
         let alt_held = world
-            .expect_resource::<Input>()
+            .res::<Input>()
             .keyboard
             .is_key_pressed(KeyCode::AltLeft)
             || world
-                .expect_resource::<Input>()
+                .res::<Input>()
                 .keyboard
                 .is_key_pressed(KeyCode::AltRight);
         if !alt_held {
-            for character in world
-                .expect_resource::<Input>()
-                .keyboard
-                .frame_chars
-                .clone()
-            {
+            for character in world.res::<Input>().keyboard.frame_chars.clone() {
                 if !character.is_control() {
                     shell.input_buffer.push(character);
                 }
@@ -35,13 +30,13 @@ pub fn run(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
         }
         handle_pick_click(shell, world);
     }
-    let delta_time = world.expect_resource::<Time>().delta_time;
+    let delta_time = world.res::<Time>().delta_time;
     shell.update_animation(delta_time);
     shell_retained_ui(shell, world);
 }
 
 fn handle_pick_click(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
-    let mouse = &world.expect_resource::<Input>().mouse;
+    let mouse = &world.res::<Input>().mouse;
     if !mouse
         .state
         .contains(nightshade::ecs::input::resources::MouseState::LEFT_JUST_PRESSED)
@@ -66,11 +61,11 @@ pub fn handle_key(
     let pressed = key_state == ElementState::Pressed;
     if pressed {
         let alt_pressed = world
-            .expect_resource::<Input>()
+            .res::<Input>()
             .keyboard
             .is_key_pressed(KeyCode::AltLeft)
             || world
-                .expect_resource::<Input>()
+                .res::<Input>()
                 .keyboard
                 .is_key_pressed(KeyCode::AltRight);
         if (key_code == KeyCode::KeyC && alt_pressed) || key_code == KeyCode::Backquote {

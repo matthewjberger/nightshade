@@ -7,7 +7,7 @@
 use freecs::Entity;
 
 /// The selected entities and how they are highlighted. Held at
-/// `world.expect_resource::<crate::ecs::graphics::selection::Selection>()`.
+/// `world.res::<crate::ecs::graphics::selection::Selection>()`.
 #[derive(Clone)]
 pub struct Selection {
     /// Enables the selection outline post-process.

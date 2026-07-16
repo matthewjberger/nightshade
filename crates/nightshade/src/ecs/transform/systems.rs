@@ -14,14 +14,13 @@ pub fn run_systems(world: &mut World) {
 /// Pull-syncs the maintained hierarchy index from the core world's
 /// structural log and change ticks. Runs at the top of the transform pass
 /// every frame; call it directly before reading
-/// `world.expect_resource::<freecs::dynamic::HierarchyIndex>()` when links may have changed this frame.
+/// `world.res::<freecs::dynamic::HierarchyIndex>()` when links may have changed this frame.
 /// Must run before the render sync trims the structural log, so never gate
 /// the transform-pass sync behind a condition.
 pub fn sync_hierarchy_index(world: &mut World) {
-    let mut hierarchy =
-        std::mem::take(world.expect_resource_mut::<freecs::dynamic::HierarchyIndex>());
+    let mut hierarchy = std::mem::take(world.res_mut::<freecs::dynamic::HierarchyIndex>());
     hierarchy.sync(&mut world.ecs.worlds[CORE]);
-    *world.expect_resource_mut::<freecs::dynamic::HierarchyIndex>() = hierarchy;
+    *world.res_mut::<freecs::dynamic::HierarchyIndex>() = hierarchy;
 }
 
 pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Entity>) {
@@ -46,12 +45,12 @@ pub fn update_global_transforms_system(world: &mut World) {
     sync_hierarchy_index(world);
 
     let initial_pass = !world
-        .expect_resource::<crate::ecs::transform::resources::TransformState>()
+        .res::<crate::ecs::transform::resources::TransformState>()
         .initial_pass_done;
 
     let mut dirty_entities = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .dirty_scratch,
     );
     dirty_entities.clear();
@@ -60,11 +59,11 @@ pub fn update_global_transforms_system(world: &mut World) {
         dirty_entities
             .extend(world.ecs.worlds[CORE].query_entities(LOCAL_TRANSFORM | GLOBAL_TRANSFORM));
         world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .initial_pass_done = true;
     } else {
         let since_tick = world
-            .expect_resource::<crate::ecs::transform::resources::TransformState>()
+            .res::<crate::ecs::transform::resources::TransformState>()
             .last_consumed_tick;
         dirty_entities.extend(
             world.ecs.worlds[CORE].query_entities_changed_since(LOCAL_TRANSFORM, since_tick),
@@ -73,13 +72,13 @@ pub fn update_global_transforms_system(world: &mut World) {
             .extend(world.ecs.worlds[CORE].query_entities_changed_since(PARENT, since_tick));
     }
     world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .res_mut::<crate::ecs::transform::resources::TransformState>()
         .last_consumed_tick = world.ecs.worlds[CORE].current_tick();
     world.ecs.worlds[CORE].increment_tick();
 
     if dirty_entities.is_empty() {
         world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .dirty_scratch = dirty_entities;
         return;
     }
@@ -89,13 +88,13 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     let mut seen = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .expansion_seen,
     );
     seen.clear();
     seen.extend(dirty_entities.iter().copied());
     {
-        let hierarchy = &world.expect_resource::<freecs::dynamic::HierarchyIndex>();
+        let hierarchy = &world.res::<freecs::dynamic::HierarchyIndex>();
         let mut index = 0;
         while index < dirty_entities.len() {
             let entity = dirty_entities[index];
@@ -112,12 +111,12 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     let mut stack = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .traversal_stack,
     );
     let mut render_dirty_entities = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .res_mut::<crate::ecs::transform::resources::TransformState>()
             .render_dirty_scratch,
     );
     stack.clear();
@@ -157,7 +156,7 @@ pub fn update_global_transforms_system(world: &mut World) {
         }
 
         for child in world
-            .expect_resource::<freecs::dynamic::HierarchyIndex>()
+            .res::<freecs::dynamic::HierarchyIndex>()
             .children(current)
         {
             stack.push(*child);
@@ -166,7 +165,7 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     for entity in render_dirty_entities.drain(..) {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_transform_dirty(render_entity(entity));
     }
 
@@ -174,16 +173,16 @@ pub fn update_global_transforms_system(world: &mut World) {
     stack.clear();
     dirty_entities.clear();
     world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .res_mut::<crate::ecs::transform::resources::TransformState>()
         .expansion_seen = seen;
     world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .res_mut::<crate::ecs::transform::resources::TransformState>()
         .traversal_stack = stack;
     world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .res_mut::<crate::ecs::transform::resources::TransformState>()
         .render_dirty_scratch = render_dirty_entities;
     world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .res_mut::<crate::ecs::transform::resources::TransformState>()
         .dirty_scratch = dirty_entities;
 }
 
@@ -230,7 +229,7 @@ pub fn propagate_subtree_global_transforms(world: &mut World, root: Entity) {
             *global_transform = GlobalTransform(new_global_transform);
         }
         for child in world
-            .expect_resource::<freecs::dynamic::HierarchyIndex>()
+            .res::<freecs::dynamic::HierarchyIndex>()
             .children(current)
         {
             stack.push(*child);

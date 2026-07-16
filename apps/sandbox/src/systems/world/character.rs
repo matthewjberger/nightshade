@@ -257,7 +257,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
         }
         set_model_visible(sandbox_world, world, true);
         if !fly {
-            world.expect_resource_mut::<ActiveCamera>().0 = sandbox_world.character.camera;
+            world.res_mut::<ActiveCamera>().0 = sandbox_world.character.camera;
         }
     } else {
         if let Some(controller) =
@@ -283,7 +283,7 @@ pub fn set_third_person(sandbox_world: &mut SandboxResources, world: &mut World,
         }
         set_model_visible(sandbox_world, world, false);
         if !fly {
-            world.expect_resource_mut::<ActiveCamera>().0 = sandbox_world.player.camera_entity;
+            world.res_mut::<ActiveCamera>().0 = sandbox_world.player.camera_entity;
         }
     }
 }
@@ -484,7 +484,7 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
 
     let mut direction = Vec3::zeros();
     let (jump_key_pressed, crouch_key_held) = {
-        let keyboard = &world.expect_resource::<Input>().keyboard;
+        let keyboard = &world.res::<Input>().keyboard;
         if keyboard.is_key_pressed(KeyCode::KeyW) {
             direction += forward;
         }
@@ -523,17 +523,14 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     }
 
     let gamepad_jump = world
-        .expect_resource::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::plugins::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::South);
     let gamepad_flip = world
-        .expect_resource::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::plugins::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::West);
-    let flip_key_pressed = world
-        .expect_resource::<Input>()
-        .keyboard
-        .just_pressed(KeyCode::KeyF);
+    let flip_key_pressed = world.res::<Input>().keyboard.just_pressed(KeyCode::KeyF);
 
     CharacterInputs {
         direction,
@@ -572,10 +569,7 @@ fn move_character(
     body: Entity,
     camera: Entity,
 ) {
-    let delta_time = world
-        .expect_resource::<Time>()
-        .delta_time
-        .min(MAX_STEP_SECONDS);
+    let delta_time = world.res::<Time>().delta_time.min(MAX_STEP_SECONDS);
     let Some(mut position) = world
         .get::<nightshade::ecs::transform::components::LocalTransform>(body)
         .map(|transform| transform.translation)

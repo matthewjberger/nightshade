@@ -108,7 +108,7 @@ pub struct Events {
 
 /// Publishes an event for participants to read next cycle.
 pub fn emit_event(world: &mut World, event: Event) {
-    let events = &mut world.expect_resource_mut::<crate::ecs::event::Events>();
+    let events = &mut world.res_mut::<crate::ecs::event::Events>();
     if events.journal_enabled {
         record(
             events,
@@ -123,43 +123,32 @@ pub fn emit_event(world: &mut World, event: Event) {
 
 /// The events visible to participants this cycle.
 pub fn events(world: &World) -> &[Event] {
-    &world.expect_resource::<crate::ecs::event::Events>().current
+    &world.res::<crate::ecs::event::Events>().current
 }
 
 /// The current cycle counter, for stamping a journal entry.
 pub fn cycle(world: &World) -> u64 {
-    world.expect_resource::<crate::ecs::event::Events>().cycle
+    world.res::<crate::ecs::event::Events>().cycle
 }
 
 /// Whether the journal is recording.
 pub fn journal_enabled(world: &World) -> bool {
-    world
-        .expect_resource::<crate::ecs::event::Events>()
-        .journal_enabled
+    world.res::<crate::ecs::event::Events>().journal_enabled
 }
 
 /// Turns the journal on or off. A tool that watches command and event traffic
 /// turns it on, a shipping build leaves it off so there is no record keeping
 /// cost on the hot path.
 pub fn set_journal_enabled(world: &mut World, enabled: bool) {
-    world
-        .expect_resource_mut::<crate::ecs::event::Events>()
-        .journal_enabled = enabled;
+    world.res_mut::<crate::ecs::event::Events>().journal_enabled = enabled;
     if !enabled {
-        world
-            .expect_resource_mut::<crate::ecs::event::Events>()
-            .journal
-            .clear();
+        world.res_mut::<crate::ecs::event::Events>().journal.clear();
     }
 }
 
 /// Takes the journal entries recorded since the last drain.
 pub fn drain_journal(world: &mut World) -> Vec<JournalEntry> {
-    std::mem::take(
-        &mut world
-            .expect_resource_mut::<crate::ecs::event::Events>()
-            .journal,
-    )
+    std::mem::take(&mut world.res_mut::<crate::ecs::event::Events>().journal)
 }
 
 fn record(events: &mut Events, entry: JournalEntry) {
@@ -172,7 +161,7 @@ fn record(events: &mut Events, entry: JournalEntry) {
 /// Frame start: last cycle's emitted events become this cycle's readable set
 /// and the emit buffer is cleared, freezing the set for every participant.
 pub fn swap_events_system(world: &mut World) {
-    let events = &mut world.expect_resource_mut::<crate::ecs::event::Events>();
+    let events = &mut world.res_mut::<crate::ecs::event::Events>();
     events.cycle = events.cycle.wrapping_add(1);
     events.current.clear();
     std::mem::swap(&mut events.current, &mut events.pending);

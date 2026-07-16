@@ -24,7 +24,7 @@ const PROPERTY_SCALE: u32 = 2;
 /// refresh every frame into reused allocations.
 pub fn render_sync_animation_system(world: &mut World) {
     let since = world
-        .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .res::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .animation_cursor;
     let players_ticked = world.ecs.worlds[CORE]
         .query_entities_changed_since(ANIMATION_PLAYER, since)
@@ -35,21 +35,21 @@ pub fn render_sync_animation_system(world: &mut World) {
         .next()
         .is_some();
     world
-        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .animation_cursor = world
-        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .data_cursor;
 
     let mut player_runtime = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::render::config::RendererState>()
+            .res_mut::<crate::render::config::RendererState>()
             .render_animation
             .player_runtime,
     );
     player_runtime.clear();
     let mut player_clips = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
             .animation_player_clips_scratch,
     );
     player_clips.clear();
@@ -75,11 +75,10 @@ pub fn render_sync_animation_system(world: &mut World) {
     }
 
     let skinned_generation = world
-        .expect_resource::<crate::render::config::RendererState>()
+        .res::<crate::render::config::RendererState>()
         .skinned_objects_generation;
     let gate_fired = {
-        let sync =
-            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
+        let sync = &mut world.res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         let gate_fired = !sync.animation_initialized
             || players_ticked
             || skins_ticked
@@ -96,7 +95,7 @@ pub fn render_sync_animation_system(world: &mut World) {
         skin_entities.sort_by_key(|entity| (entity.id, entity.generation));
         let signature = static_signature(world, &skin_entities, &joint_to_player, &player_clips);
         let snapshot = &mut world
-            .expect_resource_mut::<crate::render::config::RendererState>()
+            .res_mut::<crate::render::config::RendererState>()
             .render_animation;
         if signature != snapshot.signature {
             snapshot.signature = signature;
@@ -104,7 +103,7 @@ pub fn render_sync_animation_system(world: &mut World) {
         } else {
             std::mem::take(
                 &mut world
-                    .expect_resource_mut::<crate::render::config::RendererState>()
+                    .res_mut::<crate::render::config::RendererState>()
                     .render_animation
                     .skeletons,
             )
@@ -112,29 +111,28 @@ pub fn render_sync_animation_system(world: &mut World) {
     } else {
         std::mem::take(
             &mut world
-                .expect_resource_mut::<crate::render::config::RendererState>()
+                .res_mut::<crate::render::config::RendererState>()
                 .render_animation
                 .skeletons,
         )
     };
 
     {
-        let sync =
-            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
+        let sync = &mut world.res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         sync.animation_player_clips_scratch =
             std::mem::replace(&mut sync.animation_player_clips, player_clips);
     }
 
     let mut layer_runtime = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::render::config::RendererState>()
+            .res_mut::<crate::render::config::RendererState>()
             .render_animation
             .layer_runtime,
     );
     layer_runtime.clear();
     let mut armature_roots = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::render::config::RendererState>()
+            .res_mut::<crate::render::config::RendererState>()
             .render_animation
             .armature_roots,
     );
@@ -164,7 +162,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     }
 
     let snapshot = &mut world
-        .expect_resource_mut::<crate::render::config::RendererState>()
+        .res_mut::<crate::render::config::RendererState>()
         .render_animation;
     snapshot.skeletons = skeletons;
     snapshot.player_runtime = player_runtime;

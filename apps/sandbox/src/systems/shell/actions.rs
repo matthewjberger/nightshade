@@ -96,16 +96,13 @@ pub fn apply_shell_actions(
             }
         }
         ShellAction::SetTimeOfDay(hour) => {
-            world.expect_resource_mut::<RendererState>().day_night.hour = hour.clamp(0.0, 24.0);
+            world.res_mut::<RendererState>().day_night.hour = hour.clamp(0.0, 24.0);
         }
         ShellAction::PauseTimeOfDay(paused) => {
-            world
-                .expect_resource_mut::<RendererState>()
-                .day_night
-                .auto_cycle = !paused;
+            world.res_mut::<RendererState>().day_night.auto_cycle = !paused;
         }
         ShellAction::SetTimeSpeed(value) => {
-            world.expect_resource_mut::<RendererState>().day_night.speed = value;
+            world.res_mut::<RendererState>().day_night.speed = value;
         }
         ShellAction::SaveLevel => {
             #[cfg(not(target_arch = "wasm32"))]

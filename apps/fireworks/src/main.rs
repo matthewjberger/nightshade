@@ -151,7 +151,7 @@ struct FireworksPlugin;
 
 impl Plugin for FireworksPlugin {
     fn build(&self, app: &mut App) {
-        app.world.expect_resource_mut::<Window>().title = "Fireworks".to_string();
+        app.world.res_mut::<Window>().title = "Fireworks".to_string();
         app.insert_resource(FireworksDemo::default());
         app.add_system(Stage::Startup, initialize);
         app.add_systems(
@@ -170,13 +170,11 @@ impl Plugin for FireworksPlugin {
 }
 
 fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
-    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::Space;
-    world.expect_resource_mut::<DebugDraw>().show_grid = true;
-    world.expect_resource_mut::<RenderSettings>().clear_color = [0.01, 0.01, 0.02, 1.0];
-    world.expect_resource_mut::<RenderSettings>().bloom_enabled = true;
-    world
-        .expect_resource_mut::<RenderSettings>()
-        .bloom_intensity = 0.05;
+    world.res_mut::<RenderSettings>().atmosphere = Atmosphere::Space;
+    world.res_mut::<DebugDraw>().show_grid = true;
+    world.res_mut::<RenderSettings>().clear_color = [0.01, 0.01, 0.02, 1.0];
+    world.res_mut::<RenderSettings>().bloom_enabled = true;
+    world.res_mut::<RenderSettings>().bloom_intensity = 0.05;
 
     let camera = spawn_entities(
         world,
@@ -219,7 +217,7 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
             ..Default::default()
         },
     );
-    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
+    world.res_mut::<ActiveCamera>().0 = Some(camera);
 
     fireworks.auto_launch = true;
     fireworks.launch_interval = 0.3;
@@ -262,7 +260,7 @@ fn initialize(fireworks: &mut FireworksDemo, world: &mut World) {
 }
 
 fn advance_show(fireworks: &mut FireworksDemo, world: &mut World) {
-    let uptime = world.expect_resource_mut::<Time>().uptime_milliseconds as f32 / 1000.0;
+    let uptime = world.res_mut::<Time>().uptime_milliseconds as f32 / 1000.0;
 
     if fireworks.show_active {
         fireworks.update_fireworks_show(world, uptime);
@@ -277,17 +275,17 @@ fn advance_show(fireworks: &mut FireworksDemo, world: &mut World) {
 }
 
 fn advance_shells(fireworks: &mut FireworksDemo, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time;
+    let delta_time = world.res_mut::<Time>().delta_time;
     fireworks.update_shells(world, delta_time);
 }
 
 fn advance_sub_shells(fireworks: &mut FireworksDemo, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time;
+    let delta_time = world.res_mut::<Time>().delta_time;
     fireworks.update_sub_shells(world, delta_time);
 }
 
 fn cleanup_effects(fireworks: &mut FireworksDemo, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time;
+    let delta_time = world.res_mut::<Time>().delta_time;
     fireworks.cleanup_expired_effects(world, delta_time);
 }
 
@@ -357,9 +355,7 @@ impl FireworksDemo {
         let launch_interval_initial = self.launch_interval;
         let salvo_mode_initial = self.salvo_mode;
         let salvo_count_initial = self.salvo_count as f32;
-        let bloom_intensity_initial = world
-            .expect_resource_mut::<RenderSettings>()
-            .bloom_intensity;
+        let bloom_intensity_initial = world.res_mut::<RenderSettings>().bloom_intensity;
 
         let mut tree = UiTreeBuilder::new(world);
         let panel = tree.add_docked_panel_left("fireworks", "Fireworks", 260.0);
@@ -534,9 +530,7 @@ impl FireworksDemo {
             self.salvo_count = value.round().clamp(3.0, 15.0) as u32;
         }
         if let Some(value) = ui_slider_value(world, self.ui.bloom_intensity) {
-            world
-                .expect_resource_mut::<RenderSettings>()
-                .bloom_intensity = value;
+            world.res_mut::<RenderSettings>().bloom_intensity = value;
         }
 
         if launch_single {
@@ -555,8 +549,7 @@ impl FireworksDemo {
             if self.show_active {
                 self.show_active = false;
             } else {
-                let uptime =
-                    world.expect_resource_mut::<Time>().uptime_milliseconds as f32 / 1000.0;
+                let uptime = world.res_mut::<Time>().uptime_milliseconds as f32 / 1000.0;
                 self.start_fireworks_show(uptime);
             }
         }
@@ -1779,7 +1772,7 @@ impl FireworksDemo {
             .to_rgba8();
         let (width, height) = img.dimensions();
         world
-            .expect_resource_mut::<LoadingState>()
+            .res_mut::<LoadingState>()
             .pending_particle_textures
             .push(ParticleTextureUpload {
                 slot,

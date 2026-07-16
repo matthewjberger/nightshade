@@ -12,7 +12,7 @@ pub struct PickingRay {
 
 impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
-        let window = &world.expect_resource::<crate::ecs::window::resources::Window>();
+        let window = &world.res::<crate::ecs::window::resources::Window>();
 
         let (local_pos, viewport_width, viewport_height) =
             if let Some(viewport_rect) = &window.active_viewport_rect {
@@ -28,7 +28,7 @@ impl PickingRay {
             };
 
         let camera_entity = world
-            .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
+            .res::<crate::ecs::camera::resources::ActiveCamera>()
             .0?;
 
         let camera = world.get::<crate::ecs::camera::components::Camera>(camera_entity)?;
@@ -190,10 +190,7 @@ pub fn get_ground_position_from_screen(
 }
 
 pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entity> {
-    let camera_entity = match world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0
-    {
+    let camera_entity = match world.res::<crate::ecs::camera::resources::ActiveCamera>().0 {
         Some(entity) => entity,
         None => return Vec::new(),
     };
@@ -214,7 +211,7 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
         None => return Vec::new(),
     };
 
-    let window = &world.expect_resource::<crate::ecs::window::resources::Window>();
+    let window = &world.res::<crate::ecs::window::resources::Window>();
     let (viewport_width, viewport_height) = match window.cached_viewport_size {
         Some(size) => size,
         None => return Vec::new(),

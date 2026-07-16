@@ -214,7 +214,7 @@ fn spawn_marker(
 
 fn push_tag(world: &mut World, entity: Entity, tag: &str) {
     world
-        .expect_resource_mut::<EntityRegistry>()
+        .res_mut::<EntityRegistry>()
         .tags
         .entry(entity)
         .or_default()
@@ -223,7 +223,7 @@ fn push_tag(world: &mut World, entity: Entity, tag: &str) {
 
 fn link_path_from_world(game_world: &mut TowerDefenseResources, world: &World) {
     let mut waypoints: Vec<(u32, Vec3)> = world
-        .expect_resource::<EntityRegistry>()
+        .res::<EntityRegistry>()
         .tags
         .iter()
         .filter_map(|(entity, tags)| {
@@ -249,7 +249,7 @@ fn link_grid_from_world(game_world: &mut TowerDefenseResources, world: &mut Worl
     game_world.tile_original_colors.clear();
 
     let tile_entries: Vec<(Entity, i32, i32, bool, Vec4)> = world
-        .expect_resource::<EntityRegistry>()
+        .res::<EntityRegistry>()
         .tags
         .iter()
         .filter_map(|(entity, tags)| {
@@ -291,10 +291,7 @@ fn tile_color(world: &World, entity: Entity) -> Vec4 {
         return fallback;
     };
     let Some(material) = nightshade::render::generational_registry::registry_entry_by_name(
-        &world
-            .expect_resource::<AssetState>()
-            .material_registry
-            .registry,
+        &world.res::<AssetState>().material_registry.registry,
         &material_ref.name,
     ) else {
         return fallback;

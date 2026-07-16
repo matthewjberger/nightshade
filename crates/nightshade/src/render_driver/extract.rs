@@ -42,7 +42,7 @@ pub(crate) fn prepare_text_meshes(
     }
     for (entity, text_index, properties) in dirty_entries {
         let text_content = match world
-            .expect_resource::<crate::ecs::text::resources::TextState>()
+            .res::<crate::ecs::text::resources::TextState>()
             .cache
             .get_text(text_index)
         {
@@ -53,7 +53,7 @@ pub(crate) fn prepare_text_meshes(
             &text_content,
             &mut super::text_mesh::TextMeshContext {
                 font_engine: &mut world
-                    .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+                    .res_mut::<crate::ecs::text::resources::TextState>()
                     .font_engine,
                 glyph_atlas: &mut renderer.glyph_atlas,
                 device: &renderer.device,
@@ -69,7 +69,7 @@ pub(crate) fn prepare_text_meshes(
 
     let mut frame_text = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
             .frame
             .text_meshes,
     );
@@ -102,7 +102,7 @@ pub(crate) fn prepare_text_meshes(
             &instance.text,
             &mut super::text_mesh::TextMeshContext {
                 font_engine: &mut world
-                    .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+                    .res_mut::<crate::ecs::text::resources::TextState>()
                     .font_engine,
                 glyph_atlas: &mut renderer.glyph_atlas,
                 device: &renderer.device,
@@ -130,7 +130,7 @@ pub(crate) fn prepare_text_meshes(
         renderer.frame_state.text_mesh_signatures.remove(&entity);
     }
     world
-        .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
         .frame
         .text_meshes = frame_text;
 

@@ -78,9 +78,7 @@ pub use systems::*;
 #[cfg(feature = "audio")]
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world
-        .expect_resource_mut::<crate::schedule::Schedules>()
-        .frame;
+    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
     schedule_push(
         schedule,
         FramePhase::Start,

@@ -69,13 +69,13 @@ pub fn update_with_state(
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pending_font_loads: Vec<_> = world
-        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .res_mut::<crate::ecs::loading::LoadingState>()
         .pending_font_loads
         .drain(..)
         .collect();
     for pending_load in pending_font_loads {
         world
-            .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+            .res_mut::<crate::ecs::text::resources::TextState>()
             .font_engine
             .load_font(pending_load.font_data);
     }
@@ -146,7 +146,7 @@ pub(crate) fn poll_depth_pick_readback(
     renderer.depth_pick.staging_buffer.unmap();
 
     world
-        .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+        .res_mut::<crate::ecs::gpu_picking::GpuPicking>()
         .set_depth_samples(
             depth_values,
             entity_id_values,
@@ -166,7 +166,7 @@ pub(crate) fn poll_depth_pick_readback(
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
 
         world
-            .expect_resource_mut::<crate::ecs::gpu_picking::GpuPicking>()
+            .res_mut::<crate::ecs::gpu_picking::GpuPicking>()
             .compute_result(
                 &inverse_view_proj,
                 texture_width as f32,
@@ -189,13 +189,13 @@ pub(crate) fn drain_loading_tasks(
     // is the only throttled step; decoding already ran off this thread.
     loading_pipeline_poll_decodes(
         &mut world
-            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::ecs::loading::LoadingState>()
             .pipeline,
         crate::ecs::loading::DECODE_POLL_BUDGET,
     );
 
     let budget = world
-        .expect_resource::<crate::ecs::loading::LoadingState>()
+        .res::<crate::ecs::loading::LoadingState>()
         .pipeline
         .tasks_per_frame
         .max(1);
@@ -206,7 +206,7 @@ pub(crate) fn drain_loading_tasks(
     while uploads < budget {
         let Some(task) = loading_pipeline_pop(
             &mut world
-                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::ecs::loading::LoadingState>()
                 .pipeline,
         ) else {
             break;
@@ -217,7 +217,7 @@ pub(crate) fn drain_loading_tasks(
             | crate::ecs::loading::LoadingTask::UploadDecodedTexture { texture, .. }
             | crate::ecs::loading::LoadingTask::MaterializeTexture { texture, .. } => {
                 crate::render::wgpu::texture_cache::texture_cache_texture_name(
-                    world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
+                    world.res::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture.index,
                 )
                 .map(str::to_string)
@@ -235,7 +235,7 @@ pub(crate) fn drain_loading_tasks(
                 // the per-frame upload budget.
                 if texture_uploads::reserve_material_layer(
                     renderer,
-                    world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
+                    world.res::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture,
                     usage,
                     sampler,
@@ -253,7 +253,7 @@ pub(crate) fn drain_loading_tasks(
             } => {
                 texture_uploads::upload_material_texture(
                     renderer,
-                    world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+                    world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture_uploads::MaterialTextureUploadRequest {
                         texture,
                         rgba_data: &rgba_data,
@@ -275,9 +275,7 @@ pub(crate) fn drain_loading_tasks(
                 // Hold the task until every source image it samples has finished
                 // decoding in the worker pool, then upload into the reserved layer.
                 if !loading_pipeline_recipe_ready(
-                    &world
-                        .expect_resource::<crate::ecs::loading::LoadingState>()
-                        .pipeline,
+                    &world.res::<crate::ecs::loading::LoadingState>().pipeline,
                     &recipe,
                 ) {
                     deferred.push(crate::ecs::loading::LoadingTask::MaterializeTexture {
@@ -291,13 +289,13 @@ pub(crate) fn drain_loading_tasks(
                 let produced = crate::ecs::loading::execute_texture_recipe(
                     &recipe,
                     &world
-                        .expect_resource::<crate::ecs::loading::LoadingState>()
+                        .res::<crate::ecs::loading::LoadingState>()
                         .pipeline
                         .decoded_images,
                 );
                 loading_pipeline_release_recipe_sources(
                     &mut world
-                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .res_mut::<crate::ecs::loading::LoadingState>()
                         .pipeline,
                     &recipe,
                 );
@@ -309,13 +307,13 @@ pub(crate) fn drain_loading_tasks(
                     // here via the `entry`-style insert.
                     let texture_name =
                         crate::render::wgpu::texture_cache::texture_cache_texture_name(
-                            world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
+                            world.res::<crate::render::wgpu::texture_cache::TextureCache>(),
                             texture.index,
                         )
                         .map(str::to_string);
                     if let Some(name) = texture_name {
                         world
-                            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                            .res_mut::<crate::ecs::asset_state::AssetState>()
                             .texture_sources
                             .entry(name)
                             .or_insert_with(|| crate::ecs::asset_state::TextureSourceBytes {
@@ -330,7 +328,7 @@ pub(crate) fn drain_loading_tasks(
                     }
                     texture_uploads::upload_material_texture(
                         renderer,
-                        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+                        world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
                         texture_uploads::MaterialTextureUploadRequest {
                             texture,
                             rgba_data: &decoded.rgba,
@@ -349,7 +347,7 @@ pub(crate) fn drain_loading_tasks(
         }
         loading_pipeline_mark_completed(
             &mut world
-                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::ecs::loading::LoadingState>()
                 .pipeline,
             label,
             category,
@@ -358,7 +356,7 @@ pub(crate) fn drain_loading_tasks(
     for task in deferred.into_iter().rev() {
         loading_pipeline_requeue_front(
             &mut world
-                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::ecs::loading::LoadingState>()
                 .pipeline,
             task,
         );
@@ -368,52 +366,46 @@ pub(crate) fn drain_loading_tasks(
     // resolve plus instance rebuild.
     let needs_resolve = reserved_any
         || !world
-            .expect_resource::<crate::ecs::asset_state::AssetState>()
+            .res::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .pending_resolve
             .is_empty();
     if needs_resolve {
-        let texture_cache = std::mem::take(
-            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-        );
+        let texture_cache =
+            std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
         crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
             &texture_cache,
             &uploaded_textures,
         );
-        *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
-            texture_cache;
+        *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = texture_cache;
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .request_full_rebuild();
     }
-    if !loading_pipeline_is_active(
-        &world
-            .expect_resource::<crate::ecs::loading::LoadingState>()
-            .pipeline,
-    ) {
+    if !loading_pipeline_is_active(&world.res::<crate::ecs::loading::LoadingState>().pipeline) {
         loading_pipeline_reset_source_arena(
             &mut world
-                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::ecs::loading::LoadingState>()
                 .pipeline,
         );
     }
 
     let evicted = crate::render::wgpu::texture_cache::texture_cache_remove_unused(
-        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
     );
     if !evicted.is_empty() {
         texture_uploads::unregister_evicted_textures(renderer, &evicted);
         for name in &evicted {
             world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .texture_sources
                 .remove(name);
         }
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .request_full_rebuild();
     }
 }

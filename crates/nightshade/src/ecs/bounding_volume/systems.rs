@@ -48,7 +48,7 @@ pub fn ensure_bounding_volumes(world: &mut World) {
     let mut pending: Vec<(Entity, BoundingVolume)> = Vec::new();
 
     let mesh_cache = &world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache;
     for (entity, render_mesh) in world
         .query_ref::<&crate::ecs::mesh::components::RenderMesh>()

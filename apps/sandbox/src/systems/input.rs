@@ -10,7 +10,7 @@ pub fn handle_global(sandbox: &mut Sandbox, input: Res<Input>, world: &mut World
     }
     let escape = input.keyboard.just_pressed(KeyCode::Escape);
     let start = world
-        .expect_resource::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::plugins::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::Start);
     let r = input.keyboard.just_pressed(KeyCode::KeyR);
@@ -19,7 +19,7 @@ pub fn handle_global(sandbox: &mut Sandbox, input: Res<Input>, world: &mut World
     match current_state::<Screen>(world) {
         Screen::Title => {
             if escape {
-                world.expect_resource_mut::<Window>().should_exit = true;
+                world.res_mut::<Window>().should_exit = true;
             }
         }
         Screen::InGame => {

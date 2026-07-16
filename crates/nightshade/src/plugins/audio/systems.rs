@@ -44,7 +44,7 @@ pub fn lazy_initialize_audio_system(world: &mut World) {
         return;
     }
     let gestured = world
-        .expect_resource::<crate::ecs::input::resources::Input>()
+        .res::<crate::ecs::input::resources::Input>()
         .events
         .iter()
         .any(|event| {
@@ -313,9 +313,7 @@ pub fn update_audio_system(world: &mut World) {
         let audio_ref = pick_active_clip(
             source,
             *entity,
-            world
-                .expect_resource::<crate::ecs::time::Time>()
-                .uptime_milliseconds,
+            world.res::<crate::ecs::time::Time>().uptime_milliseconds,
         );
         let bus = source.bus;
         let min_distance = source.min_distance;

@@ -104,9 +104,9 @@ impl<'a, T: Send + Sync + 'static> freecs::system_param::ResourceParam for Event
 /// system reading either sees identical input.
 pub(crate) fn emit_app_event(world: &mut World, event: crate::ecs::input::events::AppEvent) {
     world
-        .expect_resource_mut::<EventQueue<crate::ecs::input::events::AppEvent>>()
+        .res_mut::<EventQueue<crate::ecs::input::events::AppEvent>>()
         .send(event.clone());
-    world.expect_resource_mut::<Input>().events.push(event);
+    world.res_mut::<Input>().events.push(event);
 }
 
 #[cfg(test)]

@@ -3,14 +3,14 @@ use std::any::Any;
 
 pub fn publish_event(world: &mut World, message: Message) {
     world
-        .expect_resource_mut::<crate::ecs::event_bus::resources::EventBus>()
+        .res_mut::<crate::ecs::event_bus::resources::EventBus>()
         .messages
         .push_back(message);
 }
 
 pub fn publish_app_event<T: Any + Send + Sync>(world: &mut World, event: T) {
     world
-        .expect_resource_mut::<crate::ecs::event_bus::resources::EventBus>()
+        .res_mut::<crate::ecs::event_bus::resources::EventBus>()
         .messages
         .push_back(Message::App {
             type_name: std::any::type_name::<T>(),

@@ -60,7 +60,7 @@ pub fn save_current_level(world: &World) {
 }
 
 pub fn find_player_spawn(world: &World) -> Option<Vec3> {
-    for (entity, tags) in &world.expect_resource::<EntityRegistry>().tags {
+    for (entity, tags) in &world.res::<EntityRegistry>().tags {
         if !tags.iter().any(|tag| tag == PLAYER_SPAWN_TAG) {
             continue;
         }
@@ -229,7 +229,7 @@ fn spawn_floor(world: &mut World) {
         name.0 = "Floor".to_string();
     }
     world
-        .expect_resource_mut::<EntityRegistry>()
+        .res_mut::<EntityRegistry>()
         .tags
         .entry(entity)
         .or_default()
@@ -247,7 +247,7 @@ fn spawn_player_spawn_marker(world: &mut World, position: Vec3) {
         components::GlobalTransform::default(),
     ));
     world
-        .expect_resource_mut::<EntityRegistry>()
+        .res_mut::<EntityRegistry>()
         .tags
         .entry(entity)
         .or_default()

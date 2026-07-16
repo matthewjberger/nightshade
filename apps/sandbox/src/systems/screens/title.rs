@@ -119,6 +119,6 @@ pub fn handle_input(sandbox_world: &mut SandboxResources, world: &mut World) {
         next_state(world, Screen::InGame);
     }
     if clicked_quit {
-        world.expect_resource_mut::<Window>().should_exit = true;
+        world.res_mut::<Window>().should_exit = true;
     }
 }

@@ -651,14 +651,13 @@ impl App {
             stages.add_stage(stage.name());
         }
         let mut world = World::default();
+        world.res_mut::<crate::schedule::Schedules>().frame =
+            crate::schedule::build_default_frame_schedule();
         world
-            .expect_resource_mut::<crate::schedule::Schedules>()
-            .frame = crate::schedule::build_default_frame_schedule();
-        world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .start_hidden = true;
         world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .create_renderer = false;
         Self {
             world,
@@ -817,11 +816,11 @@ impl App {
 
         if self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .start_hidden
             && !self
                 .world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .create_renderer
         {
             let mut world = self.world;
@@ -959,15 +958,15 @@ impl Default for WindowPlugin {
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
         app.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .title = self.title.clone();
         if self.size.is_some() {
             app.world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::ecs::window::resources::Window>()
                 .initial_size = self.size;
         }
         app.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .start_hidden = false;
     }
 }

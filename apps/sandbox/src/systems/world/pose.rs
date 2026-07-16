@@ -620,10 +620,7 @@ pub fn apply_softness(sandbox_world: &mut SandboxResources, world: &mut World) {
         }
         return;
     }
-    let delta_time = world
-        .expect_resource::<Time>()
-        .delta_time
-        .min(SOFTNESS_MAX_STEP);
+    let delta_time = world.res::<Time>().delta_time.min(SOFTNESS_MAX_STEP);
     let rigid_blend = sandbox_world.character.hang_weight.clamp(0.0, 1.0);
     for soft in &mut sandbox_world.pose.soft_joints {
         let Some(target) = world
@@ -813,7 +810,7 @@ pub fn update(sandbox_world: &SandboxResources, world: &mut World) {
         None
     };
 
-    let delta_time = world.expect_resource::<Time>().delta_time;
+    let delta_time = world.res::<Time>().delta_time;
     let sharpness = POSE_BLEND_SHARPNESS + GAIT_TRACKING_SHARPNESS_BOOST * gait_weight;
     let blend = 1.0 - (-sharpness * delta_time).exp();
 

@@ -18,7 +18,7 @@
 //! ```ignore
 //! // Returns the player body and its attached first-person camera.
 //! let (player, camera) = spawn_first_person_player(world, Vec3::new(0.0, 2.0, 0.0));
-//! world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
+//! world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //! ```
 //!
 //! Then run the controller system each frame:
@@ -119,9 +119,7 @@ pub use systems::*;
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
     world.plugin_resource_mut::<PhysicsWorld>().enabled = true;
-    let schedule = &mut world
-        .expect_resource_mut::<crate::schedule::Schedules>()
-        .frame;
+    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
     schedule_push(schedule, FramePhase::Update, systems::run_physics_systems);
     schedule_push(
         schedule,

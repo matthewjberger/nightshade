@@ -7,12 +7,12 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
 
     let mut transform_dirty = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+            .res_mut::<crate::ecs::world::scratch::Scratch>()
             .transform_dirty,
     );
     let mut local_matrices_dirty = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+            .res_mut::<crate::ecs::world::scratch::Scratch>()
             .local_matrices_dirty,
     );
     transform_dirty.clear();
@@ -48,24 +48,24 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
 
     for entity in transform_dirty.drain(..) {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_transform_dirty(render_entity(entity));
     }
     for entity in local_matrices_dirty.drain(..) {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_instanced_local_matrices_dirty(render_entity(entity));
     }
     if needs_compute_dispatch {
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_instanced_compute_dispatch_needed();
     }
 
     world
-        .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+        .res_mut::<crate::ecs::world::scratch::Scratch>()
         .transform_dirty = transform_dirty;
     world
-        .expect_resource_mut::<crate::ecs::world::scratch::Scratch>()
+        .res_mut::<crate::ecs::world::scratch::Scratch>()
         .local_matrices_dirty = local_matrices_dirty;
 }

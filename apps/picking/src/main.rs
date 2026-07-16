@@ -86,7 +86,7 @@ struct PickingPlugin;
 
 impl Plugin for PickingPlugin {
     fn build(&self, app: &mut App) {
-        app.world.expect_resource_mut::<Window>().title = "Picking Demo".to_string();
+        app.world.res_mut::<Window>().title = "Picking Demo".to_string();
         app.insert_resource(PickingDemo::default());
         app.add_system(Stage::Startup, initialize);
         app.add_systems(
@@ -107,9 +107,9 @@ impl Plugin for PickingPlugin {
 }
 
 fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
-    world.expect_resource_mut::<DebugDraw>().show_grid = true;
-    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::Sky;
-    world.expect_resource_mut::<Selection>().outline_enabled = true;
+    world.res_mut::<DebugDraw>().show_grid = true;
+    world.res_mut::<RenderSettings>().atmosphere = Atmosphere::Sky;
+    world.res_mut::<Selection>().outline_enabled = true;
     picking_demo.show_debug_volumes = true;
     picking_demo.spin_speed = 1.0;
 
@@ -149,7 +149,7 @@ fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
         0.4,
         "Picking Demo Camera".to_string(),
     );
-    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
+    world.res_mut::<ActiveCamera>().0 = Some(camera);
 
     let preview_entity = spawn_entities(world, LINES | VISIBILITY | GLOBAL_TRANSFORM, 1)[0];
     world.set(preview_entity, Lines::default());
@@ -208,7 +208,7 @@ fn drain_keyboard(
         } = event
         {
             match key {
-                KeyCode::Escape => world.expect_resource_mut::<Window>().should_exit = true,
+                KeyCode::Escape => world.res_mut::<Window>().should_exit = true,
                 KeyCode::F1 => {
                     let panel = picking_demo.handles.panel;
                     ui_set_visible(world, panel, !ui_node_visible(world, panel));
@@ -246,7 +246,7 @@ impl PickingDemo {
     }
 
     fn tick_rotation(&mut self, world: &mut World) {
-        let delta = world.expect_resource::<Time>().delta_time.max(0.0);
+        let delta = world.res::<Time>().delta_time.max(0.0);
         if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {
             return;
         }
@@ -286,21 +286,21 @@ impl PickingDemo {
     }
 
     fn update_gpu_hover(&mut self, input: &Input, world: &mut World) {
-        if let Some(result) = world.expect_resource_mut::<GpuPicking>().take_result() {
+        if let Some(result) = world.res_mut::<GpuPicking>().take_result() {
             self.last_pick_result = Some(result);
         }
 
         let mouse = input.mouse;
         let mouse_pos = mouse.position;
         let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
-        let ui_capturing = world.expect_resource::<UserInterface>().hud_wants_pointer
+        let ui_capturing = world.res::<UserInterface>().hud_wants_pointer
             || world
-                .expect_resource::<RetainedUiState>()
+                .res::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .expect_resource::<RetainedUiState>()
+                .res::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();
@@ -309,7 +309,7 @@ impl PickingDemo {
             self.highlighted_entity = None;
         } else if !ui_capturing && current_mouse_pos != self.last_mouse_pos {
             world
-                .expect_resource_mut::<GpuPicking>()
+                .res_mut::<GpuPicking>()
                 .request_pick(current_mouse_pos.0, current_mouse_pos.1);
             self.last_mouse_pos = current_mouse_pos;
         }
@@ -372,14 +372,14 @@ impl PickingDemo {
         if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
             return;
         }
-        let ui_capturing = world.expect_resource::<UserInterface>().hud_wants_pointer
+        let ui_capturing = world.res::<UserInterface>().hud_wants_pointer
             || world
-                .expect_resource::<RetainedUiState>()
+                .res::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .expect_resource::<RetainedUiState>()
+                .res::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();
@@ -395,7 +395,7 @@ impl PickingDemo {
     }
 
     fn sync_outline(&self, world: &mut World) {
-        world.expect_resource_mut::<Selection>().active_entity =
+        world.res_mut::<Selection>().active_entity =
             self.highlighted_entity.or(self.selected_entity);
     }
 

@@ -174,7 +174,7 @@ struct NavMeshDemoPlugin;
 
 impl Plugin for NavMeshDemoPlugin {
     fn build(&self, app: &mut App) {
-        app.world.expect_resource_mut::<Window>().title = "NavMesh Pathfinding".to_string();
+        app.world.res_mut::<Window>().title = "NavMesh Pathfinding".to_string();
         app.insert_resource(NavMeshDemo::default());
         app.add_system(Stage::Startup, initialize);
         app.add_systems(
@@ -194,8 +194,8 @@ impl Plugin for NavMeshDemoPlugin {
 }
 
 fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
-    world.expect_resource_mut::<RenderSettings>().atmosphere = Atmosphere::Hdr;
-    world.expect_resource_mut::<DebugDraw>().show_grid = false;
+    world.res_mut::<RenderSettings>().atmosphere = Atmosphere::Hdr;
+    world.res_mut::<DebugDraw>().show_grid = false;
 
     load_hdr_skybox(world, HDR_SKYBOX.to_vec());
 
@@ -207,7 +207,7 @@ fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
 
     let focus = nalgebra_glm::vec3(0.0, 2.0, 0.0);
     let camera = spawn_pan_orbit_camera(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
-    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera);
+    world.res_mut::<ActiveCamera>().0 = Some(camera);
     navmesh_demo.camera_entity = Some(camera);
 
     navmesh_demo.spawn_terrain(world);
@@ -468,10 +468,7 @@ impl NavMeshDemo {
         ui_set_text(
             world,
             self.ui.fps_label,
-            &format!(
-                "FPS: {:.1}",
-                world.expect_resource::<Time>().frames_per_second
-            ),
+            &format!("FPS: {:.1}", world.res::<Time>().frames_per_second),
         );
 
         if self.followed_fox_index != self.last_following_index {
@@ -919,7 +916,7 @@ impl NavMeshDemo {
     }
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
-        let delta_time = world.expect_resource::<Time>().delta_time;
+        let delta_time = world.res::<Time>().delta_time;
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {
@@ -1108,9 +1105,7 @@ impl NavMeshDemo {
     }
 
     fn handle_mouse_input(&mut self, input: &Input, world: &mut World) {
-        if world.expect_resource::<UserInterface>().hud_wants_pointer
-            || ui_pointer_over_widget(world)
-        {
+        if world.res::<UserInterface>().hud_wants_pointer || ui_pointer_over_widget(world) {
             return;
         }
 

@@ -28,7 +28,7 @@
 //!
 //! impl Plugin for MyGamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.res_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
 //!         app.add_system(Stage::Startup, initialize);
 //!         app.add_systems(Stage::Update, (tick, spawn_on_space));
@@ -36,11 +36,11 @@
 //! }
 //!
 //! fn initialize(game: &mut MyGame, world: &mut World) {
-//!     world.expect_resource::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
+//!     world.res::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
 //!     spawn_sun(world);
 //!
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
+//!     world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!     game.camera = Some(camera);
 //!
 //!     spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
@@ -90,7 +90,7 @@
 //!
 //! - **Entities**: Unsigned integer handles (`Entity`) identifying objects
 //! - **Components**: Data attached to entities (transforms, meshes, physics, etc.)
-//! - **Resources**: Global singletons read as `Res<T>` / `ResMut<T>` system parameters (for example [`Input`](ecs::input::resources::Input), [`Window`](ecs::window::resources::Window), [`RenderSettings`](render::config::RenderSettings)), or through `world.expect_resource::<T>()` inside a `&mut World` system
+//! - **Resources**: Global singletons read as `Res<T>` / `ResMut<T>` system parameters (for example [`Input`](ecs::input::resources::Input), [`Window`](ecs::window::resources::Window), [`RenderSettings`](render::config::RenderSettings)), or through `world.res::<T>()` inside a `&mut World` system
 //!
 //! ### Component Flags
 //!
@@ -138,10 +138,10 @@
 //! query, or a helper deep in a call graph):
 //!
 //! ```ignore
-//! let dt = world.expect_resource::<crate::ecs::time::Time>().delta_time;
-//! let fps = world.expect_resource::<crate::ecs::time::Time>().frames_per_second;
-//! let uptime_ms = world.expect_resource::<crate::ecs::time::Time>().uptime_milliseconds;
-//! world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera_entity);
+//! let dt = world.res::<crate::ecs::time::Time>().delta_time;
+//! let fps = world.res::<crate::ecs::time::Time>().frames_per_second;
+//! let uptime_ms = world.res::<crate::ecs::time::Time>().uptime_milliseconds;
+//! world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera_entity);
 //! ```
 //!
 //! ### Render Graph
@@ -152,7 +152,7 @@
 //! ## Troubleshooting
 //!
 //! **Black Screen**
-//! - Set `world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0` to a valid camera
+//! - Set `world.res::<crate::ecs::camera::resources::ActiveCamera>().0` to a valid camera
 //! - Ensure camera can see objects (position/orientation)
 //! - Add lighting: `spawn_sun(world)`
 //!
@@ -170,7 +170,7 @@
 //!
 //! **Textures Missing**
 //! - Textures acquired through materials are released on despawn; keep hand-loaded
-//!   textures alive with `texture_cache_protect(&mut world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(), name)`
+//!   textures alive with `texture_cache_protect(&mut world.res::<crate::render::wgpu::texture_cache::TextureCache>(), name)`
 //! - Names are case-sensitive
 //!
 //! **Entity Invisible**
@@ -273,7 +273,7 @@
 //!
 //! // Step physics each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     let delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+//!     let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
 //!     physics_world_step(world.plugin_resource_mut::<PhysicsWorld>(), delta_time);
 //!     sync_physics_transforms(world);
 //! }
@@ -295,7 +295,7 @@
 //!
 //! // Update each frame
 //! fn run_systems(&mut self, world: &mut World) {
-//!     run_navmesh_systems(world, world.expect_resource::<crate::ecs::time::Time>().delta_time);
+//!     run_navmesh_systems(world, world.res::<crate::ecs::time::Time>().delta_time);
 //! }
 //! ```
 //!
@@ -303,15 +303,15 @@
 //!
 //! ```ignore
 //! // Bounding-box picking under the cursor
-//! let mouse_pos = world.expect_resource::<crate::ecs::input::resources::Input>().mouse.position;
+//! let mouse_pos = world.res::<crate::ecs::input::resources::Input>().mouse.position;
 //! if let Some(hit) = pick_closest_entity(world, mouse_pos) {
 //!     println!("Hit {:?} at distance {}", hit.entity, hit.distance);
 //! }
 //!
 //! // GPU picking (pixel-perfect)
-//! world.expect_resource::<crate::ecs::gpu_picking::GpuPicking>().request_pick(mouse_pos.x as u32, mouse_pos.y as u32);
+//! world.res::<crate::ecs::gpu_picking::GpuPicking>().request_pick(mouse_pos.x as u32, mouse_pos.y as u32);
 //! // Next frame:
-//! if let Some(result) = world.expect_resource::<crate::ecs::gpu_picking::GpuPicking>().take_result() {
+//! if let Some(result) = world.res::<crate::ecs::gpu_picking::GpuPicking>().take_result() {
 //!     let world_pos = result.world_position;
 //!     let normal = result.world_normal;
 //! }
@@ -355,7 +355,7 @@
 //!         app.add_system(Stage::Update, |world: &mut World| {
 //!             if let Some(ctx) = egui_context(world) {
 //!                 egui::Window::new("Debug").show(&ctx, |ui| {
-//!                     ui.label(format!("FPS: {:.0}", world.expect_resource::<crate::ecs::time::Time>().frames_per_second));
+//!                     ui.label(format!("FPS: {:.0}", world.res::<crate::ecs::time::Time>().frames_per_second));
 //!                     if ui.button("Spawn Cube").clicked() {
 //!                         spawn_cube_at(world, Vec3::zeros());
 //!                     }
@@ -372,7 +372,7 @@
 //!
 //! ```ignore
 //! fn tick(world: &mut World) {
-//!     let gamepad = world.expect_resource::<Gamepad>();
+//!     let gamepad = world.res::<Gamepad>();
 //!     {
 //!         // Analog sticks
 //!         let move_x = gamepad.left_stick.x;
@@ -398,19 +398,19 @@
 //!
 //! ```ignore
 //! fn initialize(world: &mut World) {
-//!     steam_initialize(&mut world.expect_resource::<crate::plugins::steam::SteamResources>()).ok();
-//!     steam_request_stats(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
+//!     steam_initialize(&mut world.res::<crate::plugins::steam::SteamResources>()).ok();
+//!     steam_request_stats(&mut world.res::<crate::plugins::steam::SteamResources>());
 //! }
 //!
 //! fn tick(game: &mut MyGame, world: &mut World) {
 //!     // Unlock achievement
 //!     if game.score >= 1000 {
-//!         steam_unlock_achievement(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "ACH_HIGH_SCORE").ok();
-//!         steam_store_stats(&world.expect_resource::<crate::plugins::steam::SteamResources>()).ok();
+//!         steam_unlock_achievement(&world.res::<crate::plugins::steam::SteamResources>(), "ACH_HIGH_SCORE").ok();
+//!         steam_store_stats(&world.res::<crate::plugins::steam::SteamResources>()).ok();
 //!     }
 //!
 //!     // Update stat
-//!     steam_set_stat_int(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "total_score", game.score).ok();
+//!     steam_set_stat_int(&world.res::<crate::plugins::steam::SteamResources>(), "total_score", game.score).ok();
 //! }
 //! ```
 //!
@@ -503,7 +503,7 @@
 //!
 //! impl Plugin for GamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.res_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!     }
 //! }
 //!
@@ -532,8 +532,8 @@
 //!    - `Last`: input reset, deferred commands, cleanup
 //! 7. Execute render graph passes
 //!
-//! The frame schedule is a resource at `world.expect_resource::<crate::schedule::Schedules>().frame`, with
-//! the retained UI sub-schedule at `world.expect_resource::<crate::schedule::Schedules>().retained_ui`.
+//! The frame schedule is a resource at `world.res::<crate::schedule::Schedules>().frame`, with
+//! the retained UI sub-schedule at `world.res::<crate::schedule::Schedules>().retained_ui`.
 //! Within a [`FramePhase`](schedule::FramePhase), systems run in registration
 //! order: the core systems land first, then each plugin's in composition
 //! order. Register your own from a startup system with

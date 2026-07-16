@@ -5,15 +5,15 @@
 //!
 //! - **Entities**: Created with `spawn_entities(world, flags, count)`, identified by [`Entity`] (u64)
 //! - **Components**: Bitflag-selected data (e.g., `LOCAL_TRANSFORM | RENDER_MESH`)
-//! - **Resources**: Global singletons in the ECS resource map, reached via `Res<T>` / `world.expect_resource::<T>()`
+//! - **Resources**: Global singletons in the ECS resource map, reached via `Res<T>` / `world.res::<T>()`
 //!
 //! Key resource paths:
 //!
-//! - `world.expect_resource::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
-//! - `world.expect_resource::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
-//! - `world.expect_resource::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
-//! - `world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
-//! - `world.expect_resource::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
+//! - `world.res::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
+//! - `world.res::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
+//! - `world.res::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
+//! - `world.res::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
+//! - `world.res::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
 
 pub mod components {
     pub use crate::ecs::animation::components::{

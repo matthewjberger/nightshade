@@ -24,7 +24,7 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxResources, world: &mut World) {
     };
     let ground = if world.plugin_resource::<TerrainSettings>().enabled {
         world
-            .expect_resource::<TerrainRenderState>()
+            .res::<TerrainRenderState>()
             .sample_height(translation.x, translation.z)
             .unwrap_or(translation.y - FLY_GROUND_CLEARANCE)
     } else {
@@ -73,13 +73,13 @@ pub fn set_fly(sandbox_world: &mut SandboxResources, world: &mut World, enabled:
             transform.rotation = rotation;
         }
         sandbox_world.player.fly_camera = Some(fly_camera);
-        world.expect_resource_mut::<ActiveCamera>().0 = Some(fly_camera);
+        world.res_mut::<ActiveCamera>().0 = Some(fly_camera);
         if let Some(player_entity) = sandbox_world.player.player_entity {
             world.remove_tag_type::<TerrainColliderAnchor>(player_entity);
         }
         world.add_tag_type::<TerrainColliderAnchor>(fly_camera);
     } else {
-        world.expect_resource_mut::<ActiveCamera>().0 = gameplay_camera;
+        world.res_mut::<ActiveCamera>().0 = gameplay_camera;
         if let Some(fly_camera) = sandbox_world.player.fly_camera.take() {
             world.remove_tag_type::<TerrainColliderAnchor>(fly_camera);
             despawn_entities_with_cache_cleanup(world, &[fly_camera]);
@@ -94,7 +94,7 @@ pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     let position = find_player_spawn(world).unwrap_or_else(default_spawn_position);
     let (player_entity, camera_entity) = spawn_first_person_player(world, position);
     world
-        .expect_resource_mut::<EntityRegistry>()
+        .res_mut::<EntityRegistry>()
         .tags
         .entry(player_entity)
         .or_default()
@@ -102,7 +102,7 @@ pub fn spawn(sandbox_world: &mut SandboxResources, world: &mut World) {
     world.add_tag_type::<TerrainColliderAnchor>(player_entity);
     sandbox_world.player.player_entity = Some(player_entity);
     sandbox_world.player.camera_entity = Some(camera_entity);
-    world.expect_resource_mut::<ActiveCamera>().0 = Some(camera_entity);
+    world.res_mut::<ActiveCamera>().0 = Some(camera_entity);
 }
 
 /// Teleport the player back to the spawn marker. Mirrors the game

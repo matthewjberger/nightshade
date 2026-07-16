@@ -8,7 +8,7 @@ use crate::ecs::world::{World, components::ChildOf};
 /// when links changed earlier in the same frame.
 pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
     world
-        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .res::<freecs::dynamic::HierarchyIndex>()
         .children(entity)
         .to_vec()
 }
@@ -17,7 +17,7 @@ pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Enti
 /// excluding the entity itself.
 pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
     world
-        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .res::<freecs::dynamic::HierarchyIndex>()
         .descendants(entity)
 }
 

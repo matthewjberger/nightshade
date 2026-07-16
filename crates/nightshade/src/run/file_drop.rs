@@ -45,14 +45,14 @@ pub(crate) fn process_dropped_files(world: &mut World) {
     {
         WASM_DROPPED_FILES.with(|files| {
             world
-                .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::ecs::loading::LoadingState>()
                 .dropped_files
                 .append(&mut files.borrow_mut());
         });
     }
 
     let dropped_files: Vec<_> = world
-        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .res_mut::<crate::ecs::loading::LoadingState>()
         .dropped_files
         .drain(..)
         .collect();

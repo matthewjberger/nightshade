@@ -82,7 +82,7 @@ pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<E
 /// Queue an [`EcsCommand`] to be drained by `process_commands_system` later in the frame schedule.
 pub fn queue_ecs_command(world: &mut World, command: EcsCommand) {
     world
-        .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+        .res_mut::<crate::ecs::world::commands::CommandQueues>()
         .ecs
         .push(command);
 }
@@ -90,17 +90,14 @@ pub fn queue_ecs_command(world: &mut World, command: EcsCommand) {
 /// Queue a [`RenderCommand`] to be drained by the renderer at frame setup.
 pub fn queue_render_command(world: &mut World, command: RenderCommand) {
     world
-        .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+        .res_mut::<crate::ecs::world::commands::CommandQueues>()
         .render
         .push(command);
 }
 
 /// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
 pub fn set_cursor_locked(world: &mut World, locked: bool) {
-    if let Some(window_handle) = &world
-        .expect_resource::<crate::ecs::window::resources::Window>()
-        .handle
-    {
+    if let Some(window_handle) = &world.res::<crate::ecs::window::resources::Window>().handle {
         if locked {
             if window_handle
                 .set_cursor_grab(winit::window::CursorGrabMode::Locked)
@@ -115,7 +112,7 @@ pub fn set_cursor_locked(world: &mut World, locked: bool) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .cursor_locked = locked;
     }
 }
@@ -132,16 +129,13 @@ pub fn sync_cursor_lock_state(world: &mut World) {
         .and_then(|document| document.pointer_lock_element())
         .is_some();
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .cursor_locked = locked;
 }
 
 /// Show or hide the OS cursor.
 pub fn set_cursor_visible(world: &mut World, visible: bool) {
-    if let Some(window_handle) = &world
-        .expect_resource::<crate::ecs::window::resources::Window>()
-        .handle
-    {
+    if let Some(window_handle) = &world.res::<crate::ecs::window::resources::Window>().handle {
         window_handle.set_cursor_visible(visible);
     }
 }
@@ -151,35 +145,33 @@ pub fn set_cursor_visible(world: &mut World, visible: bool) {
 /// values clamp to zero. Systems that read the scaled delta time follow it;
 /// unscaled work reads `raw_delta_time` instead.
 pub fn set_time_scale(world: &mut World, scale: f32) {
-    world
-        .expect_resource_mut::<crate::ecs::time::Time>()
-        .time_speed = scale.max(0.0);
+    world.res_mut::<crate::ecs::time::Time>().time_speed = scale.max(0.0);
 }
 
 /// The current global time scale.
 pub fn time_scale(world: &World) -> f32 {
-    world.expect_resource::<crate::ecs::time::Time>().time_speed
+    world.res::<crate::ecs::time::Time>().time_speed
 }
 
 /// Pause game time, so the scaled delta time reports zero until resumed. The
 /// time scale is preserved, so resuming returns to the previous speed.
 pub fn pause(world: &mut World) {
-    world.expect_resource_mut::<crate::ecs::time::Time>().paused = true;
+    world.res_mut::<crate::ecs::time::Time>().paused = true;
 }
 
 /// Resume game time after a pause.
 pub fn unpause(world: &mut World) {
-    world.expect_resource_mut::<crate::ecs::time::Time>().paused = false;
+    world.res_mut::<crate::ecs::time::Time>().paused = false;
 }
 
 /// Set whether game time is paused.
 pub fn set_paused(world: &mut World, paused: bool) {
-    world.expect_resource_mut::<crate::ecs::time::Time>().paused = paused;
+    world.res_mut::<crate::ecs::time::Time>().paused = paused;
 }
 
 /// Whether game time is currently paused.
 pub fn is_paused(world: &World) -> bool {
-    world.expect_resource::<crate::ecs::time::Time>().paused
+    world.res::<crate::ecs::time::Time>().paused
 }
 
 /// Insert a material into the registry, ref-count it, and attach it to `entity` via [`MaterialRef`].
@@ -191,13 +183,13 @@ pub fn register_material(
 ) {
     material_registry_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         name.clone(),
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -205,7 +197,7 @@ pub fn register_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -213,7 +205,7 @@ pub fn register_material(
     }
     world.set(entity, MaterialRef::new(name));
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 }
 
@@ -257,7 +249,7 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
 pub fn process_commands_system(world: &mut World) {
     let commands = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+            .res_mut::<crate::ecs::world::commands::CommandQueues>()
             .ecs,
     );
     let _span = tracing::info_span!("ecs_commands", count = commands.len()).entered();
@@ -284,7 +276,7 @@ fn reload_material_command(
 
     crate::ecs::material::resources::material_registry_mutate(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         &name,
         |existing| *existing = new_material,
@@ -301,12 +293,12 @@ fn reload_material_command(
 
     for entity in referencing_entities {
         texture_cache_acquire(
-            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             TextureOwner::EntityMaterial(render_entity(entity)),
             new_textures.clone(),
         );
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_material_dirty(render_entity(entity));
     }
 }
@@ -316,12 +308,12 @@ fn reload_material_command(
 pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity]) {
     for &entity in entities {
         world
-            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .res_mut::<crate::ecs::entity_registry::EntityRegistry>()
             .tags
             .remove(&entity);
         if let Some(guid) = world.get::<crate::ecs::primitives::Guid>(entity).copied() {
             world
-                .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+                .res_mut::<crate::ecs::entity_registry::EntityRegistry>()
                 .guid_index
                 .remove(&guid.0);
         }
@@ -329,7 +321,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         if let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
             let mesh_name = render_mesh.name.clone();
             if let Some(&index) = world
-                .expect_resource::<crate::ecs::asset_state::AssetState>()
+                .res::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
@@ -337,14 +329,14 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             {
                 registry_remove_reference(
                     &mut world
-                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .res_mut::<crate::ecs::asset_state::AssetState>()
                         .mesh_cache
                         .registry,
                     index,
                 );
             }
             world
-                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+                .res_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_entity_removed(render_entity(entity));
         }
 
@@ -353,7 +345,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let mesh_name = instanced_mesh.mesh_name.clone();
             if let Some(&index) = world
-                .expect_resource::<crate::ecs::asset_state::AssetState>()
+                .res::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
@@ -361,19 +353,19 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             {
                 registry_remove_reference(
                     &mut world
-                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .res_mut::<crate::ecs::asset_state::AssetState>()
                         .mesh_cache
                         .registry,
                     index,
                 );
             }
             world
-                .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+                .res_mut::<crate::render::mesh_state::MeshRenderState>()
                 .mark_instanced_meshes_changed();
         }
 
         texture_cache_release_entity(
-            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             render_entity(entity),
         );
 
@@ -382,7 +374,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let material_name = material_ref.name.clone();
             if let Some(&index) = world
-                .expect_resource::<crate::ecs::asset_state::AssetState>()
+                .res::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry
                 .name_to_index
@@ -390,7 +382,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             {
                 registry_remove_reference(
                     &mut world
-                        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                        .res_mut::<crate::ecs::asset_state::AssetState>()
                         .material_registry
                         .registry,
                     index,
@@ -406,7 +398,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     crate::ecs::transform::systems::sync_hierarchy_index(world);
     let mut targets = world
-        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .res::<freecs::dynamic::HierarchyIndex>()
         .descendants(entity);
     targets.insert(0, entity);
     despawn_entities_with_cache_cleanup(world, &targets);
@@ -524,7 +516,7 @@ pub fn spawn_mesh_at(
     let render_mesh = components::RenderMesh::new(mesh_name);
 
     if !world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
@@ -543,7 +535,7 @@ pub fn spawn_mesh_at(
         if let Some(mesh) = mesh {
             mesh_cache_insert(
                 &mut world
-                    .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                    .res_mut::<crate::ecs::asset_state::AssetState>()
                     .mesh_cache,
                 mesh_name.to_string(),
                 mesh,
@@ -552,7 +544,7 @@ pub fn spawn_mesh_at(
     }
 
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
@@ -560,7 +552,7 @@ pub fn spawn_mesh_at(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry,
             index,
@@ -568,7 +560,7 @@ pub fn spawn_mesh_at(
     }
 
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -576,7 +568,7 @@ pub fn spawn_mesh_at(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -598,7 +590,7 @@ pub fn spawn_mesh_at(
         crate::ecs::primitives::Visibility { visible: true },
     ));
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -695,7 +687,7 @@ fn spawn_3d_text_impl(
     use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, TEXT, VISIBILITY};
 
     let text_index = world
-        .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+        .res_mut::<crate::ecs::text::resources::TextState>()
         .cache
         .add_text(text);
 
@@ -735,29 +727,29 @@ const CLEANUP_INTERVAL_FRAMES: u64 = 300;
 pub fn cleanup_unused_resources_system(world: &mut World) {
     let _span = tracing::info_span!("cleanup").entered();
     world
-        .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+        .res_mut::<crate::ecs::world::cleanup::CleanupState>()
         .frame_counter += 1;
 
     if world
-        .expect_resource::<crate::ecs::world::cleanup::CleanupState>()
+        .res::<crate::ecs::world::cleanup::CleanupState>()
         .frame_counter
         >= CLEANUP_INTERVAL_FRAMES
     {
         world
-            .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+            .res_mut::<crate::ecs::world::cleanup::CleanupState>()
             .frame_counter = 0;
         mesh_cache_remove_unused(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache,
         );
         material_registry_remove_unused(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
         );
         texture_cache_remove_unused(
-            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         );
     }
 }
@@ -773,7 +765,7 @@ pub fn set_material_with_textures(
 
     let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
     texture_cache_acquire(
-        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
@@ -781,25 +773,25 @@ pub fn set_material_with_textures(
     if let Some(ref mat_ref) = material_ref {
         crate::ecs::material::resources::material_registry_mutate(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
             &mat_ref.name,
             |existing_mat| *existing_mat = material,
         );
         world
-            .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+            .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .mark_material_dirty(render_entity(entity));
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
             material_name.clone(),
             material,
         );
         if let Some(&index) = world
-            .expect_resource::<crate::ecs::asset_state::AssetState>()
+            .res::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .registry
             .name_to_index
@@ -807,7 +799,7 @@ pub fn set_material_with_textures(
         {
             registry_add_reference(
                 &mut world
-                    .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                    .res_mut::<crate::ecs::asset_state::AssetState>()
                     .material_registry
                     .registry,
                 index,
@@ -859,7 +851,7 @@ pub fn load_procedural_textures(world: &mut World) {
 
     for name in ["checkerboard", "gradient", "uv_test"] {
         crate::render::wgpu::texture_cache::texture_cache_protect(
-            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             name.to_string(),
         );
     }
@@ -1011,7 +1003,7 @@ pub fn spawn_instanced_mesh(
     );
 
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1019,7 +1011,7 @@ pub fn spawn_instanced_mesh(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -1074,7 +1066,7 @@ pub fn spawn_instanced_mesh_with_material(
     );
 
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1082,7 +1074,7 @@ pub fn spawn_instanced_mesh_with_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -1091,7 +1083,7 @@ pub fn spawn_instanced_mesh_with_material(
 
     let texture_names: Vec<String> = registry_entry_by_name(
         &world
-            .expect_resource::<crate::ecs::asset_state::AssetState>()
+            .res::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .registry,
         material_name,
@@ -1099,7 +1091,7 @@ pub fn spawn_instanced_mesh_with_material(
     .map(|mat| mat.texture_names().map(str::to_string).collect())
     .unwrap_or_default();
     texture_cache_acquire(
-        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
@@ -1129,13 +1121,13 @@ pub fn spawn_material(
 ) {
     material_registry_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         name.clone(),
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1143,7 +1135,7 @@ pub fn spawn_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -1173,14 +1165,14 @@ mod tests {
 
         assert!(
             world
-                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
+                .res::<crate::ecs::world::commands::CommandQueues>()
                 .ecs
                 .is_empty(),
             "process_commands_system should drain the ecs queue"
         );
         assert_eq!(
             world
-                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
+                .res::<crate::ecs::world::commands::CommandQueues>()
                 .render
                 .len(),
             1,
@@ -1188,7 +1180,7 @@ mod tests {
         );
         assert!(matches!(
             world
-                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
+                .res::<crate::ecs::world::commands::CommandQueues>()
                 .render[0],
             RenderCommand::LoadHdrSkybox { .. }
         ));

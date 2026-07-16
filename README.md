@@ -180,7 +180,7 @@ impl Plugin for SpinCubePlugin {
 }
 
 fn initialize(game: &mut SpinCube, world: &mut World) {
-    world.expect_resource_mut::<nightshade::render::config::RenderSettings>().atmosphere = Atmosphere::Nebula;
+    world.res_mut::<nightshade::render::config::RenderSettings>().atmosphere = Atmosphere::Nebula;
     let camera = spawn_pan_orbit_camera(
         world,
         Vec3::zeros(), 5.0, 0.5, 0.3,
@@ -192,7 +192,7 @@ fn initialize(game: &mut SpinCube, world: &mut World) {
 }
 
 fn spin(game: &mut SpinCube, world: &mut World) {
-    game.time += world.expect_resource::<nightshade::ecs::time::Time>().delta_time;
+    game.time += world.res::<nightshade::ecs::time::Time>().delta_time;
     if let Some(entity) = game.cube
         && let Some(transform) = world.get_mut::<LocalTransform>(entity)
     {

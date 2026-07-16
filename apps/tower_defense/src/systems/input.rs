@@ -21,7 +21,7 @@ pub fn input_system(game_world: &mut TowerDefenseResources, input: &Input, world
         let sell_value = (tower.tower_type.cost() as f32 * 0.7) as u32;
 
         let text_index = world
-            .expect_resource_mut::<TextState>()
+            .res_mut::<TextState>()
             .cache
             .add_text(format!("${}", sell_value));
         let text_entity = spawn_entities(
@@ -60,7 +60,7 @@ pub fn input_system(game_world: &mut TowerDefenseResources, input: &Input, world
     }
 
     let pointer_over_ui = world
-        .expect_resource::<RetainedUiState>()
+        .res::<RetainedUiState>()
         .interaction
         .hovered_entity
         .is_some();

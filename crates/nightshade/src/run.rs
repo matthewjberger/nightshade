@@ -9,7 +9,7 @@
 //!
 //! impl State for MyGame {
 //!     fn initialize(&mut self, world: &mut World) {
-//!         world.expect_resource_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         world.res_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
 //!         // Set up camera, lights, entities
 //!     }
 //!
@@ -30,17 +30,17 @@
 //! | Method | When Called | Use For |
 //! |--------|-------------|---------|
 //! | `initialize()` | After renderer ready | Scene setup, spawn entities |
-//! | `run_systems()` | Every frame | Game logic, drain `world.expect_resource::<crate::ecs::input::resources::Input>().events` |
+//! | `run_systems()` | Every frame | Game logic, drain `world.res::<crate::ecs::input::resources::Input>().events` |
 //! | `configure_render_graph()` | Once at startup | Custom post-processing |
 //! | `update_render_graph()` | Every frame | Dynamic render graph changes |
 //! | `pre_render()` | Each frame before render | Custom GPU uploads |
 //!
 //! Input, file-drop, gamepad, and lifecycle events arrive on
-//! `world.expect_resource::<crate::ecs::input::resources::Input>().events` as [`AppEvent`](crate::ecs::input::events::AppEvent)
+//! `world.res::<crate::ecs::input::resources::Input>().events` as [`AppEvent`](crate::ecs::input::events::AppEvent)
 //! values. Drain them in [`State::run_systems`].
 //!
 //! To transition to a different `State`, set
-//! `world.expect_resource::<PendingState>().0 = Some(Box::new(|world| Box::new(NewState::new(world))))`
+//! `world.res::<PendingState>().0 = Some(Box::new(|world| Box::new(NewState::new(world))))`
 //! from inside `run_systems`; the engine takes the builder at the end of the
 //! frame and invokes it with `&mut World` so the new state can be constructed
 //! against the live world.
@@ -50,12 +50,12 @@
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
 //!     // Configure graphics
-//!     world.expect_resource::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
-//!     world.expect_resource::<crate::render::config::DebugDraw>().show_grid = true;
+//!     world.res::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
+//!     world.res::<crate::render::config::DebugDraw>().show_grid = true;
 //!
 //!     // Spawn camera
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
+//!     world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!
 //!     // Spawn lighting
 //!     spawn_sun(world);
@@ -75,7 +75,7 @@
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
 //!     if self.should_go_to_menu {
-//!         world.expect_resource::<PendingState>().0 =
+//!         world.res::<PendingState>().0 =
 //!             Some(Box::new(|_world| Box::new(MenuState::default())));
 //!     }
 //! }
@@ -189,17 +189,17 @@ pub fn launch_with_world(
 #[cfg(not(target_arch = "wasm32"))]
 fn sync_min_window_size(world: &mut World) {
     let desired = world
-        .expect_resource::<crate::render::config::RendererState>()
+        .res::<crate::render::config::RendererState>()
         .min_window_size;
     if world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .applied_min_window_size
         == desired
     {
         return;
     }
     let Some(handle) = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     else {
@@ -227,7 +227,7 @@ fn sync_min_window_size(world: &mut World) {
         }
     }
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .applied_min_window_size = desired;
 }
 
@@ -237,7 +237,7 @@ fn sync_min_window_size(_world: &mut World) {}
 #[cfg(not(target_arch = "wasm32"))]
 fn sync_window_title(world: &mut World) {
     let (title, handle) = {
-        let window = world.expect_resource::<crate::ecs::window::resources::Window>();
+        let window = world.res::<crate::ecs::window::resources::Window>();
         if window.applied_title.as_deref() == Some(&window.title) {
             return;
         }
@@ -248,7 +248,7 @@ fn sync_window_title(world: &mut World) {
     };
     handle.set_title(&title);
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .applied_title = Some(title);
 }
 
@@ -258,10 +258,10 @@ fn sync_window_title(_world: &mut World) {}
 #[cfg(all(not(target_arch = "wasm32"), feature = "assets"))]
 fn sync_window_icon(world: &mut World) {
     let current = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .icon_bytes;
     let applied = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .applied_icon_bytes;
     let unchanged = match (current, applied) {
         (None, None) => true,
@@ -272,7 +272,7 @@ fn sync_window_icon(world: &mut World) {
         return;
     }
     let Some(handle) = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     else {
@@ -286,7 +286,7 @@ fn sync_window_icon(world: &mut World) {
     });
     handle.set_window_icon(icon);
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .applied_icon_bytes = current;
 }
 
@@ -299,7 +299,7 @@ pub(crate) fn step(
     renderer: &mut Option<crate::render::wgpu::WgpuRenderer>,
     event: &WindowEvent,
 ) -> Option<Box<dyn State>> {
-    let delta_ms = (world.expect_resource::<crate::ecs::time::Time>().delta_time * 1000.0) as u32;
+    let delta_ms = (world.res::<crate::ecs::time::Time>().delta_time * 1000.0) as u32;
     let _span = tracing::info_span!("frame", delta_ms).entered();
 
     sync_min_window_size(world);
@@ -315,7 +315,7 @@ pub(crate) fn step(
         WindowEvent::RedrawRequested => match renderer.as_mut() {
             Some(renderer) => run_frame_body(world, state.as_mut(), renderer),
             None if !world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .create_renderer =>
             {
                 run_frame_logic(world, state.as_mut())
@@ -338,7 +338,7 @@ pub(crate) fn step(
 /// `OffscreenCanvas` inside a web worker exactly as it drives a real window.
 ///
 /// Returns the next [`State`] when [`State::run_systems`] requested a transition
-/// through `world.expect_resource::<crate::state::PendingState>()`.
+/// through `world.res::<crate::state::PendingState>()`.
 pub fn run_frame_body(
     world: &mut World,
     state: &mut dyn State,
@@ -349,7 +349,7 @@ pub fn run_frame_body(
     }
 
     let (viewport_width, viewport_height) = if let Some(window_handle) = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     {
@@ -357,7 +357,7 @@ pub fn run_frame_body(
         (size.width, size.height)
     } else {
         world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .cached_viewport_size
             .unwrap_or((0, 0))
     };
@@ -394,12 +394,11 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     egui_support::begin_frame(world);
     state.run_systems(world);
     world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::ecs::input::resources::Input>()
         .events
         .clear();
     world
-        .expect_resource_mut::<crate::ecs::events::EventQueue<crate::ecs::input::events::AppEvent>>(
-        )
+        .res_mut::<crate::ecs::events::EventQueue<crate::ecs::input::events::AppEvent>>()
         .clear();
 
     run_frame_systems(world);
@@ -407,29 +406,25 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     #[cfg(feature = "egui")]
     egui_support::finish_frame(world);
 
-    if let Some(builder) = world
-        .expect_resource_mut::<crate::state::PendingState>()
-        .0
-        .take()
-    {
+    if let Some(builder) = world.res_mut::<crate::state::PendingState>().0.take() {
         return Some(builder(world));
     }
 
     let window_handle = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .handle
         .clone();
     if world
-        .expect_resource::<crate::ecs::ui::resources::RetainedUiState>()
+        .res::<crate::ecs::ui::resources::RetainedUiState>()
         .visible
         && let Some(window_handle) = window_handle
     {
         let requested = world
-            .expect_resource::<crate::ecs::ui::resources::RetainedUiState>()
+            .res::<crate::ecs::ui::resources::RetainedUiState>()
             .interaction
             .requested_cursor;
         let applied = world
-            .expect_resource::<crate::ecs::ui::resources::RetainedUiState>()
+            .res::<crate::ecs::ui::resources::RetainedUiState>()
             .interaction
             .applied_cursor;
         if requested.is_some() && requested != applied {
@@ -437,7 +432,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
                 window_handle.set_cursor(cursor);
             }
             world
-                .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
                 .interaction
                 .applied_cursor = requested;
         } else if requested.is_none()
@@ -446,7 +441,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         {
             window_handle.set_cursor(winit::window::CursorIcon::Default);
             world
-                .expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
                 .interaction
                 .applied_cursor = Some(winit::window::CursorIcon::Default);
         }
@@ -464,15 +459,9 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 pub(crate) fn run_frame_systems(world: &mut World) {
-    let schedule = std::mem::take(
-        &mut world
-            .expect_resource_mut::<crate::schedule::Schedules>()
-            .frame,
-    );
+    let schedule = std::mem::take(&mut world.res_mut::<crate::schedule::Schedules>().frame);
     crate::schedule::schedule_run(&schedule, world);
-    world
-        .expect_resource_mut::<crate::schedule::Schedules>()
-        .frame = schedule;
+    world.res_mut::<crate::schedule::Schedules>().frame = schedule;
 }
 
 fn timing_system(world: &mut World, event: &WindowEvent) {
@@ -483,7 +472,7 @@ fn timing_system(world: &mut World, event: &WindowEvent) {
 }
 
 /// Advances frame timing by one frame: `delta_time`, the fps averaging window,
-/// and `uptime_milliseconds` on the `world.expect_resource::<crate::ecs::time::Time>()` resource.
+/// and `uptime_milliseconds` on the `world.res::<crate::ecs::time::Time>()` resource.
 ///
 /// The winit loop calls this on every `RedrawRequested`. Offscreen and headless
 /// callers invoke it once per frame through [`tick_offscreen`].
@@ -492,7 +481,7 @@ pub fn advance_timing(world: &mut World) {
 
     let now = Instant::now();
 
-    let timing = world.expect_resource_mut::<crate::ecs::time::Time>();
+    let timing = world.res_mut::<crate::ecs::time::Time>();
 
     if timing.initial_frame_start_instant.is_none() {
         timing.initial_frame_start_instant = Some(now);
@@ -537,7 +526,7 @@ pub(crate) fn apply_surface_resize(
     height: u32,
 ) {
     world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .cached_viewport_size = Some((width, height));
     if let Some(renderer) = renderer.as_mut()
         && let Err(error) = renderer.resize_surface(width, height)
@@ -575,7 +564,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         );
         self.renderer = None;
         self.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .handle = None;
         #[cfg(all(
             not(target_arch = "wasm32"),
@@ -590,7 +579,7 @@ impl winit::application::ApplicationHandler for WindowContext {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         if self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .handle
             .is_some()
         {
@@ -605,7 +594,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .with_title(
                     &self
                         .world
-                        .expect_resource::<crate::ecs::window::resources::Window>()
+                        .res::<crate::ecs::window::resources::Window>()
                         .title,
                 )
                 .with_resizable(true)
@@ -615,7 +604,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
             if let Some((width, height)) = self
                 .world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .initial_size
             {
                 attributes =
@@ -625,7 +614,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             #[cfg(feature = "assets")]
             if let Some(icon_bytes) = self
                 .world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .icon_bytes
                 && let Ok(icon_image) = image::load_from_memory(icon_bytes)
             {
@@ -638,18 +627,18 @@ impl winit::application::ApplicationHandler for WindowContext {
                 }
             }
             self.world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::ecs::window::resources::Window>()
                 .applied_title = Some(
                 self.world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .title
                     .clone(),
             );
             self.world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::ecs::window::resources::Window>()
                 .applied_icon_bytes = self
                 .world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::ecs::window::resources::Window>()
                 .icon_bytes;
         }
 
@@ -678,7 +667,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .unwrap_or(600.0);
             let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
             self.world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::ecs::window::resources::Window>()
                 .pointer_viewport_scale = (dpr / raw_dpr) as f32;
             let physical_width = (css_width * dpr).round() as u32;
             let physical_height = (css_height * dpr).round() as u32;
@@ -697,10 +686,10 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         let window_handle = std::sync::Arc::new(window);
         self.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .cached_scale_factor = window_handle.scale_factor() as f32;
         self.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .handle = Some(window_handle.clone());
 
         #[cfg(feature = "egui")]
@@ -720,7 +709,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         crate::ecs::window::resources::refresh_monitors_from_event_loop(
             self.world
-                .expect_resource_mut::<crate::ecs::window::resources::Monitors>(),
+                .res_mut::<crate::ecs::window::resources::Monitors>(),
             event_loop,
         );
 
@@ -731,7 +720,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             use winit::platform::web::WindowExtWebSys;
             if let Some(canvas) = window_handle.canvas() {
                 self.world
-                    .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                    .res_mut::<crate::ecs::window::resources::Window>()
                     .cached_viewport_size = Some((canvas.width(), canvas.height()));
             }
         }
@@ -742,7 +731,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         if self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .create_renderer
         {
             match pollster::block_on(crate::render::core::create_renderer(
@@ -768,7 +757,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .create_renderer
         {
             let (sender, receiver) = futures::channel::oneshot::channel();
@@ -799,19 +788,18 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if !self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .create_renderer
             && !self.initialized
         {
             if self
                 .world
-                .expect_resource::<crate::schedule::Schedules>()
+                .res::<crate::schedule::Schedules>()
                 .frame
                 .is_empty()
             {
-                self.world
-                    .expect_resource_mut::<crate::schedule::Schedules>()
-                    .frame = crate::schedule::build_default_frame_schedule();
+                self.world.res_mut::<crate::schedule::Schedules>().frame =
+                    crate::schedule::build_default_frame_schedule();
             }
             self.state.initialize(&mut self.world);
             sync_min_window_size(&mut self.world);
@@ -824,13 +812,12 @@ impl winit::application::ApplicationHandler for WindowContext {
             if !self.initialized {
                 if self
                     .world
-                    .expect_resource::<crate::schedule::Schedules>()
+                    .res::<crate::schedule::Schedules>()
                     .frame
                     .is_empty()
                 {
-                    self.world
-                        .expect_resource_mut::<crate::schedule::Schedules>()
-                        .frame = crate::schedule::build_default_frame_schedule();
+                    self.world.res_mut::<crate::schedule::Schedules>().frame =
+                        crate::schedule::build_default_frame_schedule();
                 }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
@@ -846,12 +833,12 @@ impl winit::application::ApplicationHandler for WindowContext {
 
             let window_handle = self
                 .world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .handle
                 .clone();
             if self
                 .world
-                .expect_resource::<crate::render::config::RendererState>()
+                .res::<crate::render::config::RendererState>()
                 .use_fullscreen
                 && let Some(window_handle) = &window_handle
             {
@@ -861,12 +848,12 @@ impl winit::application::ApplicationHandler for WindowContext {
             if let Some(window_handle) = &window_handle {
                 let show_cursor = self
                     .world
-                    .expect_resource::<crate::render::config::RendererState>()
+                    .res::<crate::render::config::RendererState>()
                     .show_cursor;
                 window_handle.set_cursor_visible(show_cursor);
                 if !self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .start_hidden
                 {
                     window_handle.set_visible(true);
@@ -895,13 +882,12 @@ impl winit::application::ApplicationHandler for WindowContext {
                 self.renderer = Some(renderer);
                 if self
                     .world
-                    .expect_resource::<crate::schedule::Schedules>()
+                    .res::<crate::schedule::Schedules>()
                     .frame
                     .is_empty()
                 {
-                    self.world
-                        .expect_resource_mut::<crate::schedule::Schedules>()
-                        .frame = crate::schedule::build_default_frame_schedule();
+                    self.world.res_mut::<crate::schedule::Schedules>().frame =
+                        crate::schedule::build_default_frame_schedule();
                 }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
@@ -910,11 +896,11 @@ impl winit::application::ApplicationHandler for WindowContext {
 
                 let show_cursor = self
                     .world
-                    .expect_resource::<crate::render::config::RendererState>()
+                    .res::<crate::render::config::RendererState>()
                     .show_cursor;
                 if let Some(window_handle) = &self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .handle
                 {
                     window_handle.set_cursor_visible(show_cursor);
@@ -935,7 +921,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         if let Some(host) = self.accesskit.as_mut()
             && let Some(window) = self
                 .world
-                .expect_resource::<crate::ecs::window::resources::Window>()
+                .res::<crate::ecs::window::resources::Window>()
                 .handle
                 .as_ref()
         {
@@ -944,7 +930,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
         if self
             .world
-            .expect_resource::<crate::ecs::window::resources::Window>()
+            .res::<crate::ecs::window::resources::Window>()
             .should_exit
             || matches!(event, winit::event::WindowEvent::CloseRequested)
         {
@@ -955,11 +941,11 @@ impl winit::application::ApplicationHandler for WindowContext {
         match event {
             winit::event::WindowEvent::Focused(focused) => {
                 self.world
-                    .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                    .res_mut::<crate::ecs::window::resources::Window>()
                     .is_focused = focused;
                 if !focused {
                     self.world
-                        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                        .res_mut::<crate::ecs::input::resources::Input>()
                         .mouse
                         .position_initialized = false;
                 }
@@ -967,7 +953,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             winit::event::WindowEvent::Moved(_) => {
                 if let Some(handle) = self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .handle
                     .clone()
                 {
@@ -977,22 +963,22 @@ impl winit::application::ApplicationHandler for WindowContext {
             winit::event::WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(handle) = self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .handle
                     .as_ref()
                 {
                     self.world
-                        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                        .res_mut::<crate::ecs::window::resources::Window>()
                         .cached_scale_factor = handle.scale_factor() as f32;
                 }
                 crate::ecs::window::resources::refresh_monitors_from_event_loop(
                     self.world
-                        .expect_resource_mut::<crate::ecs::window::resources::Monitors>(),
+                        .res_mut::<crate::ecs::window::resources::Monitors>(),
                     event_loop,
                 );
                 if let Some(handle) = self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .handle
                     .clone()
                 {
@@ -1004,17 +990,17 @@ impl winit::application::ApplicationHandler for WindowContext {
             {
                 if let Some(handle) = self
                     .world
-                    .expect_resource::<crate::ecs::window::resources::Window>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .handle
                     .as_ref()
                 {
                     self.world
-                        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                        .res_mut::<crate::ecs::window::resources::Window>()
                         .cached_scale_factor = handle.scale_factor() as f32;
                 }
                 crate::ecs::window::resources::refresh_monitors_from_event_loop(
                     self.world
-                        .expect_resource_mut::<crate::ecs::window::resources::Monitors>(),
+                        .res_mut::<crate::ecs::window::resources::Monitors>(),
                     event_loop,
                 );
 
@@ -1034,14 +1020,14 @@ impl winit::application::ApplicationHandler for WindowContext {
                         .unwrap_or(height as f64);
                     let dpr = wasm_capped_dpr(css_width, css_height, raw_dpr);
                     self.world
-                        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                        .res_mut::<crate::ecs::window::resources::Window>()
                         .pointer_viewport_scale = (dpr / raw_dpr) as f32;
                     let physical_width = (css_width * dpr).round() as u32;
                     let physical_height = (css_height * dpr).round() as u32;
                     use winit::platform::web::WindowExtWebSys;
                     if let Some(window) = self
                         .world
-                        .expect_resource::<crate::ecs::window::resources::Window>()
+                        .res::<crate::ecs::window::resources::Window>()
                         .handle
                         .as_ref()
                         && let Some(canvas) = window.canvas()
@@ -1091,7 +1077,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         if let DeviceEvent::MouseMotion { delta } = event {
             let mouse = &mut self
                 .world
-                .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                .res_mut::<crate::ecs::input::resources::Input>()
                 .mouse;
             mouse.raw_mouse_delta.x += delta.0 as f32;
             mouse.raw_mouse_delta.y += delta.1 as f32;
@@ -1107,7 +1093,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
 pub(crate) fn request_redraw_system(world: &mut World) {
     let Some(window_handle) = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::ecs::window::resources::Window>()
         .handle
         .as_mut()
     else {

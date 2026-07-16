@@ -60,9 +60,7 @@ pub fn character_controller_input_system(world: &mut World) {
             crouch_key_pressed,
             sprint_key_pressed,
         ) = {
-            let keyboard = &world
-                .expect_resource::<crate::ecs::input::resources::Input>()
-                .keyboard;
+            let keyboard = &world.res::<crate::ecs::input::resources::Input>().keyboard;
             (
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyA),
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyD),
@@ -101,9 +99,8 @@ pub fn character_controller_input_system(world: &mut World) {
         let (gamepad_movement, gamepad_jump, gamepad_crouch, gamepad_sprint) =
             (nalgebra_glm::vec2(0.0, 0.0), false, false, false);
 
-        let (forward, right) = if let Some(camera_entity) = world
-            .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-            .0
+        let (forward, right) = if let Some(camera_entity) =
+            world.res::<crate::ecs::camera::resources::ActiveCamera>().0
         {
             if let Some(camera_transform) =
                 world.get::<crate::ecs::transform::components::LocalTransform>(camera_entity)

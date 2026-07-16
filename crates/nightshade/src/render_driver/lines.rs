@@ -50,11 +50,9 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
 fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
-    let camera_entity = world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0;
+    let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let mesh_cache = &world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache;
 
     for entity in world.ecs.worlds[CORE]
@@ -104,7 +102,7 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
     }
 
     for (entity, instanced) in &world
-        .expect_resource::<crate::render::config::RendererState>()
+        .res::<crate::render::config::RendererState>()
         .render_instanced_objects
     {
         let entity = *entity;
@@ -173,20 +171,18 @@ pub fn gather_bounding_volume_data(
     show_bounding_volumes: bool,
 ) -> Option<Vec<GpuBoundingVolumeData>> {
     let show_selected_bounding_volume = world
-        .expect_resource::<crate::render::config::DebugDraw>()
+        .res::<crate::render::config::DebugDraw>()
         .show_selected_bounding_volume;
     let selected_entity = world
-        .expect_resource::<crate::ecs::graphics::selection::Selection>()
+        .res::<crate::ecs::graphics::selection::Selection>()
         .active_entity;
     if !show_bounding_volumes && !show_selected_bounding_volume {
         return None;
     }
 
-    let camera_entity = world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0;
+    let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let mesh_cache = &world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache;
     let mut bv_data = Vec::new();
 
@@ -392,10 +388,10 @@ fn world_position_bounds(
 
 pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNormalData>> {
     let normal_line_length = world
-        .expect_resource::<crate::render::config::DebugDraw>()
+        .res::<crate::render::config::DebugDraw>()
         .normal_line_length;
     let normal_line_color = world
-        .expect_resource::<crate::render::config::DebugDraw>()
+        .res::<crate::render::config::DebugDraw>()
         .normal_line_color;
     if !show_normals {
         return None;
@@ -406,11 +402,9 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
     let view_proj = camera_matrices.projection * camera_matrices.view;
     let frustum_planes = extract_frustum_planes(&view_proj);
 
-    let camera_entity = world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0;
+    let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let mesh_cache = &world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .mesh_cache;
     let mut normal_data = Vec::new();
 

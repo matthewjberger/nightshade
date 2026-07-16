@@ -24,7 +24,7 @@ impl Gamepad {
 }
 
 pub fn with_active_gamepad<R>(world: &World, f: impl FnOnce(gilrs::Gamepad<'_>) -> R) -> Option<R> {
-    let gamepad = world.expect_resource::<Gamepad>();
+    let gamepad = world.res::<Gamepad>();
     let guard = gamepad.gilrs.lock().unwrap();
     let gilrs = guard.as_ref()?;
     let id = gamepad.gamepad?;
@@ -35,7 +35,7 @@ pub fn gamepad_input_system(world: &mut World) {
     let _span = tracing::info_span!("gamepad_input").entered();
     let mut connection_events = Vec::new();
     {
-        let gamepad = world.expect_resource_mut::<Gamepad>();
+        let gamepad = world.res_mut::<Gamepad>();
         gamepad.events.clear();
         gamepad.just_pressed_buttons.clear();
 
@@ -128,27 +128,27 @@ pub fn detect_input_mode_system(world: &mut World) {
 
     if has_gamepad_input
         && world
-            .expect_resource::<crate::ecs::input::resources::Input>()
+            .res::<crate::ecs::input::resources::Input>()
             .input_mode
             != InputMode::Gamepad
     {
         world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::ecs::input::resources::Input>()
             .input_mode = InputMode::Gamepad;
     } else if (has_keyboard_input || has_mouse_input)
         && world
-            .expect_resource::<crate::ecs::input::resources::Input>()
+            .res::<crate::ecs::input::resources::Input>()
             .input_mode
             != InputMode::MouseKeyboard
     {
         world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::ecs::input::resources::Input>()
             .input_mode = InputMode::MouseKeyboard;
     }
 }
 
 /// Installs gamepad input: polls devices at the top of every frame and
-/// forwards connection and button events onto `world.expect_resource::<crate::ecs::input::resources::Input>().events`.
+/// forwards connection and button events onto `world.res::<crate::ecs::input::resources::Input>().events`.
 /// Without this plugin the engine never opens the gilrs context.
 pub struct GamepadPlugin;
 
@@ -156,7 +156,7 @@ impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(Stage::First, |world: &mut World| {
             gamepad_input_system(world);
-            let gamepad_events = world.expect_resource::<Gamepad>().events.clone();
+            let gamepad_events = world.res::<Gamepad>().events.clone();
             for event in gamepad_events {
                 crate::ecs::events::emit_app_event(
                     world,

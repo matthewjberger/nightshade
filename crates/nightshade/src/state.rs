@@ -45,7 +45,7 @@ pub struct RenderResources {
 pub type NextStateBuilder = Box<dyn FnOnce(&mut World) -> Box<dyn State> + Send + Sync>;
 
 /// The next-state transition queued for the end of the frame, if any. Set it
-/// through `world.expect_resource::<PendingState>()`; the runner takes the
+/// through `world.res::<PendingState>()`; the runner takes the
 /// builder after the frame and constructs the new [`State`] against the world.
 #[derive(Default)]
 pub struct PendingState(pub Option<NextStateBuilder>);

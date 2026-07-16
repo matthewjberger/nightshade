@@ -85,7 +85,7 @@ pub fn poll_file_watcher_system(world: &mut crate::ecs::world::World) {
 /// alongside the other housekeeping passes.
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world.expect_resource::<crate::schedule::Schedules>().frame;
+    let schedule = &mut world.res::<crate::schedule::Schedules>().frame;
     schedule_push(schedule, FramePhase::Last, poll_file_watcher_system);
     #[cfg(feature = "assets")]
     schedule_push(

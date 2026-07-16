@@ -4,7 +4,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
     let _span = tracing::info_span!("apply_ime_allowed").entered();
     let (allowed, applied) = {
         let ime = &world
-            .expect_resource::<crate::ecs::input::resources::Input>()
+            .res::<crate::ecs::input::resources::Input>()
             .keyboard
             .ime;
         (ime.allowed, ime.applied)
@@ -13,7 +13,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
         return;
     }
     let Some(window) = world
-        .expect_resource::<crate::ecs::window::resources::Window>()
+        .res::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     else {
@@ -21,7 +21,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
     };
     window.set_ime_allowed(allowed);
     world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::ecs::input::resources::Input>()
         .keyboard
         .ime
         .applied = allowed;
@@ -29,7 +29,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
 
 pub fn set_ime_allowed(world: &mut World, allowed: bool) {
     world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::ecs::input::resources::Input>()
         .keyboard
         .ime
         .allowed = allowed;
@@ -37,9 +37,7 @@ pub fn set_ime_allowed(world: &mut World, allowed: bool) {
 
 pub fn reset_mouse_system(world: &mut World) {
     let _span = tracing::info_span!("reset_mouse").entered();
-    let mouse = &mut world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
-        .mouse;
+    let mouse = &mut world.res_mut::<crate::ecs::input::resources::Input>().mouse;
     if mouse.state.contains(MouseState::SCROLLED) {
         mouse.wheel_delta = Vec2::new(0.0, 0.0);
     }
@@ -61,16 +59,14 @@ pub fn reset_touch_system(world: &mut World) {
     let _span = tracing::info_span!("reset_touch").entered();
     use crate::ecs::input::resources::TouchGesture;
 
-    let touch = &mut world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
-        .touch;
+    let touch = &mut world.res_mut::<crate::ecs::input::resources::Input>().touch;
     touch.clear_ended_touches();
     touch.gesture = TouchGesture::None;
 }
 
 pub fn reset_keyboard_system(world: &mut World) {
     let keyboard = &mut world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::ecs::input::resources::Input>()
         .keyboard;
     keyboard.just_pressed_keys.clear();
     keyboard.just_released_keys.clear();
@@ -83,7 +79,7 @@ pub fn escape_key_exit_system(world: &mut World) {
         .is_key_pressed(winit::keyboard::KeyCode::Escape)
     {
         world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .should_exit = true;
     }
 }

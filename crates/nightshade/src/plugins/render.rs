@@ -14,9 +14,7 @@ use crate::render_driver::render_entity;
 /// render-facing state.
 pub fn install(world: &mut World) {
     use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world
-        .expect_resource_mut::<crate::schedule::Schedules>()
-        .frame;
+    let schedule = &mut world.res_mut::<crate::schedule::Schedules>().frame;
     schedule_push(
         schedule,
         FramePhase::Render,
@@ -49,16 +47,16 @@ pub struct RenderPlugin {
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         app.world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::ecs::window::resources::Window>()
             .create_renderer = true;
         if let Some(vsync) = self.vsync {
             app.world
-                .expect_resource_mut::<crate::render::config::RenderSettings>()
+                .res_mut::<crate::render::config::RenderSettings>()
                 .vsync_enabled = vsync;
         }
         if let Some(limit) = self.frame_rate_limit {
             app.world
-                .expect_resource_mut::<crate::render::config::RenderSettings>()
+                .res_mut::<crate::render::config::RenderSettings>()
                 .frame_rate_limit = Some(limit);
         }
         install(&mut app.world);
@@ -89,16 +87,15 @@ fn material_table_entry(
 /// `MaterialRef` or the renderable entity set changed.
 pub fn render_sync_materials_system(world: &mut World) {
     let registry_version = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .version;
     let registry_names_version = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .names_version;
     let (rebuild_entity_maps, first_run) = {
-        let sync =
-            &mut world.expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
+        let sync = &mut world.res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         let entities_dirty = std::mem::take(&mut sync.materials_dirty);
         let version_dirty = sync.materials_version_seen != registry_version;
         let names_dirty = sync.materials_names_version_seen != registry_names_version;
@@ -116,18 +113,17 @@ pub fn render_sync_materials_system(world: &mut World) {
 
     let mut dirty_indices = std::mem::take(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .dirty_indices,
     );
     dirty_indices.sort_unstable();
     dirty_indices.dedup();
 
-    let mut scene =
-        std::mem::take(world.expect_resource_mut::<crate::render::config::RendererState>());
+    let mut scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
     {
         let registry = &world
-            .expect_resource::<crate::ecs::asset_state::AssetState>()
+            .res::<crate::ecs::asset_state::AssetState>()
             .material_registry;
         let table = &mut scene.render_materials;
         let entry_count = registry.registry.entries.len();
@@ -179,11 +175,11 @@ pub fn render_sync_materials_system(world: &mut World) {
             }
         }
     }
-    *world.expect_resource_mut::<crate::render::config::RendererState>() = scene;
+    *world.res_mut::<crate::render::config::RendererState>() = scene;
 
     {
         let table = &mut world
-            .expect_resource_mut::<crate::render::config::RendererState>()
+            .res_mut::<crate::render::config::RendererState>()
             .render_materials;
         table.generation = table.generation.wrapping_add(1);
     }
@@ -206,7 +202,7 @@ pub fn render_sync_materials_system(world: &mut World) {
         .collect();
 
     let registry = &world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry;
     let mut entity_to_id: std::collections::HashMap<crate::ecs::world::Entity, u32> =
         std::collections::HashMap::new();
@@ -242,7 +238,7 @@ pub fn render_sync_materials_system(world: &mut World) {
     }
 
     let table = &mut world
-        .expect_resource_mut::<crate::render::config::RendererState>()
+        .res_mut::<crate::render::config::RendererState>()
         .render_materials;
     table.entity_to_id = entity_to_id
         .into_iter()

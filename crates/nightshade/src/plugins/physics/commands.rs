@@ -71,13 +71,13 @@ pub fn spawn_static_physics_cube_with_material(
     let fallback_name = format!("StaticPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -85,7 +85,7 @@ pub fn spawn_static_physics_cube_with_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -116,7 +116,7 @@ pub fn spawn_static_physics_cube_with_material(
     }
 
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -165,13 +165,13 @@ pub fn spawn_dynamic_physics_sphere_with_material(
     let fallback_name = format!("DynamicPhysicsSphere_{}", entity.id);
     let material_name = material_registry_find_or_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -179,7 +179,7 @@ pub fn spawn_dynamic_physics_sphere_with_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -211,7 +211,7 @@ pub fn spawn_dynamic_physics_sphere_with_material(
     }
 
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -259,13 +259,13 @@ pub fn spawn_dynamic_physics_cube_with_material(
     let fallback_name = format!("DynamicPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -273,7 +273,7 @@ pub fn spawn_dynamic_physics_cube_with_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -305,7 +305,7 @@ pub fn spawn_dynamic_physics_cube_with_material(
     }
 
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -354,13 +354,13 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
     let fallback_name = format!("DynamicPhysicsCylinder_{}", entity.id);
     let material_name = material_registry_find_or_insert(
         &mut world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .res_mut::<crate::ecs::asset_state::AssetState>()
             .material_registry,
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .expect_resource::<crate::ecs::asset_state::AssetState>()
+        .res::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -368,7 +368,7 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
     {
         registry_add_reference(
             &mut world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry,
             index,
@@ -400,7 +400,7 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
     }
 
     world
-        .expect_resource_mut::<crate::render::mesh_state::MeshRenderState>()
+        .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(render_entity(entity));
 
     entity
@@ -486,28 +486,25 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
     }
 
     world
-        .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+        .res_mut::<crate::ecs::camera::resources::ActiveCamera>()
         .0 = Some(camera_entity);
 
     (player_entity, camera_entity)
 }
 
 pub fn look_camera_system(world: &mut World) {
-    let Some(camera_entity) = world
-        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
-        .0
-    else {
+    let Some(camera_entity) = world.res::<crate::ecs::camera::resources::ActiveCamera>().0 else {
         return;
     };
 
-    let delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
+    let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
     let right_clicked = world
-        .expect_resource::<crate::ecs::input::resources::Input>()
+        .res::<crate::ecs::input::resources::Input>()
         .mouse
         .state
         .contains(crate::ecs::input::resources::MouseState::RIGHT_CLICKED);
     let raw_mouse_delta = world
-        .expect_resource::<crate::ecs::input::resources::Input>()
+        .res::<crate::ecs::input::resources::Input>()
         .mouse
         .raw_mouse_delta;
 
