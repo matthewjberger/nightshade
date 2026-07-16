@@ -84,58 +84,62 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
 }
 
 fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
-    std::mem::take(&mut world.resources.commands.render)
-        .into_iter()
-        .filter_map(|command| match command {
-            crate::ecs::world::RenderCommand::UploadUiImageLayer {
-                layer,
-                rgba_data,
-                width,
-                height,
-            } => Some(RendererCommand::UploadUiImageLayer {
-                layer,
-                rgba_data,
-                width,
-                height,
-            }),
-            crate::ecs::world::RenderCommand::ReloadTexture {
-                name,
-                rgba_data,
-                width,
-                height,
-            } => Some(RendererCommand::ReloadTexture {
-                name,
-                rgba_data,
-                width,
-                height,
-            }),
-            crate::ecs::world::RenderCommand::LoadHdrSkybox { hdr_data } => {
-                Some(RendererCommand::LoadHdrSkybox { hdr_data })
-            }
-            crate::ecs::world::RenderCommand::SetColorLut { data } => {
-                Some(RendererCommand::SetColorLut { data })
-            }
-            crate::ecs::world::RenderCommand::LoadHdrSkyboxFromPath { path } => {
-                match std::fs::read(&path) {
-                    Ok(bytes) => {
-                        tracing::info!("Successfully read HDR file: {}", path.display());
-                        Some(RendererCommand::LoadHdrSkybox { hdr_data: bytes })
-                    }
-                    Err(error) => {
-                        tracing::error!("Failed to read HDR file {}: {}", path.display(), error);
-                        None
-                    }
+    std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+            .render,
+    )
+    .into_iter()
+    .filter_map(|command| match command {
+        crate::ecs::world::RenderCommand::UploadUiImageLayer {
+            layer,
+            rgba_data,
+            width,
+            height,
+        } => Some(RendererCommand::UploadUiImageLayer {
+            layer,
+            rgba_data,
+            width,
+            height,
+        }),
+        crate::ecs::world::RenderCommand::ReloadTexture {
+            name,
+            rgba_data,
+            width,
+            height,
+        } => Some(RendererCommand::ReloadTexture {
+            name,
+            rgba_data,
+            width,
+            height,
+        }),
+        crate::ecs::world::RenderCommand::LoadHdrSkybox { hdr_data } => {
+            Some(RendererCommand::LoadHdrSkybox { hdr_data })
+        }
+        crate::ecs::world::RenderCommand::SetColorLut { data } => {
+            Some(RendererCommand::SetColorLut { data })
+        }
+        crate::ecs::world::RenderCommand::LoadHdrSkyboxFromPath { path } => {
+            match std::fs::read(&path) {
+                Ok(bytes) => {
+                    tracing::info!("Successfully read HDR file: {}", path.display());
+                    Some(RendererCommand::LoadHdrSkybox { hdr_data: bytes })
+                }
+                Err(error) => {
+                    tracing::error!("Failed to read HDR file {}: {}", path.display(), error);
+                    None
                 }
             }
-            crate::ecs::world::RenderCommand::CaptureScreenshot {
-                path,
-                max_dimension,
-            } => Some(RendererCommand::CaptureScreenshot {
-                path,
-                max_dimension,
-            }),
-        })
-        .collect()
+        }
+        crate::ecs::world::RenderCommand::CaptureScreenshot {
+            path,
+            max_dimension,
+        } => Some(RendererCommand::CaptureScreenshot {
+            path,
+            max_dimension,
+        }),
+    })
+    .collect()
 }
 
 /// Composes the renderer's per-frame input by snapshotting everything the
@@ -252,7 +256,9 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     #[cfg(feature = "terrain")]
     let terrain = std::mem::take(world.plugin_resource_mut::<TerrainSettings>());
     #[cfg(feature = "terrain")]
-    let terrain_render = std::mem::take(&mut world.resources.terrain_render);
+    let terrain_render = std::mem::take(
+        world.expect_resource_mut::<crate::render::terrain_config::TerrainRenderState>(),
+    );
 
     let wind = *world.expect_resource::<crate::render::wind::Wind>();
     let debug_draw =
@@ -291,6 +297,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
             .mesh_cache,
     );
+    let world_id = world.expect_resource::<crate::ecs::world::WorldId>().0;
+    let texture_cache = std::mem::take(
+        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+    );
     let resources = &mut world.resources;
     let retained = &mut resources.retained_ui;
     RenderInputs {
@@ -301,7 +311,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         shadow_atlas: Default::default(),
         wind,
         mesh_cache,
-        texture_cache: std::mem::take(&mut resources.texture_cache),
+        texture_cache,
         pending_particle_textures: loading_particle_textures,
         ui: UiFrameInputs {
             rects: std::mem::take(&mut retained.frame.rects),
@@ -323,7 +333,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             camera_tile_render_iteration: window_camera_tile_render_iteration,
             active_viewport_rect: window_active_viewport_rect,
         },
-        world_id: resources.world_id,
+        world_id,
         frame: crate::render::wgpu::render_configs::FrameInputs {
             commands,
             cameras,
@@ -358,7 +368,8 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     #[cfg(feature = "terrain")]
     {
         *world.plugin_resource_mut::<TerrainSettings>() = inputs.terrain;
-        world.resources.terrain_render = inputs.terrain_render;
+        *world.expect_resource_mut::<crate::render::terrain_config::TerrainRenderState>() =
+            inputs.terrain_render;
     }
     *world.expect_resource_mut::<crate::render::config::DebugDraw>() = inputs.debug_draw;
     *world.expect_resource_mut::<crate::render::config::RenderSettings>() = inputs.settings;
@@ -385,8 +396,9 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     world
         .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache = inputs.mesh_cache;
+    *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
+        inputs.texture_cache;
     let resources = &mut world.resources;
-    resources.texture_cache = inputs.texture_cache;
     let retained = &mut resources.retained_ui;
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs

@@ -134,7 +134,9 @@ pub use systems::run_navmesh_systems;
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
     schedule_push(
-        &mut world.resources.schedules.frame,
+        &mut world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .frame,
         FramePhase::Update,
         systems::run_navmesh_systems,
     );

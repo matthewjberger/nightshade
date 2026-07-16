@@ -76,6 +76,7 @@ pub mod resources {
     pub use crate::ecs::camera::resources::ActiveCamera;
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
+    pub use crate::ecs::event::Events;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::input::resources::{Input, MouseState};
@@ -89,6 +90,7 @@ pub mod resources {
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::window::resources::Window;
+    pub use crate::ecs::world::WorldId;
     pub use crate::ecs::world::cleanup::CleanupState;
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::resources::AudioEngine;
@@ -103,6 +105,7 @@ pub mod resources {
     pub use crate::render::mesh_cache::MeshCache;
     pub use crate::render::wgpu::texture_cache::TextureCache;
     pub use crate::render::wind::Wind;
+    pub use freecs::dynamic::HierarchyIndex;
 }
 
 pub mod events {
@@ -249,23 +252,17 @@ freecs::dynamic_schema! {
 
 #[derive(Default)]
 pub struct Resources {
-    pub commands: crate::ecs::world::commands::CommandQueues,
-    pub event_bus: crate::ecs::event_bus::resources::EventBus,
-    pub events: crate::ecs::event::Events,
-    pub hierarchy: freecs::dynamic::HierarchyIndex,
-    pub cleanup: crate::ecs::world::cleanup::CleanupState,
     pub entities: crate::ecs::entity_registry::EntityRegistry,
     pub mesh_render_state: crate::render::mesh_state::MeshRenderState,
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
     pub text: crate::ecs::text::resources::TextState,
     pub user_interface: crate::ecs::ui::UserInterface,
-    pub is_runtime: bool,
-    pub schedules: crate::schedule::Schedules,
-    #[cfg(feature = "terrain")]
-    pub terrain_render: crate::render::terrain_config::TerrainRenderState,
-    pub texture_cache: crate::render::wgpu::texture_cache::TextureCache,
-    pub world_id: u64,
 }
+
+/// The renderer-facing identifier of the world whose scene is being composed,
+/// handed to each frame's `RenderInputs`.
+#[derive(Default)]
+pub struct WorldId(pub u64);
 
 freecs::dynamic_worlds! {
     pub fn build_engine_ecs {
@@ -335,11 +332,21 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(freecs::dynamic::HierarchyIndex::default());
+        ecs.insert_resource(crate::schedule::Schedules::default());
+        ecs.insert_resource(crate::render::wgpu::texture_cache::TextureCache::default());
+        ecs.insert_resource(crate::ecs::world::commands::CommandQueues::default());
+        ecs.insert_resource(crate::ecs::event_bus::resources::EventBus::default());
+        ecs.insert_resource(crate::ecs::event::Events::default());
+        ecs.insert_resource(crate::ecs::world::cleanup::CleanupState::default());
+        ecs.insert_resource(crate::ecs::world::WorldId::default());
         ecs.insert_resource(crate::ecs::asset_state::AssetState::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
         #[cfg(feature = "grass")]
         ecs.insert_resource(crate::render::grass_config::GrassSettings::default());
+        #[cfg(feature = "terrain")]
+        ecs.insert_resource(crate::render::terrain_config::TerrainRenderState::default());
         ecs.insert_resource(crate::render::wind::Wind::default());
         ecs.insert_resource(crate::ecs::cloth::resources::ClothMeshSync::default());
         ecs.insert_resource(crate::ecs::gpu_picking::GpuPicking::default());

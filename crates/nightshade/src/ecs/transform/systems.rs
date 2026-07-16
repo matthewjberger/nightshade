@@ -14,12 +14,14 @@ pub fn run_systems(world: &mut World) {
 /// Pull-syncs the maintained hierarchy index from the core world's
 /// structural log and change ticks. Runs at the top of the transform pass
 /// every frame; call it directly before reading
-/// `world.resources.hierarchy` when links may have changed this frame.
+/// `world.expect_resource::<freecs::dynamic::HierarchyIndex>()` when links may have changed this frame.
 /// Must run before the render sync trims the structural log, so never gate
 /// the transform-pass sync behind a condition.
 pub fn sync_hierarchy_index(world: &mut World) {
-    let World { ecs, resources } = world;
-    resources.hierarchy.sync(&mut ecs.worlds[CORE]);
+    let mut hierarchy =
+        std::mem::take(world.expect_resource_mut::<freecs::dynamic::HierarchyIndex>());
+    hierarchy.sync(&mut world.ecs.worlds[CORE]);
+    *world.expect_resource_mut::<freecs::dynamic::HierarchyIndex>() = hierarchy;
 }
 
 pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Entity>) {
@@ -93,7 +95,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     seen.clear();
     seen.extend(dirty_entities.iter().copied());
     {
-        let hierarchy = &world.resources.hierarchy;
+        let hierarchy = &world.expect_resource::<freecs::dynamic::HierarchyIndex>();
         let mut index = 0;
         while index < dirty_entities.len() {
             let entity = dirty_entities[index];
@@ -154,7 +156,10 @@ pub fn update_global_transforms_system(world: &mut World) {
             render_dirty_entities.push(current);
         }
 
-        for child in world.resources.hierarchy.children(current) {
+        for child in world
+            .expect_resource::<freecs::dynamic::HierarchyIndex>()
+            .children(current)
+        {
             stack.push(*child);
         }
     }
@@ -225,7 +230,10 @@ pub fn propagate_subtree_global_transforms(world: &mut World, root: Entity) {
         {
             *global_transform = GlobalTransform(new_global_transform);
         }
-        for child in world.resources.hierarchy.children(current) {
+        for child in world
+            .expect_resource::<freecs::dynamic::HierarchyIndex>()
+            .children(current)
+        {
             stack.push(*child);
         }
     }

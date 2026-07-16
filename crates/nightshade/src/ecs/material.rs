@@ -63,8 +63,8 @@
 //!
 //! ```ignore
 //! // Load textures into the cache
-//! texture_cache_add_reference(&mut world.resources.texture_cache, "assets/brick_albedo.png");
-//! texture_cache_add_reference(&mut world.resources.texture_cache, "assets/brick_normal.png");
+//! texture_cache_add_reference(&mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_albedo.png");
+//! texture_cache_add_reference(&mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_normal.png");
 //!
 //! // Create material with texture paths
 //! let material = Material {

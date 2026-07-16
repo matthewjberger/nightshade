@@ -119,7 +119,9 @@ pub use systems::*;
 pub fn install(world: &mut crate::ecs::world::World) {
     use crate::schedule::{FramePhase, schedule_push};
     world.plugin_resource_mut::<PhysicsWorld>().enabled = true;
-    let schedule = &mut world.resources.schedules.frame;
+    let schedule = &mut world
+        .expect_resource_mut::<crate::schedule::Schedules>()
+        .frame;
     schedule_push(schedule, FramePhase::Update, systems::run_physics_systems);
     schedule_push(
         schedule,

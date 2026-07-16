@@ -7,13 +7,18 @@ use crate::ecs::world::{World, components::ChildOf};
 /// [`sync_hierarchy_index`](super::systems::sync_hierarchy_index) first
 /// when links changed earlier in the same frame.
 pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
-    world.resources.hierarchy.children(entity).to_vec()
+    world
+        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .children(entity)
+        .to_vec()
 }
 
 /// The entity's whole subtree below it as of the last hierarchy sync,
 /// excluding the entity itself.
 pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
-    world.resources.hierarchy.descendants(entity)
+    world
+        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .descendants(entity)
 }
 
 pub fn query_ancestors(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {

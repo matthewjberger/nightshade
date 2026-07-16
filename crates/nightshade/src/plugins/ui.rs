@@ -34,11 +34,17 @@ pub fn build_default_retained_ui_schedule() -> Vec<SystemFn> {
 }
 
 pub fn run_retained_ui_schedule(world: &mut World) {
-    let systems = std::mem::take(&mut world.resources.schedules.retained_ui);
+    let systems = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .retained_ui,
+    );
     for system in &systems {
         system(world);
     }
-    world.resources.schedules.retained_ui = systems;
+    world
+        .expect_resource_mut::<crate::schedule::Schedules>()
+        .retained_ui = systems;
 }
 
 /// Builds the UI sub-schedule and registers the frame-schedule entry that
@@ -47,9 +53,13 @@ pub fn run_retained_ui_schedule(world: &mut World) {
 /// the tree shown.
 pub fn install(world: &mut World) {
     world.resources.retained_ui.visible = true;
-    world.resources.schedules.retained_ui = build_default_retained_ui_schedule();
+    world
+        .expect_resource_mut::<crate::schedule::Schedules>()
+        .retained_ui = build_default_retained_ui_schedule();
     schedule_push_after(
-        &mut world.resources.schedules.frame,
+        &mut world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .frame,
         FramePhase::PostUpdate,
         run_retained_ui_schedule,
         crate::ecs::transform::systems::run_systems,

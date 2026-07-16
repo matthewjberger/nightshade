@@ -651,7 +651,9 @@ impl App {
             stages.add_stage(stage.name());
         }
         let mut world = World::default();
-        world.resources.schedules.frame = crate::schedule::build_default_frame_schedule();
+        world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .frame = crate::schedule::build_default_frame_schedule();
         world
             .expect_resource_mut::<crate::ecs::window::resources::Window>()
             .start_hidden = true;

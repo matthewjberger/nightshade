@@ -24,8 +24,7 @@ pub fn clamp_fly_camera(sandbox_world: &SandboxResources, world: &mut World) {
     };
     let ground = if world.plugin_resource::<TerrainSettings>().enabled {
         world
-            .resources
-            .terrain_render
+            .expect_resource::<TerrainRenderState>()
             .sample_height(translation.x, translation.z)
             .unwrap_or(translation.y - FLY_GROUND_CLEARANCE)
     } else {

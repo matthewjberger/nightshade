@@ -26,7 +26,7 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     while let Some(message) = world.resources.event_bus.messages.pop_front() {
+//!     while let Some(message) = world.expect_resource_mut::<crate::ecs::event_bus::resources::EventBus>().messages.pop_front() {
 //!         match message {
 //!             Message::Input { event } => {
 //!                 // Handle input events
@@ -68,7 +68,7 @@
 //! }
 //!
 //! // In UI system
-//! for message in world.resources.event_bus.messages.iter() {
+//! for message in world.expect_resource_mut::<crate::ecs::event_bus::resources::EventBus>().messages.iter() {
 //!     if let Message::App { type_name, payload } = message {
 //!         if type_name == std::any::type_name::<PlayerDamaged>() {
 //!             // Flash health bar red

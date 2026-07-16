@@ -319,6 +319,10 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
             morph_weights.weights = weights.to_vec();
         }
 
-        pending.extend_from_slice(world.resources.hierarchy.children(current));
+        pending.extend_from_slice(
+            world
+                .expect_resource::<freecs::dynamic::HierarchyIndex>()
+                .children(current),
+        );
     }
 }

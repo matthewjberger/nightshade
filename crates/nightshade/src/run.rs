@@ -454,9 +454,15 @@ fn handle_event_systems(world: &mut World, event: &WindowEvent) {
 }
 
 pub(crate) fn run_frame_systems(world: &mut World) {
-    let schedule = std::mem::take(&mut world.resources.schedules.frame);
+    let schedule = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .frame,
+    );
     crate::schedule::schedule_run(&schedule, world);
-    world.resources.schedules.frame = schedule;
+    world
+        .expect_resource_mut::<crate::schedule::Schedules>()
+        .frame = schedule;
 }
 
 fn timing_system(world: &mut World, event: &WindowEvent) {
@@ -787,9 +793,15 @@ impl winit::application::ApplicationHandler for WindowContext {
             .create_renderer
             && !self.initialized
         {
-            if self.world.resources.schedules.frame.is_empty() {
-                self.world.resources.schedules.frame =
-                    crate::schedule::build_default_frame_schedule();
+            if self
+                .world
+                .expect_resource_mut::<crate::schedule::Schedules>()
+                .frame
+                .is_empty()
+            {
+                self.world
+                    .expect_resource_mut::<crate::schedule::Schedules>()
+                    .frame = crate::schedule::build_default_frame_schedule();
             }
             self.state.initialize(&mut self.world);
             sync_min_window_size(&mut self.world);
@@ -800,9 +812,15 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if !self.initialized {
-                if self.world.resources.schedules.frame.is_empty() {
-                    self.world.resources.schedules.frame =
-                        crate::schedule::build_default_frame_schedule();
+                if self
+                    .world
+                    .expect_resource_mut::<crate::schedule::Schedules>()
+                    .frame
+                    .is_empty()
+                {
+                    self.world
+                        .expect_resource_mut::<crate::schedule::Schedules>()
+                        .frame = crate::schedule::build_default_frame_schedule();
                 }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);
@@ -865,9 +883,15 @@ impl winit::application::ApplicationHandler for WindowContext {
                     tracing::error!("Failed to configure renderer with state: {error}");
                 }
                 self.renderer = Some(renderer);
-                if self.world.resources.schedules.frame.is_empty() {
-                    self.world.resources.schedules.frame =
-                        crate::schedule::build_default_frame_schedule();
+                if self
+                    .world
+                    .expect_resource_mut::<crate::schedule::Schedules>()
+                    .frame
+                    .is_empty()
+                {
+                    self.world
+                        .expect_resource_mut::<crate::schedule::Schedules>()
+                        .frame = crate::schedule::build_default_frame_schedule();
                 }
                 self.state.initialize(&mut self.world);
                 sync_min_window_size(&mut self.world);

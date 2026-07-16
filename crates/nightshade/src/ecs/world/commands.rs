@@ -81,12 +81,18 @@ pub fn spawn_entities_ui(world: &mut World, ui_mask: u64, count: usize) -> Vec<E
 
 /// Queue an [`EcsCommand`] to be drained by `process_commands_system` later in the frame schedule.
 pub fn queue_ecs_command(world: &mut World, command: EcsCommand) {
-    world.resources.commands.ecs.push(command);
+    world
+        .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+        .ecs
+        .push(command);
 }
 
 /// Queue a [`RenderCommand`] to be drained by the renderer at frame setup.
 pub fn queue_render_command(world: &mut World, command: RenderCommand) {
-    world.resources.commands.render.push(command);
+    world
+        .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+        .render
+        .push(command);
 }
 
 /// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
@@ -250,7 +256,11 @@ pub fn spawn_physics_body(world: &mut World, entity: Entity) {
 }
 
 pub fn process_commands_system(world: &mut World) {
-    let commands = std::mem::take(&mut world.resources.commands.ecs);
+    let commands = std::mem::take(
+        &mut world
+            .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+            .ecs,
+    );
     let _span = tracing::info_span!("ecs_commands", count = commands.len()).entered();
     for command in commands {
         match command {
@@ -292,7 +302,7 @@ fn reload_material_command(
 
     for entity in referencing_entities {
         texture_cache_acquire(
-            &mut world.resources.texture_cache,
+            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             TextureOwner::EntityMaterial(render_entity(entity)),
             new_textures.clone(),
         );
@@ -360,7 +370,10 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
                 .mark_instanced_meshes_changed();
         }
 
-        texture_cache_release_entity(&mut world.resources.texture_cache, render_entity(entity));
+        texture_cache_release_entity(
+            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+            render_entity(entity),
+        );
 
         if let Some(material_ref) =
             world.get::<crate::ecs::material::components::MaterialRef>(entity)
@@ -390,7 +403,9 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 /// Despawn `entity` and all of its descendants immediately (no deferral).
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     crate::ecs::transform::systems::sync_hierarchy_index(world);
-    let mut targets = world.resources.hierarchy.descendants(entity);
+    let mut targets = world
+        .expect_resource::<freecs::dynamic::HierarchyIndex>()
+        .descendants(entity);
     targets.insert(0, entity);
     despawn_entities_with_cache_cleanup(world, &targets);
 }
@@ -715,10 +730,18 @@ const CLEANUP_INTERVAL_FRAMES: u64 = 300;
 
 pub fn cleanup_unused_resources_system(world: &mut World) {
     let _span = tracing::info_span!("cleanup").entered();
-    world.resources.cleanup.frame_counter += 1;
+    world
+        .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+        .frame_counter += 1;
 
-    if world.resources.cleanup.frame_counter >= CLEANUP_INTERVAL_FRAMES {
-        world.resources.cleanup.frame_counter = 0;
+    if world
+        .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+        .frame_counter
+        >= CLEANUP_INTERVAL_FRAMES
+    {
+        world
+            .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+            .frame_counter = 0;
         mesh_cache_remove_unused(
             &mut world
                 .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
@@ -729,7 +752,9 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
                 .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
         );
-        texture_cache_remove_unused(&mut world.resources.texture_cache);
+        texture_cache_remove_unused(
+            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        );
     }
 }
 
@@ -744,7 +769,7 @@ pub fn set_material_with_textures(
 
     let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
     texture_cache_acquire(
-        &mut world.resources.texture_cache,
+        &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
@@ -831,7 +856,7 @@ pub fn load_procedural_textures(world: &mut World) {
 
     for name in ["checkerboard", "gradient", "uv_test"] {
         crate::render::wgpu::texture_cache::texture_cache_protect(
-            &mut world.resources.texture_cache,
+            &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
             name.to_string(),
         );
     }
@@ -1071,7 +1096,7 @@ pub fn spawn_instanced_mesh_with_material(
     .map(|mat| mat.texture_names().map(str::to_string).collect())
     .unwrap_or_default();
     texture_cache_acquire(
-        &mut world.resources.texture_cache,
+        &mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         TextureOwner::EntityMaterial(render_entity(entity)),
         texture_names,
     );
@@ -1144,16 +1169,24 @@ mod tests {
         process_commands_system(&mut world);
 
         assert!(
-            world.resources.commands.ecs.is_empty(),
+            world
+                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .ecs
+                .is_empty(),
             "process_commands_system should drain the ecs queue"
         );
         assert_eq!(
-            world.resources.commands.render.len(),
+            world
+                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .render
+                .len(),
             1,
             "process_commands_system must not touch the render queue"
         );
         assert!(matches!(
-            world.resources.commands.render[0],
+            world
+                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .render[0],
             RenderCommand::LoadHdrSkybox { .. }
         ));
     }

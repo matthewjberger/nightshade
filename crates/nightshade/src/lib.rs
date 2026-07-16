@@ -170,7 +170,7 @@
 //!
 //! **Textures Missing**
 //! - Textures acquired through materials are released on despawn; keep hand-loaded
-//!   textures alive with `texture_cache_protect(&mut world.resources.texture_cache, name)`
+//!   textures alive with `texture_cache_protect(&mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(), name)`
 //! - Names are case-sensitive
 //!
 //! **Entity Invisible**
@@ -531,8 +531,8 @@
 //!    - `Last`: input reset, deferred commands, cleanup
 //! 7. Execute render graph passes
 //!
-//! The frame schedule is a resource at `world.resources.schedules.frame`, with
-//! the retained UI sub-schedule at `world.resources.schedules.retained_ui`.
+//! The frame schedule is a resource at `world.expect_resource_mut::<crate::schedule::Schedules>().frame`, with
+//! the retained UI sub-schedule at `world.expect_resource_mut::<crate::schedule::Schedules>().retained_ui`.
 //! Within a [`FramePhase`](schedule::FramePhase), systems run in registration
 //! order: the core systems land first, then each plugin's in composition
 //! order. Register your own from a startup system with

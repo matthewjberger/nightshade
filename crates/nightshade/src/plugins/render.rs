@@ -8,14 +8,15 @@ use crate::app::{App, Plugin};
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
 use crate::render_driver::render_entity;
-use freecs::dynamic::ResourceHostExt;
 
 /// Registers the scene, material, animation, and skinning sync systems
 /// into the frame schedule's render phase, after every system that writes
 /// render-facing state.
 pub fn install(world: &mut World) {
     use crate::schedule::{FramePhase, schedule_push};
-    let schedule = &mut world.resources.schedules.frame;
+    let schedule = &mut world
+        .expect_resource_mut::<crate::schedule::Schedules>()
+        .frame;
     schedule_push(
         schedule,
         FramePhase::Render,
@@ -122,7 +123,9 @@ pub fn render_sync_materials_system(world: &mut World) {
     dirty_indices.sort_unstable();
     dirty_indices.dedup();
 
-    world.resource_scope(|world, scene: &mut crate::render::config::RendererState| {
+    let mut scene =
+        std::mem::take(world.expect_resource_mut::<crate::render::config::RendererState>());
+    {
         let registry = &world
             .expect_resource::<crate::ecs::asset_state::AssetState>()
             .material_registry;
@@ -175,7 +178,8 @@ pub fn render_sync_materials_system(world: &mut World) {
                 table.double_sided_ids.insert(material_id);
             }
         }
-    });
+    }
+    *world.expect_resource_mut::<crate::render::config::RendererState>() = scene;
 
     {
         let table = &mut world

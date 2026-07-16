@@ -10,7 +10,6 @@ use crate::render::wgpu::presentation;
 use crate::render::wgpu::render_configs::FrameOutputs;
 use crate::render::wgpu::texture_uploads;
 use crate::render_driver::scene_entity;
-use freecs::dynamic::ResourceHostExt;
 
 /// Renders one frame: the pre-frame steps that need both the world and the
 /// renderer run first, then the frame inputs are composed, the renderer's
@@ -219,7 +218,7 @@ pub(crate) fn drain_loading_tasks(
             | crate::ecs::loading::LoadingTask::UploadDecodedTexture { texture, .. }
             | crate::ecs::loading::LoadingTask::MaterializeTexture { texture, .. } => {
                 crate::render::wgpu::texture_cache::texture_cache_texture_name(
-                    &world.resources.texture_cache,
+                    world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture.index,
                 )
                 .map(str::to_string)
@@ -237,7 +236,7 @@ pub(crate) fn drain_loading_tasks(
                 // the per-frame upload budget.
                 if texture_uploads::reserve_material_layer(
                     renderer,
-                    &world.resources.texture_cache,
+                    world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture,
                     usage,
                     sampler,
@@ -255,7 +254,7 @@ pub(crate) fn drain_loading_tasks(
             } => {
                 texture_uploads::upload_material_texture(
                     renderer,
-                    &mut world.resources.texture_cache,
+                    world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture_uploads::MaterialTextureUploadRequest {
                         texture,
                         rgba_data: &rgba_data,
@@ -311,7 +310,7 @@ pub(crate) fn drain_loading_tasks(
                     // here via the `entry`-style insert.
                     let texture_name =
                         crate::render::wgpu::texture_cache::texture_cache_texture_name(
-                            &world.resources.texture_cache,
+                            world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(),
                             texture.index,
                         )
                         .map(str::to_string);
@@ -332,7 +331,7 @@ pub(crate) fn drain_loading_tasks(
                     }
                     texture_uploads::upload_material_texture(
                         renderer,
-                        &mut world.resources.texture_cache,
+                        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
                         texture_uploads::MaterialTextureUploadRequest {
                             texture,
                             rgba_data: &decoded.rgba,
@@ -375,13 +374,18 @@ pub(crate) fn drain_loading_tasks(
             .pending_resolve
             .is_empty();
     if needs_resolve {
-        world.resource_scope(|world, assets: &mut crate::ecs::asset_state::AssetState| {
-            crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
-                &mut assets.material_registry,
-                &world.resources.texture_cache,
-                &uploaded_textures,
-            );
-        });
+        let texture_cache = std::mem::take(
+            world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
+        );
+        crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
+            &mut world
+                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .material_registry,
+            &texture_cache,
+            &uploaded_textures,
+        );
+        *world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>() =
+            texture_cache;
         world.resources.mesh_render_state.request_full_rebuild();
     }
     if !loading_pipeline_is_active(
@@ -397,7 +401,7 @@ pub(crate) fn drain_loading_tasks(
     }
 
     let evicted = crate::render::wgpu::texture_cache::texture_cache_remove_unused(
-        &mut world.resources.texture_cache,
+        world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
     );
     if !evicted.is_empty() {
         texture_uploads::unregister_evicted_textures(renderer, &evicted);

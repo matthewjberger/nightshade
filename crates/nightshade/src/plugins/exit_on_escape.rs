@@ -7,7 +7,9 @@ use crate::schedule::{FramePhase, schedule_push};
 /// Registers the Escape check into the frame schedule's update phase.
 pub fn install(world: &mut World) {
     schedule_push(
-        &mut world.resources.schedules.frame,
+        &mut world
+            .expect_resource_mut::<crate::schedule::Schedules>()
+            .frame,
         FramePhase::Update,
         crate::ecs::input::systems::escape_key_exit_system,
     );
