@@ -694,7 +694,10 @@ fn spawn_3d_text_impl(
     use crate::ecs::world::components;
     use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, TEXT, VISIBILITY};
 
-    let text_index = world.resources.text.cache.add_text(text);
+    let text_index = world
+        .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+        .cache
+        .add_text(text);
 
     let entity = spawn_entities(
         world,

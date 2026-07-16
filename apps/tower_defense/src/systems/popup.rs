@@ -14,7 +14,10 @@ pub fn spawn_money_popup(world: &mut World, position: Vec3, amount: i32) {
         )
     };
 
-    let text_index = world.resources.text.cache.add_text(&text);
+    let text_index = world
+        .expect_resource_mut::<TextState>()
+        .cache
+        .add_text(&text);
     let text_entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | TEXT | VISIBILITY,

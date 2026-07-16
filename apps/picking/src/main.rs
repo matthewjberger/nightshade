@@ -293,7 +293,9 @@ impl PickingDemo {
         let mouse = input.mouse;
         let mouse_pos = mouse.position;
         let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
-        let ui_capturing = world.resources.user_interface.hud_wants_pointer
+        let ui_capturing = world
+            .expect_resource_mut::<UserInterface>()
+            .hud_wants_pointer
             || world
                 .resources
                 .retained_ui
@@ -374,7 +376,9 @@ impl PickingDemo {
         if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
             return;
         }
-        let ui_capturing = world.resources.user_interface.hud_wants_pointer
+        let ui_capturing = world
+            .expect_resource_mut::<UserInterface>()
+            .hud_wants_pointer
             || world
                 .resources
                 .retained_ui

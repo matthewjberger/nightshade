@@ -156,8 +156,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let commands = map_render_commands(world);
 
     let cameras: Vec<CameraFrameInputs> = world
-        .resources
-        .user_interface
+        .expect_resource::<crate::ecs::ui::UserInterface>()
         .required_cameras
         .iter()
         .map(|&entity| snapshot_camera(world, entity))
@@ -413,7 +412,9 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     retained.frame.text_meshes = inputs.ui.text_meshes;
     retained.render_slots = inputs.ui.render_slots;
     if outputs.frame_executed {
-        resources.user_interface.viewport_texture_sizes = outputs.viewport_texture_sizes;
+        world
+            .expect_resource_mut::<crate::ecs::ui::UserInterface>()
+            .viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {
         world

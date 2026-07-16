@@ -41,14 +41,20 @@ pub(crate) fn prepare_text_meshes(
         }
     }
     for (entity, text_index, properties) in dirty_entries {
-        let text_content = match world.resources.text.cache.get_text(text_index) {
+        let text_content = match world
+            .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+            .cache
+            .get_text(text_index)
+        {
             Some(t) => t.to_string(),
             None => continue,
         };
         let mesh = super::text_mesh::generate_text_mesh_world(
             &text_content,
             &mut super::text_mesh::TextMeshContext {
-                font_engine: &mut world.resources.text.font_engine,
+                font_engine: &mut world
+                    .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+                    .font_engine,
                 glyph_atlas: &mut renderer.glyph_atlas,
                 device: &renderer.device,
                 queue: &renderer.queue,
@@ -90,7 +96,9 @@ pub(crate) fn prepare_text_meshes(
         instance.mesh = super::text_mesh::generate_text_mesh_ui(
             &instance.text,
             &mut super::text_mesh::TextMeshContext {
-                font_engine: &mut world.resources.text.font_engine,
+                font_engine: &mut world
+                    .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+                    .font_engine,
                 glyph_atlas: &mut renderer.glyph_atlas,
                 device: &renderer.device,
                 queue: &renderer.queue,

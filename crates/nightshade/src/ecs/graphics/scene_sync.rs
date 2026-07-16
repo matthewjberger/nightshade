@@ -931,8 +931,7 @@ fn sync_texts(world: &mut World) {
                 .get::<crate::ecs::transform::components::GlobalTransform>(entity)?
                 .0;
             let char_count = world
-                .resources
-                .text
+                .expect_resource::<crate::ecs::text::resources::TextState>()
                 .cache
                 .get_text(text.text_index)
                 .map(|content| {

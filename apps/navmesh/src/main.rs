@@ -1108,7 +1108,11 @@ impl NavMeshDemo {
     }
 
     fn handle_mouse_input(&mut self, input: &Input, world: &mut World) {
-        if world.resources.user_interface.hud_wants_pointer || ui_pointer_over_widget(world) {
+        if world
+            .expect_resource_mut::<UserInterface>()
+            .hud_wants_pointer
+            || ui_pointer_over_widget(world)
+        {
             return;
         }
 

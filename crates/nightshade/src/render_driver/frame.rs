@@ -75,8 +75,7 @@ pub fn update_with_state(
         .collect();
     for pending_load in pending_font_loads {
         world
-            .resources
-            .text
+            .expect_resource_mut::<crate::ecs::text::resources::TextState>()
             .font_engine
             .load_font(pending_load.font_data);
     }

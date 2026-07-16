@@ -310,8 +310,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
                     let label = text_slot
                         .and_then(|slot| {
                             world
-                                .resources
-                                .text
+                                .expect_resource::<TextState>()
                                 .cache
                                 .get_text(slot)
                                 .map(|s| s.to_string())
@@ -420,7 +419,10 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
                 world.get::<nightshade::ecs::ui::components::UiNodeContent>(log_entity)
             {
                 let slot = *text_slot;
-                world.resources.text.cache.set_text(slot, &message);
+                world
+                    .expect_resource_mut::<TextState>()
+                    .cache
+                    .set_text(slot, &message);
             }
         }
     }

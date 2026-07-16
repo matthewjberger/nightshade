@@ -362,7 +362,10 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         _ => {}
     }
 
-    if world.resources.user_interface.consumed_event {
+    if world
+        .expect_resource_mut::<crate::ecs::ui::UserInterface>()
+        .consumed_event
+    {
         return;
     }
 

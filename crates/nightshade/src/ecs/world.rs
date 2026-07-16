@@ -254,8 +254,6 @@ freecs::dynamic_schema! {
 #[derive(Default)]
 pub struct Resources {
     pub retained_ui: crate::ecs::ui::resources::RetainedUiState,
-    pub text: crate::ecs::text::resources::TextState,
-    pub user_interface: crate::ecs::ui::UserInterface,
 }
 
 /// The renderer-facing identifier of the world whose scene is being composed,
@@ -331,6 +329,8 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(crate::ecs::text::resources::TextState::default());
+        ecs.insert_resource(crate::ecs::ui::UserInterface::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
         ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
         ecs.insert_resource(freecs::dynamic::HierarchyIndex::default());
