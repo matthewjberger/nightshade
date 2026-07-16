@@ -94,36 +94,35 @@ pub struct JournalEntry {
 /// journal never grows without bound on a long running session.
 const JOURNAL_CAPACITY: usize = 4096;
 
-/// The event cycle's shared state: the frozen `current` events, the `pending`
-/// events accumulating for next cycle, and an optional journal a tool drains to
-/// watch what was published.
+/// The event cycle's shared state alongside the freecs event bus that carries
+/// the events themselves: the cycle counter and an optional journal a tool
+/// drains to watch what was published.
 #[derive(Default)]
 pub struct Events {
-    current: Vec<Event>,
-    pending: Vec<Event>,
     journal: Vec<JournalEntry>,
     journal_enabled: bool,
     cycle: u64,
 }
 
-/// Publishes an event for participants to read next cycle.
+/// Publishes an event for participants to read next cycle. The event lands on
+/// the freecs bus and becomes visible through [`events`] once the frame
+/// settles it, so a participant never sees its own cycle's emissions.
 pub fn emit_event(world: &mut World, event: Event) {
-    let events = &mut world.res_mut::<crate::ecs::event::Events>();
+    let events = world.res_mut::<crate::ecs::event::Events>();
     if events.journal_enabled {
-        record(
-            events,
-            JournalEntry {
-                cycle: events.cycle,
-                event: event.clone(),
-            },
-        );
+        let entry = JournalEntry {
+            cycle: events.cycle,
+            event: event.clone(),
+        };
+        record(events, entry);
     }
-    events.pending.push(event);
+    world.ecs.events.send(event);
 }
 
-/// The events visible to participants this cycle.
+/// The events visible to participants this cycle: the set frozen at frame
+/// start on the freecs bus, broadcast to every reader.
 pub fn events(world: &World) -> &[Event] {
-    &world.res::<crate::ecs::event::Events>().current
+    world.ecs.events.read_frame::<Event>()
 }
 
 /// The current cycle counter, for stamping a journal entry.
@@ -158,13 +157,13 @@ fn record(events: &mut Events, entry: JournalEntry) {
     events.journal.push(entry);
 }
 
-/// Frame start: last cycle's emitted events become this cycle's readable set
-/// and the emit buffer is cleared, freezing the set for every participant.
-pub fn swap_events_system(world: &mut World) {
-    let events = &mut world.res_mut::<crate::ecs::event::Events>();
+/// Frame start: advances the freecs bus one frame, so the events emitted last
+/// cycle become this cycle's frozen readable set and older ones expire, and
+/// steps the cycle counter. [`events`] reads the settled set through the bus.
+pub fn advance_event_frame_system(world: &mut World) {
+    world.ecs.events.update();
+    let events = world.res_mut::<crate::ecs::event::Events>();
     events.cycle = events.cycle.wrapping_add(1);
-    events.current.clear();
-    std::mem::swap(&mut events.current, &mut events.pending);
 }
 
 /// Reads the physics collision events produced by the last physics step and

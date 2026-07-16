@@ -397,7 +397,6 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .res_mut::<crate::ecs::input::resources::Input>()
         .events
         .clear();
-    world.ecs.events.update();
 
     run_frame_systems(world);
 
