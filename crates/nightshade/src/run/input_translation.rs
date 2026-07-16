@@ -5,13 +5,13 @@ use winit::event::WindowEvent;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn recenter_locked_cursor(world: &mut World) {
     if !world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .cursor_locked
     {
         return;
     }
     let Some(window_handle) = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     else {
@@ -60,7 +60,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
     } = window_event
     {
         let was_pressed = world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .expect_resource::<crate::ecs::input::resources::Input>()
             .keyboard
             .keystates
             .get(key_code)
@@ -142,7 +142,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
 
     #[cfg(target_arch = "wasm32")]
     let cursor_scale = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
         .map(|w| w.scale_factor() as f32)
@@ -151,7 +151,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
     let cursor_scale = 1.0_f32;
 
     let pointer_scale = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .pointer_viewport_scale;
 
     let mouse = &mut world
@@ -230,7 +230,7 @@ fn handle_touch_input(world: &mut World, window_event: &WindowEvent) {
 
     if let winit::event::WindowEvent::Touch(touch) = window_event {
         let pointer_scale = world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .expect_resource::<crate::ecs::window::resources::Window>()
             .pointer_viewport_scale;
         let touch_input = &mut world
             .expect_resource_mut::<crate::ecs::input::resources::Input>()
@@ -363,7 +363,7 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
     }
 
     if world
-        .expect_resource_mut::<crate::ecs::ui::UserInterface>()
+        .expect_resource::<crate::ecs::ui::UserInterface>()
         .consumed_event
     {
         return;

@@ -128,7 +128,7 @@ pub fn detect_input_mode_system(world: &mut World) {
 
     if has_gamepad_input
         && world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .expect_resource::<crate::ecs::input::resources::Input>()
             .input_mode
             != InputMode::Gamepad
     {
@@ -137,7 +137,7 @@ pub fn detect_input_mode_system(world: &mut World) {
             .input_mode = InputMode::Gamepad;
     } else if (has_keyboard_input || has_mouse_input)
         && world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .expect_resource::<crate::ecs::input::resources::Input>()
             .input_mode
             != InputMode::MouseKeyboard
     {
@@ -148,7 +148,7 @@ pub fn detect_input_mode_system(world: &mut World) {
 }
 
 /// Installs gamepad input: polls devices at the top of every frame and
-/// forwards connection and button events onto `world.expect_resource_mut::<crate::ecs::input::resources::Input>().events`.
+/// forwards connection and button events onto `world.expect_resource::<crate::ecs::input::resources::Input>().events`.
 /// Without this plugin the engine never opens the gilrs context.
 pub struct GamepadPlugin;
 

@@ -33,7 +33,7 @@ pub fn ensure_guid(world: &mut World, entity: Entity) -> crate::ecs::primitives:
         .saturating_add(1);
     let guid = crate::ecs::primitives::Guid(
         world
-            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .expect_resource::<crate::ecs::entity_registry::EntityRegistry>()
             .next_guid,
     );
     if !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::GUID) {
@@ -61,7 +61,7 @@ pub fn assign_guid(world: &mut World, entity: Entity, guid: crate::ecs::primitiv
         .insert(guid.0, entity);
     if guid.0
         > world
-            .expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>()
+            .expect_resource::<crate::ecs::entity_registry::EntityRegistry>()
             .next_guid
     {
         world

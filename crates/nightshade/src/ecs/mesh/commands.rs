@@ -44,7 +44,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
         Material::default(),
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index

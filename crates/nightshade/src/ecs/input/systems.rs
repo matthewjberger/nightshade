@@ -4,7 +4,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
     let _span = tracing::info_span!("apply_ime_allowed").entered();
     let (allowed, applied) = {
         let ime = &world
-            .expect_resource_mut::<crate::ecs::input::resources::Input>()
+            .expect_resource::<crate::ecs::input::resources::Input>()
             .keyboard
             .ime;
         (ime.allowed, ime.applied)
@@ -13,7 +13,7 @@ pub fn apply_ime_allowed_system(world: &mut World) {
         return;
     }
     let Some(window) = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
         .as_ref()
     else {

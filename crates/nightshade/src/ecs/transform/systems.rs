@@ -46,7 +46,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     sync_hierarchy_index(world);
 
     let initial_pass = !world
-        .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+        .expect_resource::<crate::ecs::transform::resources::TransformState>()
         .initial_pass_done;
 
     let mut dirty_entities = std::mem::take(
@@ -64,7 +64,7 @@ pub fn update_global_transforms_system(world: &mut World) {
             .initial_pass_done = true;
     } else {
         let since_tick = world
-            .expect_resource_mut::<crate::ecs::transform::resources::TransformState>()
+            .expect_resource::<crate::ecs::transform::resources::TransformState>()
             .last_consumed_tick;
         dirty_entities.extend(
             world.ecs.worlds[CORE].query_entities_changed_since(LOCAL_TRANSFORM, since_tick),

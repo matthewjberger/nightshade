@@ -58,7 +58,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     let mut dirt = SceneDirt::default();
 
     if !world
-        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .initialized
     {
         dirt.full = true;
@@ -72,11 +72,11 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         .to_vec();
     if let Some(first) = changes.first()
         && world
-            .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+            .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
             .initialized
         && first.sequence
             != world
-                .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+                .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
                 .structural_cursor
                 + 1
     {
@@ -171,7 +171,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     }
 
     let since = world
-        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .data_cursor;
     let visibility_changed: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities_changed_since(crate::ecs::world::VISIBILITY, since)
@@ -964,19 +964,19 @@ fn sync_texts(world: &mut World) {
 
 fn sync_selection_outline(world: &mut World) {
     let selection_ids: Vec<u32> = if world
-        .expect_resource_mut::<crate::render::config::RendererState>()
+        .expect_resource::<crate::render::config::RendererState>()
         .active_view
         .selection_outline_enabled
     {
         let mut seeds: Vec<crate::ecs::world::Entity> = Vec::new();
         if let Some(active) = world
-            .expect_resource_mut::<crate::ecs::graphics::selection::Selection>()
+            .expect_resource::<crate::ecs::graphics::selection::Selection>()
             .active_entity
         {
             seeds.push(active);
         }
         for entity in &world
-            .expect_resource_mut::<crate::ecs::graphics::selection::Selection>()
+            .expect_resource::<crate::ecs::graphics::selection::Selection>()
             .entities
         {
             if !seeds.contains(entity) {

@@ -69,7 +69,7 @@ pub fn install(world: &mut World) {
 }
 
 /// Installs the retained UI through [`install`]. Hide and show the whole
-/// tree at runtime through `world.expect_resource_mut::<crate::ecs::ui::resources::RetainedUiState>().visible`.
+/// tree at runtime through `world.expect_resource::<crate::ecs::ui::resources::RetainedUiState>().visible`.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {

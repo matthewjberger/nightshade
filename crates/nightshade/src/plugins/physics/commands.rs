@@ -77,7 +77,7 @@ pub fn spawn_static_physics_cube_with_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -171,7 +171,7 @@ pub fn spawn_dynamic_physics_sphere_with_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -265,7 +265,7 @@ pub fn spawn_dynamic_physics_cube_with_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -360,7 +360,7 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -494,22 +494,20 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
 
 pub fn look_camera_system(world: &mut World) {
     let Some(camera_entity) = world
-        .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+        .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
         .0
     else {
         return;
     };
 
-    let delta_time = world
-        .expect_resource_mut::<crate::ecs::time::Time>()
-        .delta_time;
+    let delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
     let right_clicked = world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .expect_resource::<crate::ecs::input::resources::Input>()
         .mouse
         .state
         .contains(crate::ecs::input::resources::MouseState::RIGHT_CLICKED);
     let raw_mouse_delta = world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .expect_resource::<crate::ecs::input::resources::Input>()
         .mouse
         .raw_mouse_delta;
 

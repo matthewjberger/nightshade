@@ -17,13 +17,13 @@
 //!
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
-//!     if let Err(error) = steam_initialize(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>()) {
+//!     if let Err(error) = steam_initialize(&mut world.expect_resource::<crate::plugins::steam::SteamResources>()) {
 //!         eprintln!("Steam initialization failed: {error}");
 //!         // Game can still run without Steam
 //!     }
 //!
 //!     // Request stats/achievements from Steam servers
-//!     steam_request_stats(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//!     steam_request_stats(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
 //! }
 //! ```
 //!
@@ -33,7 +33,7 @@
 //!
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
-//!     steam_run_callbacks(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//!     steam_run_callbacks(&world.expect_resource::<crate::plugins::steam::SteamResources>());
 //! }
 //! ```
 //!
@@ -43,17 +43,17 @@
 //!
 //! ```ignore
 //! // Unlock an achievement
-//! steam_unlock_achievement(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "ACH_FIRST_KILL")?;
-//! steam_store_stats(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
+//! steam_unlock_achievement(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "ACH_FIRST_KILL")?;
+//! steam_store_stats(&world.expect_resource::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
 //!
 //! // Check achievement status
-//! steam_refresh_achievements(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
-//! for achievement in &world.expect_resource_mut::<crate::plugins::steam::SteamResources>().achievements {
+//! steam_refresh_achievements(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
+//! for achievement in &world.expect_resource::<crate::plugins::steam::SteamResources>().achievements {
 //!     println!("{}: {}", achievement.api_name, achievement.achieved);
 //! }
 //!
 //! // Clear achievement (for testing)
-//! steam_clear_achievement(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "ACH_FIRST_KILL")?;
+//! steam_clear_achievement(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "ACH_FIRST_KILL")?;
 //! ```
 //!
 //! # Stats
@@ -62,13 +62,13 @@
 //!
 //! ```ignore
 //! // Set stats
-//! steam_set_stat_int(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "total_kills", 42)?;
-//! steam_set_stat_float(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "play_time_hours", 10.5)?;
-//! steam_store_stats(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
+//! steam_set_stat_int(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "total_kills", 42)?;
+//! steam_set_stat_float(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "play_time_hours", 10.5)?;
+//! steam_store_stats(&world.expect_resource::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
 //!
 //! // Read stats
-//! steam_refresh_stats(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), &["total_kills", "play_time_hours"]);
-//! for stat in &world.expect_resource_mut::<crate::plugins::steam::SteamResources>().stats {
+//! steam_refresh_stats(&mut world.expect_resource::<crate::plugins::steam::SteamResources>(), &["total_kills", "play_time_hours"]);
+//! for stat in &world.expect_resource::<crate::plugins::steam::SteamResources>().stats {
 //!     match stat.value {
 //!         StatValue::Int(value) => println!("{}: {}", stat.api_name, value),
 //!         StatValue::Float(value) => println!("{}: {}", stat.api_name, value),
@@ -76,7 +76,7 @@
 //! }
 //!
 //! // Reset all stats (for testing)
-//! steam_reset_all_stats(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), true)?;  // true = also reset achievements
+//! steam_reset_all_stats(&world.expect_resource::<crate::plugins::steam::SteamResources>(), true)?;  // true = also reset achievements
 //! ```
 //!
 //! # Friends List
@@ -84,9 +84,9 @@
 //! Access the player's Steam friends:
 //!
 //! ```ignore
-//! steam_refresh_friends(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//! steam_refresh_friends(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
 //!
-//! for friend in &world.expect_resource_mut::<crate::plugins::steam::SteamResources>().friends {
+//! for friend in &world.expect_resource::<crate::plugins::steam::SteamResources>().friends {
 //!     let status = friend.state.as_str();  // "Online", "Away", etc.
 //!     println!("{}: {}", friend.name, status);
 //!
@@ -102,12 +102,12 @@
 //!
 //! ```ignore
 //! // Setup networking callbacks (once)
-//! steam_setup_networking_callbacks(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//! steam_setup_networking_callbacks(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
 //!
 //! // Send message to a friend
 //! let target_id = friend.steam_id;
 //! steam_send_message(
-//!     &mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
+//!     &mut world.expect_resource::<crate::plugins::steam::SteamResources>(),
 //!     target_id,
 //!     b"Hello!",
 //!     0,      // Channel
@@ -115,27 +115,27 @@
 //! )?;
 //!
 //! // Receive messages each frame
-//! steam_receive_messages(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), 0, 100);  // Channel 0, max 100 messages
+//! steam_receive_messages(&mut world.expect_resource::<crate::plugins::steam::SteamResources>(), 0, 100);  // Channel 0, max 100 messages
 //!
-//! for message in &world.expect_resource_mut::<crate::plugins::steam::SteamResources>().received_messages {
+//! for message in &world.expect_resource::<crate::plugins::steam::SteamResources>().received_messages {
 //!     if !message.is_outgoing {
 //!         let text = String::from_utf8_lossy(&message.data);
 //!         println!("From {}: {}", message.sender_name, text);
 //!     }
 //! }
-//! steam_clear_messages(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//! steam_clear_messages(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
 //!
 //! // Process incoming session requests
-//! steam_process_pending_requests(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//! steam_process_pending_requests(&mut world.expect_resource::<crate::plugins::steam::SteamResources>());
 //!
 //! // Check connection state
-//! let state = steam_get_session_state(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), target_id);
+//! let state = steam_get_session_state(&world.expect_resource::<crate::plugins::steam::SteamResources>(), target_id);
 //! if state == SessionState::Connected {
 //!     // Peer is connected
 //! }
 //!
 //! // Close session
-//! steam_close_session(&mut world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), target_id);
+//! steam_close_session(&mut world.expect_resource::<crate::plugins::steam::SteamResources>(), target_id);
 //! ```
 //!
 //! # Rich Presence
@@ -144,11 +144,11 @@
 //!
 //! ```ignore
 //! // Set status
-//! steam_set_rich_presence(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "status", "In Battle - Wave 5");
-//! steam_set_rich_presence(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "steam_display", "#StatusInGame");
+//! steam_set_rich_presence(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "status", "In Battle - Wave 5");
+//! steam_set_rich_presence(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "steam_display", "#StatusInGame");
 //!
 //! // Clear all rich presence
-//! steam_clear_rich_presence(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>());
+//! steam_clear_rich_presence(&world.expect_resource::<crate::plugins::steam::SteamResources>());
 //! ```
 //!
 //! # Steam Overlay
@@ -157,10 +157,10 @@
 //!
 //! ```ignore
 //! // Open invite dialog
-//! steam_open_invite_dialog(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "+connect_lobby 12345");
+//! steam_open_invite_dialog(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "+connect_lobby 12345");
 //!
 //! // Open chat with a user
-//! steam_open_overlay_to_user(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "chat", friend.steam_id);
+//! steam_open_overlay_to_user(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "chat", friend.steam_id);
 //! ```
 //!
 //! # User Information
@@ -168,7 +168,7 @@
 //! Access the current user's Steam info:
 //!
 //! ```ignore
-//! let steam = &world.expect_resource_mut::<crate::plugins::steam::SteamResources>();
+//! let steam = &world.expect_resource::<crate::plugins::steam::SteamResources>();
 //! if steam_is_initialized(steam) {
 //!     println!("User: {}", steam.user_name);
 //!     println!("Steam ID: {:?}", steam.user_id);
@@ -194,7 +194,7 @@
 //! Most of these functions return `Result<(), String>`. Always check for errors:
 //!
 //! ```ignore
-//! if let Err(error) = steam_unlock_achievement(&world.expect_resource_mut::<crate::plugins::steam::SteamResources>(), "ACH_WIN") {
+//! if let Err(error) = steam_unlock_achievement(&world.expect_resource::<crate::plugins::steam::SteamResources>(), "ACH_WIN") {
 //!     eprintln!("Failed to unlock achievement: {error}");
 //! }
 //! ```
@@ -882,9 +882,7 @@ impl crate::app::Plugin for SteamPlugin {
             },
         );
         app.add_system(crate::app::Stage::First, |world: &mut crate::ecs::World| {
-            steam_run_callbacks(
-                world.expect_resource_mut::<crate::plugins::steam::SteamResources>(),
-            );
+            steam_run_callbacks(world.expect_resource::<crate::plugins::steam::SteamResources>());
         });
     }
 }

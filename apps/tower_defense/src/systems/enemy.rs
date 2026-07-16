@@ -603,7 +603,7 @@ fn spawn_child_cone_emissive(
 }
 
 pub fn enemy_movement_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
+    let delta_time = world.expect_resource::<Time>().delta_time * game_world.game_speed;
     let path = game_world.path.clone();
     let mut enemies_to_remove = Vec::new();
 

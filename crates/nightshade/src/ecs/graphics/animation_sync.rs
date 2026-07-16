@@ -24,7 +24,7 @@ const PROPERTY_SCALE: u32 = 2;
 /// refresh every frame into reused allocations.
 pub fn render_sync_animation_system(world: &mut World) {
     let since = world
-        .expect_resource_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .expect_resource::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .animation_cursor;
     let players_ticked = world.ecs.worlds[CORE]
         .query_entities_changed_since(ANIMATION_PLAYER, since)
@@ -75,7 +75,7 @@ pub fn render_sync_animation_system(world: &mut World) {
     }
 
     let skinned_generation = world
-        .expect_resource_mut::<crate::render::config::RendererState>()
+        .expect_resource::<crate::render::config::RendererState>()
         .skinned_objects_generation;
     let gate_fired = {
         let sync =

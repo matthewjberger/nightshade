@@ -98,7 +98,7 @@ pub fn queue_render_command(world: &mut World, command: RenderCommand) {
 /// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
 pub fn set_cursor_locked(world: &mut World, locked: bool) {
     if let Some(window_handle) = &world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
     {
         if locked {
@@ -139,7 +139,7 @@ pub fn sync_cursor_lock_state(world: &mut World) {
 /// Show or hide the OS cursor.
 pub fn set_cursor_visible(world: &mut World, visible: bool) {
     if let Some(window_handle) = &world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .handle
     {
         window_handle.set_cursor_visible(visible);
@@ -197,7 +197,7 @@ pub fn register_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -329,7 +329,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         if let Some(render_mesh) = world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
             let mesh_name = render_mesh.name.clone();
             if let Some(&index) = world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .expect_resource::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
@@ -353,7 +353,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let mesh_name = instanced_mesh.mesh_name.clone();
             if let Some(&index) = world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .expect_resource::<crate::ecs::asset_state::AssetState>()
                 .mesh_cache
                 .registry
                 .name_to_index
@@ -382,7 +382,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
         {
             let material_name = material_ref.name.clone();
             if let Some(&index) = world
-                .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+                .expect_resource::<crate::ecs::asset_state::AssetState>()
                 .material_registry
                 .registry
                 .name_to_index
@@ -524,7 +524,7 @@ pub fn spawn_mesh_at(
     let render_mesh = components::RenderMesh::new(mesh_name);
 
     if !world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
@@ -552,7 +552,7 @@ pub fn spawn_mesh_at(
     }
 
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .mesh_cache
         .registry
         .name_to_index
@@ -568,7 +568,7 @@ pub fn spawn_mesh_at(
     }
 
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -739,7 +739,7 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
         .frame_counter += 1;
 
     if world
-        .expect_resource_mut::<crate::ecs::world::cleanup::CleanupState>()
+        .expect_resource::<crate::ecs::world::cleanup::CleanupState>()
         .frame_counter
         >= CLEANUP_INTERVAL_FRAMES
     {
@@ -799,7 +799,7 @@ pub fn set_material_with_textures(
             material,
         );
         if let Some(&index) = world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .expect_resource::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .registry
             .name_to_index
@@ -1011,7 +1011,7 @@ pub fn spawn_instanced_mesh(
     );
 
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1074,7 +1074,7 @@ pub fn spawn_instanced_mesh_with_material(
     );
 
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1135,7 +1135,7 @@ pub fn spawn_material(
         material,
     );
     if let Some(&index) = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .registry
         .name_to_index
@@ -1173,14 +1173,14 @@ mod tests {
 
         assert!(
             world
-                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
                 .ecs
                 .is_empty(),
             "process_commands_system should drain the ecs queue"
         );
         assert_eq!(
             world
-                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
                 .render
                 .len(),
             1,
@@ -1188,7 +1188,7 @@ mod tests {
         );
         assert!(matches!(
             world
-                .expect_resource_mut::<crate::ecs::world::commands::CommandQueues>()
+                .expect_resource::<crate::ecs::world::commands::CommandQueues>()
                 .render[0],
             RenderCommand::LoadHdrSkybox { .. }
         ));

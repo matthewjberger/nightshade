@@ -573,7 +573,7 @@ fn move_character(
     camera: Entity,
 ) {
     let delta_time = world
-        .expect_resource_mut::<Time>()
+        .expect_resource::<Time>()
         .delta_time
         .min(MAX_STEP_SECONDS);
     let Some(mut position) = world

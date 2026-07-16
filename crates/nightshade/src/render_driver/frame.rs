@@ -195,7 +195,7 @@ pub(crate) fn drain_loading_tasks(
     );
 
     let budget = world
-        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+        .expect_resource::<crate::ecs::loading::LoadingState>()
         .pipeline
         .tasks_per_frame
         .max(1);
@@ -276,7 +276,7 @@ pub(crate) fn drain_loading_tasks(
                 // decoding in the worker pool, then upload into the reserved layer.
                 if !loading_pipeline_recipe_ready(
                     &world
-                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .expect_resource::<crate::ecs::loading::LoadingState>()
                         .pipeline,
                     &recipe,
                 ) {
@@ -291,7 +291,7 @@ pub(crate) fn drain_loading_tasks(
                 let produced = crate::ecs::loading::execute_texture_recipe(
                     &recipe,
                     &world
-                        .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+                        .expect_resource::<crate::ecs::loading::LoadingState>()
                         .pipeline
                         .decoded_images,
                 );
@@ -368,7 +368,7 @@ pub(crate) fn drain_loading_tasks(
     // resolve plus instance rebuild.
     let needs_resolve = reserved_any
         || !world
-            .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+            .expect_resource::<crate::ecs::asset_state::AssetState>()
             .material_registry
             .pending_resolve
             .is_empty();
@@ -391,7 +391,7 @@ pub(crate) fn drain_loading_tasks(
     }
     if !loading_pipeline_is_active(
         &world
-            .expect_resource_mut::<crate::ecs::loading::LoadingState>()
+            .expect_resource::<crate::ecs::loading::LoadingState>()
             .pipeline,
     ) {
         loading_pipeline_reset_source_arena(

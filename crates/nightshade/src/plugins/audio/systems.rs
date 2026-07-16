@@ -44,7 +44,7 @@ pub fn lazy_initialize_audio_system(world: &mut World) {
         return;
     }
     let gestured = world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .expect_resource::<crate::ecs::input::resources::Input>()
         .events
         .iter()
         .any(|event| {

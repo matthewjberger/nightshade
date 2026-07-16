@@ -61,7 +61,7 @@ pub fn character_controller_input_system(world: &mut World) {
             sprint_key_pressed,
         ) = {
             let keyboard = &world
-                .expect_resource_mut::<crate::ecs::input::resources::Input>()
+                .expect_resource::<crate::ecs::input::resources::Input>()
                 .keyboard;
             (
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyA),
@@ -102,7 +102,7 @@ pub fn character_controller_input_system(world: &mut World) {
             (nalgebra_glm::vec2(0.0, 0.0), false, false, false);
 
         let (forward, right) = if let Some(camera_entity) = world
-            .expect_resource_mut::<crate::ecs::camera::resources::ActiveCamera>()
+            .expect_resource::<crate::ecs::camera::resources::ActiveCamera>()
             .0
         {
             if let Some(camera_transform) =

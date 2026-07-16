@@ -24,14 +24,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry,
 //!     "red_metal".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("red_metal")
+//!     world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("red_metal")
 //! {
-//!     registry_add_reference(&mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
 //! }
 //!
 //! // Apply to an entity
@@ -46,14 +46,14 @@
 //! ```ignore
 //! // Full registration pattern
 //! material_registry_insert(
-//!     &mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry,
 //!     "my_material".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("my_material")
+//!     world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("my_material")
 //! {
-//!     registry_add_reference(&mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
 //! }
 //! ```
 //!
@@ -63,8 +63,8 @@
 //!
 //! ```ignore
 //! // Load textures into the cache
-//! texture_cache_add_reference(&mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_albedo.png");
-//! texture_cache_add_reference(&mut world.expect_resource_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_normal.png");
+//! texture_cache_add_reference(&mut world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_albedo.png");
+//! texture_cache_add_reference(&mut world.expect_resource::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_normal.png");
 //!
 //! // Create material with texture paths
 //! let material = Material {
@@ -77,14 +77,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry,
 //!     "brick".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("brick")
+//!     world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("brick")
 //! {
-//!     registry_add_reference(&mut world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
 //! }
 //! ```
 //!

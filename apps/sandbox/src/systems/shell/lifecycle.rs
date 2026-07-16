@@ -35,7 +35,7 @@ pub fn run(shell: &mut ShellState<SandboxShellContext>, world: &mut World) {
         }
         handle_pick_click(shell, world);
     }
-    let delta_time = world.expect_resource_mut::<Time>().delta_time;
+    let delta_time = world.expect_resource::<Time>().delta_time;
     shell.update_animation(delta_time);
     shell_retained_ui(shell, world);
 }

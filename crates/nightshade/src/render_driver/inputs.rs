@@ -240,11 +240,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             .take_frame_state(),
     );
     let mouse_position = world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .expect_resource::<crate::ecs::input::resources::Input>()
         .mouse
         .position;
     let force_render_cameras = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .force_render_cameras
         .iter()
         .copied()
@@ -267,25 +267,23 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let settings =
         std::mem::take(world.expect_resource_mut::<crate::render::config::RenderSettings>());
     let window_uptime_milliseconds = world
-        .expect_resource_mut::<crate::ecs::time::Time>()
+        .expect_resource::<crate::ecs::time::Time>()
         .uptime_milliseconds;
-    let window_delta_time = world
-        .expect_resource_mut::<crate::ecs::time::Time>()
-        .delta_time;
+    let window_delta_time = world.expect_resource::<crate::ecs::time::Time>().delta_time;
     let window_cached_viewport_size = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .cached_viewport_size;
     let window_camera_tile_rects: std::collections::HashMap<_, _> = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .camera_tile_rects
         .iter()
         .map(|(entity, rect)| (render_entity(*entity), *rect))
         .collect();
     let window_camera_tile_render_iteration = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .camera_tile_render_iteration;
     let window_active_viewport_rect = world
-        .expect_resource_mut::<crate::ecs::window::resources::Window>()
+        .expect_resource::<crate::ecs::window::resources::Window>()
         .active_viewport_rect;
     let loading_particle_textures = std::mem::take(
         &mut world

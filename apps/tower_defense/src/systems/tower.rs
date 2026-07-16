@@ -169,7 +169,7 @@ pub fn sell_tower(
 }
 
 pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
+    let delta_time = world.expect_resource::<Time>().delta_time * game_world.game_speed;
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {
@@ -271,7 +271,7 @@ pub fn tower_targeting_system(game_world: &mut TowerDefenseResources, world: &mu
 }
 
 pub fn tower_shooting_system(game_world: &mut TowerDefenseResources, world: &mut World) {
-    let delta_time = world.expect_resource_mut::<Time>().delta_time * game_world.game_speed;
+    let delta_time = world.expect_resource::<Time>().delta_time * game_world.game_speed;
     let tower_entities: Vec<Entity> = world.ecs.worlds[GAME].query_entities(TOWER).collect();
 
     for tower_entity in tower_entities {

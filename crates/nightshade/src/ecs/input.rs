@@ -14,7 +14,7 @@
 //! Check if keys are currently held:
 //!
 //! ```ignore
-//! let keyboard = &world.expect_resource_mut::<crate::ecs::input::resources::Input>().keyboard;
+//! let keyboard = &world.expect_resource::<crate::ecs::input::resources::Input>().keyboard;
 //!
 //! if keyboard.is_key_pressed(KeyCode::KeyW) {
 //!     // W is held down
@@ -40,7 +40,7 @@
 //! # Mouse Input
 //!
 //! ```ignore
-//! let mouse = &world.expect_resource_mut::<crate::ecs::input::resources::Input>().mouse;
+//! let mouse = &world.expect_resource::<crate::ecs::input::resources::Input>().mouse;
 //!
 //! // Current cursor position in screen coordinates
 //! let position = mouse.position;

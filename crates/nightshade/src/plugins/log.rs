@@ -183,7 +183,7 @@ impl Plugin for LogPlugin {
         }
         let title = self.title.clone().unwrap_or_else(|| {
             app.world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .expect_resource::<crate::ecs::window::resources::Window>()
                 .title
                 .clone()
         });

@@ -571,7 +571,7 @@ pub fn material_registry_find_or_insert(
 
 /// Inserts a named material into the world's registry and takes a reference to
 /// it so it stays resident, returning the name. Wraps the registry drilling so
-/// a system never reaches into `world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry`.
+/// a system never reaches into `world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry`.
 pub fn insert_material(
     world: &mut crate::ecs::world::World,
     name: impl Into<String>,
@@ -590,7 +590,7 @@ pub fn insert_material(
 
 /// Mutates an existing named material in place, returning whether it was found.
 /// Wraps the registry drilling so a system never reaches into
-/// `world.expect_resource_mut::<crate::ecs::asset_state::AssetState>().material_registry`.
+/// `world.expect_resource::<crate::ecs::asset_state::AssetState>().material_registry`.
 pub fn mutate_material(
     world: &mut crate::ecs::world::World,
     name: &str,

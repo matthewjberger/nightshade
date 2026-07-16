@@ -68,7 +68,7 @@ pub fn initialize_offscreen(
     }
 
     if world
-        .expect_resource_mut::<crate::schedule::Schedules>()
+        .expect_resource::<crate::schedule::Schedules>()
         .frame
         .is_empty()
     {
@@ -246,7 +246,7 @@ pub fn input_inject_keyboard(
     use crate::ecs::world::events::{InputEvent, KeyState, Message};
 
     let was_pressed = world
-        .expect_resource_mut::<crate::ecs::input::resources::Input>()
+        .expect_resource::<crate::ecs::input::resources::Input>()
         .keyboard
         .keystates
         .get(&key_code)

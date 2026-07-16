@@ -246,7 +246,7 @@ impl PickingDemo {
     }
 
     fn tick_rotation(&mut self, world: &mut World) {
-        let delta = world.expect_resource_mut::<Time>().delta_time.max(0.0);
+        let delta = world.expect_resource::<Time>().delta_time.max(0.0);
         if self.spin_speed.abs() < f32::EPSILON || delta <= 0.0 {
             return;
         }
@@ -293,16 +293,14 @@ impl PickingDemo {
         let mouse = input.mouse;
         let mouse_pos = mouse.position;
         let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
-        let ui_capturing = world
-            .expect_resource_mut::<UserInterface>()
-            .hud_wants_pointer
+        let ui_capturing = world.expect_resource::<UserInterface>().hud_wants_pointer
             || world
-                .expect_resource_mut::<RetainedUiState>()
+                .expect_resource::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .expect_resource_mut::<RetainedUiState>()
+                .expect_resource::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();
@@ -374,16 +372,14 @@ impl PickingDemo {
         if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
             return;
         }
-        let ui_capturing = world
-            .expect_resource_mut::<UserInterface>()
-            .hud_wants_pointer
+        let ui_capturing = world.expect_resource::<UserInterface>().hud_wants_pointer
             || world
-                .expect_resource_mut::<RetainedUiState>()
+                .expect_resource::<RetainedUiState>()
                 .interaction
                 .hovered_entity
                 .is_some()
             || world
-                .expect_resource_mut::<RetainedUiState>()
+                .expect_resource::<RetainedUiState>()
                 .interaction
                 .active_entity
                 .is_some();

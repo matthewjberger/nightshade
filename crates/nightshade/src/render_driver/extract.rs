@@ -42,7 +42,7 @@ pub(crate) fn prepare_text_meshes(
     }
     for (entity, text_index, properties) in dirty_entries {
         let text_content = match world
-            .expect_resource_mut::<crate::ecs::text::resources::TextState>()
+            .expect_resource::<crate::ecs::text::resources::TextState>()
             .cache
             .get_text(text_index)
         {

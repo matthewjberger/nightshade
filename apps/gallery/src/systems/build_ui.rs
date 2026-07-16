@@ -374,10 +374,7 @@ pub fn poll_gallery(gallery: &mut GalleryResources, input: &Input, world: &mut W
     let slider_entity = ui_named_entity(world, "nav_slider");
     let mut slider_y = gallery.state.nav_slider_y;
     let slider_target = gallery.state.nav_slider_target_y;
-    let delta_time = world
-        .expect_resource_mut::<Time>()
-        .delta_time
-        .clamp(0.0, 0.05);
+    let delta_time = world.expect_resource::<Time>().delta_time.clamp(0.0, 0.05);
     let stiffness = 220.0_f32;
     let displacement = slider_y - slider_target;
     let damping_factor = (-stiffness * delta_time * 0.5).exp();
@@ -468,7 +465,7 @@ enum ProgressAction {
 fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool) {
     let Some(label) = label else { return };
     let theme = world
-        .expect_resource_mut::<RetainedUiState>()
+        .expect_resource::<RetainedUiState>()
         .theme_state
         .active_theme()
         .clone();

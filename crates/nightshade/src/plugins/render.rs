@@ -89,11 +89,11 @@ fn material_table_entry(
 /// `MaterialRef` or the renderable entity set changed.
 pub fn render_sync_materials_system(world: &mut World) {
     let registry_version = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .version;
     let registry_names_version = world
-        .expect_resource_mut::<crate::ecs::asset_state::AssetState>()
+        .expect_resource::<crate::ecs::asset_state::AssetState>()
         .material_registry
         .names_version;
     let (rebuild_entity_maps, first_run) = {

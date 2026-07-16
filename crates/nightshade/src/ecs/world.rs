@@ -10,10 +10,10 @@
 //! Key resource paths:
 //!
 //! - `world.expect_resource::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
-//! - `world.expect_resource_mut::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
-//! - `world.expect_resource_mut::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
+//! - `world.expect_resource::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
+//! - `world.expect_resource::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.expect_resource::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
-//! - `world.expect_resource_mut::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
+//! - `world.expect_resource::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
 
 pub mod components {
     pub use crate::ecs::animation::components::{

@@ -817,11 +817,11 @@ impl App {
 
         if self
             .world
-            .expect_resource_mut::<crate::ecs::window::resources::Window>()
+            .expect_resource::<crate::ecs::window::resources::Window>()
             .start_hidden
             && !self
                 .world
-                .expect_resource_mut::<crate::ecs::window::resources::Window>()
+                .expect_resource::<crate::ecs::window::resources::Window>()
                 .create_renderer
         {
             let mut world = self.world;

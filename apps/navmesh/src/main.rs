@@ -919,7 +919,7 @@ impl NavMeshDemo {
     }
 
     fn sync_foxes_to_agents(&mut self, world: &mut World) {
-        let delta_time = world.expect_resource_mut::<Time>().delta_time;
+        let delta_time = world.expect_resource::<Time>().delta_time;
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &mut self.foxes {
@@ -1108,9 +1108,7 @@ impl NavMeshDemo {
     }
 
     fn handle_mouse_input(&mut self, input: &Input, world: &mut World) {
-        if world
-            .expect_resource_mut::<UserInterface>()
-            .hud_wants_pointer
+        if world.expect_resource::<UserInterface>().hud_wants_pointer
             || ui_pointer_over_widget(world)
         {
             return;

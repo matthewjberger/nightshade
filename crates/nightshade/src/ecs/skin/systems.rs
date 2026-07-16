@@ -166,7 +166,7 @@ pub fn render_sync_skinning_system(world: &mut World) {
             .cache,
     );
     let mut generation = world
-        .expect_resource_mut::<crate::render::config::RendererState>()
+        .expect_resource::<crate::render::config::RendererState>()
         .render_skinning
         .static_generation;
     if skinning_cache_needs_rebuild(&cache, world) {
