@@ -1,5 +1,28 @@
+use crate::ecs::text::components::TextProperties;
+use crate::render::text_data::FontKind;
+use crate::render::text_mesh::TextMeshParams;
 use crate::render::wgpu::WgpuRenderer;
 use crate::render::wgpu::pass_sync::rebind_glyph_atlas;
+
+/// Resolves a text component into the renderer's shaping parameters, collapsing
+/// the monospace request onto the mono font and leaving the icon fonts as chosen.
+/// The renderer's mesher never names the engine's text component, so this is the
+/// one place the two vocabularies meet.
+fn text_mesh_params(properties: &TextProperties) -> TextMeshParams {
+    let font_kind = match properties.font_kind {
+        FontKind::IconsMaterial | FontKind::IconsLucide => properties.font_kind,
+        _ if properties.monospace_width.is_some() => FontKind::Mono,
+        kind => kind,
+    };
+    TextMeshParams {
+        font_size: properties.font_size,
+        line_height: properties.line_height,
+        font_kind,
+        alignment: properties.alignment,
+        vertical_alignment: properties.vertical_alignment,
+        anchor_character: properties.anchor_character,
+    }
+}
 
 fn compute_ui_text_signature(text_instance: &crate::render::ui_data::UiTextInstance) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -49,9 +72,10 @@ pub(crate) fn prepare_text_meshes(
             Some(t) => t.to_string(),
             None => continue,
         };
-        let mesh = super::text_mesh::generate_text_mesh_world(
+        let params = text_mesh_params(&properties);
+        let mesh = crate::render::text_mesh::generate_text_mesh_world(
             &text_content,
-            &mut super::text_mesh::TextMeshContext {
+            &mut crate::render::text_mesh::TextMeshContext {
                 font_engine: &mut world
                     .res_mut::<crate::ecs::text::resources::TextState>()
                     .font_engine,
@@ -59,7 +83,7 @@ pub(crate) fn prepare_text_meshes(
                 device: &renderer.device,
                 queue: &renderer.queue,
             },
-            &properties,
+            &params,
         );
         if let Some(text) = world.get_mut::<crate::ecs::text::components::Text>(entity) {
             text.cached_mesh = Some(mesh);
@@ -86,7 +110,7 @@ pub(crate) fn prepare_text_meshes(
             }
             continue;
         }
-        let properties = crate::ecs::text::components::TextProperties {
+        let properties = TextProperties {
             font_size: instance.font_size,
             color: instance.color,
             alignment: instance.alignment,
@@ -96,11 +120,12 @@ pub(crate) fn prepare_text_meshes(
             outline_width: instance.outline_width,
             monospace_width: if instance.monospace { Some(0.0) } else { None },
             font_kind: instance.font_kind,
-            ..crate::ecs::text::components::TextProperties::default()
+            ..TextProperties::default()
         };
-        instance.mesh = super::text_mesh::generate_text_mesh_ui(
+        let params = text_mesh_params(&properties);
+        instance.mesh = crate::render::text_mesh::generate_text_mesh_ui(
             &instance.text,
-            &mut super::text_mesh::TextMeshContext {
+            &mut crate::render::text_mesh::TextMeshContext {
                 font_engine: &mut world
                     .res_mut::<crate::ecs::text::resources::TextState>()
                     .font_engine,
@@ -108,7 +133,7 @@ pub(crate) fn prepare_text_meshes(
                 device: &renderer.device,
                 queue: &renderer.queue,
             },
-            &properties,
+            &params,
             instance.wrap_width,
         );
         if let Some(entity) = instance.entity {

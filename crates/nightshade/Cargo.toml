@@ -76,7 +76,7 @@ file_dialog = [
 
 runtime = [
     "core",
-    "dep:cosmic-text",
+    "nightshade-renderer/text",
 ]
 
 engine = [
@@ -140,7 +140,6 @@ enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
-cosmic-text = { version = "0.16", optional = true }
 freecs = { workspace = true, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }

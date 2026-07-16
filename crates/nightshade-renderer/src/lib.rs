@@ -322,6 +322,8 @@ pub mod bounding_volume;
 pub mod config;
 pub mod core;
 pub mod entity;
+#[cfg(feature = "text")]
+pub mod font_engine;
 pub mod generational_registry;
 pub mod geometry;
 #[cfg(feature = "grass")]
@@ -338,6 +340,8 @@ pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
 pub mod text_data;
+#[cfg(feature = "wgpu")]
+pub mod text_mesh;
 pub mod texture_data;
 pub mod ui_data;
 pub mod wind;
