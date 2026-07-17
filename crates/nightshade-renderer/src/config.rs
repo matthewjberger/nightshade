@@ -1096,6 +1096,12 @@ pub struct DebugDraw {
     /// cut everywhere, which is how the raster is put under load without
     /// changing the scene; higher trades visible error for fewer clusters.
     pub meshlet_lod_error_threshold: f32,
+    /// When true, every meshlet cull picks its cut against the active camera's
+    /// frustum and distance rather than the camera being rendered. The active
+    /// camera is unchanged, since the frozen view is its own; any other camera
+    /// then draws exactly the clusters the active camera kept, from wherever it
+    /// stands, so its frustum and level of detail show as geometry in space.
+    pub meshlet_freeze_cull_to_active: bool,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1620,6 +1626,12 @@ pub struct RendererState {
     /// when there is no active camera. Passes read this instead of calling
     /// `query_active_camera_matrices`.
     pub render_view: Option<RenderView>,
+    /// The active camera's view, held for every camera in the frame, so a pass
+    /// can decide against the active camera rather than the one being rendered.
+    /// The meshlet cull reads this to freeze its cut to the active camera while
+    /// another camera draws that cut from elsewhere. `None` unless something asks
+    /// for it, so an ordinary frame carries no extra view.
+    pub frozen_cull_view: Option<RenderView>,
     /// Per-entity dynamic render state (visibility and morph weights) extracted
     /// once per frame, so the mesh pass reads it here instead of scanning the
     /// ECS per tracked object. A step toward world-free geometry passes.
@@ -1979,6 +1991,7 @@ impl Default for DebugDraw {
             material_filtering: true,
             meshlet_cluster_visualization: false,
             meshlet_lod_error_threshold: 1.0,
+            meshlet_freeze_cull_to_active: false,
         }
     }
 }
@@ -1988,6 +2001,7 @@ impl Default for RendererState {
         Self {
             auto_frame_rate_limit_baseline: None,
             taa_jitter: [0.0, 0.0],
+            frozen_cull_view: None,
             view_projection: nalgebra_glm::Mat4::identity().into(),
             prev_view_projection: nalgebra_glm::Mat4::identity().into(),
             gpu_culling_enabled: true,

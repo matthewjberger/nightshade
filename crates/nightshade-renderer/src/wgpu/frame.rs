@@ -267,6 +267,31 @@ fn dispatch_window_renders(
     );
 
     let cameras: Vec<CameraFrameInputs> = inputs.frame.cameras.clone();
+
+    // Freezing captures the current view once and holds it, so the cut stays put
+    // as the camera flies away from the frustum that chose it. Capturing every
+    // frame instead would track the camera and freeze nothing. Cleared the
+    // moment freezing turns off. The source is the active camera, whether the
+    // frame renders one camera or several. Surface resolution sets the frustum
+    // and the pixels-per-unit the cull needs.
+    if inputs.debug_draw.meshlet_freeze_cull_to_active {
+        if renderer.meshlet_frozen_cull_view.is_none() {
+            let source = original_active_camera
+                .and_then(|active| cameras.iter().find(|camera| camera.entity == active))
+                .or(inputs.frame.active_camera_frame.as_ref());
+            renderer.meshlet_frozen_cull_view = source.and_then(|camera| {
+                build_render_view(
+                    camera,
+                    inputs.scene.taa_jitter,
+                    (surface_width.max(1), surface_height.max(1)),
+                )
+            });
+        }
+    } else {
+        renderer.meshlet_frozen_cull_view = None;
+    }
+    inputs.scene.frozen_cull_view = renderer.meshlet_frozen_cull_view.clone();
+
     for (iteration_index, camera) in cameras.iter().enumerate() {
         let camera_entity = camera.entity;
         let (tile_width, tile_height) = inputs

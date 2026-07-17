@@ -112,6 +112,11 @@ pub struct WgpuRenderer {
     /// Image-based-lighting texture views, persisted across frames and swapped
     /// into [`RenderInputs`](render_configs::RenderInputs) for the frame.
     pub ibl_views: crate::config::IblViews,
+    /// The view a meshlet cull is frozen to, captured the frame freezing turns
+    /// on and held until it turns off. Held here rather than rebuilt per frame
+    /// so it stays put while the camera moves away from it, which is what makes
+    /// the frozen cut visible as the camera leaves the frustum that chose it.
+    pub meshlet_frozen_cull_view: Option<crate::config::RenderView>,
 }
 
 /// Render-graph resource handles for the built-in pipeline targets.

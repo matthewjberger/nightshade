@@ -859,6 +859,7 @@ impl super::WgpuRenderer {
             },
             gpu_profile,
             ibl_views: crate::config::IblViews::default(),
+            meshlet_frozen_cull_view: None,
         })
     }
 }
