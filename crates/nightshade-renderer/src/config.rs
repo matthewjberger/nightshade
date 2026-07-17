@@ -1090,6 +1090,12 @@ pub struct DebugDraw {
     /// rasterized from instead of shading it, exposing the decomposition the
     /// bake produced.
     pub meshlet_cluster_visualization: bool,
+    /// Screen-space error, in pixels, a meshlet cluster may introduce before
+    /// the level of detail it belongs to is rejected for a finer one. One pixel
+    /// is where the seam between levels stops being visible. Lower holds a finer
+    /// cut everywhere, which is how the raster is put under load without
+    /// changing the scene; higher trades visible error for fewer clusters.
+    pub meshlet_lod_error_threshold: f32,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1893,6 +1899,10 @@ pub fn render_settings_signature(
         .hash(&mut hasher);
     debug.material_filtering.hash(&mut hasher);
     debug.meshlet_cluster_visualization.hash(&mut hasher);
+    debug
+        .meshlet_lod_error_threshold
+        .to_bits()
+        .hash(&mut hasher);
     render.taa_enabled.hash(&mut hasher);
     render.render_scale.to_bits().hash(&mut hasher);
     render.ibl_blend_factor.to_bits().hash(&mut hasher);
@@ -1968,6 +1978,7 @@ impl Default for DebugDraw {
             ssao_visualization: false,
             material_filtering: true,
             meshlet_cluster_visualization: false,
+            meshlet_lod_error_threshold: 1.0,
         }
     }
 }

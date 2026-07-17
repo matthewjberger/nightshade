@@ -92,6 +92,17 @@ impl super::WgpuRenderer {
         if bindless_enabled {
             required_limits.max_binding_array_elements_per_shader_stage = bindless_capacity;
         }
+        // The default caps a single storage binding at 128mb, which is a
+        // conservative floor rather than anything the hardware minds. Virtualized
+        // geometry keeps every asset's vertices in one shared stream, so a scene
+        // with tens of millions of unique vertices passes that in one buffer.
+        // Take whatever the adapter offers.
+        #[cfg(feature = "meshlet")]
+        {
+            required_limits.max_storage_buffer_binding_size =
+                adapter_limits.max_storage_buffer_binding_size;
+            required_limits.max_buffer_size = adapter_limits.max_buffer_size;
+        }
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
