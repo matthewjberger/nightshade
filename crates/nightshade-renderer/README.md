@@ -74,20 +74,20 @@ The three steps every host repeats:
    (`scene: RendererState`, `mesh_cache`, `texture_cache`) lives on the host and
    moves in by value each frame; `frame: FrameInputs` carries the cameras to
    dispatch, drained commands, and this frame's dirty state. The renderer-owned
-   fields `ibl_views` and `shadow_atlas` are composed as `Default::default()` —
-   the frame driver fills them itself.
+   fields `ibl_views` and `shadow_atlas` are composed as `Default::default()`,
+   and the frame driver fills them itself.
 3. **Apply `FrameOutputs` and take the persistent state back out** of the inputs
    for the next frame. On a skipped frame (occluded or lost surface) the
    unconsumed state stays in the inputs so nothing is lost.
 
 `RenderInputs` deliberately has no `Default`: every field is load-bearing and
 the move-in / move-out cycle is the contract. Build one compose function against
-the struct and the compiler walks you through the fields — the examples' shared
+the struct and the compiler walks you through the fields. The examples' shared
 module is exactly that function.
 
-For the full design — the frame flow, every `RenderInputs` sub-struct, the
+For the full design (the frame flow, every `RenderInputs` sub-struct, the
 module map, the feature gating, and how the nightshade engine layer drives the
-renderer — read [ARCHITECTURE.md](ARCHITECTURE.md).
+renderer) read [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What it renders
 
@@ -113,8 +113,8 @@ the GPU on hardware with `MULTI_DRAW_INDIRECT_COUNT`. Bindless material textures
 are used where the device supports them.
 
 Because the draw arguments are populated on the GPU across the culling and batch
-passes, a scene needs a couple of frames of warmup before its first draws land —
-a continuously-rendering host never notices, but a one-shot capture should
+passes, a scene needs a couple of frames of warmup before its first draws land.
+A continuously-rendering host never notices, but a one-shot capture should
 render a few frames before reading back (the `minimal` example does).
 
 ## Using the frame graph alone
