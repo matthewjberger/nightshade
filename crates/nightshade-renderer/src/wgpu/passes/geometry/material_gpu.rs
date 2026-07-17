@@ -7,7 +7,7 @@ pub fn bindless_material_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
     views: &[&wgpu::TextureView],
-    sampler: &wgpu::Sampler,
+    samplers: &[wgpu::Sampler; 3],
     label: &str,
 ) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -20,7 +20,15 @@ pub fn bindless_material_bind_group(
             },
             wgpu::BindGroupEntry {
                 binding: 1,
-                resource: wgpu::BindingResource::Sampler(sampler),
+                resource: wgpu::BindingResource::Sampler(&samplers[0]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: wgpu::BindingResource::Sampler(&samplers[1]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: wgpu::BindingResource::Sampler(&samplers[2]),
             },
         ],
     })
@@ -34,7 +42,7 @@ pub fn array_material_bind_group(
     layout: &wgpu::BindGroupLayout,
     srgb_view: &wgpu::TextureView,
     linear_view: &wgpu::TextureView,
-    sampler: &wgpu::Sampler,
+    samplers: &[wgpu::Sampler; 3],
     label: &str,
 ) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -51,7 +59,15 @@ pub fn array_material_bind_group(
             },
             wgpu::BindGroupEntry {
                 binding: 2,
-                resource: wgpu::BindingResource::Sampler(sampler),
+                resource: wgpu::BindingResource::Sampler(&samplers[0]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: wgpu::BindingResource::Sampler(&samplers[1]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: wgpu::BindingResource::Sampler(&samplers[2]),
             },
         ],
     })
@@ -64,14 +80,14 @@ pub fn rebuild_array_material_bind_group(
     layout: &wgpu::BindGroupLayout,
     srgb: Option<&wgpu::TextureView>,
     linear: Option<&wgpu::TextureView>,
-    sampler: Option<&wgpu::Sampler>,
+    samplers: Option<&[wgpu::Sampler; 3]>,
     label: &str,
 ) -> Option<wgpu::BindGroup> {
-    let (Some(srgb), Some(linear), Some(sampler)) = (srgb, linear, sampler) else {
+    let (Some(srgb), Some(linear), Some(samplers)) = (srgb, linear, samplers) else {
         return None;
     };
     Some(array_material_bind_group(
-        device, layout, srgb, linear, sampler, label,
+        device, layout, srgb, linear, samplers, label,
     ))
 }
 

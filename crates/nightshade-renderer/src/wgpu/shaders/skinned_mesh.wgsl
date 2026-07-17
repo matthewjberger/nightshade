@@ -415,7 +415,36 @@ var<storage, read> light_indices: array<u32>;
 @group(1) @binding(9)
 var<uniform> cluster_uniforms: ClusterUniforms;
 
-#import nightshade::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER}
+#import nightshade::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER, UvGrad}
+
+var<private> material_uv0_ddx: vec2<f32>;
+var<private> material_uv0_ddy: vec2<f32>;
+var<private> material_uv1_ddx: vec2<f32>;
+var<private> material_uv1_ddy: vec2<f32>;
+
+fn texture_uv_grad(transform: TextureTransform) -> UvGrad {
+    let uv_set = u32(transform.row0.w);
+    let ddx = select(material_uv0_ddx, material_uv1_ddx, uv_set == 1u);
+    let ddy = select(material_uv0_ddy, material_uv1_ddy, uv_set == 1u);
+    var out: UvGrad;
+    out.ddx = vec2<f32>(dot(transform.row0.xy, ddx), dot(transform.row1.xy, ddx));
+    out.ddy = vec2<f32>(dot(transform.row0.xy, ddy), dot(transform.row1.xy, ddy));
+    return out;
+}
+
+fn base_material_uv_grad() -> UvGrad {
+    var out: UvGrad;
+    out.ddx = material_uv0_ddx;
+    out.ddy = material_uv0_ddy;
+    return out;
+}
+
+fn scaled_material_uv_grad(scale: f32) -> UvGrad {
+    var out: UvGrad;
+    out.ddx = material_uv0_ddx * scale;
+    out.ddy = material_uv0_ddy * scale;
+    return out;
+}
 #import nightshade::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}
 
 @group(3) @binding(0)
@@ -874,6 +903,10 @@ fn get_normal(
 
 @fragment
 fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> FragmentOutput {
+    material_uv0_ddx = dpdx(in.tex_coords);
+    material_uv0_ddy = dpdy(in.tex_coords);
+    material_uv1_ddx = dpdx(in.tex_coords_1);
+    material_uv1_ddy = dpdy(in.tex_coords_1);
     if in.flip_winding != 0u && is_front_face {
         discard;
     }
@@ -909,7 +942,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
             dot(view_dir_initial, geom_normal),
         );
         view_tangent.z = view_tangent.z + 0.42;
-        let raw_height = sample_linear_layer(material.height_layer, uv0).r;
+        let raw_height = sample_linear_layer(material.height_layer, uv0, base_material_uv_grad()).r;
         let parallax_height = raw_height * material.parallax_scale - material.parallax_scale * 0.5;
         uv0 = uv0 + parallax_height * view_tangent.xy / view_tangent.z;
     }
@@ -920,24 +953,24 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
 
     var normal_tex_sample = select(
         vec3<f32>(0.5, 0.5, 1.0),
-        sample_linear_layer(material.normal_layer, normal_uv).xyz,
+        sample_linear_layer(material.normal_layer, normal_uv, texture_uv_grad(material.normal_transform)).xyz,
         material.normal_layer != NO_LAYER,
     );
     if material.detail_normal_layer != NO_LAYER {
         let detail_uv = uv0 * material.detail_uv_scale;
-        let detail_raw = sample_linear_layer(material.detail_normal_layer, detail_uv).xyz;
+        let detail_raw = sample_linear_layer(material.detail_normal_layer, detail_uv, scaled_material_uv_grad(material.detail_uv_scale)).xyz;
         let n1 = (normal_tex_sample * 2.0 - 1.0) + vec3<f32>(0.0, 0.0, 1.0);
         let n2 = (detail_raw * 2.0 - 1.0) * vec3<f32>(-1.0, -1.0, 1.0);
         normal_tex_sample = normalize(n1 * dot(n1, n2) / n1.z - n2) * 0.5 + 0.5;
     }
     let base_tex_sample = select(
         vec4<f32>(1.0),
-        sample_srgb_layer(material.base_layer, select(base_uv, in.tex_coords_affine, uniforms.affine_enabled > 0u)),
+        sample_srgb_layer(material.base_layer, select(base_uv, in.tex_coords_affine, uniforms.affine_enabled > 0u), texture_uv_grad(material.base_transform)),
         material.base_layer != NO_LAYER,
     );
     let emissive_tex_sample = select(
         vec4<f32>(0.0),
-        sample_srgb_layer(material.emissive_layer, emissive_uv),
+        sample_srgb_layer(material.emissive_layer, emissive_uv, texture_uv_grad(material.emissive_transform)),
         material.emissive_layer != NO_LAYER,
     );
 
@@ -965,7 +998,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
     var albedo = base_color.rgb;
     if material.detail_base_layer != NO_LAYER {
         let detail_uv = uv0 * material.detail_uv_scale;
-        let detail_col = sample_srgb_layer(material.detail_base_layer, detail_uv).rgb;
+        let detail_col = sample_srgb_layer(material.detail_base_layer, detail_uv, scaled_material_uv_grad(material.detail_uv_scale)).rgb;
         let screen_blend = 1.0 - (1.0 - albedo) * (1.0 - detail_col);
         let multiply_blend = 2.0 * albedo * detail_col;
         albedo = select(screen_blend, multiply_blend, albedo < vec3<f32>(0.5));
@@ -975,7 +1008,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
     var roughness = material.roughness;
     if material.metallic_roughness_layer != NO_LAYER {
         let mr_uv = texture_uv(uv0, uv1, material.metallic_roughness_transform);
-        let mr_sample = sample_linear_layer(material.metallic_roughness_layer, mr_uv);
+        let mr_sample = sample_linear_layer(material.metallic_roughness_layer, mr_uv, texture_uv_grad(material.metallic_roughness_transform));
         roughness = roughness * mr_sample.g;
         metallic = metallic * mr_sample.b;
     }
@@ -989,34 +1022,34 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
     var occlusion = 1.0;
     if material.occlusion_layer != NO_LAYER {
         let occlusion_uv = texture_uv(uv0, uv1, material.occlusion_transform);
-        occlusion = sample_linear_layer(material.occlusion_layer, occlusion_uv).r;
+        occlusion = sample_linear_layer(material.occlusion_layer, occlusion_uv, texture_uv_grad(material.occlusion_transform)).r;
     }
 
     var transmission_factor = material.transmission_factor;
     if material.transmission_layer != NO_LAYER {
         let transmission_uv = texture_uv(uv0, uv1, material.transmission_transform);
-        let transmission_sample = sample_linear_layer(material.transmission_layer, transmission_uv).r;
+        let transmission_sample = sample_linear_layer(material.transmission_layer, transmission_uv, texture_uv_grad(material.transmission_transform)).r;
         transmission_factor = transmission_factor * transmission_sample;
     }
 
     var thickness = material.thickness;
     if material.thickness_layer != NO_LAYER {
         let thickness_uv = texture_uv(uv0, uv1, material.thickness_transform);
-        let thickness_sample = sample_linear_layer(material.thickness_layer, thickness_uv).g;
+        let thickness_sample = sample_linear_layer(material.thickness_layer, thickness_uv, texture_uv_grad(material.thickness_transform)).g;
         thickness = thickness * thickness_sample;
     }
 
     var specular_factor = material.specular_factor;
     if material.specular_layer != NO_LAYER {
         let specular_uv = texture_uv(uv0, uv1, material.specular_transform);
-        let specular_sample = sample_linear_layer(material.specular_layer, specular_uv).a;
+        let specular_sample = sample_linear_layer(material.specular_layer, specular_uv, texture_uv_grad(material.specular_transform)).a;
         specular_factor = specular_factor * specular_sample;
     }
 
     var specular_color_factor = material.specular_color_factor;
     if material.specular_color_layer != NO_LAYER {
         let specular_color_uv = texture_uv(uv0, uv1, material.specular_color_transform);
-        let specular_color_sample = sample_srgb_layer(material.specular_color_layer, specular_color_uv).rgb;
+        let specular_color_sample = sample_srgb_layer(material.specular_color_layer, specular_color_uv, texture_uv_grad(material.specular_color_transform)).rgb;
         specular_color_factor = specular_color_factor * specular_color_sample;
     }
 
@@ -1075,7 +1108,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         var iridescence_thickness = material.iridescence_thickness_maximum;
         if material.iridescence_layer != NO_LAYER {
             let irid_uv = texture_uv(uv0, uv1, material.iridescence_transform);
-            let irid_sample = sample_linear_layer(material.iridescence_layer, irid_uv);
+            let irid_sample = sample_linear_layer(material.iridescence_layer, irid_uv, texture_uv_grad(material.iridescence_transform));
             iridescence_factor = iridescence_factor * irid_sample.r;
             iridescence_thickness = mix(material.iridescence_thickness_minimum, material.iridescence_thickness_maximum, irid_sample.g);
         }
@@ -1088,7 +1121,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         var anisotropy_dir = vec2<f32>(material.anisotropy_rotation_cos, material.anisotropy_rotation_sin);
         if material.anisotropy_layer != NO_LAYER {
             let aniso_uv = texture_uv(uv0, uv1, material.anisotropy_transform);
-            let aniso_sample = sample_linear_layer(material.anisotropy_layer, aniso_uv);
+            let aniso_sample = sample_linear_layer(material.anisotropy_layer, aniso_uv, texture_uv_grad(material.anisotropy_transform));
             let tex_dir = aniso_sample.xy * 2.0 - 1.0;
             let rot_x = material.anisotropy_rotation_cos * tex_dir.x - material.anisotropy_rotation_sin * tex_dir.y;
             let rot_y = material.anisotropy_rotation_sin * tex_dir.x + material.anisotropy_rotation_cos * tex_dir.y;
@@ -1104,7 +1137,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         var diffuse_transmission_color = material.diffuse_transmission_color_factor;
         if material.diffuse_transmission_color_layer != NO_LAYER {
             let dtc_uv = texture_uv(uv0, uv1, material.diffuse_transmission_color_transform);
-            let dtc_sample = sample_srgb_layer(material.diffuse_transmission_color_layer, dtc_uv);
+            let dtc_sample = sample_srgb_layer(material.diffuse_transmission_color_layer, dtc_uv, texture_uv_grad(material.diffuse_transmission_color_transform));
             diffuse_transmission_color = diffuse_transmission_color * dtc_sample.rgb;
             diffuse_transmission_factor = diffuse_transmission_factor * dtc_sample.a;
         }
@@ -1117,19 +1150,19 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         var cc_roughness = clamp(material.clearcoat_roughness_factor, 0.0, 1.0);
         if material.clearcoat_layer != NO_LAYER {
             let cc_uv = texture_uv(uv0, uv1, material.clearcoat_transform);
-            let cc_sample = sample_linear_layer(material.clearcoat_layer, cc_uv);
+            let cc_sample = sample_linear_layer(material.clearcoat_layer, cc_uv, texture_uv_grad(material.clearcoat_transform));
             cc_factor = cc_factor * cc_sample.r;
         }
         if material.clearcoat_roughness_layer != NO_LAYER {
             let ccr_uv = texture_uv(uv0, uv1, material.clearcoat_roughness_transform);
-            let ccr_sample = sample_linear_layer(material.clearcoat_roughness_layer, ccr_uv);
+            let ccr_sample = sample_linear_layer(material.clearcoat_roughness_layer, ccr_uv, texture_uv_grad(material.clearcoat_roughness_transform));
             cc_roughness = cc_roughness * ccr_sample.g;
         }
         cc_roughness = clamp(cc_roughness, 0.04, 1.0);
         var cc_normal = N;
         if material.clearcoat_normal_layer != NO_LAYER {
             let cc_n_uv = texture_uv(uv0, uv1, material.clearcoat_normal_transform);
-            let cc_n_sample = sample_linear_layer(material.clearcoat_normal_layer, cc_n_uv).xyz;
+            let cc_n_sample = sample_linear_layer(material.clearcoat_normal_layer, cc_n_uv, texture_uv_grad(material.clearcoat_normal_transform)).xyz;
             let cc_n_tangent_xy = (cc_n_sample.xy * 2.0 - 1.0) * material.clearcoat_normal_scale;
             let cc_n_tangent = vec3<f32>(cc_n_tangent_xy, sqrt(max(1.0 - dot(cc_n_tangent_xy, cc_n_tangent_xy), 0.0)));
             let cc_T = safe_normalize(geom_tangent.xyz);
@@ -1145,7 +1178,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         var sheen_roughness = clamp(material.sheen_roughness_factor, 0.0, 1.0);
         if material.sheen_color_layer != NO_LAYER {
             let sheen_uv = texture_uv(uv0, uv1, material.sheen_color_transform);
-            let sheen_sample = sample_srgb_layer(material.sheen_color_layer, sheen_uv);
+            let sheen_sample = sample_srgb_layer(material.sheen_color_layer, sheen_uv, texture_uv_grad(material.sheen_color_transform));
             sheen_color = sheen_color * sheen_sample.rgb;
             sheen_roughness = sheen_roughness * sheen_sample.a;
         }

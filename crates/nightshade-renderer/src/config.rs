@@ -1083,6 +1083,9 @@ pub struct DebugDraw {
     /// Animation speed for debug stripes.
     pub texture_debug_stripes_speed: f32,
     pub ssao_visualization: bool,
+    /// When false, material textures sample at mip 0 with no anisotropy,
+    /// reproducing the unfiltered look for comparison.
+    pub material_filtering: bool,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1850,6 +1853,7 @@ pub fn render_settings_signature(
         .texture_debug_stripes_speed
         .to_bits()
         .hash(&mut hasher);
+    debug.material_filtering.hash(&mut hasher);
     render.taa_enabled.hash(&mut hasher);
     render.render_scale.to_bits().hash(&mut hasher);
     render.ibl_blend_factor.to_bits().hash(&mut hasher);
@@ -1923,6 +1927,7 @@ impl Default for DebugDraw {
             texture_debug_stripes: false,
             texture_debug_stripes_speed: 100.0,
             ssao_visualization: false,
+            material_filtering: true,
         }
     }
 }

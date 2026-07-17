@@ -76,7 +76,7 @@ pub struct MeshPass {
     pub(super) registered_textures: HashMap<String, (wgpu::TextureView, wgpu::Sampler)>,
     pub(super) material_array_srgb_view: Option<wgpu::TextureView>,
     pub(super) material_array_linear_view: Option<wgpu::TextureView>,
-    pub(super) material_array_sampler: Option<wgpu::Sampler>,
+    pub(super) material_array_samplers: Option<[wgpu::Sampler; 3]>,
     pub(super) material_bind_group: Option<wgpu::BindGroup>,
     pub(super) material_bindless_max: Option<u32>,
     pub(super) material_layer_map: HashMap<
@@ -186,6 +186,15 @@ pub(super) struct OitResourceBundle {
     pub composite_bind_group: wgpu::BindGroup,
 }
 
+fn material_sampler_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+        count: None,
+    }
+}
+
 fn texture_bind_group_layout_entries(bindless_max: Option<u32>) -> Vec<wgpu::BindGroupLayoutEntry> {
     if let Some(max_textures) = bindless_max {
         return vec![
@@ -199,12 +208,9 @@ fn texture_bind_group_layout_entries(bindless_max: Option<u32>) -> Vec<wgpu::Bin
                 },
                 count: std::num::NonZeroU32::new(max_textures),
             },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
+            material_sampler_entry(1),
+            material_sampler_entry(2),
+            material_sampler_entry(3),
         ];
     }
     vec![
@@ -228,12 +234,9 @@ fn texture_bind_group_layout_entries(bindless_max: Option<u32>) -> Vec<wgpu::Bin
             },
             count: None,
         },
-        wgpu::BindGroupLayoutEntry {
-            binding: 2,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-            count: None,
-        },
+        material_sampler_entry(2),
+        material_sampler_entry(3),
+        material_sampler_entry(4),
     ]
 }
 

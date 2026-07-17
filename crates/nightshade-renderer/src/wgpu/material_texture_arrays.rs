@@ -58,7 +58,9 @@ pub struct MaterialTextureArrays {
     pub linear_texture: wgpu::Texture,
     pub srgb_view: wgpu::TextureView,
     pub linear_view: wgpu::TextureView,
-    pub sampler: wgpu::Sampler,
+    pub sampler_repeat: wgpu::Sampler,
+    pub sampler_mirror: wgpu::Sampler,
+    pub sampler_clamp: wgpu::Sampler,
     pub anisotropy_clamp: u16,
     pub srgb_next_layer: u32,
     pub linear_next_layer: u32,
@@ -76,19 +78,47 @@ pub struct MaterialTextureArrays {
     bindless_dirty: bool,
 }
 
-fn build_material_sampler(device: &wgpu::Device, anisotropy_clamp: u16) -> wgpu::Sampler {
+fn build_material_sampler(
+    device: &wgpu::Device,
+    anisotropy_clamp: u16,
+    address_mode: wgpu::AddressMode,
+    label: &str,
+) -> wgpu::Sampler {
     let clamped = anisotropy_clamp.clamp(1, 16);
     device.create_sampler(&wgpu::SamplerDescriptor {
-        label: Some("Material Texture Array Sampler"),
-        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        label: Some(label),
+        address_mode_u: address_mode,
+        address_mode_v: address_mode,
+        address_mode_w: address_mode,
         mag_filter: wgpu::FilterMode::Linear,
         min_filter: wgpu::FilterMode::Linear,
         mipmap_filter: wgpu::MipmapFilterMode::Linear,
         anisotropy_clamp: clamped,
         ..Default::default()
     })
+}
+
+fn build_wrap_samplers(device: &wgpu::Device, anisotropy_clamp: u16) -> [wgpu::Sampler; 3] {
+    [
+        build_material_sampler(
+            device,
+            anisotropy_clamp,
+            wgpu::AddressMode::Repeat,
+            "Material Texture Array Sampler (Repeat)",
+        ),
+        build_material_sampler(
+            device,
+            anisotropy_clamp,
+            wgpu::AddressMode::MirrorRepeat,
+            "Material Texture Array Sampler (Mirror)",
+        ),
+        build_material_sampler(
+            device,
+            anisotropy_clamp,
+            wgpu::AddressMode::ClampToEdge,
+            "Material Texture Array Sampler (Clamp)",
+        ),
+    ]
 }
 
 impl MaterialTextureArrays {
@@ -141,7 +171,8 @@ impl MaterialTextureArrays {
         });
 
         let anisotropy_clamp = DEFAULT_ANISOTROPY;
-        let sampler = build_material_sampler(device, anisotropy_clamp);
+        let [sampler_repeat, sampler_mirror, sampler_clamp] =
+            build_wrap_samplers(device, anisotropy_clamp);
 
         Self {
             layer_size,
@@ -151,7 +182,9 @@ impl MaterialTextureArrays {
             linear_texture,
             srgb_view,
             linear_view,
-            sampler,
+            sampler_repeat,
+            sampler_mirror,
+            sampler_clamp,
             anisotropy_clamp,
             srgb_next_layer: 0,
             linear_next_layer: 0,
@@ -557,19 +590,27 @@ impl MaterialTextureArrays {
         &self.linear_view
     }
 
-    pub fn sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
+    pub fn samplers(&self) -> [wgpu::Sampler; 3] {
+        [
+            self.sampler_repeat.clone(),
+            self.sampler_mirror.clone(),
+            self.sampler_clamp.clone(),
+        ]
     }
 
-    /// Replaces the sampler with one using the requested anisotropy clamp.
-    /// Returns true when the clamp changed and the sampler was rebuilt.
-    /// Callers must update any bind groups that reference the old sampler.
+    /// Replaces the wrap samplers with ones using the requested anisotropy
+    /// clamp. Returns true when the clamp changed and the samplers were
+    /// rebuilt. Callers must update any bind groups that reference the old
+    /// samplers.
     pub fn set_anisotropy(&mut self, device: &wgpu::Device, anisotropy_clamp: u16) -> bool {
         let clamped = anisotropy_clamp.clamp(1, 16);
         if clamped == self.anisotropy_clamp {
             return false;
         }
-        self.sampler = build_material_sampler(device, clamped);
+        let [repeat, mirror, clamp] = build_wrap_samplers(device, clamped);
+        self.sampler_repeat = repeat;
+        self.sampler_mirror = mirror;
+        self.sampler_clamp = clamp;
         self.anisotropy_clamp = clamped;
         true
     }
@@ -581,12 +622,33 @@ fn resample_to_size(rgba_data: &[u8], width: u32, height: u32, target: u32) -> V
     }
     let mut out = vec![0u8; (target * target * 4) as usize];
     for y in 0..target {
-        let sy = ((y as u64) * (height as u64) / (target as u64)) as u32;
+        let src_y0 = ((y as u64) * (height as u64) / (target as u64)) as u32;
+        let src_y1 = ((((y as u64) + 1) * (height as u64) / (target as u64)) as u32)
+            .max(src_y0 + 1)
+            .min(height);
         for x in 0..target {
-            let sx = ((x as u64) * (width as u64) / (target as u64)) as u32;
-            let src_offset = ((sy * width + sx) * 4) as usize;
+            let src_x0 = ((x as u64) * (width as u64) / (target as u64)) as u32;
+            let src_x1 = ((((x as u64) + 1) * (width as u64) / (target as u64)) as u32)
+                .max(src_x0 + 1)
+                .min(width);
+            let mut accum = [0u32; 4];
+            let mut count = 0u32;
+            for sy in src_y0..src_y1 {
+                for sx in src_x0..src_x1 {
+                    let src_offset = ((sy * width + sx) * 4) as usize;
+                    accum[0] += rgba_data[src_offset] as u32;
+                    accum[1] += rgba_data[src_offset + 1] as u32;
+                    accum[2] += rgba_data[src_offset + 2] as u32;
+                    accum[3] += rgba_data[src_offset + 3] as u32;
+                    count += 1;
+                }
+            }
+            let divisor = count.max(1);
             let dst_offset = ((y * target + x) * 4) as usize;
-            out[dst_offset..dst_offset + 4].copy_from_slice(&rgba_data[src_offset..src_offset + 4]);
+            out[dst_offset] = (accum[0] / divisor) as u8;
+            out[dst_offset + 1] = (accum[1] / divisor) as u8;
+            out[dst_offset + 2] = (accum[2] / divisor) as u8;
+            out[dst_offset + 3] = (accum[3] / divisor) as u8;
         }
     }
     out

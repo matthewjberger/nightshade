@@ -1866,7 +1866,7 @@ impl MeshPass {
             registered_textures: HashMap::new(),
             material_array_srgb_view: None,
             material_array_linear_view: None,
-            material_array_sampler: None,
+            material_array_samplers: None,
             material_bind_group: None,
             material_bindless_max,
             material_layer_map: HashMap::new(),

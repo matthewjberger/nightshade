@@ -71,7 +71,8 @@ pub(super) struct MeshUniforms {
     pub(super) flat_color: [f32; 4],
     pub(super) prev_view_projection: [[f32; 4]; 4],
     pub(super) cur_view_projection: [[f32; 4]; 4],
-    pub(super) _padding3: [f32; 44],
+    pub(super) material_filtering: u32,
+    pub(super) _padding3: [f32; 43],
 }
 
 #[repr(C)]

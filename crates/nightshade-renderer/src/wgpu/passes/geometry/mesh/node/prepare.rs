@@ -1162,7 +1162,8 @@ impl MeshPass {
                     .unwrap_or([0.0; 4]),
                 prev_view_projection: configs.scene.prev_view_projection,
                 cur_view_projection: configs.scene.view_projection,
-                _padding3: [0.0; 44],
+                material_filtering: configs.debug_draw.material_filtering as u32,
+                _padding3: [0.0; 43],
             };
             queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
