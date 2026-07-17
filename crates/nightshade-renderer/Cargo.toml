@@ -39,6 +39,18 @@ wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 wgpu = { workspace = true, optional = true, features = ["fragile-send-sync-non-atomic-wasm"] }
 
+[dev-dependencies]
+pollster = "0.4"
+winit = { workspace = true }
+
+[[example]]
+name = "window"
+required-features = ["wgpu"]
+
+[[example]]
+name = "minimal"
+required-features = ["wgpu", "screenshot"]
+
 [features]
 default = ["wgpu"]
 rendergraph = ["dep:wgpu", "dep:petgraph", "dep:thiserror"]
