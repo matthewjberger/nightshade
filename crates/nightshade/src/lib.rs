@@ -664,7 +664,8 @@ pub mod prelude {
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{
-        spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_third_person_camera,
+        spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_pan_orbit_camera_at,
+        spawn_third_person_camera,
     };
     pub use crate::ecs::camera::components::ThirdPersonCamera;
     pub use crate::ecs::camera::systems::{

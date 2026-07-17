@@ -206,7 +206,7 @@ fn initialize(navmesh_demo: &mut NavMeshDemo, world: &mut World) {
     }
 
     let focus = nalgebra_glm::vec3(0.0, 2.0, 0.0);
-    let camera = spawn_pan_orbit_camera(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
+    let camera = spawn_pan_orbit_camera_at(world, focus, 50.0, 0.0, 0.6, "Main Camera".to_string());
     world.res_mut::<ActiveCamera>().0 = Some(camera);
     navmesh_demo.camera_entity = Some(camera);
 

@@ -44,7 +44,18 @@ pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {
     camera
 }
 
-pub fn spawn_pan_orbit_camera(
+/// Spawns a pan-orbit camera with the default configuration, focused on the
+/// origin. Reach for [`spawn_pan_orbit_camera_at`] or
+/// [`spawn_pan_orbit_camera_with_config`] when you need to place or tune it.
+pub fn spawn_pan_orbit_camera(world: &mut World) -> Entity {
+    spawn_pan_orbit_camera_with_config(
+        world,
+        "Pan Orbit Camera".to_string(),
+        PanOrbitCamera::default(),
+    )
+}
+
+pub fn spawn_pan_orbit_camera_at(
     world: &mut World,
     focus: Vec3,
     radius: f32,

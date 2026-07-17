@@ -1,4 +1,4 @@
-use nightshade::ecs::camera::commands::spawn_pan_orbit_camera;
+use nightshade::ecs::camera::commands::spawn_pan_orbit_camera_at;
 use nightshade::ecs::camera::systems::pan_orbit_camera_system;
 use nightshade::ecs::gpu_picking::GpuPickResult;
 use nightshade::ecs::input::resources::MouseState;
@@ -141,7 +141,7 @@ fn initialize(picking_demo: &mut PickingDemo, world: &mut World) {
         });
     }
 
-    let camera = spawn_pan_orbit_camera(
+    let camera = spawn_pan_orbit_camera_at(
         world,
         Vec3::new(0.0, 0.0, 0.0),
         12.0,
