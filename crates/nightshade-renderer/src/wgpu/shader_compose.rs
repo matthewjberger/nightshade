@@ -16,10 +16,17 @@ impl Default for ShaderComposer {
 
 impl ShaderComposer {
     pub fn new() -> Self {
+        // These say what the composer will validate, not what any device can do.
+        // A capability granted here only permits a construct to be written; the
+        // device's own features still decide at module creation, and a shader
+        // that needs one is only ever compiled where those features exist. So
+        // this list is deliberately the union of everything any path may use.
         let mut composer = Composer::default().with_capabilities(
             wgpu::naga::valid::Capabilities::default()
                 | wgpu::naga::valid::Capabilities::TEXTURE_AND_SAMPLER_BINDING_ARRAY
-                | wgpu::naga::valid::Capabilities::TEXTURE_AND_SAMPLER_BINDING_ARRAY_NON_UNIFORM_INDEXING,
+                | wgpu::naga::valid::Capabilities::TEXTURE_AND_SAMPLER_BINDING_ARRAY_NON_UNIFORM_INDEXING
+                | wgpu::naga::valid::Capabilities::SHADER_INT64
+                | wgpu::naga::valid::Capabilities::TEXTURE_INT64_ATOMIC,
         );
         composer
             .add_composable_module(ComposableModuleDescriptor {

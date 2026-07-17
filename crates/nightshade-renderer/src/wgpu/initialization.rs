@@ -101,9 +101,17 @@ impl super::WgpuRenderer {
         // cut has made triangles land on single pixels. Requested where the
         // adapter has it, and the pass falls back to hardware alone where it
         // does not.
+        //
+        // Three features, because they answer different questions:
+        // TEXTURE_INT64_ATOMIC allows the R64Uint format at all, TEXTURE_ATOMIC
+        // allows a texture to carry the atomic usage, and SHADER_INT64 allows
+        // the shader to hold the packed value. Asking for less than all three
+        // fails later rather than here.
         #[cfg(feature = "meshlet")]
         {
-            let wanted = wgpu::Features::TEXTURE_INT64_ATOMIC | wgpu::Features::SHADER_INT64;
+            let wanted = wgpu::Features::TEXTURE_INT64_ATOMIC
+                | wgpu::Features::TEXTURE_ATOMIC
+                | wgpu::Features::SHADER_INT64;
             if adapter_features.contains(wanted) {
                 required_features |= wanted;
             } else {
@@ -468,28 +476,18 @@ impl super::WgpuRenderer {
         // follow occlude against it.
         #[cfg(feature = "meshlet")]
         {
-            let meshlet_visibility_id =
-                render_graph_add_color_texture(&mut graph, "meshlet_visibility")
-                    .format(wgpu::TextureFormat::R32Uint)
-                    .size(initial_width.max(1), initial_height.max(1))
-                    .usage(
-                        wgpu::TextureUsages::RENDER_ATTACHMENT
-                            | wgpu::TextureUsages::TEXTURE_BINDING,
-                    )
-                    .clear_color(wgpu::Color {
-                        r: passes::geometry::meshlet::MESHLET_VISIBILITY_BUFFER_EMPTY as f64,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    })
-                    .force_store()
-                    .transient();
-
+            // The pass owns its visibility buffer rather than naming a graph
+            // slot: with 64 bit atomics it is an R64Uint texture, which cannot be
+            // a render attachment, so there is nothing here to schedule.
             let mut meshlet_pass = passes::MeshletPass::new(
                 &device,
                 hdr_format,
                 depth_format,
-                wgpu::TextureFormat::R32Uint,
+                device.features().contains(
+                    wgpu::Features::TEXTURE_INT64_ATOMIC
+                        | wgpu::Features::TEXTURE_ATOMIC
+                        | wgpu::Features::SHADER_INT64,
+                ),
                 bindless_config
                     .enabled
                     .then_some(bindless_config.max_textures),
@@ -498,11 +496,7 @@ impl super::WgpuRenderer {
             render_graph_add_pass(
                 &mut graph,
                 Box::new(meshlet_pass),
-                &[
-                    ("meshlet_visibility", meshlet_visibility_id),
-                    ("color", scene_color_id),
-                    ("depth", depth_id),
-                ],
+                &[("color", scene_color_id), ("depth", depth_id)],
             )?;
         }
 
