@@ -2,17 +2,19 @@
 //!
 //! ## Architecture
 //!
-//! - `src/plugin.rs` — the `TemplatePlugin`. Registers the app member
-//!   world, the app resources, and the startup and update systems against
-//!   the `App` builder.
-//! - `src/ecs.rs` — declares the app member world schema (registered into
-//!   the engine group at index `GAME`), the component structs, and the
+//! - `src/plugin.rs` — the `TemplatePlugin`: inserts the app resources and
+//!   registers the systems against the `App` builder. Registration only, no
+//!   behavior.
+//! - `src/ecs.rs` — the app member world schema (registered into the engine
+//!   group at index `GAME`), the component structs, and the
 //!   `TemplateResources` struct for app-wide state.
-//! - `src/systems/` — behavior. Each system is a free function with the
-//!   shape `fn name(template_resources: &mut TemplateResources, world: &mut World)`.
+//! - `src/systems/` — behavior, one file per concern: `setup::initialize`
+//!   builds the opening scene, `example::tick` runs each frame. A system is a
+//!   free function taking `&mut World`, optionally preceded by
+//!   `&mut TemplateResources` for app state.
 //!
-//! Add a new system by dropping a file in `src/systems/`, registering it
-//! in `src/systems.rs`, and pushing it onto a stage in
+//! Add a system by dropping a file in `src/systems/`, declaring it in
+//! `src/systems.rs`, and registering it on a stage in
 //! `plugin.rs::TemplatePlugin::build`.
 
 mod ecs;
