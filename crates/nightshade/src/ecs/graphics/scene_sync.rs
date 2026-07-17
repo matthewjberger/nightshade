@@ -865,7 +865,7 @@ fn sync_water(world: &mut World) {
 #[cfg(feature = "meshlet")]
 fn sync_meshlets(world: &mut World) {
     let mut instances: Vec<crate::render::config::MeshletInstance> = Vec::new();
-    for (_, (meshlet_mesh, global_transform)) in world
+    for (entity, (meshlet_mesh, global_transform)) in world
         .query_ref::<(
             &crate::ecs::meshlet::components::MeshletMesh,
             &crate::ecs::transform::components::GlobalTransform,
@@ -876,6 +876,7 @@ fn sync_meshlets(world: &mut World) {
             transform: global_transform.0,
             asset_id: meshlet_mesh.asset_id,
             root_bvh_node_index: 0,
+            entity: render_entity(entity),
         });
     }
 

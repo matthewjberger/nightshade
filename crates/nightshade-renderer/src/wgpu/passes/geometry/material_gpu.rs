@@ -3,6 +3,66 @@ use std::collections::HashMap;
 /// Builds the bindless material bind group (a texture-view array at binding 0 and
 /// a shared sampler at binding 1). Shared by the mesh and skinned mesh passes,
 /// which differ only in the debug label.
+fn material_sampler_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+        count: None,
+    }
+}
+
+/// The layout `material_sampling` expects, which every pass that shades from a
+/// material binds. Bindless collapses the two arrays into one indexed binding;
+/// otherwise the srgb and linear arrays are bound separately, and either way
+/// the three samplers are the wrap modes the shader picks between.
+pub fn material_texture_bind_group_layout_entries(
+    bindless_max: Option<u32>,
+) -> Vec<wgpu::BindGroupLayoutEntry> {
+    if let Some(max_textures) = bindless_max {
+        return vec![
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: std::num::NonZeroU32::new(max_textures),
+            },
+            material_sampler_entry(1),
+            material_sampler_entry(2),
+            material_sampler_entry(3),
+        ];
+    }
+    vec![
+        wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                multisampled: false,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 1,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                multisampled: false,
+            },
+            count: None,
+        },
+        material_sampler_entry(2),
+        material_sampler_entry(3),
+        material_sampler_entry(4),
+    ]
+}
+
 pub fn bindless_material_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,

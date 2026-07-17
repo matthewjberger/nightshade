@@ -9,6 +9,8 @@ use crate::wgpu::rendergraph::{RenderGraph, render_graph_get_pass_mut};
 
 pub const MESH_PASS: &str = "mesh_pass";
 pub const SKINNED_MESH_PASS: &str = "skinned_mesh_pass";
+#[cfg(feature = "meshlet")]
+pub const MESHLET_PASS: &str = "meshlet_pass";
 pub const SHADOW_DEPTH_PASS: &str = "shadow_depth_pass";
 pub const SKY_PASS: &str = "sky_pass";
 pub const SCENE_OVERLAY_PASS: &str = "scene_overlay_pass";
@@ -35,6 +37,11 @@ pub fn skinned_mesh_pass_mut(
     graph: &mut RenderGraph<RenderInputs>,
 ) -> Option<&mut passes::geometry::SkinnedMeshPass> {
     pass_mut(graph, SKINNED_MESH_PASS)
+}
+
+#[cfg(feature = "meshlet")]
+pub fn meshlet_pass_mut(graph: &mut RenderGraph<RenderInputs>) -> Option<&mut passes::MeshletPass> {
+    pass_mut(graph, MESHLET_PASS)
 }
 
 pub fn shadow_depth_pass_mut(

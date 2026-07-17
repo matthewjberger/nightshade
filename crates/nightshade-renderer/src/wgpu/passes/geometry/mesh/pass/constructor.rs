@@ -11,7 +11,8 @@ use super::super::types::{
 };
 
 use super::super::super::shadow_inputs;
-use super::{MeshPass, texture_bind_group_layout_entries};
+use super::MeshPass;
+use crate::wgpu::passes::geometry::material_gpu::material_texture_bind_group_layout_entries;
 
 impl MeshPass {
     pub async fn new(
@@ -420,7 +421,7 @@ impl MeshPass {
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Mesh Texture Bind Group Layout"),
-                entries: &texture_bind_group_layout_entries(material_bindless_max),
+                entries: &material_texture_bind_group_layout_entries(material_bindless_max),
             });
 
         let dummy_shadow_texture = device.create_texture(&wgpu::TextureDescriptor {

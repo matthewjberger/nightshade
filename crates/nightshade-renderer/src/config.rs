@@ -1545,6 +1545,12 @@ pub struct MeshletInstance {
     pub transform: nalgebra_glm::Mat4,
     pub asset_id: u64,
     pub root_bvh_node_index: u32,
+    /// Which entity this places, so the pass can resolve its material against
+    /// [`RenderMaterials::entity_to_id`]. The material is looked up here rather
+    /// than carried from the engine because the system that resolves the
+    /// material table runs after the one that collects these, so an id read
+    /// there would trail a frame behind.
+    pub entity: crate::entity::RenderEntity,
 }
 
 /// Every meshlet placement in the scene plus the baked assets they reference,

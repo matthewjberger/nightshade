@@ -186,60 +186,6 @@ pub(super) struct OitResourceBundle {
     pub composite_bind_group: wgpu::BindGroup,
 }
 
-fn material_sampler_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-        count: None,
-    }
-}
-
-fn texture_bind_group_layout_entries(bindless_max: Option<u32>) -> Vec<wgpu::BindGroupLayoutEntry> {
-    if let Some(max_textures) = bindless_max {
-        return vec![
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: std::num::NonZeroU32::new(max_textures),
-            },
-            material_sampler_entry(1),
-            material_sampler_entry(2),
-            material_sampler_entry(3),
-        ];
-    }
-    vec![
-        wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                view_dimension: wgpu::TextureViewDimension::D2Array,
-                multisampled: false,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 1,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                view_dimension: wgpu::TextureViewDimension::D2Array,
-                multisampled: false,
-            },
-            count: None,
-        },
-        material_sampler_entry(2),
-        material_sampler_entry(3),
-        material_sampler_entry(4),
-    ]
-}
-
 impl MeshPass {
     #[inline]
     pub(super) fn state(&self) -> &WorldRenderState {

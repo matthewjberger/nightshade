@@ -453,12 +453,16 @@ impl super::WgpuRenderer {
                     .force_store()
                     .transient();
 
-            let meshlet_pass = passes::MeshletPass::new(
+            let mut meshlet_pass = passes::MeshletPass::new(
                 &device,
                 hdr_format,
                 depth_format,
                 wgpu::TextureFormat::R32Uint,
+                bindless_config
+                    .enabled
+                    .then_some(bindless_config.max_textures),
             );
+            meshlet_pass.apply_material_textures(&device, &material_texture_arrays);
             render_graph_add_pass(
                 &mut graph,
                 Box::new(meshlet_pass),

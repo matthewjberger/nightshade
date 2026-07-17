@@ -97,6 +97,21 @@ pub fn upload_material_texture(
         }
     }
 
+    #[cfg(feature = "meshlet")]
+    if let Some(meshlet_pass) = crate::wgpu::pass_access::meshlet_pass_mut(&mut renderer.graph)
+        && let Some(layer) = layer_index
+    {
+        meshlet_pass.add_material_layer_mapping(
+            texture,
+            MaterialTextureLayer {
+                usage,
+                layer,
+                wrap_u: sampler.wrap_u,
+                wrap_v: sampler.wrap_v,
+            },
+        );
+    }
+
     if let Some(skinned_mesh_pass) =
         crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
         && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
@@ -282,5 +297,9 @@ pub fn sync_material_texture_bindings(renderer: &mut WgpuRenderer, requested_ani
     }
     if let Some(skinned) = crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph) {
         skinned.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
+    }
+    #[cfg(feature = "meshlet")]
+    if let Some(meshlet) = crate::wgpu::pass_access::meshlet_pass_mut(&mut renderer.graph) {
+        meshlet.apply_material_textures(&renderer.device, &renderer.material_texture_arrays);
     }
 }

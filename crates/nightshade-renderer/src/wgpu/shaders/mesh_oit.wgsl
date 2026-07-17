@@ -132,8 +132,8 @@ struct ModelMatrix {
 };
 
 struct TextureTransform {
-    row0: vec4<f32>,
-    row1: vec4<f32>,
+    row_u: vec4<f32>,
+    row_v: vec4<f32>,
 };
 
 struct Material {
@@ -188,7 +188,7 @@ struct Material {
     sheen_color_factor: vec3<f32>,
     sheen_roughness_factor: f32,
     sheen_color_layer: u32,
-    _pad_sheen0: u32,
+    _pad_sheen_word: u32,
     _pad_sheen: vec2<u32>,
     sheen_color_transform: TextureTransform,
     sheen_roughness_transform: TextureTransform,
@@ -197,7 +197,7 @@ struct Material {
     iridescence_thickness_minimum: f32,
     iridescence_thickness_maximum: f32,
     iridescence_layer: u32,
-    _pad_iridescence0: u32,
+    _pad_iridescence_word: u32,
     _pad_iridescence: vec2<u32>,
     iridescence_transform: TextureTransform,
     iridescence_thickness_transform: TextureTransform,
@@ -208,7 +208,7 @@ struct Material {
     anisotropy_transform: TextureTransform,
     dispersion: f32,
     diffuse_transmission_factor: f32,
-    _pad_diffuse_transmission0: u32,
+    _pad_diffuse_transmission_word: u32,
     diffuse_transmission_color_layer: u32,
     diffuse_transmission_color_factor: vec3<f32>,
     blend_opaque_alpha_threshold: f32,
@@ -219,9 +219,9 @@ struct Material {
     height_layer: u32,
     detail_uv_scale: f32,
     parallax_scale: f32,
-    _pad_detail0: u32,
-    _pad_detail1: u32,
-    _pad_detail2: u32,
+    _pad_detail_a: u32,
+    _pad_detail_b: u32,
+    _pad_detail_c: u32,
     reflection_box_min: vec3<f32>,
     _pad_box_min: f32,
     reflection_box_max: vec3<f32>,
@@ -232,11 +232,11 @@ const NORMAL_MAP_FLIP_Y: u32 = 1u;
 const NORMAL_MAP_TWO_COMPONENT: u32 = 2u;
 
 fn texture_uv(uv0: vec2<f32>, uv1: vec2<f32>, transform: TextureTransform) -> vec2<f32> {
-    let uv_set = u32(transform.row0.w);
+    let uv_set = u32(transform.row_u.w);
     let uv = select(uv0, uv1, uv_set == 1u);
     let homogeneous = vec3<f32>(uv, 1.0);
-    let u = dot(transform.row0.xyz, homogeneous);
-    let v = dot(transform.row1.xyz, homogeneous);
+    let u = dot(transform.row_u.xyz, homogeneous);
+    let v = dot(transform.row_v.xyz, homogeneous);
     return vec2<f32>(u, v);
 }
 
@@ -376,12 +376,12 @@ var<private> material_uv1_ddx: vec2<f32>;
 var<private> material_uv1_ddy: vec2<f32>;
 
 fn texture_uv_grad(transform: TextureTransform) -> UvGrad {
-    let uv_set = u32(transform.row0.w);
+    let uv_set = u32(transform.row_u.w);
     let ddx = select(material_uv0_ddx, material_uv1_ddx, uv_set == 1u);
     let ddy = select(material_uv0_ddy, material_uv1_ddy, uv_set == 1u);
     var out: UvGrad;
-    out.ddx = vec2<f32>(dot(transform.row0.xy, ddx), dot(transform.row1.xy, ddx));
-    out.ddy = vec2<f32>(dot(transform.row0.xy, ddy), dot(transform.row1.xy, ddy));
+    out.ddx = vec2<f32>(dot(transform.row_u.xy, ddx), dot(transform.row_v.xy, ddx));
+    out.ddy = vec2<f32>(dot(transform.row_u.xy, ddy), dot(transform.row_v.xy, ddy));
     return out;
 }
 #import nightshade::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}

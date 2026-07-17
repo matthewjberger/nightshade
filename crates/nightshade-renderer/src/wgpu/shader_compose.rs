@@ -53,6 +53,16 @@ impl ShaderComposer {
             .expect("failed to register cull_common shader module");
         composer
             .add_composable_module(ComposableModuleDescriptor {
+                source: include_str!("shaders/material_data.wgsl"),
+                file_path: "material_data.wgsl",
+                language: ShaderLanguage::Wgsl,
+                as_name: None,
+                additional_imports: &[],
+                shader_defs: HashMap::new(),
+            })
+            .expect("failed to register material_data shader module");
+        composer
+            .add_composable_module(ComposableModuleDescriptor {
                 source: include_str!("shaders/area_lighting.wgsl"),
                 file_path: "area_lighting.wgsl",
                 language: ShaderLanguage::Wgsl,
