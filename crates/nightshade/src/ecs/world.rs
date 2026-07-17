@@ -197,6 +197,14 @@ freecs::dynamic_schema! {
             lightning_bolt: crate::ecs::vfx::components::LightningBolt => LIGHTNING_BOLT,
             trail: crate::ecs::vfx::components::Trail => TRAIL,
             vfx_animator: crate::ecs::vfx::components::VfxAnimator => VFX_ANIMATOR,
+            // Registered whether or not the `meshlet` feature is on. The schema
+            // macro takes no attribute on a field, and cfg-ing one out would be
+            // worse than the leak: the bit constants are assigned textually
+            // while the masks are assigned by registration order, so dropping a
+            // registration shifts every later component's mask out from under
+            // its constant. The component is a bare id and the systems, assets,
+            // and pass behind it are all gated, so with the feature off this
+            // costs one mask bit and does nothing.
             meshlet_mesh: crate::ecs::meshlet::components::MeshletMesh => MESHLET_MESH,
     }
 }
