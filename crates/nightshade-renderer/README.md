@@ -10,7 +10,7 @@ engine, extracted so it can be driven on its own.
 
 ```toml
 [dependencies]
-nightshade-renderer = "0.54.0"
+nightshade-renderer = "0.55.0"
 ```
 
 ## The one idea: the renderer is ECS-free
@@ -124,7 +124,7 @@ module and usable without the renderer:
 
 ```toml
 [dependencies]
-nightshade-renderer = { version = "0.54.0", default-features = false, features = ["rendergraph"] }
+nightshade-renderer = { version = "0.55.0", default-features = false, features = ["rendergraph"] }
 ```
 
 Declare passes and the resources they read and write, compile once, execute
