@@ -60,6 +60,7 @@ impl MeshPass {
             && !self.state().instanced_transform_ranges.is_empty()
         {
             self.dispatch_instanced_transform_compute(
+                context.device,
                 context.encoder,
                 context.queue,
                 context.configs,
@@ -249,33 +250,37 @@ impl MeshPass {
                 }
             }
 
-            let mesh_geo: Vec<super::super::types::MeshGeo> = self
-                .mesh_data
-                .iter()
-                .map(|mesh| super::super::types::MeshGeo {
-                    index_count: mesh.index_count,
-                    first_index: mesh.index_offset,
-                    base_vertex: mesh.vertex_offset as i32,
-                    _pad: 0,
-                })
-                .collect();
-            if mesh_geo.len() > self.mesh_geo_buffer_size {
-                let new_size = mesh_geo.len().next_power_of_two();
-                self.mesh_geo_buffer = context.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Mesh Geometry Table Buffer (Resized)"),
-                    size: (std::mem::size_of::<super::super::types::MeshGeo>() * new_size) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-                self.mesh_geo_buffer_size = new_size;
-                self.gpu_mut().indirect_build_bind_group = None;
-            }
-            if !mesh_geo.is_empty() {
-                context.queue.write_buffer(
-                    &self.mesh_geo_buffer,
-                    0,
-                    bytemuck::cast_slice(&mesh_geo),
-                );
+            if self.mesh_geo_dirty {
+                let mesh_geo: Vec<super::super::types::MeshGeo> = self
+                    .mesh_data
+                    .iter()
+                    .map(|mesh| super::super::types::MeshGeo {
+                        index_count: mesh.index_count,
+                        first_index: mesh.index_offset,
+                        base_vertex: mesh.vertex_offset as i32,
+                        _pad: 0,
+                    })
+                    .collect();
+                if mesh_geo.len() > self.mesh_geo_buffer_size {
+                    let new_size = mesh_geo.len().next_power_of_two();
+                    self.mesh_geo_buffer = context.device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Mesh Geometry Table Buffer (Resized)"),
+                        size: (std::mem::size_of::<super::super::types::MeshGeo>() * new_size)
+                            as u64,
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+                    self.mesh_geo_buffer_size = new_size;
+                    self.gpu_mut().indirect_build_bind_group = None;
+                }
+                if !mesh_geo.is_empty() {
+                    context.queue.write_buffer(
+                        &self.mesh_geo_buffer,
+                        0,
+                        bytemuck::cast_slice(&mesh_geo),
+                    );
+                }
+                self.mesh_geo_dirty = false;
             }
 
             let build_params: [u32; 4] = [self.state().indirect_reset_count as u32, 0, 0, 0];

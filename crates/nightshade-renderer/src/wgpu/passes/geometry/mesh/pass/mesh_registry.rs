@@ -419,6 +419,7 @@ impl MeshPass {
         self.meshes.insert(name.to_string(), mesh_id);
         self.mesh_data.push(mesh_data);
         self.mesh_names.push(name.to_string());
+        self.mesh_geo_dirty = true;
 
         if mesh_id as usize >= self.mesh_bounds_buffer_size {
             let new_size = ((mesh_id as usize + 1) as f32 * BUFFER_GROWTH_FACTOR).ceil() as usize;

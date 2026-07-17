@@ -126,12 +126,10 @@ impl MeshPass {
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
         for &entity in mesh_entities {
-            let render_layer = configs
-                .scene
-                .render_dynamic_objects
-                .get(&entity)
-                .map(|dynamic| dynamic.render_layer)
-                .unwrap_or(crate::render_layer::RenderLayer::WORLD);
+            let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) else {
+                continue;
+            };
+            let render_layer = dynamic.render_layer;
 
             let should_render = match render_layer {
                 crate::render_layer::RenderLayer::WORLD => {
@@ -148,9 +146,6 @@ impl MeshPass {
             }
 
             let Some(mesh_name) = configs.scene.render_object_meshes.get(&entity) else {
-                continue;
-            };
-            let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) else {
                 continue;
             };
             let transform = dynamic.transform;
@@ -194,12 +189,7 @@ impl MeshPass {
 
             let morph_weights = dynamic.morph_weights;
 
-            let culling_mask = configs
-                .scene
-                .render_dynamic_objects
-                .get(&entity)
-                .map(|dynamic| dynamic.culling_mask)
-                .unwrap_or_default();
+            let culling_mask = dynamic.culling_mask;
             accum.objects.push(ObjectData {
                 transform_index,
                 mesh_id,

@@ -499,6 +499,7 @@ impl MeshPass {
         self.meshes.clear();
         self.mesh_data.clear();
         self.mesh_names.clear();
+        self.mesh_geo_dirty = true;
         self.mesh_bounds_data.clear();
         self.mesh_lod_data.clear();
         for entry in &mut self.mesh_lod_mesh_ids {

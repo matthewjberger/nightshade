@@ -104,8 +104,8 @@ impl MeshPass {
             .as_mut()
             .unwrap();
         let gpu = world_state.gpu_buffers.as_mut().unwrap();
-        gpu.instanced_compute_bind_group =
-            Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+        gpu.instanced_compute_bind_group = Some(
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Instanced Transform Compute Bind Group"),
                 layout: &self.instanced_compute_bind_group_layout,
                 entries: &[
@@ -119,10 +119,21 @@ impl MeshPass {
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: self.instanced_compute_uniforms_buffer.as_entire_binding(),
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &self.instanced_compute_uniforms_buffer,
+                            offset: 0,
+                            size: Some(
+                                std::num::NonZeroU64::new(std::mem::size_of::<
+                                    super::super::types::InstancedTransformComputeUniforms,
+                                >()
+                                    as u64)
+                                .unwrap(),
+                            ),
+                        }),
                     },
                 ],
-            }));
+            }),
+        );
     }
 
     pub(in super::super) fn ensure_world_gpu_buffers(

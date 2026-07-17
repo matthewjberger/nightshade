@@ -162,7 +162,7 @@ pub struct MeshPass {
     pub(super) instanced_compute_pipeline: wgpu::ComputePipeline,
     pub(super) instanced_compute_bind_group_layout: wgpu::BindGroupLayout,
     pub(super) instanced_compute_uniforms_buffer: wgpu::Buffer,
-    pub(super) instanced_compute_staging_buffer: wgpu::Buffer,
+    pub(super) instanced_compute_uniforms_slots: usize,
     pub(super) scene_bind_group_dirty: bool,
     pub(super) scratch_mesh_updates: Vec<(u32, super::types::ModelMatrix)>,
     pub frame_dirty: Option<MeshRenderStateInner>,
@@ -172,6 +172,7 @@ pub struct MeshPass {
     pub frame_dirty_consumed: bool,
     pub dirty_mesh_ids: HashSet<u32>,
     pub(super) last_mesh_cache_clear_generation: u64,
+    pub(super) mesh_geo_dirty: bool,
 }
 
 pub(super) const OIT_RESOURCE_CACHE_CAPACITY: usize = 4;

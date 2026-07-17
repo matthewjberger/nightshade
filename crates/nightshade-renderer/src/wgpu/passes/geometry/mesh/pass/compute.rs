@@ -3,20 +3,15 @@ use super::MeshPass;
 
 impl MeshPass {
     pub(in super::super) fn dispatch_instanced_transform_compute(
-        &self,
+        &mut self,
+        device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         queue: &wgpu::Queue,
         configs: &crate::wgpu::render_configs::RenderInputs,
     ) {
-        let world_state = self.world_states[self.current_world_id as usize]
+        let ranges: Vec<_> = self.world_states[self.current_world_id as usize]
             .as_ref()
-            .unwrap();
-        let gpu = world_state.gpu_buffers.as_ref().unwrap();
-        let Some(ref bind_group) = gpu.instanced_compute_bind_group else {
-            return;
-        };
-
-        let ranges: Vec<_> = world_state
+            .unwrap()
             .instanced_transform_ranges
             .iter()
             .map(|(&entity, &(start, count))| (entity, start, count))
@@ -26,9 +21,39 @@ impl MeshPass {
             return;
         }
 
-        let uniform_size = std::mem::size_of::<InstancedTransformComputeUniforms>();
+        let struct_size = std::mem::size_of::<InstancedTransformComputeUniforms>() as u64;
+        let alignment = device.limits().min_uniform_buffer_offset_alignment as u64;
+        let slot_size = struct_size.div_ceil(alignment) * alignment;
 
-        for &(entity, start, count) in &ranges {
+        if ranges.len() > self.instanced_compute_uniforms_slots {
+            self.instanced_compute_uniforms_buffer =
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Instanced Transform Compute Uniforms Buffer (Resized)"),
+                    size: slot_size * ranges.len() as u64,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+            self.instanced_compute_uniforms_slots = ranges.len();
+            for world_state in self.world_states.iter_mut().flatten() {
+                if let Some(gpu) = world_state.gpu_buffers.as_mut() {
+                    gpu.instanced_compute_bind_group = None;
+                }
+            }
+        }
+
+        if self.world_states[self.current_world_id as usize]
+            .as_ref()
+            .unwrap()
+            .gpu_buffers
+            .as_ref()
+            .unwrap()
+            .instanced_compute_bind_group
+            .is_none()
+        {
+            self.rebuild_instanced_compute_bind_group(device);
+        }
+
+        for (slot_index, &(entity, start, count)) in ranges.iter().enumerate() {
             let parent_transform = configs
                 .scene
                 .render_instanced_objects
@@ -42,26 +67,30 @@ impl MeshPass {
                 _pad: [0; 2],
             };
             queue.write_buffer(
-                &self.instanced_compute_staging_buffer,
-                0,
+                &self.instanced_compute_uniforms_buffer,
+                slot_size * slot_index as u64,
                 bytemuck::bytes_of(&uniforms),
             );
+        }
 
-            encoder.copy_buffer_to_buffer(
-                &self.instanced_compute_staging_buffer,
-                0,
-                &self.instanced_compute_uniforms_buffer,
-                0,
-                uniform_size as u64,
-            );
+        let bind_group = self.world_states[self.current_world_id as usize]
+            .as_ref()
+            .unwrap()
+            .gpu_buffers
+            .as_ref()
+            .unwrap()
+            .instanced_compute_bind_group
+            .as_ref()
+            .unwrap();
 
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Instanced Transform Compute Pass"),
-                timestamp_writes: None,
-            });
-
-            compute_pass.set_pipeline(&self.instanced_compute_pipeline);
-            compute_pass.set_bind_group(0, bind_group, &[]);
+        let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("Instanced Transform Compute Pass"),
+            timestamp_writes: None,
+        });
+        compute_pass.set_pipeline(&self.instanced_compute_pipeline);
+        for (slot_index, &(_, _, count)) in ranges.iter().enumerate() {
+            let dynamic_offset = (slot_size * slot_index as u64) as u32;
+            compute_pass.set_bind_group(0, bind_group, &[dynamic_offset]);
             compute_pass.dispatch_workgroups(count.div_ceil(256), 1, 1);
         }
     }

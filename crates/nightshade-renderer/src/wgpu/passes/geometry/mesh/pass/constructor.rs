@@ -1776,7 +1776,7 @@ impl MeshPass {
                         visibility: wgpu::ShaderStages::COMPUTE,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
+                            has_dynamic_offset: true,
                             min_binding_size: None,
                         },
                         count: None,
@@ -1805,13 +1805,6 @@ impl MeshPass {
             label: Some("Instanced Transform Compute Uniforms Buffer"),
             size: std::mem::size_of::<InstancedTransformComputeUniforms>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let instanced_compute_staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Instanced Transform Compute Staging Buffer"),
-            size: std::mem::size_of::<InstancedTransformComputeUniforms>() as u64,
-            usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -1935,13 +1928,14 @@ impl MeshPass {
             instanced_compute_pipeline,
             instanced_compute_bind_group_layout,
             instanced_compute_uniforms_buffer,
-            instanced_compute_staging_buffer,
+            instanced_compute_uniforms_slots: 0,
             scene_bind_group_dirty: true,
             scratch_mesh_updates: Vec::new(),
             frame_dirty: None,
             frame_dirty_consumed: true,
             dirty_mesh_ids: HashSet::new(),
             last_mesh_cache_clear_generation: 0,
+            mesh_geo_dirty: true,
         };
 
         pass.add_mesh(device, queue, "Cube", create_cube_mesh());
