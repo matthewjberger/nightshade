@@ -1,13 +1,17 @@
-use crate::ecs::register_template_components;
+use crate::components::Spin;
 use nightshade::prelude::*;
 
-/// Startup: registers the app member world and builds the opening scene, a
-/// grid on a nebula sky lit by a sun, viewed through an orbit camera.
-pub fn initialize(world: &mut World) {
-    world.ecs.add_world_at(GAME, register_template_components());
-
-    world.res_mut::<DebugDraw>().show_grid = true;
-    world.res_mut::<RenderSettings>().atmosphere = Atmosphere::Nebula;
+/// Startup: builds the opening scene and spawns a cube carrying a `Spin` game
+/// component for the update system to rotate. The resources it configures come
+/// in as `ResMut` params; the world is for spawning entities.
+pub fn initialize(
+    mut debug_draw: ResMut<DebugDraw>,
+    mut render_settings: ResMut<RenderSettings>,
+    mut active_camera: ResMut<ActiveCamera>,
+    world: &mut World,
+) {
+    debug_draw.show_grid = true;
+    render_settings.atmosphere = Atmosphere::Nebula;
 
     spawn_sun(world);
 
@@ -19,5 +23,8 @@ pub fn initialize(world: &mut World) {
         std::f32::consts::FRAC_PI_4,
         "Main Camera".to_string(),
     );
-    world.res_mut::<ActiveCamera>().0 = Some(camera_entity);
+    active_camera.0 = Some(camera_entity);
+
+    let cube = spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
+    world.set(cube, Spin { speed: 1.0 });
 }

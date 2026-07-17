@@ -1,23 +1,37 @@
-use crate::ecs::TemplateResources;
+use crate::components::Spin;
+use crate::resources::TemplateResources;
 use nightshade::prelude::*;
 
-/// Example per-frame system: advances the demo counters, then exits on Q.
-/// Game components live on engine entities in the app member world; set them
-/// with `world.set(entity, component)` and read them with
-/// `world.get::<Component>(entity)`, both routed to the owning member world.
-/// Add more files in `src/systems/` and register them in `src/systems.rs` to
-/// grow your game.
-pub fn tick(template_resources: &mut TemplateResources, world: &mut World) {
-    template_resources.example.frame_count =
-        template_resources.example.frame_count.saturating_add(1);
-    template_resources.example.elapsed_seconds += world.res::<Time>().delta_time;
+/// Example per-frame system: advances the demo counters, spins every entity
+/// carrying a [`Spin`] about the Y axis, then exits on Q. The resources it
+/// reads and writes come in as `Res`/`ResMut` params; the world is for entity
+/// and component access, here `query_ref` to find the spinners and `get_mut`
+/// to turn them. Add more files in `src/systems/` and register them in
+/// `src/systems.rs` to grow your game.
+pub fn tick(
+    mut template_resources: ResMut<TemplateResources>,
+    time: Res<Time>,
+    input: Res<Input>,
+    mut window: ResMut<Window>,
+    world: &mut World,
+) {
+    let example = &mut template_resources.example;
+    example.frame_count = example.frame_count.saturating_add(1);
+    example.elapsed_seconds += time.delta_time;
 
-    let events = std::mem::take(&mut world.res_mut::<Input>().events);
-    for event in events {
-        if let AppEvent::Keyboard { key, state } = event
-            && matches!((key, state), (KeyCode::KeyQ, KeyState::Pressed))
-        {
-            world.res_mut::<Window>().should_exit = true;
+    let spinners: Vec<(Entity, f32)> = world
+        .query_ref::<&Spin>()
+        .iter()
+        .map(|(entity, spin)| (entity, spin.speed))
+        .collect();
+    for (entity, speed) in spinners {
+        if let Some(transform) = world.get_mut::<LocalTransform>(entity) {
+            let rotation = nalgebra_glm::quat_angle_axis(speed * time.delta_time, &Vec3::y());
+            transform.rotation = rotation * transform.rotation;
         }
+    }
+
+    if input.keyboard.just_pressed(KeyCode::KeyQ) {
+        window.should_exit = true;
     }
 }

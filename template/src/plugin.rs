@@ -1,4 +1,4 @@
-use crate::ecs::TemplateResources;
+use crate::resources::TemplateResources;
 use crate::systems;
 use nightshade::prelude::*;
 
