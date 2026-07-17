@@ -6,8 +6,9 @@
 //!   registers the systems against the `App` builder. Registration only, no
 //!   behavior.
 //! - `src/ecs.rs` — the app member world schema (registered into the engine
-//!   group at index `GAME`), the component structs, and the
-//!   `TemplateResources` struct for app-wide state.
+//!   group at index `GAME`) and the `TemplateResources` aggregate; the
+//!   component structs live in `src/ecs/components.rs`, the resource structs
+//!   in `src/ecs/resources.rs`.
 //! - `src/systems/` — behavior, one file per concern: `setup::initialize`
 //!   builds the opening scene, `example::tick` runs each frame. A system is a
 //!   free function taking `&mut World`, optionally preceded by
