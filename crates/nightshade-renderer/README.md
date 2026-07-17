@@ -62,6 +62,21 @@ commented with the input contract.
   cargo run --example minimal --features wgpu,screenshot
   ```
 
+Beyond those two, a set of small single-capability examples each drive the
+renderer through a shared minimal host in `examples/common/driver.rs` (window,
+camera, and the per-frame `RenderInputs` composition, with no engine layer):
+`pbr`, `lights`, `shadows`, `sky`, `fog`, `transparency`, `alpha_mask`,
+`textures`, `instancing`, `morph`, `gpu_particles`, `water`, `decals`,
+`post_processing`, and `ui`. Run one directly with
+`cargo run --example pbr --features wgpu`, or from the crate's `justfile` pick
+one with fzf:
+
+```sh
+just run          # fuzzy-pick an example
+just run pbr      # or run one by name
+just list         # list them
+```
+
 The three steps every host repeats:
 
 1. **Bring the renderer up once** over anything with window handles.

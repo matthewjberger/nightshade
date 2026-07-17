@@ -58,6 +58,66 @@ required-features = ["wgpu"]
 name = "minimal"
 required-features = ["wgpu", "screenshot"]
 
+[[example]]
+name = "pbr"
+required-features = ["wgpu"]
+
+[[example]]
+name = "lights"
+required-features = ["wgpu"]
+
+[[example]]
+name = "shadows"
+required-features = ["wgpu"]
+
+[[example]]
+name = "sky"
+required-features = ["wgpu"]
+
+[[example]]
+name = "fog"
+required-features = ["wgpu"]
+
+[[example]]
+name = "transparency"
+required-features = ["wgpu"]
+
+[[example]]
+name = "instancing"
+required-features = ["wgpu"]
+
+[[example]]
+name = "post_processing"
+required-features = ["wgpu"]
+
+[[example]]
+name = "water"
+required-features = ["wgpu"]
+
+[[example]]
+name = "ui"
+required-features = ["wgpu"]
+
+[[example]]
+name = "gpu_particles"
+required-features = ["wgpu"]
+
+[[example]]
+name = "textures"
+required-features = ["wgpu"]
+
+[[example]]
+name = "morph"
+required-features = ["wgpu"]
+
+[[example]]
+name = "decals"
+required-features = ["wgpu"]
+
+[[example]]
+name = "alpha_mask"
+required-features = ["wgpu"]
+
 [features]
 default = ["wgpu"]
 rendergraph = ["dep:wgpu", "dep:petgraph", "dep:thiserror"]

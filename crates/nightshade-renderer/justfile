@@ -1,0 +1,46 @@
+set windows-shell := ["powershell.exe"]
+export RUST_LOG := "info,wgpu_core=off"
+export RUST_BACKTRACE := "1"
+
+# Lists the available commands
+@just:
+    just --list
+
+# Fuzzy-picks an example with fzf and runs it, or runs one by name: `just run pbr`
+[windows]
+run name="":
+    if ('{{ name }}' -ne '') { cargo run -r --example {{ name }} --features wgpu,screenshot } else { $choice = (Get-ChildItem examples -Filter *.rs | ForEach-Object { $_.BaseName } | fzf --prompt 'example> '); if ($choice) { cargo run -r --example $choice --features wgpu,screenshot } }
+
+# Fuzzy-picks an example with fzf and runs it, or runs one by name: `just run pbr`
+[unix]
+run name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{ name }}" ]; then
+        cargo run -r --example "{{ name }}" --features wgpu,screenshot
+    else
+        choice=$(ls examples/*.rs | xargs -n1 basename | sed 's/\.rs$//' | fzf --prompt 'example> ')
+        [ -n "$choice" ] && cargo run -r --example "$choice" --features wgpu,screenshot
+    fi
+
+# Lists the examples
+[windows]
+list:
+    @Get-ChildItem examples -Filter *.rs | ForEach-Object { $_.BaseName }
+
+# Lists the examples
+[unix]
+list:
+    @ls examples/*.rs | xargs -n1 basename | sed 's/\.rs$//'
+
+# Builds every example (compile gate)
+build:
+    cargo build --examples --features wgpu,screenshot
+
+# Clippy every example with warnings denied
+lint:
+    cargo clippy --examples --features wgpu,screenshot -- -D warnings
+
+# Formats the examples
+format:
+    cargo fmt -p nightshade-renderer
