@@ -78,6 +78,32 @@ impl ShaderComposer {
                 shader_defs: HashMap::new(),
             })
             .expect("failed to register area_lighting shader module");
+        #[cfg(feature = "meshlet")]
+        {
+            composer
+                .add_composable_module(ComposableModuleDescriptor {
+                    source: include_str!("shaders/meshlet_data.wgsl"),
+                    file_path: "meshlet_data.wgsl",
+                    language: ShaderLanguage::Wgsl,
+                    as_name: None,
+                    additional_imports: &[],
+                    shader_defs: crate::wgpu::passes::geometry::meshlet::meshlet_shader_defs()
+                        .into_iter()
+                        .map(|(name, value)| (name.to_string(), value))
+                        .collect(),
+                })
+                .expect("failed to register meshlet_data shader module");
+            composer
+                .add_composable_module(ComposableModuleDescriptor {
+                    source: include_str!("shaders/meshlet_streams.wgsl"),
+                    file_path: "meshlet_streams.wgsl",
+                    language: ShaderLanguage::Wgsl,
+                    as_name: None,
+                    additional_imports: &[],
+                    shader_defs: HashMap::new(),
+                })
+                .expect("failed to register meshlet_streams shader module");
+        }
         Self {
             inner: Mutex::new(composer),
         }
