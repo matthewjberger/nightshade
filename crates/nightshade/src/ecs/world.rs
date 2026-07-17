@@ -394,6 +394,29 @@ impl World {
             )
         })
     }
+
+    /// Writes `T` on the member world that registered it, exactly as the
+    /// group-typed [`DynEcs::set`](freecs::dynamic::DynEcs::set) does. A type no
+    /// member world has registered is an app component: it lazily registers into
+    /// the app member world ([`GAME`]), creating that world the first time one is
+    /// written, so game code stores components on engine entities without
+    /// declaring a schema. Reads of an unregistered type already come back empty
+    /// (`get`, `has`, `query_ref`); a component a game serializes into snapshots
+    /// still earns an explicit `serde` schema, which lazy registration cannot
+    /// carry.
+    pub fn set<T: Send + Sync + Default + 'static>(&mut self, entity: Entity, value: T) {
+        let index = match self.ecs.route::<T>() {
+            Some(index) => index,
+            None => {
+                if self.ecs.worlds.len() <= GAME {
+                    self.ecs
+                        .add_world_at(GAME, freecs::dynamic::ComponentRegistry::default());
+                }
+                GAME
+            }
+        };
+        self.ecs.worlds[index].set(entity, value);
+    }
 }
 
 impl std::ops::Deref for World {
