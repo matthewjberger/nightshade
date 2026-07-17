@@ -237,6 +237,7 @@ impl MeshPass {
                 if let Some(name_slot) = self.mesh_names.get_mut(mesh_id as usize) {
                     name_slot.clear();
                 }
+                self.mesh_geo_dirty = true;
                 evicted = true;
             }
         }
