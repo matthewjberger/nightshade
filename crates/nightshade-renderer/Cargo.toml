@@ -33,6 +33,13 @@ cosmic-text = { workspace = true, optional = true }
 egui = { workspace = true, optional = true }
 egui-wgpu = { workspace = true, optional = true }
 
+lz4_flex = { version = "0.13", optional = true }
+range-alloc = { version = "0.1", optional = true }
+meshopt = { version = "0.6.2", optional = true }
+metis = { version = "0.2.2", optional = true }
+itertools = { version = "0.14", optional = true }
+bitvec = { version = "1", optional = true }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
@@ -63,3 +70,5 @@ debug_render = []
 egui = ["dep:egui", "dep:egui-wgpu"]
 grass = []
 terrain = ["grass"]
+meshlet = ["dep:lz4_flex", "dep:range-alloc", "dep:thiserror"]
+meshlet_processor = ["meshlet", "dep:meshopt", "dep:metis", "dep:itertools", "dep:bitvec"]

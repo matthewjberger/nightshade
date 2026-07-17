@@ -39,6 +39,7 @@ pub mod lines;
 pub mod loading;
 pub mod material;
 pub mod mesh;
+pub mod meshlet;
 pub mod morph;
 pub mod particles;
 #[cfg(feature = "picking")]

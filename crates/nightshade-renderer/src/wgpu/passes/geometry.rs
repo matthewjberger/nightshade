@@ -34,6 +34,11 @@ pub use hiz::HizPass;
 mod mesh;
 pub use mesh::MeshPass;
 
+#[cfg(feature = "meshlet")]
+pub mod meshlet;
+#[cfg(feature = "meshlet")]
+pub use meshlet::MeshletPass;
+
 mod scene_overlay;
 pub use scene_overlay::SceneOverlayPass;
 

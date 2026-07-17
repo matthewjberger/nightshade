@@ -858,6 +858,52 @@ fn sync_water(world: &mut World) {
         .render_water = water_bodies;
 }
 
+/// Rebuilds the renderer's meshlet placements and hands over any asset it has
+/// not been given yet. Rebuilt in full every frame rather than from the dirt
+/// set: an instance is a transform and an id, and the assets behind them are
+/// shared handles, so there is nothing here worth tracking deltas for.
+#[cfg(feature = "meshlet")]
+fn sync_meshlets(world: &mut World) {
+    let mut instances: Vec<crate::render::config::MeshletInstance> = Vec::new();
+    for (_, (meshlet_mesh, global_transform)) in world
+        .query_ref::<(
+            &crate::ecs::meshlet::components::MeshletMesh,
+            &crate::ecs::transform::components::GlobalTransform,
+        )>()
+        .iter()
+    {
+        instances.push(crate::render::config::MeshletInstance {
+            transform: global_transform.0,
+            asset_id: meshlet_mesh.asset_id,
+            root_bvh_node_index: 0,
+        });
+    }
+
+    let mut assets = std::mem::take(
+        &mut world
+            .res_mut::<crate::render::config::RendererState>()
+            .meshlets
+            .assets,
+    );
+    for instance in &instances {
+        if assets.contains_key(&instance.asset_id) {
+            continue;
+        }
+        let Some(asset) = world
+            .res::<crate::ecs::meshlet::resources::MeshletAssets>()
+            .get(instance.asset_id)
+            .cloned()
+        else {
+            continue;
+        };
+        assets.insert(instance.asset_id, asset);
+    }
+
+    world
+        .res_mut::<crate::render::config::RendererState>()
+        .meshlets = crate::render::config::MeshletInstances { instances, assets };
+}
+
 fn sync_cloth(world: &mut World) {
     let mut cloth_bodies: Vec<crate::render::config::RenderCloth> = Vec::new();
     for (entity, (cloth, global_transform, render_mesh)) in world
@@ -1009,6 +1055,8 @@ fn sync_selection_outline(world: &mut World) {
 /// only the domains something actually changed in are touched.
 pub fn render_sync_system(world: &mut World) {
     let _span = tracing::info_span!("render_sync").entered();
+    #[cfg(feature = "meshlet")]
+    sync_meshlets(world);
     let dirt = collect_scene_dirt(world);
 
     if dirt.full {

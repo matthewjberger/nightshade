@@ -124,6 +124,8 @@ full = [
 
 grass = ["nightshade-renderer/grass"]
 terrain = ["grass", "nightshade-renderer/terrain"]
+meshlet = ["nightshade-renderer/meshlet"]
+meshlet_processor = ["meshlet", "nightshade-renderer/meshlet_processor"]
 
 wgpu = ["nightshade-renderer/wgpu"]
 steam = ["dep:steamworks", "dep:steamworks-sys"]

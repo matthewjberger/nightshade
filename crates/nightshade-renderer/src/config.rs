@@ -1530,6 +1530,29 @@ pub struct RenderBounds {
     pub sphere_radius: f32,
 }
 
+/// One placement of a baked meshlet mesh in the scene, snapshotted once per
+/// frame. `asset_id` keys the asset in [`MeshletInstances::assets`], and
+/// `root_bvh_node_index` addresses the mesh's root node in the shared bvh
+/// buffer once the asset has been uploaded. The index is unresolved until
+/// then, so the meshlet pass fills it in from its own upload ledger.
+#[cfg(feature = "meshlet")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MeshletInstance {
+    pub transform: nalgebra_glm::Mat4,
+    pub asset_id: u64,
+    pub root_bvh_node_index: u32,
+}
+
+/// Every meshlet placement in the scene plus the baked assets they reference,
+/// snapshotted once per frame. The meshlet pass uploads assets it has not seen
+/// before, then rasterizes one cluster per (instance, meshlet) pair.
+#[cfg(feature = "meshlet")]
+#[derive(Clone, Default)]
+pub struct MeshletInstances {
+    pub instances: Vec<MeshletInstance>,
+    pub assets: std::collections::HashMap<u64, std::sync::Arc<crate::meshlet::asset::MeshletMesh>>,
+}
+
 /// Runtime-only renderer bookkeeping that apps generally do not edit
 /// directly. Carried in `RenderInputs::scene`.
 #[derive(Clone)]
@@ -1610,6 +1633,11 @@ pub struct RendererState {
     /// The scene's cloth bodies collected once per frame in query order, so the
     /// cloth pass reads them here instead of walking the ECS.
     pub render_cloth: Vec<RenderCloth>,
+    /// Every meshlet placement in the scene plus the assets they reference,
+    /// collected once per frame so the meshlet pass reads them here instead of
+    /// the ECS.
+    #[cfg(feature = "meshlet")]
+    pub meshlets: MeshletInstances,
     /// The entity ids the selection-outline mask covers (selected seeds plus
     /// their descendants), resolved once per frame so the selection-mask pass
     /// reads them here instead of walking the transform hierarchy. Empty when the
@@ -1961,6 +1989,8 @@ impl Default for RendererState {
             render_particle_emitters: Vec::new(),
             render_water: Vec::new(),
             render_cloth: Vec::new(),
+            #[cfg(feature = "meshlet")]
+            meshlets: MeshletInstances::default(),
             render_selection_outline_ids: Vec::new(),
             render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
             render_bounds: std::collections::HashMap::new(),

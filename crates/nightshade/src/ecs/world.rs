@@ -38,6 +38,7 @@ pub mod components {
         MaterialRef, MaterialVariantMapping, MaterialVariants,
     };
     pub use crate::ecs::mesh::components::{InstanceTransform, InstancedMesh, RenderMesh};
+    pub use crate::ecs::meshlet::components::MeshletMesh;
     pub use crate::ecs::morph::components::MorphWeights;
     pub use crate::ecs::primitives::CastsShadow;
     pub use crate::ecs::primitives::EasingFunction;
@@ -82,6 +83,8 @@ pub mod resources {
     pub use crate::ecs::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
+    #[cfg(feature = "meshlet")]
+    pub use crate::ecs::meshlet::resources::MeshletAssets;
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::resources::CachedPrefab;
     pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
@@ -194,6 +197,7 @@ freecs::dynamic_schema! {
             lightning_bolt: crate::ecs::vfx::components::LightningBolt => LIGHTNING_BOLT,
             trail: crate::ecs::vfx::components::Trail => TRAIL,
             vfx_animator: crate::ecs::vfx::components::VfxAnimator => VFX_ANIMATOR,
+            meshlet_mesh: crate::ecs::meshlet::components::MeshletMesh => MESHLET_MESH,
     }
 }
 
@@ -346,6 +350,8 @@ impl Default for World {
         ecs.insert_resource(crate::render::terrain_config::TerrainRenderState::default());
         ecs.insert_resource(crate::render::wind::Wind::default());
         ecs.insert_resource(crate::ecs::cloth::resources::ClothMeshSync::default());
+        #[cfg(feature = "meshlet")]
+        ecs.insert_resource(crate::ecs::meshlet::resources::MeshletAssets::default());
         ecs.insert_resource(crate::ecs::gpu_picking::GpuPicking::default());
         ecs.insert_resource(crate::ecs::window::resources::Monitors::default());
         ecs.insert_resource(crate::ecs::tween::Tweens::default());

@@ -105,6 +105,8 @@ pub use setup::PickKeepalivePass;
 pub mod geometry;
 #[cfg(feature = "grass")]
 pub use geometry::GrassPass;
+#[cfg(feature = "meshlet")]
+pub use geometry::MeshletPass;
 #[cfg(feature = "terrain")]
 pub use geometry::TerrainPass;
 pub use geometry::{

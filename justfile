@@ -85,8 +85,10 @@ lint: lint-wasm lint-rendergraph check-feature-forwarding
     cargo clippy --all --all-targets -- -D warnings
 
 # Runs linter for wasm32 target
+# The meshlet baker links METIS and meshopt, which are C libraries with no
+# wasm target, so the app that bakes is native only and sits out this lint.
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown --workspace -- -D warnings
+    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet -- -D warnings
     cargo clippy --target wasm32-unknown-unknown -p nightshade-api --no-default-features --features leptos,offscreen -- -D warnings
 
 # Builds the frame graph alone. This is the layering firewall: the rendergraph
@@ -101,7 +103,7 @@ lint-rendergraph:
 check-feature-forwarding:
     #!/usr/bin/env bash
     status=0
-    for feature in wgpu hdr egui debug_render screenshot grass terrain browser_yield; do
+    for feature in wgpu hdr egui debug_render screenshot grass terrain browser_yield meshlet meshlet_processor; do
         if ! grep -q "nightshade-renderer/${feature}" crates/nightshade/Cargo.toml; then
             echo "missing forwarding: nightshade '${feature}' does not forward to nightshade-renderer/${feature}"
             status=1

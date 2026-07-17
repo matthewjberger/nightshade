@@ -331,6 +331,8 @@ pub mod grass_config;
 pub mod material;
 pub mod mesh_cache;
 pub mod mesh_state;
+#[cfg(feature = "meshlet")]
+pub mod meshlet;
 pub mod particles;
 pub mod procedural_meshes;
 pub mod render_layer;

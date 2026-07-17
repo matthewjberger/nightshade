@@ -430,6 +430,46 @@ impl super::WgpuRenderer {
             ],
         )?;
 
+        // Meshlet geometry rasterizes after the mesh passes have laid down
+        // depth, so its visibility buffer only keeps pixels that survive against
+        // the rest of the scene, and writes depth of its own so the passes that
+        // follow occlude against it.
+        #[cfg(feature = "meshlet")]
+        {
+            let meshlet_visibility_id =
+                render_graph_add_color_texture(&mut graph, "meshlet_visibility")
+                    .format(wgpu::TextureFormat::R32Uint)
+                    .size(initial_width.max(1), initial_height.max(1))
+                    .usage(
+                        wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING,
+                    )
+                    .clear_color(wgpu::Color {
+                        r: passes::geometry::meshlet::MESHLET_VISIBILITY_BUFFER_EMPTY as f64,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.0,
+                    })
+                    .force_store()
+                    .transient();
+
+            let meshlet_pass = passes::MeshletPass::new(
+                &device,
+                hdr_format,
+                depth_format,
+                wgpu::TextureFormat::R32Uint,
+            );
+            render_graph_add_pass(
+                &mut graph,
+                Box::new(meshlet_pass),
+                &[
+                    ("meshlet_visibility", meshlet_visibility_id),
+                    ("color", scene_color_id),
+                    ("depth", depth_id),
+                ],
+            )?;
+        }
+
         render_graph_add_pass(
             &mut graph,
             Box::new(skinned_mesh_pass),
