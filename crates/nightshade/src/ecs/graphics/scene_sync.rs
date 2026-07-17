@@ -862,22 +862,65 @@ fn sync_water(world: &mut World) {
 /// not been given yet. Rebuilt in full every frame rather than from the dirt
 /// set: an instance is a transform and an id, and the assets behind them are
 /// shared handles, so there is nothing here worth tracking deltas for.
+///
+/// The material id is resolved here, against the registry directly, rather than
+/// in the pass against the resolved material table: the registry is the source
+/// of truth and already current, so the id never trails the table's separate
+/// rebuild cadence.
 #[cfg(feature = "meshlet")]
 fn sync_meshlets(world: &mut World) {
-    let mut instances: Vec<crate::render::config::MeshletInstance> = Vec::new();
-    for (entity, (meshlet_mesh, global_transform)) in world
+    let collected: Vec<(
+        u64,
+        nalgebra_glm::Mat4,
+        Option<crate::ecs::material::components::MaterialRef>,
+    )> = world
         .query_ref::<(
             &crate::ecs::meshlet::components::MeshletMesh,
             &crate::ecs::transform::components::GlobalTransform,
+            Option<&crate::ecs::material::components::MaterialRef>,
         )>()
         .iter()
+        .map(|(_, (meshlet_mesh, global_transform, material_ref))| {
+            (
+                meshlet_mesh.asset_id,
+                global_transform.0,
+                material_ref.cloned(),
+            )
+        })
+        .collect();
+    let mut instances: Vec<crate::render::config::MeshletInstance> =
+        Vec::with_capacity(collected.len());
     {
-        instances.push(crate::render::config::MeshletInstance {
-            transform: global_transform.0,
-            asset_id: meshlet_mesh.asset_id,
-            root_bvh_node_index: 0,
-            entity: render_entity(entity),
-        });
+        use crate::render::generational_registry::{registry_entry, registry_lookup_index};
+        let registry = &world
+            .res::<crate::ecs::asset_state::AssetState>()
+            .material_registry;
+        for (asset_id, transform, material_ref) in &collected {
+            let material_id = material_ref.as_ref().map_or(0, |reference| {
+                reference
+                    .id
+                    .and_then(|id| {
+                        registry_entry(&registry.registry, id.index, id.generation)
+                            .map(|_| id.index + 1)
+                    })
+                    .or_else(|| {
+                        registry_lookup_index(&registry.registry, &reference.name).and_then(
+                            |(index, _generation)| {
+                                registry.registry.entries[index as usize]
+                                    .as_ref()
+                                    .map(|_| index + 1)
+                            },
+                        )
+                    })
+                    .unwrap_or(0)
+            });
+            instances.push(crate::render::config::MeshletInstance {
+                transform: *transform,
+                asset_id: *asset_id,
+                root_bvh_node_index: 0,
+                material_id,
+            });
+        }
     }
 
     let mut assets = std::mem::take(

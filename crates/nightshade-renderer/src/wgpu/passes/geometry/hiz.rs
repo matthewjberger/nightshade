@@ -120,7 +120,10 @@ impl HizPass {
                         binding: 0,
                         visibility: wgpu::ShaderStages::COMPUTE,
                         ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            // The source is the scene depth, whose only sample
+                            // type is Depth: reading it as unfilterable float
+                            // reduces a texture of zeros into an empty pyramid.
+                            sample_type: wgpu::TextureSampleType::Depth,
                             view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },

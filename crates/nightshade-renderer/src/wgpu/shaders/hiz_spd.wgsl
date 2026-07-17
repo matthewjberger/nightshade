@@ -4,7 +4,7 @@ struct SpdParams {
     _padding: u32,
 }
 
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
+@group(0) @binding(0) var src_texture: texture_depth_2d;
 @group(0) @binding(1) var dst_mip0: texture_storage_2d<r32float, write>;
 @group(0) @binding(2) var dst_mip1: texture_storage_2d<r32float, write>;
 @group(0) @binding(3) var dst_mip2: texture_storage_2d<r32float, write>;
@@ -19,7 +19,7 @@ fn reduce4(v0: f32, v1: f32, v2: f32, v3: f32) -> f32 {
 
 fn load_from_source(coord: vec2<u32>) -> f32 {
     let clamped = min(coord, params.src_size - vec2(1u));
-    return textureLoad(src_texture, clamped, 0).r;
+    return textureLoad(src_texture, clamped, 0);
 }
 
 @compute @workgroup_size(256, 1, 1)

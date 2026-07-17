@@ -54,6 +54,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
                 physical_key: winit::keyboard::PhysicalKey::Code(key_code),
                 state,
                 text,
+                repeat,
                 ..
             },
         ..
@@ -74,11 +75,17 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
             .or_insert(*state) = *state;
 
         let pressed = *state == winit::event::ElementState::Pressed;
-        world
-            .res_mut::<crate::ecs::input::resources::Input>()
-            .keyboard
-            .frame_keys
-            .push((*key_code, pressed));
+        // Auto-repeat is dropped here: frame_keys drives one-shot key actions
+        // like a widget activating on Space or a Tab moving focus, and a held
+        // key must not fire those every frame. Level state (keystates, read by
+        // the camera) and typed text (the `text` field) come through unaffected.
+        if !repeat {
+            world
+                .res_mut::<crate::ecs::input::resources::Input>()
+                .keyboard
+                .frame_keys
+                .push((*key_code, pressed));
+        }
 
         if pressed && !was_pressed {
             world

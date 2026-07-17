@@ -1102,6 +1102,11 @@ pub struct DebugDraw {
     /// then draws exactly the clusters the active camera kept, from wherever it
     /// stands, so its frustum and level of detail show as geometry in space.
     pub meshlet_freeze_cull_to_active: bool,
+    /// When true, the meshlet cull drops clusters the previous frame's depth
+    /// already covered, tested against a pyramid of that depth. On by default,
+    /// since occlusion is part of what makes virtualized geometry affordable;
+    /// off is for seeing what it removes.
+    pub meshlet_occlusion_culling: bool,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1557,12 +1562,13 @@ pub struct MeshletInstance {
     pub transform: nalgebra_glm::Mat4,
     pub asset_id: u64,
     pub root_bvh_node_index: u32,
-    /// Which entity this places, so the pass can resolve its material against
-    /// [`RenderMaterials::entity_to_id`]. The material is looked up here rather
-    /// than carried from the engine because the system that resolves the
-    /// material table runs after the one that collects these, so an id read
-    /// there would trail a frame behind.
-    pub entity: crate::entity::RenderEntity,
+    /// The material this places, as the registry index plus one, with zero the
+    /// built-in default grey. Resolved from the registry where the instance is
+    /// collected rather than looked up in the pass against a material table:
+    /// the registry is the source of truth and is already current here, so the
+    /// id never trails the table's separate rebuild, which is what left every
+    /// mesh grey the frame the table lagged the collection.
+    pub material_id: u32,
 }
 
 /// Every meshlet placement in the scene plus the baked assets they reference,
@@ -1992,6 +1998,7 @@ impl Default for DebugDraw {
             meshlet_cluster_visualization: false,
             meshlet_lod_error_threshold: 1.0,
             meshlet_freeze_cull_to_active: false,
+            meshlet_occlusion_culling: true,
         }
     }
 }
