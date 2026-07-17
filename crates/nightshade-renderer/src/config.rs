@@ -1086,6 +1086,10 @@ pub struct DebugDraw {
     /// When false, material textures sample at mip 0 with no anisotropy,
     /// reproducing the unfiltered look for comparison.
     pub material_filtering: bool,
+    /// When true, the meshlet resolve tints every pixel by the cluster it
+    /// rasterized from instead of shading it, exposing the decomposition the
+    /// bake produced.
+    pub meshlet_cluster_visualization: bool,
 }
 
 /// The GPU class the renderer ended up on, mirrored from `wgpu::DeviceType`
@@ -1882,6 +1886,7 @@ pub fn render_settings_signature(
         .to_bits()
         .hash(&mut hasher);
     debug.material_filtering.hash(&mut hasher);
+    debug.meshlet_cluster_visualization.hash(&mut hasher);
     render.taa_enabled.hash(&mut hasher);
     render.render_scale.to_bits().hash(&mut hasher);
     render.ibl_blend_factor.to_bits().hash(&mut hasher);
@@ -1956,6 +1961,7 @@ impl Default for DebugDraw {
             texture_debug_stripes_speed: 100.0,
             ssao_visualization: false,
             material_filtering: true,
+            meshlet_cluster_visualization: false,
         }
     }
 }
