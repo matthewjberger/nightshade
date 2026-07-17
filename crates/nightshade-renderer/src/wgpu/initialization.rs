@@ -92,6 +92,27 @@ impl super::WgpuRenderer {
         if bindless_enabled {
             required_limits.max_binding_array_elements_per_shader_stage = bindless_capacity;
         }
+        // Rasterizing a cluster in compute needs one atomic to settle both
+        // visibility and payload: depth in a value's high bits and the cluster
+        // and triangle in its low bits means a single max over sixty four bits
+        // is the depth test, with no fixed function rasterizer and no quads. A
+        // hardware rasterizer costs a two by two quad per triangle however
+        // small it is, which is most of its throughput once a level of detail
+        // cut has made triangles land on single pixels. Requested where the
+        // adapter has it, and the pass falls back to hardware alone where it
+        // does not.
+        #[cfg(feature = "meshlet")]
+        {
+            let wanted = wgpu::Features::TEXTURE_INT64_ATOMIC | wgpu::Features::SHADER_INT64;
+            if adapter_features.contains(wanted) {
+                required_features |= wanted;
+            } else {
+                tracing::info!(
+                    "adapter has no 64 bit texture atomics: meshlet clusters rasterize on the \
+                     hardware rasterizer alone, which costs a quad per triangle however small"
+                );
+            }
+        }
         // The default caps a single storage binding at 128mb, which is a
         // conservative floor rather than anything the hardware minds. Virtualized
         // geometry keeps every asset's vertices in one shared stream, so a scene
