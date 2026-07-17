@@ -200,6 +200,16 @@ pub fn render_sync_materials_system(world: &mut World) {
     let instanced_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::INSTANCED_MESH)
         .collect();
+    // Meshlet geometry names its material like anything else and has to be
+    // resolved here too. An entity this misses gets no id at all, which reads
+    // downstream as the built-in default, so it renders grey however carefully
+    // its material was authored.
+    #[cfg(feature = "meshlet")]
+    let meshlet_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::MESHLET_MESH)
+        .collect();
+    #[cfg(not(feature = "meshlet"))]
+    let meshlet_entities: Vec<crate::ecs::world::Entity> = Vec::new();
 
     let registry = &world
         .res::<crate::ecs::asset_state::AssetState>()
@@ -212,6 +222,7 @@ pub fn render_sync_materials_system(world: &mut World) {
         .iter()
         .chain(skinned_entities.iter())
         .chain(instanced_entities.iter())
+        .chain(meshlet_entities.iter())
     {
         use crate::render::generational_registry::{registry_entry, registry_lookup_index};
         let Some(material_ref) = world.get::<crate::ecs::material::components::MaterialRef>(entity)

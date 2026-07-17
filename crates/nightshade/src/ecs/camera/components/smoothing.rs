@@ -20,6 +20,15 @@ pub struct Smoothing {
     pub gamepad_smoothness: f32,
     /// Gamepad stick deadzone threshold.
     pub gamepad_deadzone: f32,
+    /// How fast keyboard movement carries the camera, in units per second.
+    /// What counts as fast is a property of the world's scale, not of the
+    /// engine: a camera crossing a room and one crossing a landscape want
+    /// numbers orders of magnitude apart.
+    #[serde(default = "default_move_speed")]
+    pub move_speed: f32,
+    /// What holding shift multiplies [`Self::move_speed`] by.
+    #[serde(default = "default_sprint_multiplier")]
+    pub sprint_multiplier: f32,
     /// Smoothed mouse delta (internal state).
     #[schema(type = "array", items = "number", len = 2)]
     pub smoothed_mouse_delta: nalgebra_glm::Vec2,
@@ -29,6 +38,14 @@ pub struct Smoothing {
     /// Smoothed gamepad input (internal state).
     #[schema(type = "array", items = "number", len = 2)]
     pub smoothed_gamepad_input: nalgebra_glm::Vec2,
+}
+
+fn default_move_speed() -> f32 {
+    20.0
+}
+
+fn default_sprint_multiplier() -> f32 {
+    3.0
 }
 
 impl Default for Smoothing {
@@ -41,6 +58,8 @@ impl Default for Smoothing {
             gamepad_sensitivity: 1.5,
             gamepad_smoothness: 0.06,
             gamepad_deadzone: 0.15,
+            move_speed: default_move_speed(),
+            sprint_multiplier: default_sprint_multiplier(),
             smoothed_mouse_delta: nalgebra_glm::vec2(0.0, 0.0),
             smoothed_movement: nalgebra_glm::vec3(0.0, 0.0, 0.0),
             smoothed_gamepad_input: nalgebra_glm::vec2(0.0, 0.0),
