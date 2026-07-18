@@ -50,20 +50,16 @@ fn classify_entity(
     let material_double_sided = render_materials.double_sided_ids.contains(&material_id);
 
     let has_negative_scale = configs
-        .scene
-        .render_dynamic_objects
-        .get(&entity)
-        .map(|dynamic| {
-            nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&dynamic.transform)) < 0.0
-        })
+        .scene_world
+        .get::<crate::render_world::Transform>(entity)
+        .map(|transform| nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&transform.0)) < 0.0)
         .unwrap_or(false);
     let is_double_sided = material_double_sided || has_negative_scale;
 
     let is_overlay = configs
-        .scene
-        .render_dynamic_objects
-        .get(&entity)
-        .map(|dynamic| dynamic.is_overlay != 0)
+        .scene_world
+        .get::<crate::render_world::Layer>(entity)
+        .map(|layer| layer.0 == crate::render_layer::RenderLayer::OVERLAY)
         .unwrap_or(false);
 
     let pipeline_class = if is_overlay {
@@ -544,9 +540,12 @@ impl MeshPass {
             if slot >= transforms.len() {
                 break;
             }
-            if let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) {
+            if let Some(transform) = configs
+                .scene_world
+                .get::<crate::render_world::Transform>(entity)
+            {
                 transforms[slot] = ModelMatrix {
-                    model: dynamic.transform.into(),
+                    model: transform.0.into(),
                     normal_matrix: [[0.0; 4]; 3],
                 };
             }
@@ -778,8 +777,7 @@ impl MeshPass {
             let instanced = configs
                 .scene_world
                 .get::<crate::config::InstancedObjectData>(entity)
-                .cloned()
-                .or_else(|| configs.scene.render_instanced_objects.get(&entity).cloned());
+                .cloned();
             if let Some(instanced) = instanced.as_ref() {
                 let local_matrices = &instanced.local_matrices;
                 let start_idx = start as usize;

@@ -55,9 +55,8 @@ impl MeshPass {
 
         for (slot_index, &(entity, start, count)) in ranges.iter().enumerate() {
             let parent_transform = configs
-                .scene
-                .render_instanced_objects
-                .get(&entity)
+                .scene_world
+                .get::<crate::config::InstancedObjectData>(entity)
                 .map(|instanced| instanced.parent_transform)
                 .unwrap_or_else(nalgebra_glm::Mat4::identity);
             let uniforms = InstancedTransformComputeUniforms {

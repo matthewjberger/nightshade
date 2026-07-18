@@ -194,19 +194,33 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .is_some();
 
     let dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)> = {
-        let scene = world.res::<crate::render::config::RendererState>();
-        let mut spheres = Vec::new();
-        for entity in world
+        let dirty: Vec<freecs::Entity> = world
             .res::<crate::render::mesh_state::MeshRenderState>()
             .dirty_entities_for_culling()
-        {
-            let Some(dynamic) = scene.render_dynamic_objects.get(&entity) else {
+            .collect();
+        let mut spheres = Vec::new();
+        for entity in dirty {
+            let Some(global_transform) = world.ecs.worlds[RENDER]
+                .get::<crate::render::render_world::Transform>(entity)
+                .map(|transform| transform.0)
+                .or_else(|| {
+                    world
+                        .res::<crate::render::config::RendererState>()
+                        .render_dynamic_objects
+                        .get(&entity)
+                        .map(|dynamic| dynamic.transform)
+                })
+            else {
                 continue;
             };
-            let Some(bounding_volume) = scene.render_bounds.get(&entity) else {
+            let Some(bounding_volume) = world
+                .res::<crate::render::config::RendererState>()
+                .render_bounds
+                .get(&entity)
+                .copied()
+            else {
                 continue;
             };
-            let global_transform = dynamic.transform;
             let world_center = global_transform
                 * nalgebra_glm::Vec4::new(
                     bounding_volume.center.x,

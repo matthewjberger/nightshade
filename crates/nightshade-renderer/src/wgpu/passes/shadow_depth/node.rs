@@ -137,18 +137,23 @@ fn caster_visible(
     configs: &crate::wgpu::render_configs::RenderInputs,
     entity: &freecs::Entity,
 ) -> bool {
+    if let Some(visible) = configs
+        .scene_world
+        .get::<crate::render_world::Visible>(*entity)
+    {
+        return visible.0;
+    }
+    if let Some(instanced) = configs
+        .scene_world
+        .get::<crate::config::InstancedObjectData>(*entity)
+    {
+        return instanced.visible != 0;
+    }
     configs
         .scene
         .render_dynamic_objects
         .get(entity)
         .map(|dynamic| dynamic.visible != 0)
-        .or_else(|| {
-            configs
-                .scene
-                .render_instanced_objects
-                .get(entity)
-                .map(|instanced| instanced.visible != 0)
-        })
         .unwrap_or(true)
 }
 

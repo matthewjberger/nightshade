@@ -29,6 +29,39 @@ fn combo_remove_one(
     }
 }
 
+/// Reconstructs a static object's per-frame state from its row in the
+/// renderer's scene world, so the incremental paths read the same source the
+/// full rebuild does. Returns `None` for an entity carrying no render transform
+/// (not a static mesh this frame).
+pub(in super::super) fn world_dynamic_object(
+    scene_world: &freecs::dynamic::DynWorld,
+    entity: freecs::Entity,
+) -> Option<crate::config::DynamicObjectState> {
+    use crate::render_world::{CullingMask, Layer, MorphWeights, Transform, Visible};
+    let transform = scene_world.get::<Transform>(entity)?.0;
+    let render_layer = scene_world
+        .get::<Layer>(entity)
+        .map(|layer| layer.0)
+        .unwrap_or(crate::render_layer::RenderLayer::WORLD);
+    Some(crate::config::DynamicObjectState {
+        visible: scene_world
+            .get::<Visible>(entity)
+            .map(|visible| u32::from(visible.0))
+            .unwrap_or(1),
+        morph_weights: scene_world
+            .get::<MorphWeights>(entity)
+            .map(|weights| weights.0)
+            .unwrap_or([0.0; 8]),
+        transform,
+        culling_mask: scene_world
+            .get::<CullingMask>(entity)
+            .map(|mask| mask.0)
+            .unwrap_or(u32::MAX),
+        is_overlay: u32::from(render_layer == crate::render_layer::RenderLayer::OVERLAY),
+        render_layer,
+    })
+}
+
 impl MeshPass {
     pub(in super::super) fn sync_dynamic_object_state(
         &mut self,
@@ -66,19 +99,16 @@ impl MeshPass {
 
             let mut changed = false;
 
-            let dynamic = configs
-                .scene
-                .render_dynamic_objects
-                .get(&entity)
-                .copied()
-                .unwrap_or(crate::config::DynamicObjectState {
+            let dynamic = world_dynamic_object(&configs.scene_world, entity).unwrap_or(
+                crate::config::DynamicObjectState {
                     visible: 1,
                     morph_weights: [0.0; 8],
                     transform: nalgebra_glm::Mat4::identity(),
                     culling_mask: u32::MAX,
                     is_overlay: 0,
                     render_layer: crate::render_layer::RenderLayer::WORLD,
-                });
+                },
+            );
 
             if world_state.cached_objects[slot].visible != dynamic.visible {
                 world_state.cached_objects[slot].visible = dynamic.visible;
@@ -129,7 +159,9 @@ impl MeshPass {
         if !local_matrices_dirty.is_empty() {
             for &entity in &local_matrices_dirty {
                 if let Some(&(start, count)) = world_state.instanced_transform_ranges.get(&entity)
-                    && let Some(instanced) = configs.scene.render_instanced_objects.get(&entity)
+                    && let Some(instanced) = configs
+                        .scene_world
+                        .get::<crate::config::InstancedObjectData>(entity)
                 {
                     let local_matrices = &instanced.local_matrices;
                     let upload_count = local_matrices.len().min(count as usize);
@@ -176,7 +208,7 @@ impl MeshPass {
                         .copied()
                         .flatten()
                         && (all_dirty || dirty_set.is_some_and(|s| s.contains(&entity)))
-                        && let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity)
+                        && let Some(dynamic) = world_dynamic_object(&configs.scene_world, entity)
                     {
                         any_mesh_dirty = true;
                         world_state.cached_transforms[slot] = ModelMatrix {
@@ -191,7 +223,9 @@ impl MeshPass {
                         continue;
                     }
                     world_state.instanced_compute_dirty = true;
-                    let Some(instanced) = configs.scene.render_instanced_objects.get(&entity)
+                    let Some(instanced) = configs
+                        .scene_world
+                        .get::<crate::config::InstancedObjectData>(entity)
                     else {
                         continue;
                     };
@@ -235,7 +269,7 @@ impl MeshPass {
                     .unwrap();
                 for &entity in &dirty_entities {
                     if let Some(&slot) = world_state.gpu_registry.entity_to_slot.get(&entity)
-                        && let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity)
+                        && let Some(dynamic) = world_dynamic_object(&configs.scene_world, entity)
                     {
                         let model_matrix = ModelMatrix {
                             model: dynamic.transform.into(),
@@ -247,7 +281,10 @@ impl MeshPass {
                         mesh_updates.push((slot, model_matrix));
                     } else if world_state.instanced_transform_ranges.contains_key(&entity) {
                         instanced_dirty.push(entity);
-                    } else if configs.scene.render_instanced_objects.contains_key(&entity) {
+                    } else if configs
+                        .scene_world
+                        .has::<crate::config::InstancedObjectData>(entity)
+                    {
                         self.scratch_mesh_updates = mesh_updates;
                         return false;
                     }
@@ -287,7 +324,9 @@ impl MeshPass {
                     for entity in instanced_dirty {
                         let &(start, count) =
                             world_state.instanced_transform_ranges.get(&entity).unwrap();
-                        let Some(instanced) = configs.scene.render_instanced_objects.get(&entity)
+                        let Some(instanced) = configs
+                            .scene_world
+                            .get::<crate::config::InstancedObjectData>(entity)
                         else {
                             continue;
                         };
@@ -311,7 +350,9 @@ impl MeshPass {
         } else if dirty_count > 0 {
             for &entity in &dirty_entities {
                 if !world_state.instanced_transform_ranges.contains_key(&entity)
-                    && configs.scene.render_instanced_objects.contains_key(&entity)
+                    && configs
+                        .scene_world
+                        .has::<crate::config::InstancedObjectData>(entity)
                 {
                     return false;
                 }
@@ -325,7 +366,9 @@ impl MeshPass {
                     else {
                         continue;
                     };
-                    let Some(instanced) = configs.scene.render_instanced_objects.get(&entity)
+                    let Some(instanced) = configs
+                        .scene_world
+                        .get::<crate::config::InstancedObjectData>(entity)
                     else {
                         continue;
                     };
@@ -404,10 +447,9 @@ impl MeshPass {
                     continue;
                 }
                 let has_mesh = configs
-                    .scene
-                    .render_object_meshes
-                    .get(entity)
-                    .is_some_and(|mesh_name| self.meshes.contains_key(mesh_name));
+                    .scene_world
+                    .get::<crate::render_world::MeshName>(*entity)
+                    .is_some_and(|mesh_name| self.meshes.contains_key(&mesh_name.0));
                 if !has_mesh {
                     return false;
                 }
@@ -474,13 +516,15 @@ impl MeshPass {
             return false;
         };
         fd.transform_dirty.iter().any(|&entity| {
-            if !configs.scene.render_instanced_objects.contains_key(&entity) {
+            if !configs
+                .scene_world
+                .has::<crate::config::InstancedObjectData>(entity)
+            {
                 return false;
             }
             let current = configs
-                .scene
-                .render_instanced_objects
-                .get(&entity)
+                .scene_world
+                .get::<crate::config::InstancedObjectData>(entity)
                 .map(|instanced| instanced.world_models.len());
             let cached = world_state
                 .instanced_transform_ranges
@@ -643,7 +687,11 @@ impl MeshPass {
             if configs.scene.render_skinned_meshes.contains(&entity) {
                 continue;
             }
-            let Some(mesh_name) = configs.scene.render_object_meshes.get(&entity) else {
+            let Some(mesh_name) = configs
+                .scene_world
+                .get::<crate::render_world::MeshName>(entity)
+                .map(|mesh_name| &mesh_name.0)
+            else {
                 continue;
             };
             let Some(&mesh_id) = self.meshes.get(mesh_name) else {
@@ -652,7 +700,7 @@ impl MeshPass {
 
             let material_id = materials.material_map.get(&entity).copied().unwrap_or(0);
 
-            let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) else {
+            let Some(dynamic) = world_dynamic_object(&configs.scene_world, entity) else {
                 continue;
             };
             let transform = dynamic.transform;
@@ -663,10 +711,7 @@ impl MeshPass {
             let is_transparent = material_is_transparent || custom_alpha < 1.0;
             let is_double_sided = materials.double_sided_material_ids.contains(&material_id)
                 || nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&transform)) < 0.0;
-            let is_overlay = configs
-                .scene
-                .render_dynamic_objects
-                .get(&entity)
+            let is_overlay = world_dynamic_object(&configs.scene_world, entity)
                 .map(|dynamic| dynamic.is_overlay != 0)
                 .unwrap_or(false);
             let pipeline_class = if is_overlay {
@@ -743,10 +788,7 @@ impl MeshPass {
                 mesh_id: info.mesh_id,
                 material_id: info.material_id,
                 batch_id: 0,
-                morph_weights: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                morph_weights: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.morph_weights)
                     .unwrap_or([0.0; 8]),
                 morph_target_count: mesh_data.morph_target_count,
@@ -754,26 +796,17 @@ impl MeshPass {
                 mesh_vertex_offset: mesh_data.vertex_offset,
                 mesh_vertex_count: mesh_data.vertex_count,
                 entity_id: info.entity.id,
-                is_overlay: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                is_overlay: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.is_overlay)
                     .unwrap_or(0),
                 skip_occlusion: u32::from(info.is_transparent || info.is_mask),
                 flip_winding: u32::from(
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&info.transform)) < 0.0,
                 ),
-                culling_mask: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                culling_mask: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.culling_mask)
                     .unwrap_or(u32::MAX),
-                visible: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                visible: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.visible)
                     .unwrap_or(1),
                 pipeline_class: info.pipeline_class,
@@ -863,10 +896,7 @@ impl MeshPass {
                 mesh_id: info.mesh_id,
                 material_id: info.material_id,
                 batch_id: 0,
-                morph_weights: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                morph_weights: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.morph_weights)
                     .unwrap_or([0.0; 8]),
                 morph_target_count: mesh_data.morph_target_count,
@@ -874,26 +904,17 @@ impl MeshPass {
                 mesh_vertex_offset: mesh_data.vertex_offset,
                 mesh_vertex_count: mesh_data.vertex_count,
                 entity_id: info.entity.id,
-                is_overlay: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                is_overlay: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.is_overlay)
                     .unwrap_or(0),
                 skip_occlusion: u32::from(info.is_transparent || info.is_mask),
                 flip_winding: u32::from(
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&info.transform)) < 0.0,
                 ),
-                culling_mask: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                culling_mask: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.culling_mask)
                     .unwrap_or(u32::MAX),
-                visible: configs
-                    .scene
-                    .render_dynamic_objects
-                    .get(&info.entity)
+                visible: world_dynamic_object(&configs.scene_world, info.entity)
                     .map(|dynamic| dynamic.visible)
                     .unwrap_or(1),
                 pipeline_class: info.pipeline_class,
@@ -960,7 +981,7 @@ impl MeshPass {
                         .copied()
                         .flatten()
                         && (all_dirty || dirty_set.is_some_and(|s| s.contains(&entity)))
-                        && let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity)
+                        && let Some(dynamic) = world_dynamic_object(&configs.scene_world, entity)
                     {
                         any_mesh_dirty = true;
                         world_state.cached_transforms[slot] = ModelMatrix {
@@ -985,7 +1006,7 @@ impl MeshPass {
                 let mut mesh_updates: Vec<(u32, ModelMatrix)> = Vec::new();
                 for entity in dirty_transforms {
                     if let Some(&slot) = world_state.gpu_registry.entity_to_slot.get(&entity)
-                        && let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity)
+                        && let Some(dynamic) = world_dynamic_object(&configs.scene_world, entity)
                     {
                         let model_matrix = ModelMatrix {
                             model: dynamic.transform.into(),
@@ -1319,16 +1340,10 @@ impl MeshPass {
                         nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&info.transform))
                             < 0.0,
                     ),
-                    culling_mask: configs
-                        .scene
-                        .render_dynamic_objects
-                        .get(&info.entity)
+                    culling_mask: world_dynamic_object(&configs.scene_world, info.entity)
                         .map(|dynamic| dynamic.culling_mask)
                         .unwrap_or_default(),
-                    visible: configs
-                        .scene
-                        .render_dynamic_objects
-                        .get(&info.entity)
+                    visible: world_dynamic_object(&configs.scene_world, info.entity)
                         .map(|dynamic| dynamic.visible)
                         .unwrap_or(1),
                     pipeline_class: info.pipeline_class,

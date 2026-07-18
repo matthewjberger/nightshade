@@ -410,10 +410,12 @@ impl MeshPass {
 
         for entity in &dirty_transforms {
             if let Some(&slot) = world_state.gpu_registry.entity_to_slot.get(entity)
-                && let Some(dynamic) = configs.scene.render_dynamic_objects.get(entity)
+                && let Some(transform) = configs
+                    .scene_world
+                    .get::<crate::render_world::Transform>(*entity)
             {
                 let model_matrix = ModelMatrix {
-                    model: dynamic.transform.into(),
+                    model: transform.0.into(),
                     normal_matrix: [[0.0; 4]; 3],
                 };
                 if (slot as usize) < world_state.cached_transforms.len() {
