@@ -2,7 +2,7 @@
 //! refreshes it in `render_sync_skinning_system`; the skinned-mesh and shadow
 //! passes read it from `renderer_state.render_skinning`.
 
-use crate::entity::RenderEntity;
+use freecs::Entity;
 use nalgebra_glm::Mat4;
 use std::collections::HashMap;
 
@@ -51,8 +51,8 @@ pub fn skinned_world_bounds(
 pub struct SkinningCache {
     pub inverse_bind_matrices: Vec<Mat4>,
     pub skin_data: Vec<GpuSkinData>,
-    pub entity_skin_indices: HashMap<RenderEntity, u32>,
-    pub joint_entities: Vec<RenderEntity>,
+    pub entity_skin_indices: HashMap<Entity, u32>,
+    pub joint_entities: Vec<Entity>,
     pub total_joints: u32,
     pub skinned_entity_ids: Vec<u32>,
     pub static_data_uploaded: bool,

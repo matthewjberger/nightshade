@@ -4,13 +4,13 @@
 //! it to the render graph costs nothing, and the graph and passes are
 //! monomorphized on this concrete type with no engine coupling.
 
-use crate::entity::RenderEntity;
+use freecs::Entity;
 use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
 pub struct UiFrameInputs {
     pub rects: Vec<crate::ui_data::UiRect>,
-    pub rect_entities: Vec<Option<RenderEntity>>,
+    pub rect_entities: Vec<Option<Entity>>,
     pub images: Vec<crate::ui_data::UiImage>,
     pub text_meshes: Vec<crate::ui_data::UiTextInstance>,
     pub render_slots: crate::ui_data::RenderSlotAllocator,
@@ -21,11 +21,11 @@ pub struct UiFrameInputs {
 /// timing, and the viewport layout the compose pass targets. The renderer
 /// updates this between camera dispatches within a frame.
 pub struct ViewInputs {
-    pub active_camera: Option<RenderEntity>,
+    pub active_camera: Option<Entity>,
     pub uptime_milliseconds: u64,
     pub delta_time: f32,
     pub viewport_size: Option<(u32, u32)>,
-    pub camera_tile_rects: HashMap<RenderEntity, crate::config::ViewportRect>,
+    pub camera_tile_rects: HashMap<Entity, crate::config::ViewportRect>,
     pub camera_tile_render_iteration: u32,
     pub active_viewport_rect: Option<crate::config::ViewportRect>,
 }
@@ -67,7 +67,7 @@ impl Default for CameraProjectionParams {
 /// transform for dirtiness checks.
 #[derive(Clone)]
 pub struct CameraFrameInputs {
-    pub entity: RenderEntity,
+    pub entity: Entity,
     pub matrices: Option<CameraMatricesInputs>,
     pub projection: CameraProjectionParams,
     pub constrained_aspect: Option<f32>,
@@ -145,7 +145,7 @@ pub struct FrameInputs {
     pub mouse_position: nalgebra_glm::Vec2,
     /// Cameras whose next render is forced; the renderer reports which ones
     /// it cleared through [`FrameOutputs`].
-    pub force_render_cameras: std::collections::HashSet<RenderEntity>,
+    pub force_render_cameras: std::collections::HashSet<Entity>,
     /// Debug line geometry gathered for this frame.
     pub debug_lines: LinesFrameInputs,
 }
@@ -156,7 +156,7 @@ pub struct FrameInputs {
 #[derive(Default)]
 pub struct FrameOutputs {
     pub viewport_texture_sizes: Vec<(u32, u32)>,
-    pub force_render_cleared: Vec<RenderEntity>,
+    pub force_render_cleared: Vec<Entity>,
     /// Whether the frame actually rendered. False when the surface was
     /// occluded, timed out, or lost, so callers keep their previous
     /// viewport state instead of applying this frame's empty outputs.
@@ -165,6 +165,11 @@ pub struct FrameOutputs {
 
 /// Everything the renderer consumes for one frame.
 pub struct RenderInputs {
+    /// The scene as the renderer's own ECS world (see [`crate::render_world`]).
+    /// The renderable geometry lives here as components; a host spawns into it
+    /// or composes it as a member world. Empty means fall back to the legacy
+    /// per-entity maps on `scene` while that path is migrated.
+    pub scene_world: freecs::dynamic::DynWorld,
     /// User-facing render settings: post-processing, atmosphere, layers.
     pub settings: crate::config::RenderSettings,
     /// Debug visualization toggles.
@@ -208,7 +213,7 @@ impl CameraFrameInputs {
     /// projection the passes expect from `projection`. Resolve
     /// `effective_shading` with [`crate::config::EffectiveShading::from_settings`].
     pub fn perspective(
-        entity: RenderEntity,
+        entity: Entity,
         view: nalgebra_glm::Mat4,
         position: nalgebra_glm::Vec3,
         projection: CameraProjectionParams,
@@ -250,6 +255,7 @@ impl RenderInputs {
     /// tracking incremental deltas. The returned struct's public fields (`ui`,
     /// `pending_particle_textures`, `frame.commands`) can be set afterward.
     pub fn single_view(
+        scene_world: freecs::dynamic::DynWorld,
         scene: crate::config::RendererState,
         mesh_cache: crate::mesh_cache::MeshCache,
         texture_cache: crate::wgpu::texture_cache::TextureCache,
@@ -267,6 +273,7 @@ impl RenderInputs {
         let active_camera = camera.entity;
         let has_skinned_meshes = !scene.render_skinned_meshes.is_empty();
         Self {
+            scene_world,
             settings,
             debug_draw,
             scene,

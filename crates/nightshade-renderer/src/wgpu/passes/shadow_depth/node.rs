@@ -135,7 +135,7 @@ const CUBEMAP_FACE_DIRECTIONS: [(nalgebra_glm::Vec3, nalgebra_glm::Vec3); POINT_
 
 fn caster_visible(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: &crate::entity::RenderEntity,
+    entity: &freecs::Entity,
 ) -> bool {
     configs
         .scene
@@ -320,27 +320,43 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
             self.occluders.clear();
             self.occluder_transforms.clear();
 
-            for &entity in &configs.scene.render_shadow_casters.meshes {
-                let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity).copied()
-                else {
-                    continue;
-                };
-                if dynamic.render_layer == crate::render_layer::RenderLayer::OVERLAY {
+            struct Caster {
+                entity: freecs::Entity,
+                transform: nalgebra_glm::Mat4,
+                visible: bool,
+                mesh_name: String,
+                overlay: bool,
+            }
+            let casters: Vec<Caster> = configs
+                .scene_world
+                .query_ref::<(
+                    &crate::render_world::Transform,
+                    &crate::render_world::MeshName,
+                    &crate::render_world::Visible,
+                    &crate::render_world::Layer,
+                )>()
+                .with_tag_type::<crate::render_world::ShadowCaster>()
+                .iter()
+                .map(|(entity, (transform, mesh, visible, layer))| Caster {
+                    entity,
+                    transform: transform.0,
+                    visible: visible.0,
+                    mesh_name: mesh.0.clone(),
+                    overlay: layer.0 == crate::render_layer::RenderLayer::OVERLAY,
+                })
+                .collect();
+            for caster in casters {
+                if caster.overlay {
                     continue;
                 }
-                let Some(&mesh_geo_id) = configs
-                    .scene
-                    .render_object_meshes
-                    .get(&entity)
-                    .and_then(|mesh_name| self.culling.name_to_geo_id.get(mesh_name))
-                else {
+                let Some(&mesh_geo_id) = self.culling.name_to_geo_id.get(&caster.mesh_name) else {
                     continue;
                 };
-                self.all_caster_entities.push(entity);
-                if dynamic.visible == 0 {
+                self.all_caster_entities.push(caster.entity);
+                if !caster.visible {
                     continue;
                 }
-                let model_matrix: [[f32; 4]; 4] = dynamic.transform.into();
+                let model_matrix: [[f32; 4]; 4] = caster.transform.into();
                 let transform_index = self.occluder_transforms.len() as u32;
                 self.occluder_transforms.push(model_matrix);
                 self.occluders.push(ShadowOccluder {
@@ -349,13 +365,19 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
                     batch_id: 0,
                     _pad: 0,
                 });
-                self.shadow_caster_entities.push(entity);
+                self.shadow_caster_entities.push(caster.entity);
             }
 
-            for &entity in &configs.scene.render_shadow_casters.instanced {
-                let Some(instanced) = configs.scene.render_instanced_objects.get(&entity) else {
-                    continue;
-                };
+            let instanced_casters: Vec<(freecs::Entity, crate::config::InstancedObjectData)> =
+                configs
+                    .scene_world
+                    .query_ref::<&crate::config::InstancedObjectData>()
+                    .with_tag_type::<crate::render_world::ShadowCaster>()
+                    .iter()
+                    .map(|(entity, instanced)| (entity, instanced.clone()))
+                    .collect();
+            for (entity, instanced) in &instanced_casters {
+                let entity = *entity;
                 if instanced.render_layer == crate::render_layer::RenderLayer::OVERLAY {
                     continue;
                 }
@@ -729,7 +751,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
         self.point_light_shadow_data.clear();
 
         let mut point_light_candidates: Vec<(
-            crate::entity::RenderEntity,
+            freecs::Entity,
             f32,
             crate::config::RenderLightData,
             nalgebra_glm::Mat4,

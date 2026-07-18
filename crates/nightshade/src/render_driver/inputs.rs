@@ -1,5 +1,4 @@
-use crate::ecs::world::CORE;
-use crate::ecs::world::World;
+use crate::ecs::world::{CORE, RENDER, World};
 #[cfg(feature = "terrain")]
 use crate::render::terrain_config::TerrainSettings;
 use crate::render::wgpu::render_configs::{
@@ -281,6 +280,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             .pending_particle_textures,
     );
     let scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
+    let scene_world = std::mem::replace(
+        &mut world.ecs.worlds[RENDER],
+        freecs::dynamic::DynWorld::new(),
+    );
     let mesh_cache = std::mem::take(
         &mut world
             .res_mut::<crate::ecs::asset_state::AssetState>()
@@ -291,6 +294,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
     let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     RenderInputs {
+        scene_world,
         settings,
         debug_draw,
         scene,
@@ -379,6 +383,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     {
         *world.res_mut::<crate::render::grass_config::GrassSettings>() = inputs.grass;
     }
+    world.ecs.worlds[RENDER] = inputs.scene_world;
     *world.res_mut::<crate::render::config::RendererState>() = inputs.scene;
     world
         .res_mut::<crate::ecs::asset_state::AssetState>()

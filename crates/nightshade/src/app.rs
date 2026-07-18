@@ -311,6 +311,24 @@ pub trait SystemCollection<Marker> {
     fn push_onto(self, schedule: &mut freecs::Schedule<World>);
 }
 
+/// Resolves a unique schedule name from a system's type name. Distinct systems
+/// that share a type name (the same closure registered per state value, say
+/// `on_enter` in a loop) collide otherwise; each gets a `#suffix` so all of
+/// them coexist in the schedule instead of the second registration panicking.
+fn unique_schedule_name(schedule: &freecs::Schedule<World>, base: &'static str) -> &'static str {
+    if !schedule.contains(base) {
+        return base;
+    }
+    let mut suffix = 2;
+    loop {
+        let candidate = format!("{base}#{suffix}");
+        if !schedule.contains(&candidate) {
+            break Box::leak(candidate.into_boxed_str());
+        }
+        suffix += 1;
+    }
+}
+
 pub struct WorldSystemMarker;
 
 pub struct GameSystemMarker<T>(std::marker::PhantomData<T>);
@@ -320,7 +338,8 @@ where
     F: FnMut(&mut World) + Send + 'static,
 {
     fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
-        schedule.push(std::any::type_name_of_val(&self), self);
+        let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
+        schedule.push(name, self);
     }
 }
 
@@ -330,7 +349,7 @@ where
     F: FnMut(&mut T, &mut World) + Send + 'static,
 {
     fn push_onto(mut self, schedule: &mut freecs::Schedule<World>) {
-        let name = std::any::type_name_of_val(&self);
+        let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
         schedule.push(name, move |world: &mut World| {
             game_scope(world, |state: &mut T, world| self(state, world));
         });
@@ -349,7 +368,7 @@ where
     F: freecs::system_param::IntoSystem<World, Marker>,
 {
     fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
-        let name = std::any::type_name_of_val(&self);
+        let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
         schedule.push(name, self.into_runner());
     }
 }

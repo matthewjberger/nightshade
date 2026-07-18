@@ -15,6 +15,7 @@ categories = ["graphics", "rendering", "game-engines"]
 [dependencies]
 bytemuck = { workspace = true }
 enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
+freecs = { version = "4.7.0", features = ["dynamic"] }
 raw-window-handle = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
@@ -60,6 +61,10 @@ required-features = ["wgpu", "screenshot"]
 
 [[example]]
 name = "shapes"
+required-features = ["wgpu", "hdr"]
+
+[[example]]
+name = "spinning"
 required-features = ["wgpu", "hdr"]
 
 [[example]]

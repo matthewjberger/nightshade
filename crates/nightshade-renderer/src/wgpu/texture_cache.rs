@@ -1,7 +1,7 @@
 use crate::asset_id::TextureId;
-use crate::entity::RenderEntity;
 use crate::generational_registry::*;
 use crate::texture_data::{SamplerFilter, SamplerSettings, SamplerWrap, TextureUsage};
+use freecs::Entity;
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
@@ -40,14 +40,14 @@ impl SamplerFilter {
     }
 }
 
-/// Who holds a set of texture references. RenderEntity owners split the material's
+/// Who holds a set of texture references. Entity owners split the material's
 /// own textures from prefab variant textures so a material swap replaces one
 /// set without disturbing the other; named owners cover keep-alives that are
 /// not tied to an entity.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum TextureOwner {
-    EntityMaterial(RenderEntity),
-    EntityVariants(RenderEntity),
+    EntityMaterial(Entity),
+    EntityVariants(Entity),
     Named(String),
 }
 
@@ -288,7 +288,7 @@ pub fn texture_cache_release(cache: &mut TextureCache, owner: &TextureOwner) {
 
 /// Releases every entity-scoped set recorded for `entity`: the material's
 /// textures and any prefab variant textures.
-pub fn texture_cache_release_entity(cache: &mut TextureCache, entity: RenderEntity) {
+pub fn texture_cache_release_entity(cache: &mut TextureCache, entity: Entity) {
     texture_cache_release(cache, &TextureOwner::EntityMaterial(entity));
     texture_cache_release(cache, &TextureOwner::EntityVariants(entity));
 }
@@ -299,7 +299,7 @@ pub fn texture_cache_release_entity(cache: &mut TextureCache, entity: RenderEnti
 /// touched.
 pub fn texture_cache_release_dead_entities(
     cache: &mut TextureCache,
-    keep: impl Fn(RenderEntity) -> bool,
+    keep: impl Fn(Entity) -> bool,
 ) {
     let dead: Vec<TextureOwner> = cache
         .owners

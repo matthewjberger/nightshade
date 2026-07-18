@@ -4,7 +4,7 @@ pub(super) use super::super::projection::{
     AreaLightData, AreaUniforms, LightData, MAX_AREA_LIGHTS,
 };
 
-use crate::entity::RenderEntity;
+use freecs::Entity;
 
 pub(super) const INITIAL_INSTANCES: usize = 1_000;
 pub const MAX_INSTANCES: usize = 1_000_000;
@@ -214,8 +214,8 @@ pub(super) struct DrawIndexedIndirect {
 
 #[derive(Debug)]
 pub struct GpuEntityRegistry {
-    pub entity_to_slot: HashMap<RenderEntity, u32>,
-    pub slot_to_entity: Vec<Option<RenderEntity>>,
+    pub entity_to_slot: HashMap<Entity, u32>,
+    pub slot_to_entity: Vec<Option<Entity>>,
     pub free_slots: Vec<u32>,
     pub slot_count: u32,
 }

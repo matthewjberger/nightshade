@@ -193,7 +193,7 @@ fn run_frame(
         pass_sync::apply_frame_dirty_state(renderer, frame_state, &mut inputs.mesh_cache);
     }
 
-    let active_camera_entities: std::collections::HashSet<crate::entity::RenderEntity> = inputs
+    let active_camera_entities: std::collections::HashSet<freecs::Entity> = inputs
         .frame
         .cameras
         .iter()
@@ -408,7 +408,8 @@ fn dispatch_window_renders(
                 inputs.scene.taa_jitter,
                 (render_width, render_height),
             );
-            inputs.scene.render_lighting = Some(build_render_lighting(&inputs.scene, Some(camera)));
+            inputs.scene.render_lighting =
+                Some(build_render_lighting(&inputs.scene_world, Some(camera)));
             pass_sync::sync_conditional_pass_toggles(
                 renderer,
                 inputs,
@@ -533,7 +534,7 @@ fn dispatch_window_renders(
                         )
                     });
             inputs.scene.render_lighting = Some(build_render_lighting(
-                &inputs.scene,
+                &inputs.scene_world,
                 inputs.frame.active_camera_frame.as_ref(),
             ));
             let command_buffers = render_graph_execute(

@@ -6,10 +6,62 @@
 //! when something in its domain actually changed; a gap in the structural
 //! log (the log overflowed) falls back to one full resync.
 
-use crate::ecs::world::CORE;
-use crate::ecs::world::World;
+use crate::ecs::world::{CORE, RENDER, World};
+use crate::render::render_world;
 use crate::render_driver::{render_entity, scene_entity};
 use std::collections::{HashMap, HashSet};
+
+/// Writes an entity's per-object render components (everything but its mesh
+/// name and material, which the mesh-name and material syncs own) onto its row
+/// in the renderer's [`RENDER`] member world.
+fn write_object_render(world: &mut World, entity: crate::ecs::world::Entity) {
+    let state = dynamic_object_state(world, entity);
+    world.set(entity, render_world::Transform(state.transform));
+    world.set(entity, render_world::Visible(state.visible != 0));
+    world.set(entity, render_world::MorphWeights(state.morph_weights));
+    world.set(entity, render_world::CullingMask(state.culling_mask));
+    world.set(entity, render_world::Layer(state.render_layer));
+    set_shadow_tag(world, entity);
+}
+
+/// Matches the entity's `ShadowCaster` tag in the [`RENDER`] member world to
+/// whether it carries `CASTS_SHADOW`, so the shadow pass draws exactly the
+/// casters the scene marks.
+fn set_shadow_tag(world: &mut World, entity: crate::ecs::world::Entity) {
+    let casts =
+        world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::CASTS_SHADOW);
+    let render = &mut world.ecs.worlds[RENDER];
+    if casts {
+        if !render.has_tag_type::<render_world::ShadowCaster>(entity) {
+            render.add_tag_type::<render_world::ShadowCaster>(entity);
+        }
+    } else {
+        render.remove_tag_type::<render_world::ShadowCaster>(entity);
+    }
+}
+
+/// Strips an entity's whole [`RENDER`] member-world row using the mask it
+/// actually carries, so a renderable that left the scene without being
+/// despawned stops drawing. Despawned entities are retired by the group and
+/// never reach here.
+fn clear_render_row(world: &mut World, entity: crate::ecs::world::Entity) {
+    let render = &mut world.ecs.worlds[RENDER];
+    if let Some(mask) = render.component_mask(entity) {
+        render.remove_components(entity, mask);
+    }
+    render.remove_tag_type::<render_world::ShadowCaster>(entity);
+}
+
+/// Clears every [`RENDER`] member-world row carrying `component`, so a
+/// full-rebuild domain sync (lights, decals, water, emitters) can drop the
+/// previous frame's rows before writing the current set.
+fn clear_render_domain(world: &mut World, component: u64) {
+    let entities: Vec<crate::ecs::world::Entity> =
+        world.ecs.worlds[RENDER].query_entities(component).collect();
+    for entity in entities {
+        clear_render_row(world, entity);
+    }
+}
 
 /// Cursors and gates for the persistent scene sync.
 #[derive(Default)]
@@ -52,7 +104,8 @@ const OBJECT_STRUCTURAL_MASK: u64 = crate::ecs::world::RENDER_MESH
     | crate::ecs::world::VISIBILITY
     | crate::ecs::world::MORPH_WEIGHTS
     | crate::ecs::world::RENDER_LAYER
-    | crate::ecs::world::CULLING_MASK;
+    | crate::ecs::world::CULLING_MASK
+    | crate::ecs::world::CASTS_SHADOW;
 
 fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     let mut dirt = SceneDirt::default();
@@ -467,6 +520,9 @@ fn instanced_object_data(
 fn sync_objects_full(world: &mut World) {
     let entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH)
+        .filter(|&entity| {
+            !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN)
+        })
         .collect();
     let states: Vec<(
         crate::ecs::world::Entity,
@@ -481,6 +537,22 @@ fn sync_objects_full(world: &mut World) {
             world
                 .get::<crate::ecs::mesh::components::RenderMesh>(entity)
                 .map(|mesh| (entity, mesh.name.clone()))
+        })
+        .collect();
+    let skinned_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::RENDER_MESH | crate::ecs::world::SKIN)
+        .collect();
+    let skinned_states: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::DynamicObjectState,
+        Option<String>,
+    )> = skinned_entities
+        .iter()
+        .map(|&entity| {
+            let name = world
+                .get::<crate::ecs::mesh::components::RenderMesh>(entity)
+                .map(|mesh| mesh.name.clone());
+            (entity, dynamic_object_state(world, entity), name)
         })
         .collect();
     let instanced: Vec<(
@@ -512,33 +584,36 @@ fn sync_objects_full(world: &mut World) {
         })
         .collect();
 
-    let dynamic = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_dynamic_objects;
-    dynamic.clear();
-    dynamic.extend(
-        states
-            .into_iter()
-            .map(|(entity, state)| (render_entity(entity), state)),
-    );
-    let mesh_map = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_object_meshes;
-    mesh_map.clear();
-    mesh_map.extend(
-        mesh_names
-            .into_iter()
-            .map(|(entity, name)| (render_entity(entity), name)),
-    );
-    let instanced_map = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_instanced_objects;
-    instanced_map.clear();
-    instanced_map.extend(
-        instanced
-            .into_iter()
-            .map(|(entity, data)| (render_entity(entity), data)),
-    );
+    for (entity, state) in states {
+        world.set(entity, render_world::Transform(state.transform));
+        world.set(entity, render_world::Visible(state.visible != 0));
+        world.set(entity, render_world::MorphWeights(state.morph_weights));
+        world.set(entity, render_world::CullingMask(state.culling_mask));
+        world.set(entity, render_world::Layer(state.render_layer));
+        set_shadow_tag(world, entity);
+    }
+    for (entity, name) in mesh_names {
+        world.set(entity, render_world::MeshName(name));
+    }
+    for (entity, data) in instanced {
+        world.set(entity, data);
+        set_shadow_tag(world, entity);
+    }
+    {
+        let state = world.res_mut::<crate::render::config::RendererState>();
+        state.render_dynamic_objects.clear();
+        state.render_object_meshes.clear();
+        for (entity, object_state, name) in skinned_states {
+            state
+                .render_dynamic_objects
+                .insert(render_entity(entity), object_state);
+            if let Some(name) = name {
+                state
+                    .render_object_meshes
+                    .insert(render_entity(entity), name);
+            }
+        }
+    }
     let render_bounds = &mut world
         .res_mut::<crate::render::config::RendererState>()
         .render_bounds;
@@ -552,13 +627,20 @@ fn sync_objects_full(world: &mut World) {
 
 fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
     for &entity in &dirt.object_refresh {
-        if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
+        let core = &world.ecs.worlds[CORE];
+        let has_mesh = core.entity_has_components(entity, crate::ecs::world::RENDER_MESH);
+        let skinned = core.entity_has_components(entity, crate::ecs::world::SKIN);
+        let instanced = core.entity_has_components(entity, crate::ecs::world::INSTANCED_MESH);
+        if has_mesh && !skinned {
+            write_object_render(world, entity);
+        } else if has_mesh && skinned {
             let state = dynamic_object_state(world, entity);
             world
                 .res_mut::<crate::render::config::RendererState>()
                 .render_dynamic_objects
                 .insert(render_entity(entity), state);
-        } else {
+        } else if !instanced {
+            clear_render_row(world, entity);
             world
                 .res_mut::<crate::render::config::RendererState>()
                 .render_dynamic_objects
@@ -566,7 +648,12 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.mesh_name_refresh {
+        let skinned = world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN);
         match world.get::<crate::ecs::mesh::components::RenderMesh>(entity) {
+            Some(mesh) if !skinned => {
+                let name = mesh.name.clone();
+                world.set(entity, render_world::MeshName(name));
+            }
             Some(mesh) => {
                 let name = mesh.name.clone();
                 world
@@ -575,6 +662,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                     .insert(render_entity(entity), name);
             }
             None => {
+                world.ecs.worlds[RENDER].remove::<render_world::MeshName>(entity);
                 world
                     .res_mut::<crate::render::config::RendererState>()
                     .render_object_meshes
@@ -583,28 +671,20 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         }
     }
     for &entity in &dirt.instanced_refresh {
-        if let Some(existing) = world
-            .res_mut::<crate::render::config::RendererState>()
-            .render_instanced_objects
-            .get_mut(&render_entity(entity))
+        if let Some(mut data) = world.ecs.worlds[RENDER]
+            .get::<crate::render::config::InstancedObjectData>(entity)
+            .cloned()
         {
-            let mut data = std::mem::take(existing);
             if refill_instanced_object_data(world, entity, &mut data) {
-                world
-                    .res_mut::<crate::render::config::RendererState>()
-                    .render_instanced_objects
-                    .insert(render_entity(entity), data);
+                world.set(entity, data);
+                set_shadow_tag(world, entity);
             } else {
-                world
-                    .res_mut::<crate::render::config::RendererState>()
-                    .render_instanced_objects
-                    .remove(&render_entity(entity));
+                world.ecs.worlds[RENDER]
+                    .remove::<crate::render::config::InstancedObjectData>(entity);
             }
         } else if let Some(data) = instanced_object_data(world, entity) {
-            world
-                .res_mut::<crate::render::config::RendererState>()
-                .render_instanced_objects
-                .insert(render_entity(entity), data);
+            world.set(entity, data);
+            set_shadow_tag(world, entity);
         }
     }
     for &entity in &dirt.bounds_refresh {
@@ -637,26 +717,6 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
 }
 
 fn sync_entity_lists(world: &mut World) {
-    let regular_mesh_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::RENDER_MESH)
-        .filter(|&entity| {
-            !world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN)
-        })
-        .collect();
-    let shadow_meshes: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
-        .query_entities(
-            crate::ecs::world::RENDER_MESH
-                | crate::ecs::world::GLOBAL_TRANSFORM
-                | crate::ecs::world::CASTS_SHADOW,
-        )
-        .collect();
-    let shadow_instanced: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
-        .query_entities(
-            crate::ecs::world::INSTANCED_MESH
-                | crate::ecs::world::GLOBAL_TRANSFORM
-                | crate::ecs::world::CASTS_SHADOW,
-        )
-        .collect();
     let shadow_skinned: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(
             crate::ecs::world::SKIN
@@ -675,16 +735,8 @@ fn sync_entity_lists(world: &mut World) {
 
     world
         .res_mut::<crate::render::config::RendererState>()
-        .render_regular_mesh_entities = regular_mesh_entities
-        .into_iter()
-        .map(render_entity)
-        .collect();
-    let shadow_casters = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_shadow_casters;
-    shadow_casters.meshes = shadow_meshes.into_iter().map(render_entity).collect();
-    shadow_casters.instanced = shadow_instanced.into_iter().map(render_entity).collect();
-    shadow_casters.skinned = shadow_skinned.into_iter().map(render_entity).collect();
+        .render_shadow_casters
+        .skinned = shadow_skinned.into_iter().map(render_entity).collect();
     world
         .res_mut::<crate::render::config::RendererState>()
         .render_skinned_meshes = skinned_meshes.into_iter().map(render_entity).collect();
@@ -694,19 +746,19 @@ fn sync_lights(world: &mut World) {
     let light_entities: Vec<crate::ecs::world::Entity> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::LIGHT | crate::ecs::world::GLOBAL_TRANSFORM)
         .collect();
-    let mut lights: Vec<crate::render::config::RenderLight> =
-        Vec::with_capacity(light_entities.len());
-    let mut light_index: std::collections::HashMap<crate::ecs::world::Entity, usize> =
-        std::collections::HashMap::new();
+    let mut collected: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::RenderLightData,
+        nalgebra_glm::Mat4,
+    )> = Vec::with_capacity(light_entities.len());
     for entity in light_entities {
         if let (Some(light), Some(transform)) = (
             world.get::<crate::ecs::light::components::Light>(entity),
             world.get::<crate::ecs::transform::components::GlobalTransform>(entity),
         ) {
-            light_index.insert(entity, lights.len());
-            lights.push(crate::render::config::RenderLight {
-                entity: render_entity(entity),
-                light: crate::render::config::RenderLightData {
+            collected.push((
+                entity,
+                crate::render::config::RenderLightData {
                     light_type: match light.light_type {
                         crate::ecs::light::components::LightType::Directional => {
                             crate::render::config::RenderLightType::Directional
@@ -753,22 +805,24 @@ fn sync_lights(world: &mut World) {
                     shadow_normal_bias: light.shadow_normal_bias,
                     shadow_softness: light.shadow_softness,
                 },
-                transform: transform.0,
-            });
+                transform.0,
+            ));
         }
     }
-    let render_lights = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_lights;
-    render_lights.lights = lights;
-    render_lights.entity_to_index = light_index
-        .into_iter()
-        .map(|(entity, index)| (render_entity(entity), index))
-        .collect();
+    clear_render_domain(world, render_world::LIGHT);
+    for (entity, light, transform) in collected {
+        world.set(entity, light);
+        world.set(entity, render_world::Transform(transform));
+    }
 }
 
 fn sync_decals(world: &mut World) {
-    let decals: Vec<crate::render::config::RenderDecal> = world.ecs.worlds[CORE]
+    let collected: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::RenderDecalData,
+        nalgebra_glm::Mat4,
+        bool,
+    )> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::DECAL | crate::ecs::GLOBAL_TRANSFORM)
         .filter_map(|entity| {
             let decal = world.get::<crate::ecs::decal::components::Decal>(entity)?;
@@ -777,8 +831,9 @@ fn sync_decals(world: &mut World) {
             let visible = world
                 .get::<crate::ecs::primitives::Visibility>(entity)
                 .is_none_or(|visibility| visibility.visible);
-            Some(crate::render::config::RenderDecal {
-                decal: crate::render::config::RenderDecalData {
+            Some((
+                entity,
+                crate::render::config::RenderDecalData {
                     texture: decal.texture.clone(),
                     emissive_texture: decal.emissive_texture.clone(),
                     emissive_strength: decal.emissive_strength,
@@ -789,73 +844,81 @@ fn sync_decals(world: &mut World) {
                     fade_start: decal.fade_start,
                     fade_end: decal.fade_end,
                 },
-                transform: transform.0,
+                transform.0,
                 visible,
-            })
+            ))
         })
         .collect();
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_decals = decals;
+    clear_render_domain(world, render_world::DECAL);
+    for (entity, decal, transform, visible) in collected {
+        world.set(entity, decal);
+        world.set(entity, render_world::Transform(transform));
+        world.set(entity, render_world::Visible(visible));
+    }
 }
 
 fn sync_emitters(world: &mut World) {
-    let emitters: Vec<crate::render::config::RenderParticleEmitter> = world.ecs.worlds[CORE]
+    let collected: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::particles::ParticleEmitter,
+    )> = world.ecs.worlds[CORE]
         .query_entities(crate::ecs::PARTICLE_EMITTER)
         .filter_map(|entity| {
             world
                 .get::<crate::render::particles::ParticleEmitter>(entity)
-                .map(|emitter| crate::render::config::RenderParticleEmitter {
-                    entity: render_entity(entity),
-                    emitter: emitter.clone(),
-                })
+                .map(|emitter| (entity, emitter.clone()))
         })
         .collect();
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_particle_emitters = emitters;
+    clear_render_domain(world, render_world::EMITTER);
+    for (entity, emitter) in collected {
+        world.set(entity, render_world::RenderEmitter(emitter));
+    }
 }
 
 fn sync_water(world: &mut World) {
-    let mut water_bodies: Vec<crate::render::config::RenderWater> = Vec::new();
-    for (_, (water, global_transform)) in world
+    let collected: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::RenderWaterData,
+        nalgebra_glm::Mat4,
+    )> = world
         .query_ref::<(
             &crate::ecs::water::components::Water,
             &crate::ecs::transform::components::GlobalTransform,
         )>()
         .iter()
-    {
-        {
-            if water.enabled {
-                water_bodies.push(crate::render::config::RenderWater {
-                    water: crate::render::config::RenderWaterData {
-                        half_extents: water.half_extents,
-                        tessellation: water.tessellation,
-                        wave_amplitude: water.wave_amplitude,
-                        wave_steepness: water.wave_steepness,
-                        wave_length: water.wave_length,
-                        wave_speed: water.wave_speed,
-                        wave_direction_radians: water.wave_direction_radians,
-                        shallow_color: water.shallow_color,
-                        deep_color: water.deep_color,
-                        depth_fade_distance: water.depth_fade_distance,
-                        edge_foam_distance: water.edge_foam_distance,
-                        foam_amount: water.foam_amount,
-                        foam_color: water.foam_color,
-                        roughness: water.roughness,
-                        fresnel_power: water.fresnel_power,
-                        reflection_strength: water.reflection_strength,
-                        refraction_strength: water.refraction_strength,
-                        specular_strength: water.specular_strength,
-                    },
-                    transform: global_transform.0,
-                });
-            }
-        }
+        .filter(|(_, (water, _))| water.enabled)
+        .map(|(entity, (water, global_transform))| {
+            (
+                entity,
+                crate::render::config::RenderWaterData {
+                    half_extents: water.half_extents,
+                    tessellation: water.tessellation,
+                    wave_amplitude: water.wave_amplitude,
+                    wave_steepness: water.wave_steepness,
+                    wave_length: water.wave_length,
+                    wave_speed: water.wave_speed,
+                    wave_direction_radians: water.wave_direction_radians,
+                    shallow_color: water.shallow_color,
+                    deep_color: water.deep_color,
+                    depth_fade_distance: water.depth_fade_distance,
+                    edge_foam_distance: water.edge_foam_distance,
+                    foam_amount: water.foam_amount,
+                    foam_color: water.foam_color,
+                    roughness: water.roughness,
+                    fresnel_power: water.fresnel_power,
+                    reflection_strength: water.reflection_strength,
+                    refraction_strength: water.refraction_strength,
+                    specular_strength: water.specular_strength,
+                },
+                global_transform.0,
+            )
+        })
+        .collect();
+    clear_render_domain(world, render_world::WATER);
+    for (entity, water, transform) in collected {
+        world.set(entity, water);
+        world.set(entity, render_world::Transform(transform));
     }
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_water = water_bodies;
 }
 
 /// Rebuilds the renderer's meshlet placements and hands over any asset it has

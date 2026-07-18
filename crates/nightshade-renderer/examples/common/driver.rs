@@ -21,17 +21,21 @@ use std::sync::Arc;
 use glm::{Mat4, Vec3};
 use nalgebra_glm as glm;
 
+use freecs::Entity;
 use nightshade_renderer::asset_id::TextureId;
 use nightshade_renderer::config::{
-    DynamicObjectState, EffectiveShading, InstancedObjectData, RenderLight, RenderParticleEmitter,
-    RenderSettings, RenderWater, RenderWaterData, RendererState,
+    EffectiveShading, InstancedObjectData, RenderDecalData, RenderLight, RenderSettings,
+    RenderWaterData, RendererState,
 };
-use nightshade_renderer::entity::RenderEntity;
 use nightshade_renderer::geometry::Mesh;
 use nightshade_renderer::material::{Material, MaterialTextureIds};
 use nightshade_renderer::mesh_cache::{MeshCache, mesh_cache_insert};
 use nightshade_renderer::particles::{ParticleEmitter, ParticleTextureUpload};
 use nightshade_renderer::render_layer::RenderLayer;
+use nightshade_renderer::render_world::{
+    CullingMask, Layer, MaterialId, MeshName, MorphWeights, RenderEmitter, ShadowCaster, Transform,
+    Visible, register_render_components,
+};
 use nightshade_renderer::texture_data::{SamplerSettings, TextureUsage};
 use nightshade_renderer::ui_data::UiRect;
 use nightshade_renderer::wgpu::WgpuRenderer;
@@ -151,6 +155,7 @@ impl Camera {
 /// [`RenderInputs`] and back out each frame, so nothing is cloned per frame.
 pub struct Scene {
     pub state: RendererState,
+    pub world: freecs::dynamic::DynWorld,
     pub mesh_cache: MeshCache,
     pub texture_cache: TextureCache,
     pub settings: RenderSettings,
@@ -160,7 +165,7 @@ pub struct Scene {
     pending_textures: Vec<PendingTexture>,
     particle_textures: Vec<ParticleTextureUpload>,
     next_id: u32,
-    camera_entity: RenderEntity,
+    camera_entity: Entity,
     time: f32,
 }
 
@@ -180,6 +185,7 @@ impl Scene {
         };
         Self {
             state,
+            world: freecs::dynamic::DynWorld::from_registry(register_render_components()),
             mesh_cache: MeshCache::default(),
             texture_cache: TextureCache::default(),
             settings: RenderSettings::default(),
@@ -189,7 +195,7 @@ impl Scene {
             pending_textures: Vec::new(),
             particle_textures: Vec::new(),
             next_id: 1,
-            camera_entity: RenderEntity {
+            camera_entity: Entity {
                 id: 0,
                 generation: 0,
             },
@@ -202,8 +208,8 @@ impl Scene {
         self.time
     }
 
-    fn next_entity(&mut self) -> RenderEntity {
-        let entity = RenderEntity {
+    fn next_entity(&mut self) -> Entity {
+        let entity = Entity {
             id: self.next_id,
             generation: 0,
         };
@@ -254,33 +260,28 @@ impl Scene {
         texture
     }
 
-    /// Spawns a static mesh entity with a material and world transform.
-    pub fn object(&mut self, mesh: &str, material: u32, transform: Mat4) -> RenderEntity {
-        let entity = self.next_entity();
-        self.state.render_regular_mesh_entities.push(entity);
-        self.state
-            .render_object_meshes
-            .insert(entity, mesh.to_string());
-        self.state.render_dynamic_objects.insert(
-            entity,
-            DynamicObjectState {
-                visible: 1,
-                morph_weights: [0.0; 8],
-                transform,
-                culling_mask: u32::MAX,
-                is_overlay: 0,
-                render_layer: RenderLayer::WORLD,
-            },
-        );
-        self.state.render_materials.assign(entity, material);
-        self.state.render_shadow_casters.meshes.push(entity);
-        entity
+    /// Spawns a static mesh entity into the renderer's own ECS world with a
+    /// material and world transform — one `spawn`, no coordinated map writes.
+    pub fn object(&mut self, mesh: &str, material: u32, transform: Mat4) -> Entity {
+        let entity = self.world.spawn((
+            Transform(transform),
+            MeshName(mesh.to_string()),
+            MaterialId(material),
+            Visible(true),
+            MorphWeights([0.0; 8]),
+            CullingMask(u32::MAX),
+            Layer(RenderLayer::WORLD),
+        ));
+        self.world.add_tag_type::<ShadowCaster>(entity);
+        Entity {
+            id: entity.id,
+            generation: entity.generation,
+        }
     }
 
     /// Spawns one instanced-mesh entity drawing `transforms` copies of `mesh`
     /// with a single material, in one upload.
-    pub fn instanced(&mut self, mesh: &str, material: u32, transforms: &[Mat4]) -> RenderEntity {
-        let entity = self.next_entity();
+    pub fn instanced(&mut self, mesh: &str, material: u32, transforms: &[Mat4]) -> Entity {
         let world_models = transforms.iter().map(|matrix| (*matrix).into()).collect();
         let world_normals = transforms
             .iter()
@@ -293,8 +294,7 @@ impl Scene {
                 ]
             })
             .collect();
-        self.state.render_instanced_objects.insert(
-            entity,
+        let entity = self.world.spawn((
             InstancedObjectData {
                 world_models,
                 world_normals,
@@ -305,40 +305,43 @@ impl Scene {
                 visible: 1,
                 parent_transform: Mat4::identity(),
             },
-        );
-        self.state.render_materials.assign(entity, material);
-        self.state.render_shadow_casters.instanced.push(entity);
+            MaterialId(material),
+        ));
+        self.world.add_tag_type::<ShadowCaster>(entity);
         entity
     }
 
     /// Updates an existing entity's world transform.
-    pub fn set_transform(&mut self, entity: RenderEntity, transform: Mat4) {
-        if let Some(dynamic) = self.state.render_dynamic_objects.get_mut(&entity) {
-            dynamic.transform = transform;
-        }
+    pub fn set_transform(&mut self, entity: Entity, transform: Mat4) {
+        self.world.set(entity, Transform(transform));
     }
 
     /// Moves an existing light to a new world transform.
-    pub fn set_light_transform(&mut self, entity: RenderEntity, transform: Mat4) {
-        if let Some(&index) = self.state.render_lights.entity_to_index.get(&entity) {
-            self.state.render_lights.lights[index].transform = transform;
+    pub fn set_light_transform(&mut self, entity: Entity, transform: Mat4) {
+        self.set_transform(entity, transform);
+    }
+
+    fn spawn_light(&mut self, light: RenderLight) -> Entity {
+        let entity = self.world.spawn((light.light, Transform(light.transform)));
+        Entity {
+            id: entity.id,
+            generation: entity.generation,
         }
     }
 
     /// Sets an existing entity's morph-target weights.
-    pub fn set_morph_weights(&mut self, entity: RenderEntity, weights: [f32; 8]) {
-        if let Some(dynamic) = self.state.render_dynamic_objects.get_mut(&entity) {
-            dynamic.morph_weights = weights;
-        }
+    pub fn set_morph_weights(&mut self, entity: Entity, weights: [f32; 8]) {
+        self.world.set(entity, MorphWeights(weights));
     }
 
     /// A shadow-casting directional light (the sun) pointing along `direction`.
-    pub fn sun(&mut self, direction: Vec3, color: Vec3, intensity: f32) -> RenderEntity {
-        let entity = self.next_entity();
-        self.state.render_lights.add(RenderLight::directional(
-            entity, direction, color, intensity,
-        ));
-        entity
+    pub fn sun(&mut self, direction: Vec3, color: Vec3, intensity: f32) -> Entity {
+        self.spawn_light(RenderLight::directional(
+            Entity::default(),
+            direction,
+            color,
+            intensity,
+        ))
     }
 
     /// A point light at `position` reaching out to `range`.
@@ -348,12 +351,14 @@ impl Scene {
         color: Vec3,
         intensity: f32,
         range: f32,
-    ) -> RenderEntity {
-        let entity = self.next_entity();
-        self.state.render_lights.add(RenderLight::point(
-            entity, position, color, intensity, range,
-        ));
-        entity
+    ) -> Entity {
+        self.spawn_light(RenderLight::point(
+            Entity::default(),
+            position,
+            color,
+            intensity,
+            range,
+        ))
     }
 
     /// A spot light at `position` aimed along `direction`, with `[inner, outer]`
@@ -366,12 +371,16 @@ impl Scene {
         intensity: f32,
         range: f32,
         cone: [f32; 2],
-    ) -> RenderEntity {
-        let entity = self.next_entity();
-        self.state.render_lights.add(RenderLight::spot(
-            entity, position, direction, color, intensity, range, cone,
-        ));
-        entity
+    ) -> Entity {
+        self.spawn_light(RenderLight::spot(
+            Entity::default(),
+            position,
+            direction,
+            color,
+            intensity,
+            range,
+            cone,
+        ))
     }
 
     /// Uploads a particle sprite into a texture-array slot the emitters sample
@@ -387,19 +396,23 @@ impl Scene {
 
     /// Adds a GPU particle emitter. The emitter's `position` field is its world
     /// origin.
-    pub fn emitter(&mut self, emitter: ParticleEmitter) -> RenderEntity {
-        let entity = self.next_entity();
-        self.state
-            .render_particle_emitters
-            .push(RenderParticleEmitter { entity, emitter });
-        entity
+    pub fn emitter(&mut self, emitter: ParticleEmitter) -> Entity {
+        let entity = self.world.spawn((RenderEmitter(emitter),));
+        Entity {
+            id: entity.id,
+            generation: entity.generation,
+        }
+    }
+
+    /// Spawns a projected decal into the world.
+    pub fn decal(&mut self, decal: RenderDecalData, transform: Mat4) {
+        self.world
+            .spawn((decal, Transform(transform), Visible(true)));
     }
 
     /// Adds a water body and enables the water pass.
     pub fn water(&mut self, water: RenderWaterData, transform: Mat4) {
-        self.state
-            .render_water
-            .push(RenderWater { water, transform });
+        self.world.spawn((water, Transform(transform)));
         self.settings.water_enabled = true;
     }
 
@@ -412,9 +425,11 @@ impl Scene {
     fn compose(&mut self, width: u32, height: u32, delta_time: f32) -> RenderInputs {
         // The particle pass spawns from each emitter's accumulated_spawn counter,
         // which the host advances every frame by spawn_rate * dt.
-        for emitter in &mut self.state.render_particle_emitters {
-            emitter.emitter.accumulated_spawn += emitter.emitter.spawn_rate * delta_time;
-        }
+        self.world
+            .query::<&mut RenderEmitter>()
+            .for_each(|_entity, emitter| {
+                emitter.0.accumulated_spawn += emitter.0.spawn_rate * delta_time;
+            });
 
         let aspect = width as f32 / height.max(1) as f32;
         let camera = CameraFrameInputs::perspective(
@@ -432,7 +447,9 @@ impl Scene {
         );
         let uptime = (self.time * 1000.0) as u64;
 
+        let scene_world = std::mem::replace(&mut self.world, freecs::dynamic::DynWorld::new());
         let mut inputs = RenderInputs::single_view(
+            scene_world,
             std::mem::take(&mut self.state),
             std::mem::take(&mut self.mesh_cache),
             std::mem::take(&mut self.texture_cache),
@@ -453,6 +470,7 @@ impl Scene {
 
     fn restore(&mut self, inputs: RenderInputs) {
         self.state = inputs.scene;
+        self.world = inputs.scene_world;
         self.mesh_cache = inputs.mesh_cache;
         self.texture_cache = inputs.texture_cache;
         self.settings = inputs.settings;

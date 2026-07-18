@@ -1,10 +1,8 @@
-//! CPU-side collection of the frame's light lists from [`RendererState`]
-//! into the packed GPU structures the mesh and shadow passes consume, plus
-//! the cascade shadow fit against the dispatching camera's frustum.
+//! CPU-side collection of the frame's light lists from the renderer's ECS
+//! world into the packed GPU structures the mesh and shadow passes consume,
+//! plus the cascade shadow fit against the dispatching camera's frustum.
 
-use crate::config::{
-    RenderAreaLightShape, RenderLightData, RenderLightType, RenderLighting, RendererState,
-};
+use crate::config::{RenderAreaLightShape, RenderLightData, RenderLightType, RenderLighting};
 use crate::wgpu::passes::geometry::projection::{
     AREA_EMISSIVE_LAYER_NONE, AREA_SHAPE_DISK, AREA_SHAPE_RECTANGLE, AREA_SHAPE_SPHERE,
     AREA_SHAPE_TUBE, AreaLightCollectionResult, AreaLightData, COOKIE_LAYER_NONE,
@@ -16,17 +14,26 @@ use crate::wgpu::passes::geometry::projection::{
 use crate::wgpu::passes::shadow_depth::{CASCADE_SPLIT_DISTANCES, scale_cascade_splits};
 use crate::wgpu::render_configs::CameraFrameInputs;
 
-pub fn collect_lights(scene: &RendererState, max_lights: usize) -> LightCollectionResult {
+pub fn collect_lights(
+    world: &freecs::dynamic::DynWorld,
+    max_lights: usize,
+) -> LightCollectionResult {
     let mut directional_lights = Vec::new();
     let mut local_lights = Vec::new();
     let mut directional_light = None;
     let mut directional_entities = Vec::new();
     let mut local_entities = Vec::new();
 
-    for render_light in &scene.render_lights.lights {
-        let entity = render_light.entity;
-        let light = &render_light.light;
-        let transform = &render_light.transform;
+    // Lights are entities in the renderer's own world: a `RenderLightData` plus
+    // a `Transform`.
+    let sources: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
+        .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
+        .iter()
+        .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
+        .collect();
+
+    for (entity, light, transform) in &sources {
+        let entity = *entity;
         {
             if light.light_type == RenderLightType::Area {
                 continue;
@@ -108,20 +115,24 @@ pub fn collect_lights(scene: &RendererState, max_lights: usize) -> LightCollecti
 }
 
 pub fn collect_area_lights(
-    scene: &RendererState,
+    world: &freecs::dynamic::DynWorld,
     max_area_lights: usize,
 ) -> AreaLightCollectionResult {
     let mut area_lights_data = Vec::new();
     let mut entity_to_index = std::collections::HashMap::new();
 
-    for render_light in &scene.render_lights.lights {
+    let lights: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
+        .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
+        .iter()
+        .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
+        .collect();
+    for (entity, light, transform) in &lights {
         if area_lights_data.len() >= max_area_lights {
             break;
         }
 
-        let entity = render_light.entity;
-        let light = &render_light.light;
-        let transform = &render_light.transform;
+        let entity = *entity;
+        let transform = &transform;
 
         if light.light_type != RenderLightType::Area {
             continue;
@@ -318,11 +329,11 @@ pub fn calculate_cascade_shadows(
 /// Collects the frame's full lighting: light lists, area lights, the cascade
 /// shadow fit for the dispatching camera, and the sun.
 pub fn build_render_lighting(
-    scene: &RendererState,
+    world: &freecs::dynamic::DynWorld,
     camera: Option<&CameraFrameInputs>,
 ) -> RenderLighting {
     const MAX_LIGHTS: usize = 1024;
-    let light_result = collect_lights(scene, MAX_LIGHTS);
+    let light_result = collect_lights(world, MAX_LIGHTS);
     let directional = light_result.directional_light;
     let directional_light_direction = directional
         .as_ref()
@@ -332,14 +343,15 @@ pub fn build_render_lighting(
         })
         .unwrap_or([0.0, -1.0, 0.0, 0.0]);
     let cascade = calculate_cascade_shadows(camera, directional.as_ref());
-    let area = collect_area_lights(scene, MAX_AREA_LIGHTS);
+    let area = collect_area_lights(world, MAX_AREA_LIGHTS);
     let mut sun = None;
-    for render_light in &scene.render_lights.lights {
-        let light = &render_light.light;
-        let transform = &render_light.transform;
+    for (_entity, (light, transform)) in world
+        .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
+        .iter()
+    {
         if light.light_type == RenderLightType::Directional {
             sun = Some((
-                -transform_forward(transform).normalize(),
+                -transform_forward(&transform.0).normalize(),
                 light.color * light.intensity,
             ));
             break;

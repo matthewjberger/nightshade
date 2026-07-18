@@ -336,6 +336,7 @@ pub mod meshlet;
 pub mod particles;
 pub mod procedural_meshes;
 pub mod render_layer;
+pub mod render_world;
 #[cfg(feature = "rendergraph")]
 pub mod rendergraph;
 pub mod skinning;

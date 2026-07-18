@@ -162,7 +162,7 @@ impl MeshPass {
                 let regular_count = world_state.regular_object_count as usize;
                 let slot_limit = regular_count.min(world_state.cached_transforms.len());
                 let all_dirty = dirty_count >= regular_count;
-                let dirty_set: Option<&HashSet<crate::entity::RenderEntity>> = if all_dirty {
+                let dirty_set: Option<&HashSet<freecs::Entity>> = if all_dirty {
                     None
                 } else {
                     Some(&dirty_entities)
@@ -229,7 +229,7 @@ impl MeshPass {
             } else {
                 let mut mesh_updates = std::mem::take(&mut self.scratch_mesh_updates);
                 mesh_updates.clear();
-                let mut instanced_dirty: Vec<crate::entity::RenderEntity> = Vec::new();
+                let mut instanced_dirty: Vec<freecs::Entity> = Vec::new();
                 let world_state = self.world_states[self.current_world_id as usize]
                     .as_mut()
                     .unwrap();
@@ -627,7 +627,7 @@ impl MeshPass {
         let current_object_count = world_state.object_count as usize;
 
         struct ClassifiedEntity {
-            entity: crate::entity::RenderEntity,
+            entity: freecs::Entity,
             mesh_id: u32,
             material_id: u32,
             is_transparent: bool,
@@ -946,7 +946,7 @@ impl MeshPass {
                 let regular_count = world_state.regular_object_count as usize;
                 let slot_limit = regular_count.min(world_state.cached_transforms.len());
                 let all_dirty = dirty_count >= regular_count;
-                let dirty_set: Option<&HashSet<crate::entity::RenderEntity>> = if all_dirty {
+                let dirty_set: Option<&HashSet<freecs::Entity>> = if all_dirty {
                     None
                 } else {
                     Some(&dirty_transforms)
@@ -1239,7 +1239,7 @@ impl MeshPass {
                     .resize(new_total, [1.0, 1.0, 1.0, 1.0]);
                 world_state.cached_entities.resize(
                     new_total,
-                    crate::entity::RenderEntity {
+                    freecs::Entity {
                         id: 0,
                         generation: 0,
                     },

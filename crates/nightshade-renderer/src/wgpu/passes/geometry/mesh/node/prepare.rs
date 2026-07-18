@@ -12,7 +12,7 @@ use crate::wgpu::passes::geometry::material_gpu::{
 };
 pub(in super::super) struct MaterialCollection {
     pub(in super::super) materials_data: Vec<MaterialData>,
-    pub(in super::super) material_map: HashMap<crate::entity::RenderEntity, u32>,
+    pub(in super::super) material_map: HashMap<freecs::Entity, u32>,
     pub(in super::super) name_to_material_id: HashMap<String, u32>,
     pub(in super::super) transparent_material_ids: std::collections::HashSet<u32>,
     pub(in super::super) double_sided_material_ids: std::collections::HashSet<u32>,
@@ -23,7 +23,7 @@ struct BatchAccumulator {
     transforms: Vec<ModelMatrix>,
     custom_data: Vec<[f32; 4]>,
     objects: Vec<ObjectData>,
-    entities: Vec<crate::entity::RenderEntity>,
+    entities: Vec<freecs::Entity>,
 }
 
 struct EntityClass {
@@ -37,7 +37,7 @@ struct EntityClass {
 
 fn classify_entity(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: crate::entity::RenderEntity,
+    entity: freecs::Entity,
 ) -> EntityClass {
     let render_materials = &configs.scene.render_materials;
     let material_id = render_materials
@@ -120,17 +120,51 @@ impl MeshPass {
     fn build_world_objects(
         &self,
         configs: &crate::wgpu::render_configs::RenderInputs,
-        mesh_entities: &[crate::entity::RenderEntity],
         materials: &mut MaterialCollection,
         accum: &mut BatchAccumulator,
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
-        for &entity in mesh_entities {
-            let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity) else {
-                continue;
-            };
-            let render_layer = dynamic.render_layer;
+        struct ObjectSource {
+            entity: freecs::Entity,
+            transform: nalgebra_glm::Mat4,
+            mesh_name: String,
+            material_id: u32,
+            visible: u32,
+            morph_weights: [f32; 8],
+            culling_mask: u32,
+            render_layer: u32,
+        }
 
+        let sources: Vec<ObjectSource> = configs
+            .scene_world
+            .query_ref::<(
+                &crate::render_world::Transform,
+                &crate::render_world::MeshName,
+                &crate::render_world::MaterialId,
+                &crate::render_world::Visible,
+                &crate::render_world::MorphWeights,
+                &crate::render_world::CullingMask,
+                &crate::render_world::Layer,
+            )>()
+            .iter()
+            .map(
+                |(entity, (transform, mesh, material, visible, morph, culling, layer))| {
+                    ObjectSource {
+                        entity,
+                        transform: transform.0,
+                        mesh_name: mesh.0.clone(),
+                        material_id: material.0,
+                        visible: u32::from(visible.0),
+                        morph_weights: morph.0,
+                        culling_mask: culling.0,
+                        render_layer: layer.0,
+                    }
+                },
+            )
+            .collect();
+
+        for source in sources {
+            let render_layer = source.render_layer;
             let should_render = match render_layer {
                 crate::render_layer::RenderLayer::WORLD => {
                     configs.settings.render_layer_world_enabled
@@ -140,20 +174,16 @@ impl MeshPass {
                 }
                 _ => true,
             };
-
             if !should_render {
                 continue;
             }
 
-            let Some(mesh_name) = configs.scene.render_object_meshes.get(&entity) else {
+            let Some(&mesh_id) = self.meshes.get(&source.mesh_name) else {
                 continue;
             };
-            let transform = dynamic.transform;
-            let Some(&mesh_id) = self.meshes.get(mesh_name) else {
-                continue;
-            };
-
-            let material_id = *materials.material_map.get(&entity).unwrap_or(&0);
+            let entity = source.entity;
+            let transform = source.transform;
+            let material_id = source.material_id;
             let is_overlay = u32::from(render_layer == crate::render_layer::RenderLayer::OVERLAY);
 
             let mesh_data = &self.mesh_data[mesh_id as usize];
@@ -187,15 +217,12 @@ impl MeshPass {
             });
             accum.custom_data.push([1.0, 1.0, 1.0, 1.0]);
 
-            let morph_weights = dynamic.morph_weights;
-
-            let culling_mask = dynamic.culling_mask;
             accum.objects.push(ObjectData {
                 transform_index,
                 mesh_id,
                 material_id,
                 batch_id: 0,
-                morph_weights,
+                morph_weights: source.morph_weights,
                 morph_target_count: mesh_data.morph_target_count,
                 morph_displacement_offset: mesh_data.morph_displacement_offset,
                 mesh_vertex_offset: mesh_data.vertex_offset,
@@ -204,8 +231,8 @@ impl MeshPass {
                 is_overlay,
                 skip_occlusion,
                 flip_winding,
-                culling_mask,
-                visible: dynamic.visible,
+                culling_mask: source.culling_mask,
+                visible: source.visible,
                 pipeline_class,
                 _pad_culling: [0; 1],
             });
@@ -293,7 +320,7 @@ impl MeshPass {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        let dirty: Vec<crate::entity::RenderEntity> = self
+        let dirty: Vec<freecs::Entity> = self
             .frame_dirty
             .as_mut()
             .map(|fd| std::mem::take(&mut fd.material_dirty).into_iter().collect())
@@ -378,23 +405,22 @@ impl MeshPass {
     fn build_instanced_objects(
         &mut self,
         configs: &crate::wgpu::render_configs::RenderInputs,
-        material_map: &HashMap<crate::entity::RenderEntity, u32>,
         transforms: &mut Vec<ModelMatrix>,
         custom_data: &mut Vec<[f32; 4]>,
         objects: &mut Vec<ObjectData>,
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
-        let instanced_data: Vec<(
-            crate::entity::RenderEntity,
-            crate::config::InstancedObjectData,
-        )> = {
+        let instanced_data: Vec<(freecs::Entity, u32, crate::config::InstancedObjectData)> = {
             let mut list: Vec<_> = configs
-                .scene
-                .render_instanced_objects
+                .scene_world
+                .query_ref::<(
+                    &crate::config::InstancedObjectData,
+                    &crate::render_world::MaterialId,
+                )>()
                 .iter()
-                .map(|(entity, data)| (*entity, data.clone()))
-                .collect();
-            list.sort_by_key(|(entity, _)| (entity.id, entity.generation));
+                .map(|(entity, (data, material))| (entity, material.0, data.clone()))
+                .collect::<Vec<_>>();
+            list.sort_by_key(|(entity, _, _)| (entity.id, entity.generation));
             list
         };
 
@@ -404,8 +430,9 @@ impl MeshPass {
             .instanced_transform_ranges
             .clear();
 
-        for (entity, data) in &instanced_data {
+        for (entity, material_id, data) in &instanced_data {
             let entity = *entity;
+            let material_id = *material_id;
             if data.visible == 0 || data.world_models.is_empty() {
                 continue;
             }
@@ -413,8 +440,6 @@ impl MeshPass {
             let Some(&mesh_id) = self.meshes.get(&data.mesh_name) else {
                 continue;
             };
-
-            let material_id = *material_map.get(&entity).unwrap_or(&0);
 
             let render_materials = &configs.scene.render_materials;
             let is_transparent = render_materials.transparent_ids.contains(&material_id);
@@ -498,7 +523,7 @@ impl MeshPass {
         let materials = self.collect_and_upload_materials(configs, device, queue);
 
         let regular = self.state().regular_object_count as usize;
-        let regular_entities: Vec<crate::entity::RenderEntity> = {
+        let regular_entities: Vec<freecs::Entity> = {
             let state = self.state();
             state
                 .cached_entities
@@ -532,7 +557,6 @@ impl MeshPass {
 
         self.build_instanced_objects(
             configs,
-            &materials.material_map,
             &mut transforms,
             &mut custom_data,
             &mut objects,
@@ -751,7 +775,12 @@ impl MeshPass {
         instanced_local_data.resize(max_end, [[0.0; 4]; 4]);
 
         for &(entity, start, count) in &ranges {
-            if let Some(instanced) = configs.scene.render_instanced_objects.get(&entity) {
+            let instanced = configs
+                .scene_world
+                .get::<crate::config::InstancedObjectData>(entity)
+                .cloned()
+                .or_else(|| configs.scene.render_instanced_objects.get(&entity).cloned());
+            if let Some(instanced) = instanced.as_ref() {
                 let local_matrices = &instanced.local_matrices;
                 let start_idx = start as usize;
                 for (offset, mat) in local_matrices.iter().take(count as usize).enumerate() {
@@ -1230,8 +1259,6 @@ impl MeshPass {
             );
         }
 
-        let mesh_entities: Vec<_> = configs.scene.render_regular_mesh_entities.clone();
-
         let mut materials = self.collect_and_upload_materials(configs, device, queue);
 
         self.resolve_lod_chains(&configs.scene.mesh_lod_chains, queue);
@@ -1244,13 +1271,7 @@ impl MeshPass {
         };
         let mut combos: HashMap<(u32, u32, u32), u32> = HashMap::new();
 
-        self.build_world_objects(
-            configs,
-            &mesh_entities,
-            &mut materials,
-            &mut accum,
-            &mut combos,
-        );
+        self.build_world_objects(configs, &mut materials, &mut accum, &mut combos);
 
         self.world_states[self.current_world_id as usize]
             .as_mut()
@@ -1259,7 +1280,6 @@ impl MeshPass {
 
         self.build_instanced_objects(
             configs,
-            &materials.material_map,
             &mut accum.transforms,
             &mut accum.custom_data,
             &mut accum.objects,

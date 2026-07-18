@@ -88,7 +88,7 @@ pub struct WgpuRenderer {
     pub ui_image_pass: Option<Box<passes::UiImagePass>>,
     pub glyph_atlas: glyph_atlas::GlyphAtlas,
     /// Per-camera viewport texture pool.
-    pub camera_viewports: std::collections::HashMap<crate::entity::RenderEntity, CameraViewport>,
+    pub camera_viewports: std::collections::HashMap<freecs::Entity, CameraViewport>,
     pub _brdf_lut_texture: wgpu::Texture,
     pub brdf_lut_view: wgpu::TextureView,
     pub material_texture_arrays: material_texture_arrays::MaterialTextureArrays,
@@ -152,7 +152,7 @@ pub struct DepthPickState {
     pub map_complete: std::sync::Arc<std::sync::atomic::AtomicBool>,
     pub center: (u32, u32),
     pub texture_size: (u32, u32),
-    pub camera: Option<crate::entity::RenderEntity>,
+    pub camera: Option<freecs::Entity>,
 }
 
 /// Screenshot capture and readback resources.
@@ -171,7 +171,7 @@ pub struct ScreenshotState {
 pub struct FrameState {
     pub index: u64,
     pub last_settings_signature: Option<u64>,
-    pub text_mesh_signatures: std::collections::HashMap<crate::entity::RenderEntity, u64>,
+    pub text_mesh_signatures: std::collections::HashMap<freecs::Entity, u64>,
     pub captured_ibl_atmosphere: Option<crate::config::Atmosphere>,
     pub captured_ibl_hour: f32,
     pub captured_day_night_snapshots: bool,
