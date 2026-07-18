@@ -32,13 +32,15 @@ use nightshade_renderer::geometry::Mesh;
 use nightshade_renderer::material::{AlphaMode, Material, MaterialTextureIds};
 use nightshade_renderer::mesh_cache::{MeshCache, mesh_cache_insert};
 use nightshade_renderer::mesh_state::MeshRenderStateInner;
-use nightshade_renderer::particles::ParticleEmitter;
+use nightshade_renderer::particles::{ParticleEmitter, ParticleTextureUpload};
 use nightshade_renderer::render_layer::RenderLayer;
 use nightshade_renderer::texture_data::{SamplerSettings, TextureUsage};
 use nightshade_renderer::ui_data::UiRect;
 use nightshade_renderer::wgpu::WgpuRenderer;
 use nightshade_renderer::wgpu::frame::render_frame;
 use nightshade_renderer::wgpu::presentation::install_presentation_passes;
+#[cfg(feature = "screenshot")]
+use nightshade_renderer::wgpu::presentation::{poll_screenshot_readback, request_screenshot_copy};
 use nightshade_renderer::wgpu::render_configs::{
     CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameInputs, LinesFrameInputs,
     RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
@@ -160,6 +162,7 @@ pub struct Scene {
     pub commands: Vec<RendererCommand>,
     pub ui_rects: Vec<UiRect>,
     pending_textures: Vec<PendingTexture>,
+    particle_textures: Vec<ParticleTextureUpload>,
     next_id: u32,
     camera_entity: RenderEntity,
     time: f32,
@@ -188,6 +191,7 @@ impl Scene {
             commands: Vec::new(),
             ui_rects: Vec::new(),
             pending_textures: Vec::new(),
+            particle_textures: Vec::new(),
             next_id: 1,
             camera_entity: RenderEntity {
                 id: 0,
@@ -416,6 +420,17 @@ impl Scene {
         self.add_light(data, direction_transform(position, direction))
     }
 
+    /// Uploads a particle sprite into a texture-array slot the emitters sample
+    /// (emitters default to slot 0). Without one, particles draw invisibly.
+    pub fn particle_texture(&mut self, slot: u32, rgba: Vec<u8>, width: u32, height: u32) {
+        self.particle_textures.push(ParticleTextureUpload {
+            slot,
+            rgba_data: rgba,
+            width,
+            height,
+        });
+    }
+
     /// Adds a GPU particle emitter. The emitter's `position` field is its world
     /// origin.
     pub fn emitter(&mut self, emitter: ParticleEmitter) -> RenderEntity {
@@ -486,6 +501,12 @@ impl Scene {
     }
 
     fn compose(&mut self, width: u32, height: u32, delta_time: f32) -> RenderInputs {
+        // The particle pass spawns from each emitter's accumulated_spawn counter,
+        // which the host advances every frame by spawn_rate * dt.
+        for emitter in &mut self.state.render_particle_emitters {
+            emitter.emitter.accumulated_spawn += emitter.emitter.spawn_rate * delta_time;
+        }
+
         let aspect = width as f32 / height.max(1) as f32;
         let shading = self.effective_shading();
         let camera = CameraFrameInputs {
@@ -531,7 +552,7 @@ impl Scene {
             terrain_render: Default::default(),
             mesh_cache: std::mem::take(&mut self.mesh_cache),
             texture_cache: std::mem::take(&mut self.texture_cache),
-            pending_particle_textures: Vec::new(),
+            pending_particle_textures: std::mem::take(&mut self.particle_textures),
             ui: UiFrameInputs {
                 rects: std::mem::take(&mut self.ui_rects),
                 rect_entities: Vec::new(),
@@ -669,6 +690,8 @@ struct Host<State, Update> {
     update: Update,
     keys: HashSet<KeyCode>,
     last_frame: std::time::Instant,
+    shot: Option<std::path::PathBuf>,
+    shot_frames: u32,
 }
 
 impl<State, Update> Host<State, Update>
@@ -713,6 +736,59 @@ where
         }
         self.scene.restore(inputs);
     }
+
+    /// Renders a fixed number of frames offscreen and writes the final one to a
+    /// PNG. Used by `NS_SHOT=<path>` so a scene can be captured headless (the
+    /// GPU-driven passes need a few frames of warmup before the first draws
+    /// land, so this renders many).
+    fn capture(&mut self, renderer: &mut WgpuRenderer, window: &Window, path: &std::path::Path) {
+        let size = window.inner_size();
+        let width = size.width.max(1);
+        let height = size.height.max(1);
+        let state = self.state.as_mut().expect("setup ran");
+        for _ in 0..self.shot_frames.max(1) {
+            let delta_time = 1.0 / 60.0;
+            self.scene.time += delta_time;
+            let time = self.scene.time;
+            (self.update)(
+                &mut self.scene,
+                state,
+                &Frame {
+                    delta_time,
+                    time,
+                    width,
+                    height,
+                },
+            );
+            let mut inputs = self.scene.compose(width, height, delta_time);
+            let mut outputs = Default::default();
+            if let Err(error) = render_frame(renderer, &mut inputs, &mut outputs) {
+                eprintln!("render_frame failed: {error}");
+            }
+            self.scene.restore(inputs);
+        }
+        #[cfg(feature = "screenshot")]
+        {
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            request_screenshot_copy(renderer, Some(path.to_path_buf()), None);
+            let mut guard = 0;
+            while renderer.screenshot.pending && guard < 600 {
+                let _ = renderer
+                    .device
+                    .poll(nightshade_renderer::wgpu::PollType::wait_indefinitely());
+                poll_screenshot_readback(renderer);
+                guard += 1;
+            }
+            println!("wrote {}", path.display());
+        }
+        #[cfg(not(feature = "screenshot"))]
+        {
+            let _ = path;
+            eprintln!("NS_SHOT needs the screenshot feature: --features wgpu,screenshot");
+        }
+    }
 }
 
 impl<State, Update> ApplicationHandler for Host<State, Update>
@@ -725,6 +801,7 @@ where
         }
         let attributes = Window::default_attributes()
             .with_title(self.title.clone())
+            .with_visible(self.shot.is_none())
             .with_inner_size(winit::dpi::PhysicalSize::new(INITIAL_WIDTH, INITIAL_HEIGHT));
         let window = Arc::new(
             event_loop
@@ -756,6 +833,12 @@ where
                     sampler: SamplerSettings::DEFAULT,
                 },
             );
+        }
+
+        if let Some(path) = self.shot.clone() {
+            self.capture(&mut renderer, &window, &path);
+            event_loop.exit();
+            return;
         }
 
         self.window = Some(window);
@@ -807,6 +890,11 @@ pub fn run<State: 'static>(
     setup: impl FnOnce(&mut Scene) -> State + 'static,
     update: impl FnMut(&mut Scene, &mut State, &Frame) + 'static,
 ) {
+    let shot = std::env::var("NS_SHOT").ok().map(std::path::PathBuf::from);
+    let shot_frames = std::env::var("NS_SHOT_FRAMES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(120);
     let event_loop = EventLoop::new().expect("failed to create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut host = Host {
@@ -819,6 +907,8 @@ pub fn run<State: 'static>(
         update,
         keys: HashSet::new(),
         last_frame: std::time::Instant::now(),
+        shot,
+        shot_frames,
     };
     event_loop.run_app(&mut host).expect("event loop failed");
 }

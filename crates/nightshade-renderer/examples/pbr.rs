@@ -21,10 +21,11 @@ const GRID: i32 = 6;
 fn setup(scene: &mut Scene) {
     scene.settings.atmosphere = Atmosphere::Sky;
     scene.settings.show_sky = true;
-    scene.settings.ambient_light = [0.2, 0.24, 0.3, 0.35];
-    scene.sun(glm::vec3(-0.5, -1.0, -0.6), glm::vec3(1.0, 0.97, 0.9), 4.0);
+    scene.settings.ambient_light = [0.35, 0.4, 0.5, 0.6];
+    scene.sun(glm::vec3(-0.5, -1.0, -0.6), glm::vec3(1.0, 0.97, 0.9), 2.6);
 
     scene.mesh("sphere", create_sphere_mesh(0.45, 32));
+    let half = (GRID - 1) as f32 / 2.0;
     for row in 0..GRID {
         for col in 0..GRID {
             let metallic = row as f32 / (GRID - 1) as f32;
@@ -35,13 +36,14 @@ fn setup(scene: &mut Scene) {
                 roughness,
                 ..Material::default()
             });
-            let x = (col - GRID / 2) as f32 * 1.1;
-            let y = (row - GRID / 2) as f32 * 1.1 + 1.5;
+            let x = (col as f32 - half) * 1.1;
+            let y = (row as f32 - half) * 1.1 + 2.5;
             scene.object("sphere", material, glm::translation(&glm::vec3(x, y, 0.0)));
         }
     }
 
-    scene.camera.position = glm::vec3(0.0, 1.5, 8.5);
+    scene.camera.position = glm::vec3(0.0, 2.5, 8.5);
+    scene.camera.pitch = 0.0;
 }
 
 fn update(_scene: &mut Scene, _state: &mut (), _frame: &Frame) {}

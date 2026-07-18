@@ -9,7 +9,7 @@ export RUST_BACKTRACE := "1"
 # Fuzzy-picks an example with fzf and runs it, or runs one by name: `just run pbr`
 [windows]
 run name="":
-    if ('{{ name }}' -ne '') { cargo run -r --example {{ name }} --features wgpu,screenshot } else { $choice = (Get-ChildItem examples -Filter *.rs | ForEach-Object { $_.BaseName } | fzf --prompt 'example> '); if ($choice) { cargo run -r --example $choice --features wgpu,screenshot } }
+    if ('{{ name }}' -ne '') { cargo run -r --example {{ name }} --features wgpu,hdr,screenshot } else { $choice = (Get-ChildItem examples -Filter *.rs | ForEach-Object { $_.BaseName } | fzf --prompt 'example> '); if ($choice) { cargo run -r --example $choice --features wgpu,hdr,screenshot } }
 
 # Fuzzy-picks an example with fzf and runs it, or runs one by name: `just run pbr`
 [unix]
@@ -17,10 +17,10 @@ run name="":
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -n "{{ name }}" ]; then
-        cargo run -r --example "{{ name }}" --features wgpu,screenshot
+        cargo run -r --example "{{ name }}" --features wgpu,hdr,screenshot
     else
         choice=$(ls examples/*.rs | xargs -n1 basename | sed 's/\.rs$//' | fzf --prompt 'example> ')
-        [ -n "$choice" ] && cargo run -r --example "$choice" --features wgpu,screenshot
+        [ -n "$choice" ] && cargo run -r --example "$choice" --features wgpu,hdr,screenshot
     fi
 
 # Lists the examples
@@ -35,11 +35,11 @@ list:
 
 # Builds every example (compile gate)
 build:
-    cargo build --examples --features wgpu,screenshot
+    cargo build --examples --features wgpu,hdr,screenshot
 
 # Clippy every example with warnings denied
 lint:
-    cargo clippy --examples --features wgpu,screenshot -- -D warnings
+    cargo clippy --examples --features wgpu,hdr,screenshot -- -D warnings
 
 # Formats the examples
 format:
