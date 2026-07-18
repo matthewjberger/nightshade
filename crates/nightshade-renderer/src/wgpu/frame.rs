@@ -67,7 +67,7 @@ fn run_frame(
     }
 
     inputs.shadow_atlas = passes::shadow_depth::atlas::assign_spotlight_atlas(
-        &inputs.scene,
+        &inputs.scene_world,
         inputs.frame.active_camera_frame.as_ref(),
         inputs.view.camera_tile_rects.is_empty(),
         passes::shadow_depth::atlas::shadow_atlas_size(),
@@ -408,8 +408,8 @@ fn dispatch_window_renders(
                 inputs.scene.taa_jitter,
                 (render_width, render_height),
             );
-            inputs.scene.render_lighting =
-                Some(build_render_lighting(&inputs.scene_world, Some(camera)));
+            let lighting = build_render_lighting(&inputs.scene_world, Some(camera));
+            inputs.scene.render_lighting = Some(lighting);
             pass_sync::sync_conditional_pass_toggles(
                 renderer,
                 inputs,
@@ -533,10 +533,11 @@ fn dispatch_window_renders(
                             renderer.render_buffer_size,
                         )
                     });
-            inputs.scene.render_lighting = Some(build_render_lighting(
+            let lighting = build_render_lighting(
                 &inputs.scene_world,
                 inputs.frame.active_camera_frame.as_ref(),
-            ));
+            );
+            inputs.scene.render_lighting = Some(lighting);
             let command_buffers = render_graph_execute(
                 &mut renderer.graph,
                 &renderer.device,

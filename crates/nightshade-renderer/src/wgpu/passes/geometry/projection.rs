@@ -342,11 +342,9 @@ pub fn resolve_cookie_layers(
     >,
 ) {
     for (entity, &index) in entity_to_index {
-        let render_lights = &configs.scene.render_lights;
-        let Some(light) = render_lights
-            .entity_to_index
-            .get(entity)
-            .map(|index| &render_lights.lights[*index].light)
+        let Some(light) = configs
+            .scene_world
+            .get::<crate::config::RenderLightData>(*entity)
         else {
             continue;
         };
@@ -387,11 +385,9 @@ pub fn resolve_area_emissive_layers(
     >,
 ) {
     for (entity, &index) in entity_to_index {
-        let render_lights = &configs.scene.render_lights;
-        let Some(light) = render_lights
-            .entity_to_index
-            .get(entity)
-            .map(|index| &render_lights.lights[*index].light)
+        let Some(light) = configs
+            .scene_world
+            .get::<crate::config::RenderLightData>(*entity)
         else {
             continue;
         };
@@ -487,10 +483,21 @@ pub fn collect_point_light_shadows(
         nalgebra_glm::Mat4,
     )> = Vec::new();
 
-    for render_light in &configs.scene.render_lights.lights {
-        let entity = render_light.entity;
-        let light = &render_light.light;
-        let transform = &render_light.transform;
+    let lights: Vec<(
+        freecs::Entity,
+        crate::config::RenderLightData,
+        nalgebra_glm::Mat4,
+    )> = configs
+        .scene_world
+        .query_ref::<(
+            &crate::config::RenderLightData,
+            &crate::render_world::Transform,
+        )>()
+        .iter()
+        .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
+        .collect();
+    for (entity, light, transform) in &lights {
+        let entity = *entity;
         if matches!(light.light_type, crate::config::RenderLightType::Point) && light.cast_shadows {
             let light_pos =
                 nalgebra_glm::vec3(transform[(0, 3)], transform[(1, 3)], transform[(2, 3)]);

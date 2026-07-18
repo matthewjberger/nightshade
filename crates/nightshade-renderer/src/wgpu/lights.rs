@@ -1,6 +1,6 @@
-//! CPU-side collection of the frame's light lists from the renderer's ECS
-//! world into the packed GPU structures the mesh and shadow passes consume,
-//! plus the cascade shadow fit against the dispatching camera's frustum.
+//! CPU-side collection of the frame's light lists from [`RendererState`]
+//! into the packed GPU structures the mesh and shadow passes consume, plus
+//! the cascade shadow fit against the dispatching camera's frustum.
 
 use crate::config::{RenderAreaLightShape, RenderLightData, RenderLightType, RenderLighting};
 use crate::wgpu::passes::geometry::projection::{
@@ -24,14 +24,11 @@ pub fn collect_lights(
     let mut directional_entities = Vec::new();
     let mut local_entities = Vec::new();
 
-    // Lights are entities in the renderer's own world: a `RenderLightData` plus
-    // a `Transform`.
     let sources: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
         .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
         .iter()
         .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
         .collect();
-
     for (entity, light, transform) in &sources {
         let entity = *entity;
         {
@@ -121,12 +118,12 @@ pub fn collect_area_lights(
     let mut area_lights_data = Vec::new();
     let mut entity_to_index = std::collections::HashMap::new();
 
-    let lights: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
+    let sources: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
         .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
         .iter()
         .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
         .collect();
-    for (entity, light, transform) in &lights {
+    for (entity, light, transform) in &sources {
         if area_lights_data.len() >= max_area_lights {
             break;
         }

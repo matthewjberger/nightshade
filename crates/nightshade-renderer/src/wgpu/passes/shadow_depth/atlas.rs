@@ -97,7 +97,7 @@ pub fn shadow_atlas_size() -> u32 {
 /// cull only applies when a single camera drives the view, so tiled multi-camera
 /// layouts keep every candidate.
 pub fn assign_spotlight_atlas(
-    scene: &crate::config::RendererState,
+    scene_world: &freecs::dynamic::DynWorld,
     active_camera: Option<&CameraFrameInputs>,
     use_camera_frustum: bool,
     atlas_size: u32,
@@ -123,10 +123,16 @@ pub fn assign_spotlight_atlas(
         nalgebra_glm::Mat4,
     )> = Vec::new();
 
-    for render_light in &scene.render_lights.lights {
-        let entity = render_light.entity;
-        let light = &render_light.light;
-        let transform = &render_light.transform;
+    let lights: Vec<(Entity, crate::config::RenderLightData, nalgebra_glm::Mat4)> = scene_world
+        .query_ref::<(
+            &crate::config::RenderLightData,
+            &crate::render_world::Transform,
+        )>()
+        .iter()
+        .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
+        .collect();
+    for (entity, light, transform) in &lights {
+        let entity = *entity;
         if light.cast_shadows && light_casts_atlas_shadow(light) {
             let light_pos =
                 nalgebra_glm::vec3(transform[(0, 3)], transform[(1, 3)], transform[(2, 3)]);

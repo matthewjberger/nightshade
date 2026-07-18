@@ -182,24 +182,24 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
     ) {
         self.sync_meshes(device, queue, &configs.mesh_cache);
 
-        let directional_light =
-            configs
-                .scene
-                .render_lights
-                .lights
-                .iter()
-                .find_map(|render_light| {
-                    let light = &render_light.light;
-                    if matches!(
-                        light.light_type,
-                        crate::config::RenderLightType::Directional
-                    ) && light.cast_shadows
-                    {
-                        Some((light.clone(), render_light.transform))
-                    } else {
-                        None
-                    }
-                });
+        let directional_light = configs
+            .scene_world
+            .query_ref::<(
+                &crate::config::RenderLightData,
+                &crate::render_world::Transform,
+            )>()
+            .iter()
+            .find_map(|(_entity, (light, transform))| {
+                if matches!(
+                    light.light_type,
+                    crate::config::RenderLightType::Directional
+                ) && light.cast_shadows
+                {
+                    Some((light.clone(), transform.0))
+                } else {
+                    None
+                }
+            });
 
         if let Some((_light, light_transform)) = directional_light {
             let light_direction =
@@ -762,10 +762,21 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
             nalgebra_glm::Mat4,
         )> = Vec::new();
 
-        for render_light in &configs.scene.render_lights.lights {
-            let entity = render_light.entity;
-            let light = &render_light.light;
-            let transform = &render_light.transform;
+        let point_lights: Vec<(
+            freecs::Entity,
+            crate::config::RenderLightData,
+            nalgebra_glm::Mat4,
+        )> = configs
+            .scene_world
+            .query_ref::<(
+                &crate::config::RenderLightData,
+                &crate::render_world::Transform,
+            )>()
+            .iter()
+            .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
+            .collect();
+        for (entity, light, transform) in &point_lights {
+            let entity = *entity;
             if matches!(light.light_type, crate::config::RenderLightType::Point)
                 && light.cast_shadows
             {
@@ -955,19 +966,17 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
             return Ok(context.into_sub_graph_commands());
         }
 
-        let has_directional_shadow =
-            context
-                .configs
-                .scene
-                .render_lights
-                .lights
-                .iter()
-                .any(|render_light| {
-                    matches!(
-                        render_light.light.light_type,
-                        crate::config::RenderLightType::Directional
-                    ) && render_light.light.cast_shadows
-                });
+        let has_directional_shadow = context
+            .configs
+            .scene_world
+            .query_ref::<&crate::config::RenderLightData>()
+            .iter()
+            .any(|(_, light)| {
+                matches!(
+                    light.light_type,
+                    crate::config::RenderLightType::Directional
+                ) && light.cast_shadows
+            });
 
         let has_spotlight_shadows = !self.spotlight_shadow_slots.is_empty();
         let has_point_light_shadows = !self.point_light_shadow_slots.is_empty();
