@@ -59,7 +59,15 @@ name = "minimal"
 required-features = ["wgpu", "screenshot"]
 
 [[example]]
+name = "shapes"
+required-features = ["wgpu", "hdr"]
+
+[[example]]
 name = "pbr"
+required-features = ["wgpu", "hdr"]
+
+[[example]]
+name = "decals"
 required-features = ["wgpu", "hdr"]
 
 [[example]]

@@ -65,9 +65,9 @@ commented with the input contract.
 Beyond those two, a set of small single-capability examples each drive the
 renderer through a shared minimal host in `examples/common/driver.rs` (window,
 camera, and the per-frame `RenderInputs` composition, with no engine layer):
-`pbr`, `lights`, `shadows`, `sky`, `fog`, `transparency`, `alpha_mask`,
-`textures`, `instancing`, `morph`, `gpu_particles`, `water`, `vertex_colors`,
-`post_processing`, and `ui`. They enable the `hdr` feature for procedural
+`shapes`, `pbr`, `lights`, `shadows`, `sky`, `fog`, `transparency`,
+`alpha_mask`, `textures`, `instancing`, `morph`, `gpu_particles`, `water`,
+`vertex_colors`, `decals`, `post_processing`, and `ui`. They enable the `hdr` feature for procedural
 image-based lighting. Run one directly with
 `cargo run --example pbr --features wgpu,hdr`, or from the crate's `justfile`
 pick one with fzf:

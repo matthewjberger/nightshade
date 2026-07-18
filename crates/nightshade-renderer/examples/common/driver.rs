@@ -3,35 +3,33 @@
 //! The renderer never sees a scene graph or an ECS: every frame the host hands
 //! it one composed [`RenderInputs`] and reads back a [`FrameOutputs`]. This
 //! module is that host in miniature, with nothing from the engine layer above
-//! it. It owns a winit window, brings the renderer up, drives a fly camera, and
-//! composes the per-frame input from a small mutable [`Scene`] the example
-//! fills. Each example becomes a `setup` that populates the scene once and an
-//! `update` that changes it per frame.
+//! it. It owns a winit window, drives a fly camera, and composes the per-frame
+//! input from a small mutable [`Scene`] the example fills. Each example is a
+//! `setup` that populates the scene once and an `update` run every frame.
 //!
 //! Controls: W/A/S/D to move, Q/E down/up, arrow keys to look.
 //!
-//! Each example is its own binary that includes this module and uses a subset
-//! of its helpers, so the unused-per-example remainder is not dead across the
-//! set.
+//! Almost every helper here is a thin wrapper over renderer API
+//! (`RenderInputs::single_view`, `CameraFrameInputs::perspective`,
+//! `RenderLight::directional`, `RenderMaterials::add`, ...), so the host owns
+//! little more than the window loop and the fly camera.
 #![allow(dead_code)]
 
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use glm::{Mat4, Vec2, Vec3};
+use glm::{Mat4, Vec3};
 use nalgebra_glm as glm;
 
 use nightshade_renderer::asset_id::TextureId;
 use nightshade_renderer::config::{
-    DebugDraw, DynamicObjectState, EffectiveShading, InstancedObjectData, RenderAreaLightShape,
-    RenderLight, RenderLightData, RenderLightType, RenderMaterialEntry, RenderParticleEmitter,
-    RenderSettings, RenderWater, RenderWaterData, RendererState, ViewportUpdateMode,
+    DynamicObjectState, EffectiveShading, InstancedObjectData, RenderLight, RenderParticleEmitter,
+    RenderSettings, RenderWater, RenderWaterData, RendererState,
 };
 use nightshade_renderer::entity::RenderEntity;
 use nightshade_renderer::geometry::Mesh;
-use nightshade_renderer::material::{AlphaMode, Material, MaterialTextureIds};
+use nightshade_renderer::material::{Material, MaterialTextureIds};
 use nightshade_renderer::mesh_cache::{MeshCache, mesh_cache_insert};
-use nightshade_renderer::mesh_state::MeshRenderStateInner;
 use nightshade_renderer::particles::{ParticleEmitter, ParticleTextureUpload};
 use nightshade_renderer::render_layer::RenderLayer;
 use nightshade_renderer::texture_data::{SamplerSettings, TextureUsage};
@@ -42,14 +40,12 @@ use nightshade_renderer::wgpu::presentation::install_presentation_passes;
 #[cfg(feature = "screenshot")]
 use nightshade_renderer::wgpu::presentation::{poll_screenshot_readback, request_screenshot_copy};
 use nightshade_renderer::wgpu::render_configs::{
-    CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameInputs, LinesFrameInputs,
-    RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
+    CameraFrameInputs, CameraProjectionParams, RenderInputs, RendererCommand, ViewFrame,
 };
 use nightshade_renderer::wgpu::texture_cache::{TextureCache, texture_cache_reserve_id};
 use nightshade_renderer::wgpu::texture_uploads::{
     MaterialTextureUploadRequest, upload_material_texture,
 };
-use nightshade_renderer::wind::Wind;
 
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
@@ -220,47 +216,20 @@ impl Scene {
         mesh_cache_insert(&mut self.mesh_cache, name.to_string(), mesh);
     }
 
-    /// Adds a material and returns its id. Material id `N` is `entries[N - 1]`;
-    /// id 0 is the renderer's built-in default.
+    /// Adds a material and returns its id.
     pub fn material(&mut self, material: Material) -> u32 {
-        self.push_material(material, MaterialTextureIds::default())
+        self.state.render_materials.add(material)
     }
 
     /// Adds a material with resolved texture ids (from [`Scene::texture`]).
     pub fn textured_material(&mut self, material: Material, textures: MaterialTextureIds) -> u32 {
-        self.push_material(material, textures)
-    }
-
-    fn push_material(&mut self, material: Material, texture_ids: MaterialTextureIds) -> u32 {
-        let transparent = matches!(material.alpha_mode, AlphaMode::Blend | AlphaMode::Dither);
-        let mask = matches!(material.alpha_mode, AlphaMode::Mask);
-        let double_sided = material.double_sided;
-        self.state
-            .render_materials
-            .entries
-            .push(RenderMaterialEntry {
-                material,
-                texture_ids,
-            });
-        let id = self.state.render_materials.entries.len() as u32;
-        if transparent {
-            self.state.render_materials.transparent_ids.insert(id);
-        }
-        if mask {
-            self.state.render_materials.mask_ids.insert(id);
-        }
-        if double_sided {
-            self.state.render_materials.double_sided_ids.insert(id);
-        }
-        self.state.render_materials.generation += 1;
-        id
+        self.state.render_materials.add_textured(material, textures)
     }
 
     /// Reserves a texture id under `name` and queues its RGBA pixels for upload
-    /// once the renderer is live. Pass `color: true` for sRGB color data (base
-    /// color, emissive) and `false` for linear data (normal, roughness). The
-    /// returned id goes into a [`MaterialTextureIds`] slot or a decal's texture
-    /// name.
+    /// once the renderer is live. `color: true` for sRGB color data, `false`
+    /// for linear (normal, roughness). The id goes into a [`MaterialTextureIds`]
+    /// slot or a decal's texture name.
     pub fn texture(
         &mut self,
         name: &str,
@@ -303,10 +272,7 @@ impl Scene {
                 render_layer: RenderLayer::WORLD,
             },
         );
-        self.state
-            .render_materials
-            .entity_to_id
-            .insert(entity, material);
+        self.state.render_materials.assign(entity, material);
         self.state.render_shadow_casters.meshes.push(entity);
         entity
     }
@@ -340,10 +306,7 @@ impl Scene {
                 parent_transform: Mat4::identity(),
             },
         );
-        self.state
-            .render_materials
-            .entity_to_id
-            .insert(entity, material);
+        self.state.render_materials.assign(entity, material);
         self.state.render_shadow_casters.instanced.push(entity);
         entity
     }
@@ -369,26 +332,13 @@ impl Scene {
         }
     }
 
-    fn add_light(&mut self, data: RenderLightData, transform: Mat4) -> RenderEntity {
-        let entity = self.next_entity();
-        let index = self.state.render_lights.lights.len();
-        self.state.render_lights.lights.push(RenderLight {
-            entity,
-            light: data,
-            transform,
-        });
-        self.state
-            .render_lights
-            .entity_to_index
-            .insert(entity, index);
-        entity
-    }
-
     /// A shadow-casting directional light (the sun) pointing along `direction`.
     pub fn sun(&mut self, direction: Vec3, color: Vec3, intensity: f32) -> RenderEntity {
-        let mut data = light_data(RenderLightType::Directional, color, intensity, 0.0);
-        data.cast_shadows = true;
-        self.add_light(data, direction_transform(Vec3::zeros(), direction))
+        let entity = self.next_entity();
+        self.state.render_lights.add(RenderLight::directional(
+            entity, direction, color, intensity,
+        ));
+        entity
     }
 
     /// A point light at `position` reaching out to `range`.
@@ -399,12 +349,15 @@ impl Scene {
         intensity: f32,
         range: f32,
     ) -> RenderEntity {
-        let data = light_data(RenderLightType::Point, color, intensity, range);
-        self.add_light(data, glm::translation(&position))
+        let entity = self.next_entity();
+        self.state.render_lights.add(RenderLight::point(
+            entity, position, color, intensity, range,
+        ));
+        entity
     }
 
-    /// A spot light at `position` aimed along `direction` with a soft cone
-    /// given as `[inner, outer]` half-angles in radians.
+    /// A spot light at `position` aimed along `direction`, with `[inner, outer]`
+    /// cone half-angles in radians.
     pub fn spot_light(
         &mut self,
         position: Vec3,
@@ -414,10 +367,11 @@ impl Scene {
         range: f32,
         cone: [f32; 2],
     ) -> RenderEntity {
-        let mut data = light_data(RenderLightType::Spot, color, intensity, range);
-        data.inner_cone_angle = cone[0];
-        data.outer_cone_angle = cone[1];
-        self.add_light(data, direction_transform(position, direction))
+        let entity = self.next_entity();
+        self.state.render_lights.add(RenderLight::spot(
+            entity, position, direction, color, intensity, range, cone,
+        ));
+        entity
     }
 
     /// Uploads a particle sprite into a texture-array slot the emitters sample
@@ -455,51 +409,6 @@ impl Scene {
         self.ui_rects.push(rect);
     }
 
-    fn effective_shading(&self) -> EffectiveShading {
-        let settings = &self.settings;
-        EffectiveShading {
-            unlit_mode: settings.unlit_mode,
-            bloom_enabled: settings.bloom_enabled,
-            ssao_enabled: settings.ssao_enabled,
-            ssgi_enabled: settings.ssgi_enabled,
-            ssr_enabled: settings.ssr_enabled,
-            show_normals: false,
-            show_bounding_volumes: false,
-            show_wireframe: false,
-            selection_outline_enabled: false,
-            flat_shading_color: None,
-            shadow_depth_enabled: true,
-            lines_enabled: false,
-            color_grading: settings.color_grading,
-            depth_of_field: settings.depth_of_field,
-            bloom_intensity: settings.bloom_intensity,
-            bloom_threshold: settings.bloom_threshold,
-            bloom_knee: settings.bloom_knee,
-            bloom_filter_radius: settings.bloom_filter_radius,
-            ssao_radius: settings.ssao_radius,
-            ssao_bias: settings.ssao_bias,
-            ssao_intensity: settings.ssao_intensity,
-            ssao_sample_count: settings.ssao_sample_count,
-            ssao_visualization: false,
-            ssao_blur_depth_threshold: settings.ssao_blur_depth_threshold,
-            ssao_blur_normal_power: settings.ssao_blur_normal_power,
-            ssgi_radius: settings.ssgi_radius,
-            ssgi_intensity: settings.ssgi_intensity,
-            ssgi_max_steps: settings.ssgi_max_steps,
-            ssr_max_steps: settings.ssr_max_steps,
-            ssr_thickness: settings.ssr_thickness,
-            ssr_max_distance: settings.ssr_max_distance,
-            ssr_stride: settings.ssr_stride,
-            ssr_fade_start: settings.ssr_fade_start,
-            ssr_fade_end: settings.ssr_fade_end,
-            ssr_intensity: settings.ssr_intensity,
-            ambient_light: settings.ambient_light,
-            culling_mask: !0,
-            fog: settings.fog,
-            atmosphere: settings.atmosphere,
-        }
-    }
-
     fn compose(&mut self, width: u32, height: u32, delta_time: f32) -> RenderInputs {
         // The particle pass spawns from each emitter's accumulated_spawn counter,
         // which the host advances every frame by spawn_rate * dt.
@@ -508,87 +417,38 @@ impl Scene {
         }
 
         let aspect = width as f32 / height.max(1) as f32;
-        let shading = self.effective_shading();
-        let camera = CameraFrameInputs {
-            entity: self.camera_entity,
-            matrices: Some(CameraMatricesInputs {
-                view: self.camera.view(),
-                projection: perspective(
-                    self.camera.y_fov_rad,
-                    aspect,
-                    self.camera.z_near,
-                    self.camera.z_far,
-                ),
-                camera_position: self.camera.position,
-            }),
-            projection: CameraProjectionParams {
+        let camera = CameraFrameInputs::perspective(
+            self.camera_entity,
+            self.camera.view(),
+            self.camera.position,
+            CameraProjectionParams {
                 z_near: self.camera.z_near,
                 z_far: self.camera.z_far,
                 y_fov_rad: self.camera.y_fov_rad,
                 aspect,
                 orthographic: None,
             },
-            constrained_aspect: None,
-            effective_shading: shading,
-            update_mode: ViewportUpdateMode::Always,
-            world_transform: None,
-        };
-
-        let has_skinned = !self.state.render_skinned_meshes.is_empty();
+            EffectiveShading::from_settings(&self.settings, &Default::default()),
+        );
         let uptime = (self.time * 1000.0) as u64;
 
-        RenderInputs {
-            settings: std::mem::take(&mut self.settings),
-            debug_draw: DebugDraw::default(),
-            scene: std::mem::take(&mut self.state),
-            ibl_views: Default::default(),
-            shadow_atlas: Default::default(),
-            wind: Wind::default(),
-            #[cfg(feature = "grass")]
-            grass: Default::default(),
-            #[cfg(feature = "terrain")]
-            terrain: Default::default(),
-            #[cfg(feature = "terrain")]
-            terrain_render: Default::default(),
-            mesh_cache: std::mem::take(&mut self.mesh_cache),
-            texture_cache: std::mem::take(&mut self.texture_cache),
-            pending_particle_textures: std::mem::take(&mut self.particle_textures),
-            ui: UiFrameInputs {
-                rects: std::mem::take(&mut self.ui_rects),
-                rect_entities: Vec::new(),
-                images: Vec::new(),
-                text_meshes: Vec::new(),
-                render_slots: Default::default(),
-                background_color: None,
-            },
-            view: ViewInputs {
-                active_camera: Some(self.camera_entity),
+        let mut inputs = RenderInputs::single_view(
+            std::mem::take(&mut self.state),
+            std::mem::take(&mut self.mesh_cache),
+            std::mem::take(&mut self.texture_cache),
+            std::mem::take(&mut self.settings),
+            Default::default(),
+            ViewFrame {
+                camera,
+                viewport: (width.max(1), height.max(1)),
                 uptime_milliseconds: uptime,
                 delta_time,
-                viewport_size: Some((width.max(1), height.max(1))),
-                camera_tile_rects: Default::default(),
-                camera_tile_render_iteration: 0,
-                active_viewport_rect: None,
             },
-            world_id: 0,
-            frame: FrameInputs {
-                commands: std::mem::take(&mut self.commands),
-                cameras: Vec::new(),
-                active_camera_frame: Some(camera),
-                fallback_shading: shading,
-                pick_request: None,
-                has_skinned_meshes: has_skinned,
-                mesh_frame_state: Some(MeshRenderStateInner {
-                    full_rebuild_needed: true,
-                    ..Default::default()
-                }),
-                dirty_world_spheres: Vec::new(),
-                global_dirty_signal: true,
-                mouse_position: Vec2::zeros(),
-                force_render_cameras: HashSet::new(),
-                debug_lines: LinesFrameInputs::default(),
-            },
-        }
+        );
+        inputs.pending_particle_textures = std::mem::take(&mut self.particle_textures);
+        inputs.ui.rects = std::mem::take(&mut self.ui_rects);
+        inputs.frame.commands = std::mem::take(&mut self.commands);
+        inputs
     }
 
     fn restore(&mut self, inputs: RenderInputs) {
@@ -597,77 +457,6 @@ impl Scene {
         self.texture_cache = inputs.texture_cache;
         self.settings = inputs.settings;
     }
-}
-
-fn light_data(
-    light_type: RenderLightType,
-    color: Vec3,
-    intensity: f32,
-    range: f32,
-) -> RenderLightData {
-    RenderLightData {
-        light_type,
-        color,
-        intensity,
-        range,
-        inner_cone_angle: 0.0,
-        outer_cone_angle: std::f32::consts::FRAC_PI_4,
-        cast_shadows: false,
-        shadow_bias: 0.0015,
-        shadow_resolution: 2048,
-        shadow_distance: 100.0,
-        cookie_texture: None,
-        area_shape: RenderAreaLightShape::Rectangle,
-        area_width: 1.0,
-        area_height: 1.0,
-        area_radius: 0.5,
-        area_two_sided: false,
-        area_emissive_texture: None,
-        shadow_normal_bias: 0.02,
-        shadow_softness: 1.0,
-    }
-}
-
-/// A world transform whose forward axis (the renderer reads `-column2`) is
-/// `direction`, placed at `position`.
-fn direction_transform(position: Vec3, direction: Vec3) -> Mat4 {
-    let forward = direction.normalize();
-    let world_up = if forward.y.abs() > 0.99 {
-        Vec3::new(0.0, 0.0, 1.0)
-    } else {
-        Vec3::new(0.0, 1.0, 0.0)
-    };
-    let right = forward.cross(&world_up).normalize();
-    let up = right.cross(&forward);
-    Mat4::new(
-        right.x, up.x, -forward.x, position.x, right.y, up.y, -forward.y, position.y, right.z,
-        up.z, -forward.z, position.z, 0.0, 0.0, 0.0, 1.0,
-    )
-}
-
-/// The reverse-Z perspective matrix the passes expect (near maps to depth 1,
-/// far to depth 0). A stock `glm::perspective` will not line up with the depth
-/// the passes read.
-fn perspective(y_fov_rad: f32, aspect: f32, z_near: f32, z_far: f32) -> Mat4 {
-    let focal_length = 1.0 / (y_fov_rad / 2.0).tan();
-    Mat4::new(
-        focal_length / aspect,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        focal_length,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        z_near / (z_far - z_near),
-        z_near * z_far / (z_far - z_near),
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-    )
 }
 
 /// Per-frame context handed to the example's `update`.
@@ -786,7 +575,7 @@ where
         #[cfg(not(feature = "screenshot"))]
         {
             let _ = path;
-            eprintln!("NS_SHOT needs the screenshot feature: --features wgpu,screenshot");
+            eprintln!("NS_SHOT needs the screenshot feature: --features wgpu,hdr,screenshot");
         }
     }
 }

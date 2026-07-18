@@ -1339,6 +1339,48 @@ pub struct RenderMaterials {
     pub generation: u64,
 }
 
+impl RenderMaterials {
+    /// Adds a material and returns its id. Material id `N` is `entries[N - 1]`;
+    /// id 0 is the renderer's built-in default. Updates the transparent / mask /
+    /// double-sided id sets from the material and bumps `generation`.
+    pub fn add(&mut self, material: crate::material::Material) -> u32 {
+        self.add_textured(material, crate::material::MaterialTextureIds::default())
+    }
+
+    /// Like [`RenderMaterials::add`], with resolved texture ids.
+    pub fn add_textured(
+        &mut self,
+        material: crate::material::Material,
+        texture_ids: crate::material::MaterialTextureIds,
+    ) -> u32 {
+        use crate::material::AlphaMode;
+        let transparent = matches!(material.alpha_mode, AlphaMode::Blend | AlphaMode::Dither);
+        let mask = matches!(material.alpha_mode, AlphaMode::Mask);
+        let double_sided = material.double_sided;
+        self.entries.push(RenderMaterialEntry {
+            material,
+            texture_ids,
+        });
+        let id = self.entries.len() as u32;
+        if transparent {
+            self.transparent_ids.insert(id);
+        }
+        if mask {
+            self.mask_ids.insert(id);
+        }
+        if double_sided {
+            self.double_sided_ids.insert(id);
+        }
+        self.generation += 1;
+        id
+    }
+
+    /// Assigns an existing material id to an entity.
+    pub fn assign(&mut self, entity: crate::entity::RenderEntity, id: u32) {
+        self.entity_to_id.insert(entity, id);
+    }
+}
+
 /// One scene light with its world transform, snapshotted once per frame so the
 /// lighting, shadow, and projection passes read lights here instead of walking
 /// the ECS themselves.
@@ -1404,6 +1446,118 @@ pub struct RenderLight {
 pub struct RenderLights {
     pub lights: Vec<RenderLight>,
     pub entity_to_index: std::collections::HashMap<crate::entity::RenderEntity, usize>,
+}
+
+impl RenderLights {
+    /// Appends a light and records its index for point lookups.
+    pub fn add(&mut self, light: RenderLight) {
+        let index = self.lights.len();
+        self.entity_to_index.insert(light.entity, index);
+        self.lights.push(light);
+    }
+}
+
+fn base_light_data(
+    light_type: RenderLightType,
+    color: nalgebra_glm::Vec3,
+    intensity: f32,
+    range: f32,
+) -> RenderLightData {
+    RenderLightData {
+        light_type,
+        color,
+        intensity,
+        range,
+        inner_cone_angle: 0.0,
+        outer_cone_angle: std::f32::consts::FRAC_PI_4,
+        cast_shadows: false,
+        shadow_bias: 0.0015,
+        shadow_resolution: 2048,
+        shadow_distance: 100.0,
+        cookie_texture: None,
+        area_shape: RenderAreaLightShape::Rectangle,
+        area_width: 1.0,
+        area_height: 1.0,
+        area_radius: 0.5,
+        area_two_sided: false,
+        area_emissive_texture: None,
+        shadow_normal_bias: 0.02,
+        shadow_softness: 1.0,
+    }
+}
+
+/// A world transform whose forward axis (which the passes read as `-column2`)
+/// is `direction`, positioned at `position`.
+fn direction_transform(
+    position: nalgebra_glm::Vec3,
+    direction: nalgebra_glm::Vec3,
+) -> nalgebra_glm::Mat4 {
+    let forward = direction.normalize();
+    let world_up = if forward.y.abs() > 0.99 {
+        nalgebra_glm::vec3(0.0, 0.0, 1.0)
+    } else {
+        nalgebra_glm::vec3(0.0, 1.0, 0.0)
+    };
+    let right = forward.cross(&world_up).normalize();
+    let up = right.cross(&forward);
+    nalgebra_glm::Mat4::new(
+        right.x, up.x, -forward.x, position.x, right.y, up.y, -forward.y, position.y, right.z,
+        up.z, -forward.z, position.z, 0.0, 0.0, 0.0, 1.0,
+    )
+}
+
+impl RenderLight {
+    /// A shadow-casting directional light (a sun) pointing along `direction`.
+    pub fn directional(
+        entity: crate::entity::RenderEntity,
+        direction: nalgebra_glm::Vec3,
+        color: nalgebra_glm::Vec3,
+        intensity: f32,
+    ) -> Self {
+        let mut light = base_light_data(RenderLightType::Directional, color, intensity, 0.0);
+        light.cast_shadows = true;
+        Self {
+            entity,
+            light,
+            transform: direction_transform(nalgebra_glm::Vec3::zeros(), direction),
+        }
+    }
+
+    /// A point light at `position` reaching out to `range`.
+    pub fn point(
+        entity: crate::entity::RenderEntity,
+        position: nalgebra_glm::Vec3,
+        color: nalgebra_glm::Vec3,
+        intensity: f32,
+        range: f32,
+    ) -> Self {
+        Self {
+            entity,
+            light: base_light_data(RenderLightType::Point, color, intensity, range),
+            transform: nalgebra_glm::translation(&position),
+        }
+    }
+
+    /// A spot light at `position` aimed along `direction`, with `[inner, outer]`
+    /// cone half-angles in radians.
+    pub fn spot(
+        entity: crate::entity::RenderEntity,
+        position: nalgebra_glm::Vec3,
+        direction: nalgebra_glm::Vec3,
+        color: nalgebra_glm::Vec3,
+        intensity: f32,
+        range: f32,
+        cone: [f32; 2],
+    ) -> Self {
+        let mut light = base_light_data(RenderLightType::Spot, color, intensity, range);
+        light.inner_cone_angle = cone[0];
+        light.outer_cone_angle = cone[1];
+        Self {
+            entity,
+            light,
+            transform: direction_transform(position, direction),
+        }
+    }
 }
 
 /// A projected decal's render parameters snapshotted once per frame from the
@@ -2144,6 +2298,86 @@ pub struct EffectiveShading {
     /// `Graphics::atmosphere` and can be overridden per camera via
     /// `CameraEnvironment`.
     pub atmosphere: Atmosphere,
+}
+
+impl EffectiveShading {
+    /// Derives the per-camera shading the render passes actually read from the
+    /// user-facing [`RenderSettings`] and [`DebugDraw`]. A host sets
+    /// `RenderSettings` and lets the renderer resolve this, rather than filling
+    /// every field by hand.
+    pub fn from_settings(render: &RenderSettings, debug: &DebugDraw) -> Self {
+        Self {
+            unlit_mode: render.unlit_mode,
+            bloom_enabled: render.bloom_enabled,
+            ssao_enabled: render.ssao_enabled,
+            ssgi_enabled: render.ssgi_enabled,
+            ssr_enabled: render.ssr_enabled,
+            show_normals: debug.show_normals,
+            show_bounding_volumes: debug.show_bounding_volumes,
+            show_wireframe: false,
+            selection_outline_enabled: false,
+            flat_shading_color: None,
+            shadow_depth_enabled: true,
+            lines_enabled: debug.show_normals || debug.show_bounding_volumes,
+            color_grading: render.color_grading,
+            depth_of_field: render.depth_of_field,
+            bloom_intensity: render.bloom_intensity,
+            bloom_threshold: render.bloom_threshold,
+            bloom_knee: render.bloom_knee,
+            bloom_filter_radius: render.bloom_filter_radius,
+            ssao_radius: render.ssao_radius,
+            ssao_bias: render.ssao_bias,
+            ssao_intensity: render.ssao_intensity,
+            ssao_sample_count: render.ssao_sample_count,
+            ssao_visualization: debug.ssao_visualization,
+            ssao_blur_depth_threshold: render.ssao_blur_depth_threshold,
+            ssao_blur_normal_power: render.ssao_blur_normal_power,
+            ssgi_radius: render.ssgi_radius,
+            ssgi_intensity: render.ssgi_intensity,
+            ssgi_max_steps: render.ssgi_max_steps,
+            ssr_max_steps: render.ssr_max_steps,
+            ssr_thickness: render.ssr_thickness,
+            ssr_max_distance: render.ssr_max_distance,
+            ssr_stride: render.ssr_stride,
+            ssr_fade_start: render.ssr_fade_start,
+            ssr_fade_end: render.ssr_fade_end,
+            ssr_intensity: render.ssr_intensity,
+            ambient_light: render.ambient_light,
+            culling_mask: !0,
+            fog: render.fog,
+            atmosphere: render.atmosphere,
+        }
+    }
+}
+
+/// The reverse-Z perspective matrix the render passes expect (near maps to
+/// depth 1, far to depth 0). Use this instead of a stock perspective, whose
+/// depth convention will not line up with the depth the passes read.
+pub fn reverse_z_perspective(
+    y_fov_rad: f32,
+    aspect: f32,
+    z_near: f32,
+    z_far: f32,
+) -> nalgebra_glm::Mat4 {
+    let focal_length = 1.0 / (y_fov_rad / 2.0).tan();
+    nalgebra_glm::Mat4::new(
+        focal_length / aspect,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        focal_length,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        z_near / (z_far - z_near),
+        z_near * z_far / (z_far - z_near),
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+    )
 }
 
 impl Default for EffectiveShading {

@@ -202,3 +202,121 @@ pub struct RenderInputs {
     #[cfg(feature = "terrain")]
     pub terrain_render: crate::terrain_config::TerrainRenderState,
 }
+
+impl CameraFrameInputs {
+    /// Builds a perspective camera for one view, computing the reverse-Z
+    /// projection the passes expect from `projection`. Resolve
+    /// `effective_shading` with [`crate::config::EffectiveShading::from_settings`].
+    pub fn perspective(
+        entity: RenderEntity,
+        view: nalgebra_glm::Mat4,
+        position: nalgebra_glm::Vec3,
+        projection: CameraProjectionParams,
+        effective_shading: crate::config::EffectiveShading,
+    ) -> Self {
+        Self {
+            entity,
+            matrices: Some(CameraMatricesInputs {
+                view,
+                projection: crate::config::reverse_z_perspective(
+                    projection.y_fov_rad,
+                    projection.aspect,
+                    projection.z_near,
+                    projection.z_far,
+                ),
+                camera_position: position,
+            }),
+            projection,
+            constrained_aspect: None,
+            effective_shading,
+            update_mode: crate::config::ViewportUpdateMode::Always,
+            world_transform: None,
+        }
+    }
+}
+
+/// The camera, viewport, and timing for one single-view frame.
+pub struct ViewFrame {
+    pub camera: CameraFrameInputs,
+    pub viewport: (u32, u32),
+    pub uptime_milliseconds: u64,
+    pub delta_time: f32,
+}
+
+impl RenderInputs {
+    /// Assembles the inputs for a single-view frame from the host-owned state,
+    /// filling the renderer's bookkeeping fields with defaults that rebuild the
+    /// scene every frame. This is the simplest correct path for a host not
+    /// tracking incremental deltas. The returned struct's public fields (`ui`,
+    /// `pending_particle_textures`, `frame.commands`) can be set afterward.
+    pub fn single_view(
+        scene: crate::config::RendererState,
+        mesh_cache: crate::mesh_cache::MeshCache,
+        texture_cache: crate::wgpu::texture_cache::TextureCache,
+        settings: crate::config::RenderSettings,
+        debug_draw: crate::config::DebugDraw,
+        frame: ViewFrame,
+    ) -> Self {
+        let ViewFrame {
+            camera,
+            viewport,
+            uptime_milliseconds,
+            delta_time,
+        } = frame;
+        let shading = camera.effective_shading;
+        let active_camera = camera.entity;
+        let has_skinned_meshes = !scene.render_skinned_meshes.is_empty();
+        Self {
+            settings,
+            debug_draw,
+            scene,
+            ibl_views: Default::default(),
+            shadow_atlas: Default::default(),
+            wind: crate::wind::Wind::default(),
+            mesh_cache,
+            texture_cache,
+            pending_particle_textures: Vec::new(),
+            ui: UiFrameInputs {
+                rects: Vec::new(),
+                rect_entities: Vec::new(),
+                images: Vec::new(),
+                text_meshes: Vec::new(),
+                render_slots: Default::default(),
+                background_color: None,
+            },
+            view: ViewInputs {
+                active_camera: Some(active_camera),
+                uptime_milliseconds,
+                delta_time,
+                viewport_size: Some(viewport),
+                camera_tile_rects: HashMap::new(),
+                camera_tile_render_iteration: 0,
+                active_viewport_rect: None,
+            },
+            world_id: 0,
+            frame: FrameInputs {
+                commands: Vec::new(),
+                cameras: Vec::new(),
+                active_camera_frame: Some(camera),
+                fallback_shading: shading,
+                pick_request: None,
+                has_skinned_meshes,
+                mesh_frame_state: Some(crate::mesh_state::MeshRenderStateInner {
+                    full_rebuild_needed: true,
+                    ..Default::default()
+                }),
+                dirty_world_spheres: Vec::new(),
+                global_dirty_signal: true,
+                mouse_position: nalgebra_glm::Vec2::zeros(),
+                force_render_cameras: std::collections::HashSet::new(),
+                debug_lines: LinesFrameInputs::default(),
+            },
+            #[cfg(feature = "grass")]
+            grass: Default::default(),
+            #[cfg(feature = "terrain")]
+            terrain: Default::default(),
+            #[cfg(feature = "terrain")]
+            terrain_render: Default::default(),
+        }
+    }
+}
