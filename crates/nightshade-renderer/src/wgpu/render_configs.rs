@@ -166,9 +166,9 @@ pub struct FrameOutputs {
 /// Everything the renderer consumes for one frame.
 pub struct RenderInputs {
     /// The scene as the renderer's own ECS world (see [`crate::render_world`]).
-    /// The renderable geometry lives here as components; a host spawns into it
-    /// or composes it as a member world. Empty means fall back to the legacy
-    /// per-entity maps on `scene` while that path is migrated.
+    /// Meshes, instances, lights, decals, water, and emitters live here as
+    /// components; a host spawns into it or composes it as a member world.
+    /// Skinned meshes and the material table stay on [`Self::scene`].
     pub scene_world: freecs::dynamic::DynWorld,
     /// User-facing render settings: post-processing, atmosphere, layers.
     pub settings: crate::config::RenderSettings,

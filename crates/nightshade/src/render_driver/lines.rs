@@ -101,10 +101,13 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
         push_mesh_wireframe_edges(line_data, entity.id, &global_transform.0, mesh);
     }
 
-    for (entity, instanced) in &world
-        .res::<crate::render::config::RendererState>()
-        .render_instanced_objects
-    {
+    let instanced_objects: Vec<(freecs::Entity, crate::render::config::InstancedObjectData)> =
+        world.ecs.worlds[crate::ecs::world::RENDER]
+            .query_ref::<&crate::render::config::InstancedObjectData>()
+            .iter()
+            .map(|(entity, data)| (entity, data.clone()))
+            .collect();
+    for (entity, instanced) in &instanced_objects {
         let entity = *entity;
         let mesh = {
             let mut found_mesh = None;

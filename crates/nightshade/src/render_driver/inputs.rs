@@ -5,7 +5,6 @@ use crate::render::wgpu::render_configs::{
     CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
     LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
 };
-use crate::render_driver::{render_entity, scene_entity};
 
 fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
     let matrices =
@@ -65,7 +64,7 @@ fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
         environment.as_ref(),
     );
     CameraFrameInputs {
-        entity: render_entity(entity),
+        entity,
         matrices,
         projection,
         constrained_aspect: world
@@ -257,7 +256,6 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .force_render_cameras
         .iter()
         .copied()
-        .map(render_entity)
         .collect();
 
     #[cfg(feature = "grass")]
@@ -280,7 +278,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .res::<crate::ecs::window::resources::Window>()
         .camera_tile_rects
         .iter()
-        .map(|(entity, rect)| (render_entity(*entity), *rect))
+        .map(|(entity, rect)| (*entity, *rect))
         .collect();
     let window_camera_tile_render_iteration = world
         .res::<crate::ecs::window::resources::Window>()
@@ -322,7 +320,6 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             rects: std::mem::take(&mut retained.frame.rects),
             rect_entities: std::mem::take(&mut retained.frame.rect_entities)
                 .into_iter()
-                .map(|entity| entity.map(render_entity))
                 .collect(),
             images: std::mem::take(&mut retained.frame.ui_images),
             text_meshes: std::mem::take(&mut retained.frame.text_meshes),
@@ -330,7 +327,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             background_color: retained.background_color,
         },
         view: ViewInputs {
-            active_camera: active_camera.map(render_entity),
+            active_camera,
             uptime_milliseconds: window_uptime_milliseconds,
             delta_time: window_delta_time,
             viewport_size: window_cached_viewport_size,
@@ -382,7 +379,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         world
             .res_mut::<crate::ecs::window::resources::Window>()
             .force_render_cameras
-            .remove(&scene_entity(entity));
+            .remove(&entity);
     }
     let mut pending = inputs.pending_particle_textures;
     pending.extend(std::mem::take(
@@ -405,12 +402,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = inputs.texture_cache;
     let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     retained.frame.rects = inputs.ui.rects;
-    retained.frame.rect_entities = inputs
-        .ui
-        .rect_entities
-        .into_iter()
-        .map(|entity| entity.map(scene_entity))
-        .collect();
+    retained.frame.rect_entities = inputs.ui.rect_entities.into_iter().collect();
     retained.frame.ui_images = inputs.ui.images;
     retained.frame.text_meshes = inputs.ui.text_meshes;
     retained.render_slots = inputs.ui.render_slots;

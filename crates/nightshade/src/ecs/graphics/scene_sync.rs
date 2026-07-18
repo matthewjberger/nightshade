@@ -8,7 +8,6 @@
 
 use crate::ecs::world::{CORE, RENDER, World};
 use crate::render::render_world;
-use crate::render_driver::{render_entity, scene_entity};
 use std::collections::{HashMap, HashSet};
 
 /// Writes an entity's per-object render components (everything but its mesh
@@ -219,7 +218,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .materials_dirty = true;
             world
                 .res_mut::<crate::render::mesh_state::MeshRenderState>()
-                .mark_material_dirty(render_entity(entity));
+                .mark_material_dirty(entity);
         }
     }
 
@@ -285,7 +284,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         for entity in material_ref_changed {
             world
                 .res_mut::<crate::render::mesh_state::MeshRenderState>()
-                .mark_material_dirty(render_entity(entity));
+                .mark_material_dirty(entity);
         }
     }
     world
@@ -340,14 +339,12 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         .inner
         .transform_dirty
     {
-        let mask = world.ecs.worlds[CORE]
-            .component_mask(scene_entity(entity))
-            .unwrap_or(0);
+        let mask = world.ecs.worlds[CORE].component_mask(entity).unwrap_or(0);
         if mask & crate::ecs::world::RENDER_MESH != 0 {
-            dirt.object_refresh.insert(scene_entity(entity));
+            dirt.object_refresh.insert(entity);
         }
         if mask & crate::ecs::world::INSTANCED_MESH != 0 {
-            dirt.instanced_refresh.insert(scene_entity(entity));
+            dirt.instanced_refresh.insert(entity);
         }
         if mask & crate::ecs::world::SKIN != 0 {
             let previous_flipped = world
@@ -358,7 +355,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
                 });
             let current_flipped = world
-                .get::<crate::ecs::transform::components::GlobalTransform>(scene_entity(entity))
+                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
                 .map(|global| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&global.0)) < 0.0
                 });
@@ -604,13 +601,9 @@ fn sync_objects_full(world: &mut World) {
         state.render_dynamic_objects.clear();
         state.render_object_meshes.clear();
         for (entity, object_state, name) in skinned_states {
-            state
-                .render_dynamic_objects
-                .insert(render_entity(entity), object_state);
+            state.render_dynamic_objects.insert(entity, object_state);
             if let Some(name) = name {
-                state
-                    .render_object_meshes
-                    .insert(render_entity(entity), name);
+                state.render_object_meshes.insert(entity, name);
             }
         }
     }
@@ -618,11 +611,7 @@ fn sync_objects_full(world: &mut World) {
         .res_mut::<crate::render::config::RendererState>()
         .render_bounds;
     render_bounds.clear();
-    render_bounds.extend(
-        bounds
-            .into_iter()
-            .map(|(entity, entity_bounds)| (render_entity(entity), entity_bounds)),
-    );
+    render_bounds.extend(bounds);
 }
 
 fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
@@ -638,13 +627,13 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
             world
                 .res_mut::<crate::render::config::RendererState>()
                 .render_dynamic_objects
-                .insert(render_entity(entity), state);
+                .insert(entity, state);
         } else if !instanced {
             clear_render_row(world, entity);
             world
                 .res_mut::<crate::render::config::RendererState>()
                 .render_dynamic_objects
-                .remove(&render_entity(entity));
+                .remove(&entity);
         }
     }
     for &entity in &dirt.mesh_name_refresh {
@@ -659,14 +648,14 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                 world
                     .res_mut::<crate::render::config::RendererState>()
                     .render_object_meshes
-                    .insert(render_entity(entity), name);
+                    .insert(entity, name);
             }
             None => {
                 world.ecs.worlds[RENDER].remove::<render_world::MeshName>(entity);
                 world
                     .res_mut::<crate::render::config::RendererState>()
                     .render_object_meshes
-                    .remove(&render_entity(entity));
+                    .remove(&entity);
             }
         }
     }
@@ -697,13 +686,13 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                 world
                     .res_mut::<crate::render::config::RendererState>()
                     .render_bounds
-                    .insert(render_entity(entity), bounds);
+                    .insert(entity, bounds);
             }
             None => {
                 world
                     .res_mut::<crate::render::config::RendererState>()
                     .render_bounds
-                    .remove(&render_entity(entity));
+                    .remove(&entity);
             }
         }
     }
@@ -711,7 +700,7 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
         if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::RENDER_MESH) {
             world
                 .res_mut::<crate::render::mesh_state::MeshRenderState>()
-                .mark_object_state_dirty(render_entity(entity));
+                .mark_object_state_dirty(entity);
         }
     }
 }
@@ -736,10 +725,10 @@ fn sync_entity_lists(world: &mut World) {
     world
         .res_mut::<crate::render::config::RendererState>()
         .render_shadow_casters
-        .skinned = shadow_skinned.into_iter().map(render_entity).collect();
+        .skinned = shadow_skinned.into_iter().collect();
     world
         .res_mut::<crate::render::config::RendererState>()
-        .render_skinned_meshes = skinned_meshes.into_iter().map(render_entity).collect();
+        .render_skinned_meshes = skinned_meshes.into_iter().collect();
 }
 
 fn sync_lights(world: &mut World) {
@@ -1023,7 +1012,7 @@ fn sync_cloth(world: &mut World) {
     {
         {
             cloth_bodies.push(crate::render::config::RenderCloth {
-                entity: render_entity(entity),
+                entity,
                 cloth: crate::render::config::RenderClothData {
                     columns: cloth.columns,
                     rows: cloth.rows,

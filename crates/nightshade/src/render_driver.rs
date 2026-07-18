@@ -8,12 +8,10 @@
 
 #[cfg(feature = "egui")]
 mod egui;
-mod entity;
 mod extract;
 mod frame;
 mod inputs;
 mod lines;
 
-pub use entity::*;
 pub use frame::*;
 pub use inputs::*;

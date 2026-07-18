@@ -7,7 +7,6 @@ use nalgebra_glm::Mat4;
 use std::collections::HashMap;
 
 use crate::render::skinning::{GpuSkinData, SkinningCache};
-use crate::render_driver::{render_entity, scene_entity};
 
 /// Whether the live skinned entity set no longer matches the cache's recorded
 /// set, requiring a static-data rebuild.
@@ -48,7 +47,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
         for &joint_entity in &skin.joints {
             bone_entity_to_index.entry(joint_entity).or_insert_with(|| {
                 let index = bone_index;
-                joint_entities.push(render_entity(joint_entity));
+                joint_entities.push(joint_entity);
                 bone_index += 1;
                 index
             });
@@ -120,7 +119,7 @@ pub fn skinning_cache_rebuild_static_data(cache: &mut SkinningCache, world: &Wor
                 index
             };
 
-            entity_skin_indices.insert(render_entity(entity), skin_index);
+            entity_skin_indices.insert(entity, skin_index);
         }
     }
 
@@ -142,7 +141,7 @@ pub fn skinning_cache_collect_bone_transforms_into(
 
     for (index, &joint_entity) in cache.joint_entities.iter().enumerate() {
         let transform = world
-            .get::<crate::ecs::transform::components::GlobalTransform>(scene_entity(joint_entity))
+            .get::<crate::ecs::transform::components::GlobalTransform>(joint_entity)
             .map(|joint_global_transform| joint_global_transform.0)
             .unwrap_or_else(Mat4::identity);
         if bone_transforms[index] != transform {

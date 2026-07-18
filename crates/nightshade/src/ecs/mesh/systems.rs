@@ -1,6 +1,5 @@
 use crate::ecs::world::CORE;
 use crate::ecs::world::{GLOBAL_TRANSFORM, INSTANCED_MESH, World};
-use crate::render_driver::render_entity;
 
 pub fn update_instanced_mesh_caches_system(world: &mut World) {
     let _span = tracing::info_span!("instanced_meshes").entered();
@@ -49,12 +48,12 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
     for entity in transform_dirty.drain(..) {
         world
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
-            .mark_transform_dirty(render_entity(entity));
+            .mark_transform_dirty(entity);
     }
     for entity in local_matrices_dirty.drain(..) {
         world
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
-            .mark_instanced_local_matrices_dirty(render_entity(entity));
+            .mark_instanced_local_matrices_dirty(entity);
     }
     if needs_compute_dispatch {
         world

@@ -913,7 +913,6 @@ pub mod prelude {
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
         texture_cache_release_entity,
     };
-    pub use crate::render_driver::{render_entity, scene_entity};
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]

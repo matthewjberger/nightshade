@@ -206,7 +206,7 @@ pub fn register_material(
     world.set(entity, MaterialRef::new(name));
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 }
 
 #[cfg(feature = "physics")]
@@ -294,12 +294,12 @@ fn reload_material_command(
     for entity in referencing_entities {
         texture_cache_acquire(
             world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-            TextureOwner::EntityMaterial(render_entity(entity)),
+            TextureOwner::EntityMaterial(entity),
             new_textures.clone(),
         );
         world
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
-            .mark_material_dirty(render_entity(entity));
+            .mark_material_dirty(entity);
     }
 }
 
@@ -337,7 +337,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
             }
             world
                 .res_mut::<crate::render::mesh_state::MeshRenderState>()
-                .mark_entity_removed(render_entity(entity));
+                .mark_entity_removed(entity);
         }
 
         if let Some(instanced_mesh) =
@@ -366,7 +366,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 
         texture_cache_release_entity(
             world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-            render_entity(entity),
+            entity,
         );
 
         if let Some(material_ref) =
@@ -591,7 +591,7 @@ pub fn spawn_mesh_at(
     ));
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 
     entity
 }
@@ -766,7 +766,7 @@ pub fn set_material_with_textures(
     let texture_names: Vec<String> = material.texture_names().map(str::to_string).collect();
     texture_cache_acquire(
         world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-        TextureOwner::EntityMaterial(render_entity(entity)),
+        TextureOwner::EntityMaterial(entity),
         texture_names,
     );
 
@@ -780,7 +780,7 @@ pub fn set_material_with_textures(
         );
         world
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
-            .mark_material_dirty(render_entity(entity));
+            .mark_material_dirty(entity);
     } else {
         let material_name = format!("TexturedMaterial_{}", entity.id);
         material_registry_insert(
@@ -1092,7 +1092,7 @@ pub fn spawn_instanced_mesh_with_material(
     .unwrap_or_default();
     texture_cache_acquire(
         world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
-        TextureOwner::EntityMaterial(render_entity(entity)),
+        TextureOwner::EntityMaterial(entity),
         texture_names,
     );
 

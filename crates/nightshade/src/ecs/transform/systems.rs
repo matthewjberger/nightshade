@@ -166,7 +166,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     for entity in render_dirty_entities.drain(..) {
         world
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
-            .mark_transform_dirty(render_entity(entity));
+            .mark_transform_dirty(entity);
     }
 
     seen.clear();

@@ -7,7 +7,6 @@
 use crate::app::{App, Plugin};
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
-use crate::render_driver::render_entity;
 
 /// Registers the scene, material, animation, and skinning sync systems
 /// into the render stage, after every system that writes render-facing
@@ -260,12 +259,6 @@ pub fn render_sync_materials_system(world: &mut World) {
     let table = &mut world
         .res_mut::<crate::render::config::RendererState>()
         .render_materials;
-    table.entity_to_id = entity_to_id
-        .into_iter()
-        .map(|(entity, id)| (render_entity(entity), id))
-        .collect();
-    table.entity_to_name = entity_to_name
-        .into_iter()
-        .map(|(entity, name)| (render_entity(entity), name))
-        .collect();
+    table.entity_to_id = entity_to_id;
+    table.entity_to_name = entity_to_name;
 }

@@ -1439,24 +1439,6 @@ pub struct RenderLight {
     pub transform: nalgebra_glm::Mat4,
 }
 
-/// The scene's lights collected once per frame in query order, with an
-/// entity-to-index map for point lookups. Passes that shade, shadow, or project
-/// lights read this instead of `query_entities(LIGHT | GLOBAL_TRANSFORM)`.
-#[derive(Clone, Default)]
-pub struct RenderLights {
-    pub lights: Vec<RenderLight>,
-    pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
-}
-
-impl RenderLights {
-    /// Appends a light and records its index for point lookups.
-    pub fn add(&mut self, light: RenderLight) {
-        let index = self.lights.len();
-        self.entity_to_index.insert(light.entity, index);
-        self.lights.push(light);
-    }
-}
-
 fn base_light_data(
     light_type: RenderLightType,
     color: nalgebra_glm::Vec3,
@@ -1576,16 +1558,6 @@ pub struct RenderDecalData {
     pub fade_end: f32,
 }
 
-/// One projected decal with its world transform and visibility, snapshotted once
-/// per frame so the decal pass reads it here instead of walking the ECS.
-#[derive(Clone)]
-pub struct RenderDecal {
-    pub entity: freecs::Entity,
-    pub decal: RenderDecalData,
-    pub transform: nalgebra_glm::Mat4,
-    pub visible: bool,
-}
-
 /// A water body's render parameters snapshotted once per frame from the `Water`
 /// component, so the water pass reads them here instead of that component.
 #[derive(Clone, Debug, Default)]
@@ -1661,22 +1633,11 @@ pub struct RenderCloth {
     pub mesh_name: String,
 }
 
-/// One particle emitter snapshotted once per frame so the particle pass reads it
-/// here instead of the `ParticleEmitter` component. Every emitter is captured in
-/// query order, disabled ones included, so an emitter's index is stable.
-#[derive(Clone)]
-pub struct RenderParticleEmitter {
-    pub entity: freecs::Entity,
-    pub emitter: crate::particles::ParticleEmitter,
-}
-
-/// The shadow-casting entities collected once per frame in query order, split by
-/// draw kind, so the shadow pass enumerates occluders from here instead of
-/// walking the ECS for each `CASTS_SHADOW` archetype.
+/// The skinned shadow-casting entities collected once per frame, so the shadow
+/// pass enumerates skinned occluders from here. Static and instanced casters
+/// carry the [`crate::render_world::ShadowCaster`] tag in the scene world.
 #[derive(Clone, Default)]
 pub struct RenderShadowCasters {
-    pub meshes: Vec<freecs::Entity>,
-    pub instanced: Vec<freecs::Entity>,
     pub skinned: Vec<freecs::Entity>,
 }
 
@@ -1794,30 +1755,17 @@ pub struct RendererState {
     /// another camera draws that cut from elsewhere. `None` unless something asks
     /// for it, so an ordinary frame carries no extra view.
     pub frozen_cull_view: Option<RenderView>,
-    /// Per-entity dynamic render state (visibility and morph weights) extracted
-    /// once per frame, so the mesh pass reads it here instead of scanning the
-    /// ECS per tracked object. A step toward world-free geometry passes.
+    /// Per-entity dynamic render state (transform, visibility, morph weights) for
+    /// skinned meshes, extracted once per frame so the skinned pass reads it here
+    /// instead of scanning the ECS. Static meshes live in the scene world.
     pub render_dynamic_objects: std::collections::HashMap<freecs::Entity, DynamicObjectState>,
     /// Scene materials resolved once per frame by the engine. Render passes read
     /// materials here instead of walking the material registry themselves.
     pub render_materials: RenderMaterials,
-    /// Per-entity mesh name, extracted once per frame so the mesh pass resolves
-    /// geometry from its own registry without reading the `RenderMesh` component.
+    /// Per-entity mesh name for skinned meshes, extracted once per frame so the
+    /// skinned pass resolves geometry from its own registry without reading the
+    /// `RenderMesh` component. Static meshes live in the scene world instead.
     pub render_object_meshes: std::collections::HashMap<freecs::Entity, String>,
-    /// Per-entity expanded instanced-mesh data, extracted once per frame.
-    pub render_instanced_objects: std::collections::HashMap<freecs::Entity, InstancedObjectData>,
-    /// The scene's lights collected once per frame in query order. The lighting,
-    /// shadow, and projection passes read lights here instead of scanning the ECS.
-    pub render_lights: RenderLights,
-    /// The scene's projected decals collected once per frame in query order. The
-    /// decal pass reads this instead of walking `DECAL | GLOBAL_TRANSFORM`.
-    pub render_decals: Vec<RenderDecal>,
-    /// The scene's particle emitters collected once per frame in query order. The
-    /// particle pass reads this instead of walking `PARTICLE_EMITTER`.
-    pub render_particle_emitters: Vec<RenderParticleEmitter>,
-    /// The scene's enabled water bodies collected once per frame in query order,
-    /// so the water pass reads them here instead of walking the ECS.
-    pub render_water: Vec<RenderWater>,
     /// The scene's cloth bodies collected once per frame in query order, so the
     /// cloth pass reads them here instead of walking the ECS.
     pub render_cloth: Vec<RenderCloth>,
@@ -2181,11 +2129,6 @@ impl Default for RendererState {
             render_dynamic_objects: std::collections::HashMap::new(),
             render_materials: RenderMaterials::default(),
             render_object_meshes: std::collections::HashMap::new(),
-            render_instanced_objects: std::collections::HashMap::new(),
-            render_lights: RenderLights::default(),
-            render_decals: Vec::new(),
-            render_particle_emitters: Vec::new(),
-            render_water: Vec::new(),
             render_cloth: Vec::new(),
             #[cfg(feature = "meshlet")]
             meshlets: MeshletInstances::default(),

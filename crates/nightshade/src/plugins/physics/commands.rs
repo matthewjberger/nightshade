@@ -117,7 +117,7 @@ pub fn spawn_static_physics_cube_with_material(
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 
     entity
 }
@@ -212,7 +212,7 @@ pub fn spawn_dynamic_physics_sphere_with_material(
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 
     entity
 }
@@ -306,7 +306,7 @@ pub fn spawn_dynamic_physics_cube_with_material(
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 
     entity
 }
@@ -401,7 +401,7 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
-        .mark_entity_added(render_entity(entity));
+        .mark_entity_added(entity);
 
     entity
 }
