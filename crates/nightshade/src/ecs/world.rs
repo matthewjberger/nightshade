@@ -449,6 +449,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::ui::UserInterface::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
         ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
+        ecs.insert_resource(crate::ecs::mesh::components::InstancedMeshMatrices::default());
         ecs.insert_resource(nightshade_ecs::dynamic::HierarchyIndex::default());
         ecs.insert_resource(crate::schedule::RetainedUiSchedule::default());
         ecs.insert_resource(crate::render::wgpu::texture_cache::TextureCache::default());

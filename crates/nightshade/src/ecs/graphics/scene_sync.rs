@@ -436,23 +436,17 @@ fn refill_instanced_object_data(
     else {
         return false;
     };
+    let matrices = world.res::<crate::ecs::mesh::components::InstancedMeshMatrices>();
+    let model_matrices = matrices.model_matrices(entity);
     data.world_models.clear();
-    data.world_models.extend(
-        instanced_mesh
-            .cached_model_matrices()
-            .iter()
-            .map(|matrix| matrix.model),
-    );
+    data.world_models
+        .extend(model_matrices.iter().map(|matrix| matrix.model));
     data.world_normals.clear();
-    data.world_normals.extend(
-        instanced_mesh
-            .cached_model_matrices()
-            .iter()
-            .map(|matrix| matrix.normal_matrix),
-    );
+    data.world_normals
+        .extend(model_matrices.iter().map(|matrix| matrix.normal_matrix));
     data.local_matrices.clear();
     data.local_matrices
-        .extend_from_slice(instanced_mesh.cached_local_matrices());
+        .extend_from_slice(matrices.local_matrices(entity));
     data.custom_tints.clear();
     data.custom_tints.extend(
         instanced_mesh
@@ -482,49 +476,43 @@ fn instanced_object_data(
     world: &World,
     entity: crate::ecs::world::Entity,
 ) -> Option<crate::render::config::InstancedObjectData> {
-    world
-        .get::<crate::ecs::mesh::components::InstancedMesh>(entity)
-        .map(|instanced_mesh| {
-            let world_models = instanced_mesh
-                .cached_model_matrices()
-                .iter()
-                .map(|matrix| matrix.model)
-                .collect();
-            let world_normals = instanced_mesh
-                .cached_model_matrices()
-                .iter()
-                .map(|matrix| matrix.normal_matrix)
-                .collect();
-            let local_matrices = instanced_mesh.cached_local_matrices().to_vec();
-            let custom_tints = instanced_mesh
-                .custom_data_slice()
-                .iter()
-                .map(|data| data.tint)
-                .collect();
-            let render_layer = world
-                .get::<crate::render::render_layer::RenderLayer>(entity)
-                .map(|layer| layer.0)
-                .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
-            let visible = u32::from(
-                world
-                    .get::<crate::ecs::primitives::Visibility>(entity)
-                    .is_none_or(|v| v.visible),
-            );
-            let parent_transform = world
-                .get::<crate::ecs::transform::components::GlobalTransform>(entity)
-                .map(|global| global.0)
-                .unwrap_or_else(nalgebra_glm::Mat4::identity);
-            crate::render::config::InstancedObjectData {
-                world_models,
-                world_normals,
-                local_matrices,
-                custom_tints,
-                mesh_name: instanced_mesh.mesh_name.clone(),
-                render_layer,
-                visible,
-                parent_transform,
-            }
-        })
+    let instanced_mesh = world.get::<crate::ecs::mesh::components::InstancedMesh>(entity)?;
+    let matrices = world.res::<crate::ecs::mesh::components::InstancedMeshMatrices>();
+    let model_matrices = matrices.model_matrices(entity);
+    let world_models = model_matrices.iter().map(|matrix| matrix.model).collect();
+    let world_normals = model_matrices
+        .iter()
+        .map(|matrix| matrix.normal_matrix)
+        .collect();
+    let local_matrices = matrices.local_matrices(entity).to_vec();
+    let custom_tints = instanced_mesh
+        .custom_data_slice()
+        .iter()
+        .map(|data| data.tint)
+        .collect();
+    let render_layer = world
+        .get::<crate::render::render_layer::RenderLayer>(entity)
+        .map(|layer| layer.0)
+        .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
+    let visible = u32::from(
+        world
+            .get::<crate::ecs::primitives::Visibility>(entity)
+            .is_none_or(|v| v.visible),
+    );
+    let parent_transform = world
+        .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+        .map(|global| global.0)
+        .unwrap_or_else(nalgebra_glm::Mat4::identity);
+    Some(crate::render::config::InstancedObjectData {
+        world_models,
+        world_normals,
+        local_matrices,
+        custom_tints,
+        mesh_name: instanced_mesh.mesh_name.clone(),
+        render_layer,
+        visible,
+        parent_transform,
+    })
 }
 
 fn sync_objects_full(world: &mut World) {

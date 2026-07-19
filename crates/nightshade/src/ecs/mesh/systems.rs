@@ -14,9 +14,19 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
             .res_mut::<crate::ecs::world::scratch::Scratch>()
             .local_matrices_dirty,
     );
+    let mut seen = std::mem::take(
+        &mut world
+            .res_mut::<crate::ecs::world::scratch::Scratch>()
+            .instanced_seen,
+    );
     transform_dirty.clear();
     local_matrices_dirty.clear();
+    seen.clear();
     let mut needs_compute_dispatch = false;
+
+    let mut matrix_entries = world
+        .res_mut::<crate::ecs::mesh::components::InstancedMeshMatrices>()
+        .take_entries();
 
     let instanced_key =
         world.ecs.worlds[CORE].register::<crate::ecs::mesh::components::InstancedMesh>();
@@ -31,8 +41,14 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
         let instanced_mesh = &mut table.column_mut(instanced_key)[idx];
         let was_dirty = instanced_mesh.dirty;
         let had_gpu_dirty = instanced_mesh.local_matrices_gpu_dirty();
-        let parent_only_changed = instanced_mesh.update_world_matrices(&parent_transform);
+        let parent_only_changed = matrix_entries.entry(entity).or_default().update(
+            &instanced_mesh.instances,
+            instanced_mesh.dirty,
+            &parent_transform,
+        );
+        instanced_mesh.dirty = false;
         let custom_data_dirty = !instanced_mesh.take_dirty_custom_data_indices().is_empty();
+        seen.insert(entity);
         if was_dirty || custom_data_dirty {
             transform_dirty.push(entity);
         }
@@ -44,6 +60,11 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
             needs_compute_dispatch = true;
         }
     });
+
+    matrix_entries.retain(|entity, _| seen.contains(entity));
+    world
+        .res_mut::<crate::ecs::mesh::components::InstancedMeshMatrices>()
+        .restore_entries(matrix_entries);
 
     for entity in transform_dirty.drain(..) {
         world
@@ -67,4 +88,7 @@ pub fn update_instanced_mesh_caches_system(world: &mut World) {
     world
         .res_mut::<crate::ecs::world::scratch::Scratch>()
         .local_matrices_dirty = local_matrices_dirty;
+    world
+        .res_mut::<crate::ecs::world::scratch::Scratch>()
+        .instanced_seen = seen;
 }
