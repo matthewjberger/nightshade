@@ -145,7 +145,7 @@ fn run_frame(
             } => {
                 texture_uploads::reload_material_texture(
                     renderer,
-                    &mut inputs.texture_cache,
+                    &inputs.texture_cache,
                     name,
                     &rgba_data,
                     width,

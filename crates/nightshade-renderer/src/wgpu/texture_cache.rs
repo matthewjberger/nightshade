@@ -153,8 +153,8 @@ pub fn texture_cache_load_from_raw_rgba_with_format(
     } = request;
     let format = spec.format;
     let sampler_settings = spec.sampler;
-    if let Some((index, generation)) = registry_lookup_index(&cache.registry, &name)
-        && registry_is_filled(&cache.registry, index)
+    if texture_store_contains(store, &name)
+        && let Some((index, generation)) = registry_lookup_index(&cache.registry, &name)
     {
         return Ok(TextureId::new(index, generation));
     }

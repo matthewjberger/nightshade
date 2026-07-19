@@ -196,7 +196,7 @@ pub fn reserve_material_layer(
 /// Replaces an existing texture's pixels and refreshes the passes that bind it.
 pub fn reload_material_texture(
     renderer: &mut WgpuRenderer,
-    texture_cache: &mut TextureCache,
+    texture_cache: &TextureCache,
     name: String,
     rgba_data: &[u8],
     width: u32,
