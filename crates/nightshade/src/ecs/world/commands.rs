@@ -417,6 +417,7 @@ pub(crate) fn setup_entity_transforms(
         entity,
         crate::ecs::world::components::GlobalTransform::default(),
     );
+    crate::ecs::transform::systems::propagate_subtree_global_transforms(world, entity);
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
@@ -602,6 +603,7 @@ pub fn spawn_mesh_at(
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(entity);
+    crate::ecs::transform::systems::propagate_subtree_global_transforms(world, entity);
 
     entity
 }
