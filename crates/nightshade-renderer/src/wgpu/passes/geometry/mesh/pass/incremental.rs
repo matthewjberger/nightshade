@@ -36,14 +36,14 @@ fn combo_remove_one(
 pub(in super::super) fn world_dynamic_object(
     scene_world: &freecs::dynamic::DynWorld,
     entity: freecs::Entity,
-) -> Option<crate::config::DynamicObjectState> {
+) -> Option<crate::config::DynamicRenderState> {
     use crate::render_world::{CullingMask, Layer, MorphWeights, Transform, Visible};
     let transform = scene_world.get::<Transform>(entity)?.0;
     let render_layer = scene_world
         .get::<Layer>(entity)
         .map(|layer| layer.0)
         .unwrap_or(crate::render_layer::RenderLayer::WORLD);
-    Some(crate::config::DynamicObjectState {
+    Some(crate::config::DynamicRenderState {
         visible: scene_world
             .get::<Visible>(entity)
             .map(|visible| u32::from(visible.0))
@@ -100,7 +100,7 @@ impl MeshPass {
             let mut changed = false;
 
             let dynamic = world_dynamic_object(&configs.scene_world, entity).unwrap_or(
-                crate::config::DynamicObjectState {
+                crate::config::DynamicRenderState {
                     visible: 1,
                     morph_weights: [0.0; 8],
                     transform: nalgebra_glm::Mat4::identity(),

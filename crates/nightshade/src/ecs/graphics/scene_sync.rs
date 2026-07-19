@@ -362,7 +362,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
         if mask & crate::ecs::world::SKIN != 0 {
             let previous_flipped = world
                 .res::<crate::render::config::RendererState>()
-                .render_dynamic_objects
+                .render_skinned_dynamic_state
                 .get(&entity)
                 .map(|state| {
                     nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&state.transform)) < 0.0
@@ -390,7 +390,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
 fn dynamic_object_state(
     world: &World,
     entity: crate::ecs::world::Entity,
-) -> crate::render::config::DynamicObjectState {
+) -> crate::render::config::DynamicRenderState {
     let visible = u32::from(
         world
             .get::<crate::ecs::primitives::Visibility>(entity)
@@ -417,7 +417,7 @@ fn dynamic_object_state(
         .unwrap_or(crate::render::render_layer::RenderLayer::WORLD);
     let is_overlay =
         u32::from(render_layer_value == crate::render::render_layer::RenderLayer::OVERLAY);
-    crate::render::config::DynamicObjectState {
+    crate::render::config::DynamicRenderState {
         visible,
         morph_weights,
         transform,
@@ -536,7 +536,7 @@ fn sync_objects_full(world: &mut World) {
         .collect();
     let states: Vec<(
         crate::ecs::world::Entity,
-        crate::render::config::DynamicObjectState,
+        crate::render::config::DynamicRenderState,
     )> = entities
         .iter()
         .map(|&entity| (entity, dynamic_object_state(world, entity)))
@@ -554,7 +554,7 @@ fn sync_objects_full(world: &mut World) {
         .collect();
     let skinned_states: Vec<(
         crate::ecs::world::Entity,
-        crate::render::config::DynamicObjectState,
+        crate::render::config::DynamicRenderState,
         Option<String>,
     )> = skinned_entities
         .iter()
@@ -611,12 +611,14 @@ fn sync_objects_full(world: &mut World) {
     }
     {
         let state = world.res_mut::<crate::render::config::RendererState>();
-        state.render_dynamic_objects.clear();
-        state.render_object_meshes.clear();
+        state.render_skinned_dynamic_state.clear();
+        state.render_skinned_mesh_names.clear();
         for (entity, object_state, name) in skinned_states {
-            state.render_dynamic_objects.insert(entity, object_state);
+            state
+                .render_skinned_dynamic_state
+                .insert(entity, object_state);
             if let Some(name) = name {
-                state.render_object_meshes.insert(entity, name);
+                state.render_skinned_mesh_names.insert(entity, name);
             }
         }
     }
@@ -638,13 +640,13 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
             let state = dynamic_object_state(world, entity);
             world
                 .res_mut::<crate::render::config::RendererState>()
-                .render_dynamic_objects
+                .render_skinned_dynamic_state
                 .insert(entity, state);
         } else if !instanced {
             clear_render_row(world, entity);
             world
                 .res_mut::<crate::render::config::RendererState>()
-                .render_dynamic_objects
+                .render_skinned_dynamic_state
                 .remove(&entity);
         }
     }
@@ -659,14 +661,14 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                 let name = mesh.name.clone();
                 world
                     .res_mut::<crate::render::config::RendererState>()
-                    .render_object_meshes
+                    .render_skinned_mesh_names
                     .insert(entity, name);
             }
             None => {
                 world.ecs.worlds[RENDER].remove::<render_world::MeshName>(entity);
                 world
                     .res_mut::<crate::render::config::RendererState>()
-                    .render_object_meshes
+                    .render_skinned_mesh_names
                     .remove(&entity);
             }
         }
@@ -1192,9 +1194,9 @@ pub fn render_sync_system(world: &mut World) {
             .request_full_rebuild();
         world
             .res_mut::<crate::render::config::RendererState>()
-            .skinned_objects_generation = world
+            .skinned_generation = world
             .res_mut::<crate::render::config::RendererState>()
-            .skinned_objects_generation
+            .skinned_generation
             .wrapping_add(1);
         sync_objects_full(world);
         sync_entity_lists(world);
@@ -1212,9 +1214,9 @@ pub fn render_sync_system(world: &mut World) {
     if dirt.skinned_objects {
         world
             .res_mut::<crate::render::config::RendererState>()
-            .skinned_objects_generation = world
+            .skinned_generation = world
             .res_mut::<crate::render::config::RendererState>()
-            .skinned_objects_generation
+            .skinned_generation
             .wrapping_add(1);
     }
     if dirt.entity_lists {

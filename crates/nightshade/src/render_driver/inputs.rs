@@ -205,7 +205,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
                 .or_else(|| {
                     world
                         .res::<crate::render::config::RendererState>()
-                        .render_dynamic_objects
+                        .render_skinned_dynamic_state
                         .get(&entity)
                         .map(|dynamic| dynamic.transform)
                 })

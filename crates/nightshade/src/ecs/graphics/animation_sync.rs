@@ -75,7 +75,7 @@ pub fn render_sync_animation_system(world: &mut World) {
 
     let skinned_generation = world
         .res::<crate::render::config::RendererState>()
-        .skinned_objects_generation;
+        .skinned_generation;
     let gate_fired = {
         let sync = &mut world.res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
         let gate_fired = !sync.animation_initialized

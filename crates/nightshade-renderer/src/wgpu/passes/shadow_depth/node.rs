@@ -151,7 +151,7 @@ fn caster_visible(
     }
     configs
         .scene
-        .render_dynamic_objects
+        .render_skinned_dynamic_state
         .get(entity)
         .map(|dynamic| dynamic.visible != 0)
         .unwrap_or(true)
@@ -584,7 +584,12 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
         self.total_joints_to_dispatch = skinning_cache.total_joints;
 
         for &entity in &configs.scene.render_shadow_casters.skinned {
-            let Some(dynamic) = configs.scene.render_dynamic_objects.get(&entity).copied() else {
+            let Some(dynamic) = configs
+                .scene
+                .render_skinned_dynamic_state
+                .get(&entity)
+                .copied()
+            else {
                 continue;
             };
 
@@ -596,7 +601,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
                 continue;
             }
 
-            if let Some(mesh_name) = configs.scene.render_object_meshes.get(&entity)
+            if let Some(mesh_name) = configs.scene.render_skinned_mesh_names.get(&entity)
                 && let Some(&(vertex_offset, _vertex_count, index_offset, index_count)) =
                     self.skinned_meshes.get(mesh_name)
             {

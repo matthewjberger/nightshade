@@ -204,8 +204,7 @@ impl SkinnedMeshPass {
             || self.gpu_batching_enabled != configs.scene.gpu_batching_enabled
             || self.state().cached_materials_generation
                 != configs.scene.render_materials.generation
-            || self.state().cached_skinned_objects_generation
-                != configs.scene.skinned_objects_generation;
+            || self.state().cached_skinned_generation != configs.scene.skinned_generation;
 
         if !statics_dirty {
             if self.state().cached_cull_objects.is_empty() {
@@ -239,14 +238,14 @@ impl SkinnedMeshPass {
             for &entity in &configs.scene.render_skinned_meshes {
                 if configs
                     .scene
-                    .render_dynamic_objects
+                    .render_skinned_dynamic_state
                     .get(&entity)
                     .is_some_and(|dynamic| dynamic.visible == 0)
                 {
                     continue;
                 }
 
-                let mesh_name = match configs.scene.render_object_meshes.get(&entity) {
+                let mesh_name = match configs.scene.render_skinned_mesh_names.get(&entity) {
                     Some(name) => name,
                     None => continue,
                 };
@@ -291,7 +290,11 @@ impl SkinnedMeshPass {
                 custom_data.push([1.0f32, 1.0, 1.0, 1.0]);
 
                 let mesh_data = &self.skinned_mesh_data[mesh_id as usize];
-                let dynamic = configs.scene.render_dynamic_objects.get(&entity).copied();
+                let dynamic = configs
+                    .scene
+                    .render_skinned_dynamic_state
+                    .get(&entity)
+                    .copied();
                 let morph_weights = dynamic.map(|d| d.morph_weights).unwrap_or([0.0; 8]);
 
                 let flip_winding = dynamic
@@ -345,13 +348,13 @@ impl SkinnedMeshPass {
             if objects.is_empty() {
                 self.gpu_batching_enabled = configs.scene.gpu_batching_enabled;
                 let materials_generation = configs.scene.render_materials.generation;
-                let skinned_objects_generation = configs.scene.skinned_objects_generation;
+                let skinned_generation = configs.scene.skinned_generation;
                 let state = self.state_mut();
                 state.cached_cull_objects = Vec::new();
                 state.cached_bounds_inputs = Vec::new();
                 state.cached_indirect_commands = Vec::new();
                 state.cached_materials_generation = materials_generation;
-                state.cached_skinned_objects_generation = skinned_objects_generation;
+                state.cached_skinned_generation = skinned_generation;
                 return;
             }
 
@@ -648,12 +651,12 @@ impl SkinnedMeshPass {
             );
 
             let materials_generation = configs.scene.render_materials.generation;
-            let skinned_objects_generation = configs.scene.skinned_objects_generation;
+            let skinned_generation = configs.scene.skinned_generation;
             let state = self.state_mut();
             state.cached_cull_objects = cull_objects;
             state.cached_bounds_inputs = bounds_inputs;
             state.cached_materials_generation = materials_generation;
-            state.cached_skinned_objects_generation = skinned_objects_generation;
+            state.cached_skinned_generation = skinned_generation;
 
             if self.gpu_batching_enabled {
                 let object_count = objects.len() as u32;

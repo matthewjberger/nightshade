@@ -1217,7 +1217,7 @@ pub struct RenderLighting {
 /// Per-entity dynamic render state the renderer refreshes each frame without a
 /// full rebuild: whether the object is visible and its current morph weights.
 #[derive(Clone, Copy, Debug)]
-pub struct DynamicObjectState {
+pub struct DynamicRenderState {
     pub visible: u32,
     pub morph_weights: [f32; 8],
     pub transform: nalgebra_glm::Mat4,
@@ -1744,14 +1744,14 @@ pub struct RendererState {
     /// Per-entity dynamic render state (transform, visibility, morph weights) for
     /// skinned meshes, extracted once per frame so the skinned pass reads it here
     /// instead of scanning the ECS. Static meshes live in the scene world.
-    pub render_dynamic_objects: std::collections::HashMap<freecs::Entity, DynamicObjectState>,
+    pub render_skinned_dynamic_state: std::collections::HashMap<freecs::Entity, DynamicRenderState>,
     /// Scene materials resolved once per frame by the engine. Render passes read
     /// materials here instead of walking the material registry themselves.
     pub render_materials: RenderMaterials,
     /// Per-entity mesh name for skinned meshes, extracted once per frame so the
     /// skinned pass resolves geometry from its own registry without reading the
     /// `RenderMesh` component. Static meshes live in the scene world instead.
-    pub render_object_meshes: std::collections::HashMap<freecs::Entity, String>,
+    pub render_skinned_mesh_names: std::collections::HashMap<freecs::Entity, String>,
     /// The renderer's meshlet asset cache. Placements live in the scene world
     /// as [`MeshletPlacement`] components; this holds only the baked assets they
     /// reference, kept warm across frames.
@@ -1786,7 +1786,7 @@ pub struct RendererState {
     /// Bumped whenever a skinned entity's object state changed (visibility,
     /// morph weights, transform, bounds), so the skinned pass can gate its
     /// instance rebuild on a counter.
-    pub skinned_objects_generation: u64,
+    pub skinned_generation: u64,
     /// Monotonic version bumped by the renderer whenever
     /// `render_settings_signature` changes between frames.
     pub settings_version: u64,
@@ -2095,9 +2095,9 @@ impl Default for RendererState {
             mesh_lod_chains: Vec::new(),
             active_view: EffectiveShading::default(),
             render_view: None,
-            render_dynamic_objects: std::collections::HashMap::new(),
+            render_skinned_dynamic_state: std::collections::HashMap::new(),
             render_materials: RenderMaterials::default(),
-            render_object_meshes: std::collections::HashMap::new(),
+            render_skinned_mesh_names: std::collections::HashMap::new(),
             #[cfg(feature = "meshlet")]
             meshlet_assets: MeshletAssetCache::default(),
             render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
@@ -2108,7 +2108,7 @@ impl Default for RendererState {
             render_animation: SkinnedAnimationSnapshot::default(),
             #[cfg(feature = "wgpu")]
             render_lighting: None,
-            skinned_objects_generation: 0,
+            skinned_generation: 0,
             settings_version: 0,
             focus_policy: ViewportFocusPolicy::default(),
             adaptive_sampling: AdaptiveSamplingState::default(),

@@ -363,7 +363,7 @@ pub(super) struct SkinnedWorldRenderState {
     /// zeroes counts with its clear dispatch instead.
     pub cached_indirect_commands: Vec<super::types::SkinnedDrawIndexedIndirect>,
     pub cached_materials_generation: u64,
-    pub cached_skinned_objects_generation: u64,
+    pub cached_skinned_generation: u64,
 
     pub last_used_frame: u64,
 
@@ -387,7 +387,7 @@ impl SkinnedWorldRenderState {
             cached_bounds_inputs: Vec::new(),
             cached_indirect_commands: Vec::new(),
             cached_materials_generation: u64::MAX,
-            cached_skinned_objects_generation: u64::MAX,
+            cached_skinned_generation: u64::MAX,
             last_used_frame: 0,
             gpu_buffers: None,
             ibl_brdf_lut_view: None,
