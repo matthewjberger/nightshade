@@ -4,8 +4,8 @@
 //! `freecs::dynamic::DynWorld::from_registry(register_render_components())`; a
 //! host with its own freecs group composes it in as a member world with
 //! `add_world_at`, sharing entity identity so no scene data is copied across
-//! the boundary. Nothing here names a type from above the renderer, so the
-//! renderer stays reasoned about in isolation and cannot couple upward.
+//! the boundary. Every type here is the renderer's own, keeping the schema
+//! self-contained and the renderer a decoupled leaf of its host's composition.
 
 use nalgebra_glm::Mat4;
 

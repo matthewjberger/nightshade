@@ -8,10 +8,10 @@ use nalgebra_glm::{vec2, vec3};
 const PIXELS_TO_WORLD: f32 = 0.01;
 
 /// The shaping and layout parameters a caller resolves from its own text
-/// component before handing a string to the mesher. The renderer never sees the
-/// engine's text component, only these fields, so the meshing pipeline stays
-/// free of any scene-graph vocabulary. `font_kind` is the already-resolved font,
-/// `line_height` the multiplier applied to `font_size`.
+/// component before handing a string to the mesher. These fields are the whole
+/// input to the meshing pipeline, keeping it free of any scene-graph vocabulary.
+/// `font_kind` is the already-resolved font, `line_height` the multiplier
+/// applied to `font_size`.
 pub struct TextMeshParams {
     pub font_size: f32,
     pub line_height: f32,

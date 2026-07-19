@@ -1,11 +1,11 @@
 //! A tiny reusable host for the `nightshade-renderer` capability examples.
 //!
-//! The renderer never sees a scene graph or an ECS: every frame the host hands
-//! it one composed [`RenderInputs`] and reads back a [`FrameOutputs`]. This
-//! module is that host in miniature, with nothing from the engine layer above
-//! it. It owns a winit window, drives a fly camera, and composes the per-frame
-//! input from a small mutable [`Scene`] the example fills. Each example is a
-//! `setup` that populates the scene once and an `update` run every frame.
+//! Every frame the host spawns the scene into the renderer's own world, hands
+//! it one composed [`RenderInputs`], and reads back a [`FrameOutputs`]. This
+//! module is that host in miniature, a pure renderer client with no engine layer
+//! above it. It owns a winit window, drives a fly camera, and composes the
+//! per-frame input from a small mutable [`Scene`] the example fills. Each example
+//! is a `setup` that populates the scene once and an `update` run every frame.
 //!
 //! Controls: W/A/S/D to move, Q/E down/up, arrow keys to look.
 //!

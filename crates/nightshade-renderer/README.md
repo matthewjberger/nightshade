@@ -1,9 +1,8 @@
 # nightshade-renderer
 
 A GPU-driven wgpu renderer with a built-in frame graph. It renders one owned
-input structure per frame and never sees the caller's scene representation, so
-any engine or tool that can fill out a `RenderInputs` can drive it. It runs on
-DX12, Metal, Vulkan, and WebGPU.
+input structure per frame, so any engine or tool that can fill out a
+`RenderInputs` can drive it. It runs on DX12, Metal, Vulkan, and WebGPU.
 
 This is the renderer behind the [nightshade](https://crates.io/crates/nightshade)
 engine, extracted so it can be driven on its own.
@@ -13,25 +12,26 @@ engine, extracted so it can be driven on its own.
 nightshade-renderer = "0.56.0"
 ```
 
-## The one idea: the renderer is ECS-free
+## The seam: one input per frame
 
-The renderer has no notion of an entity-component system, a scene tree, or a
-game world. Every frame the host composes a single [`RenderInputs`] value from
-whatever representation it keeps, calls `render_frame`, and reads back a
-[`FrameOutputs`] with the writes that belong to the host. Entities cross the
-boundary as a plain `RenderEntity { id, generation }` handle, never as a live
-ECS entity. That decoupling is the whole point: the passes and the frame graph
-are monomorphized on one concrete `RenderInputs` type with zero coupling to the
-caller, and the large scene state moves in and out by value rather than being
-cloned.
+The renderer owns the scene as its own freecs ECS world. Every frame the host
+composes a single [`RenderInputs`] value — that scene world plus settings, the
+mesh and texture caches, and the cameras to dispatch — calls `render_frame`, and
+reads back a [`FrameOutputs`] with the writes that belong to the host. A host
+that runs its own freecs group composes the renderer's schema in as a member
+world, so a render entity is the host entity and no scene data is copied across
+the boundary; a standalone host stands the world up from the registry and spawns
+into it. Either way the passes and the frame graph are monomorphized on one
+concrete `RenderInputs` type, and the large scene state moves in and out by
+value rather than being cloned.
 
 ```text
         host (any scene representation)
                  │  compose_frame()
                  ▼
         RenderInputs  ──────────►  render_frame(renderer, &mut inputs, &mut outputs)
-          settings                          │
-          scene: RendererState              │  graph executes per view
+          scene_world (freecs)              │
+          settings / scene: RendererState   │  graph executes per view
           mesh_cache / texture_cache        │  (mesh, shadows, sky, post, UI…)
           frame: cameras + commands         ▼
                  ◄──────────────────  FrameOutputs (viewport sizes, cleared flags)
@@ -87,9 +87,9 @@ The three steps every host repeats:
    appends the presentation tail (viewport blit, swapchain compose, UI) and
    compiles the graph. Call it once, after creation.
 2. **Compose a `RenderInputs` and call `render_frame`.** Persistent state
-   (`scene: RendererState`, `mesh_cache`, `texture_cache`) lives on the host and
-   moves in by value each frame; `frame: FrameInputs` carries the cameras to
-   dispatch, drained commands, and this frame's dirty state. The renderer-owned
+   (`scene_world`, `scene: RendererState`, `mesh_cache`, `texture_cache`) lives
+   on the host and moves in by value each frame; `frame: FrameInputs` carries the
+   cameras to dispatch, drained commands, and this frame's dirty state. The renderer-owned
    fields `ibl_views` and `shadow_atlas` are composed as `Default::default()`,
    and the frame driver fills them itself.
 3. **Apply `FrameOutputs` and take the persistent state back out** of the inputs
@@ -121,8 +121,8 @@ renderer) read [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## GPU-driven drawing
 
-Object transforms, materials, and instance data live in persistent per-world GPU
-buffers updated by deltas. Frustum and hi-z occlusion culling, LOD selection,
+Renderable transforms, materials, and instance data live in persistent per-world
+GPU buffers updated by deltas. Frustum and hi-z occlusion culling, LOD selection,
 batch table construction, and indirect draw argument population run in compute.
 Draw submission is multi-draw indirect, with the draw count itself sourced from
 the GPU on hardware with `MULTI_DRAW_INDIRECT_COUNT`. Bindless material textures
