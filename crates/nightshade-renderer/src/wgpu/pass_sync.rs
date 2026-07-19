@@ -25,7 +25,8 @@ pub fn apply_frame_dirty_state(
     let dirty_meshes = mesh_cache_take_dirty(mesh_cache);
     let dirty_skinned = mesh_cache_take_dirty_skinned(mesh_cache);
 
-    let shadow_scene_dirty = !frame_state.transform_dirty.is_empty()
+    let shadow_scene_dirty = frame_state.full_rebuild_needed
+        || !frame_state.transform_dirty.is_empty()
         || !frame_state.entities_added.is_empty()
         || !frame_state.entities_removed.is_empty()
         || frame_state.instanced_meshes_changed
