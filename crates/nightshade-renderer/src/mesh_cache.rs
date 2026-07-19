@@ -28,12 +28,14 @@ pub fn mesh_cache_insert(cache: &mut MeshCache, name: String, mesh: Mesh) -> Mes
         if let Some(entry) = cache.registry.entries.get_mut(index as usize) {
             *entry = Some(mesh);
         }
-        cache.dirty_meshes.insert(name);
+        cache.dirty_meshes.insert(name.clone());
+        cache.dirty_skinned_meshes.insert(name);
         return MeshId::new(index, generation);
     }
     let (index, generation) = registry_insert(&mut cache.registry, name.clone(), mesh);
     registry_add_reference(&mut cache.registry, index);
-    cache.dirty_meshes.insert(name);
+    cache.dirty_meshes.insert(name.clone());
+    cache.dirty_skinned_meshes.insert(name);
     MeshId::new(index, generation)
 }
 
