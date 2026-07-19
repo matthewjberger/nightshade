@@ -13,7 +13,7 @@ use crate::wgpu::passes::geometry::material_gpu::{
 pub(in super::super) struct MaterialCollection {
     pub(in super::super) materials_data: Vec<MaterialData>,
     pub(in super::super) material_map: HashMap<freecs::Entity, u32>,
-    pub(in super::super) name_to_material_id: HashMap<String, u32>,
+    pub(in super::super) material_ids: std::collections::HashSet<u32>,
     pub(in super::super) transparent_material_ids: std::collections::HashSet<u32>,
     pub(in super::super) double_sided_material_ids: std::collections::HashSet<u32>,
     pub(in super::super) mask_material_ids: std::collections::HashSet<u32>,
@@ -111,7 +111,7 @@ impl MeshPass {
                 .iter()
                 .map(|(entity, material)| (entity, material.0))
                 .collect(),
-            name_to_material_id: render_materials.name_to_id.clone(),
+            material_ids: render_materials.name_to_id.values().copied().collect(),
             transparent_material_ids: render_materials.transparent_ids.clone(),
             double_sided_material_ids: render_materials.double_sided_ids.clone(),
             mask_material_ids: render_materials.mask_ids.clone(),
@@ -333,7 +333,7 @@ impl MeshPass {
 
         {
             let state = self.state_mut();
-            state.cached_name_to_material_id = materials.name_to_material_id.clone();
+            state.cached_material_ids = materials.material_ids.clone();
             state.cached_material_map = materials.material_map.clone();
             state.cached_transparent_material_ids = materials.transparent_material_ids.clone();
             state.cached_double_sided_material_ids = materials.double_sided_material_ids.clone();
@@ -577,7 +577,7 @@ impl MeshPass {
             state.cached_custom_data = custom_data;
             state.combos = combos;
             state.object_count = new_object_count;
-            state.cached_name_to_material_id = materials.name_to_material_id;
+            state.cached_material_ids = materials.material_ids;
             state.cached_material_map = materials.material_map;
             state.cached_transparent_material_ids = materials.transparent_material_ids;
             state.cached_double_sided_material_ids = materials.double_sided_material_ids;
@@ -1422,7 +1422,7 @@ impl MeshPass {
         self.world_states[self.current_world_id as usize]
             .as_mut()
             .unwrap()
-            .cached_name_to_material_id = materials.name_to_material_id;
+            .cached_material_ids = materials.material_ids;
         self.world_states[self.current_world_id as usize]
             .as_mut()
             .unwrap()

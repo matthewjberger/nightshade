@@ -10,7 +10,9 @@ use nalgebra_glm as glm;
 use nightshade_renderer::config::Atmosphere;
 use nightshade_renderer::material::Material;
 use nightshade_renderer::mesh_cache::mesh_cache_insert;
-use nightshade_renderer::procedural_meshes::{create_cube_mesh, create_plane_mesh, create_sphere_mesh};
+use nightshade_renderer::procedural_meshes::{
+    create_cube_mesh, create_plane_mesh, create_sphere_mesh,
+};
 use nightshade_renderer::render_layer::RenderLayer;
 use nightshade_renderer::render_world::{
     CullingMask, Layer, MaterialId, MeshName, MorphWeights, ShadowCaster, Transform, Visible,
@@ -57,7 +59,11 @@ impl Example for Shadows {
             Layer(RenderLayer::WORLD),
         ));
 
-        mesh_cache_insert(&mut scene.mesh_cache, "cube".to_string(), create_cube_mesh());
+        mesh_cache_insert(
+            &mut scene.mesh_cache,
+            "cube".to_string(),
+            create_cube_mesh(),
+        );
         mesh_cache_insert(
             &mut scene.mesh_cache,
             "sphere".to_string(),

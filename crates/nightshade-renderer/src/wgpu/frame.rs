@@ -45,6 +45,25 @@ pub fn render_frame(
     result
 }
 
+/// Renders one single-view frame straight from a [`SingleViewHost`]: composes
+/// the inputs, runs the frame, and moves the host's state back so the loop can
+/// call this and nothing else. A frame that fails to execute (surface lost,
+/// occluded, or timed out) leaves [`FrameOutputs::frame_executed`] false and the
+/// host state intact for the next attempt.
+pub fn render_single_view(
+    renderer: &mut crate::wgpu::WgpuRenderer,
+    host: &mut crate::wgpu::render_configs::SingleViewHost,
+    frame: crate::wgpu::render_configs::ViewFrame,
+) -> FrameOutputs {
+    let mut inputs = crate::wgpu::render_configs::compose_single_view(host, frame);
+    let mut outputs = FrameOutputs::default();
+    if render_frame(renderer, &mut inputs, &mut outputs).is_err() {
+        outputs.frame_executed = false;
+    }
+    crate::wgpu::render_configs::restore_single_view(host, inputs);
+    outputs
+}
+
 fn run_frame(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,

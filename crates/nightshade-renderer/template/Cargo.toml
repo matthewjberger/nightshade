@@ -10,7 +10,7 @@ edition = "2024"
 
 [[bin]]
 name = "standalone"
-path = "standalone.rs"
+path = "main.rs"
 
 [dependencies]
 nightshade-renderer = { path = "..", features = ["wgpu", "hdr"] }

@@ -438,7 +438,7 @@ impl MeshPass {
         }
 
         if has_adds {
-            if world_state.cached_name_to_material_id.is_empty() {
+            if world_state.cached_material_ids.is_empty() {
                 return false;
             }
 
@@ -453,13 +453,12 @@ impl MeshPass {
                 if !has_mesh {
                     return false;
                 }
-                let has_cached_material = configs
-                    .scene
-                    .render_materials
-                    .entity_to_name
-                    .get(entity)
-                    .is_some_and(|name| world_state.cached_name_to_material_id.contains_key(name));
-                if !has_cached_material {
+                let material_id = configs
+                    .scene_world
+                    .get::<crate::render_world::MaterialId>(*entity)
+                    .map(|material| material.0)
+                    .unwrap_or(0);
+                if !world_state.cached_material_ids.contains(&material_id) {
                     return false;
                 }
             }
@@ -492,7 +491,7 @@ impl MeshPass {
 
         if world_state.gpu_buffers.is_none()
             || world_state.cached_entities.is_empty()
-            || world_state.cached_name_to_material_id.is_empty()
+            || world_state.cached_material_ids.is_empty()
         {
             return false;
         }

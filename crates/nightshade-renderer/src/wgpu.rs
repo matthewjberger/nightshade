@@ -40,8 +40,8 @@ pub mod view;
 pub use crate::rendergraph;
 pub mod shader_compose;
 mod stagger;
-pub mod texture_cache;
 pub mod texture_array_pool;
+pub mod texture_cache;
 
 pub use ::wgpu::*;
 

@@ -50,7 +50,11 @@ impl Example for Spinning {
             2.5,
         ));
 
-        mesh_cache_insert(&mut scene.mesh_cache, "cube".to_string(), create_cube_mesh());
+        mesh_cache_insert(
+            &mut scene.mesh_cache,
+            "cube".to_string(),
+            create_cube_mesh(),
+        );
         mesh_cache_insert(
             &mut scene.mesh_cache,
             "sphere".to_string(),

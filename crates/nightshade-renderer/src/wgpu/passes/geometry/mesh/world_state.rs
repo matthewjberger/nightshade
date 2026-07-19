@@ -514,7 +514,7 @@ pub(super) struct WorldRenderState {
     pub ibl_blend_factor: f32,
     pub ibl_dirty: bool,
 
-    pub cached_name_to_material_id: HashMap<String, u32>,
+    pub cached_material_ids: std::collections::HashSet<u32>,
     pub cached_material_map: HashMap<Entity, u32>,
     pub cached_render_materials_generation: u64,
     pub cached_materials_data: Vec<MaterialData>,
@@ -575,7 +575,7 @@ impl WorldRenderState {
             ibl_blend_factor: 0.0,
             ibl_dirty: false,
 
-            cached_name_to_material_id: HashMap::new(),
+            cached_material_ids: std::collections::HashSet::new(),
             cached_material_map: HashMap::new(),
             cached_render_materials_generation: u64::MAX,
             cached_materials_data: Vec::new(),

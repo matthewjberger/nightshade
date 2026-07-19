@@ -1330,7 +1330,6 @@ pub struct RenderMaterialEntry {
 pub struct RenderMaterials {
     pub entries: Vec<RenderMaterialEntry>,
     pub name_to_id: std::collections::HashMap<String, u32>,
-    pub entity_to_name: std::collections::HashMap<freecs::Entity, String>,
     pub transparent_ids: std::collections::HashSet<u32>,
     pub mask_ids: std::collections::HashSet<u32>,
     pub double_sided_ids: std::collections::HashSet<u32>,

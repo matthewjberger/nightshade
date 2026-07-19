@@ -252,8 +252,14 @@ impl RenderInputs {
     /// Assembles the inputs for a single-view frame from the host-owned state,
     /// filling the renderer's bookkeeping fields with defaults that rebuild the
     /// scene every frame. This is the simplest correct path for a host not
-    /// tracking incremental deltas. The returned struct's public fields (`ui`,
-    /// `pending_particle_textures`, `frame.commands`) can be set afterward.
+    /// tracking incremental deltas, and it does work proportional to the scene
+    /// size every frame, so it suits modest scenes rather than large ones. The
+    /// returned struct's public fields (`ui`, `pending_particle_textures`,
+    /// `frame.commands`) can be set afterward.
+    ///
+    /// Most hosts drive this through [`SingleViewHost`] and
+    /// [`crate::wgpu::frame::render_single_view`] rather than calling it
+    /// directly.
     pub fn single_view(
         scene_world: freecs::dynamic::DynWorld,
         scene: crate::config::RendererState,
@@ -326,4 +332,46 @@ impl RenderInputs {
             terrain_render: Default::default(),
         }
     }
+}
+
+/// The renderer-facing state a single-view host owns across frames: the scene
+/// world, the renderer state, the geometry and texture caches, the frame's
+/// settings, and the debug-draw toggles. Build one, spawn into `scene_world`,
+/// then drive each frame with [`crate::wgpu::frame::render_single_view`]. The
+/// fields move into the frame's [`RenderInputs`] and back, so the host loop
+/// never writes the swap by hand and nothing is cloned per frame.
+pub struct SingleViewHost {
+    pub scene_world: freecs::dynamic::DynWorld,
+    pub scene: crate::config::RendererState,
+    pub mesh_cache: crate::mesh_cache::MeshCache,
+    pub texture_cache: crate::wgpu::texture_cache::TextureCache,
+    pub settings: crate::config::RenderSettings,
+    pub debug_draw: crate::config::DebugDraw,
+}
+
+/// Moves `host`'s persistent state into the inputs for one single-view frame,
+/// leaving `host`'s fields empty until [`restore_single_view`] puts them back.
+/// Set the returned struct's public fields (`ui`, `pending_particle_textures`,
+/// `frame.commands`) before rendering if the host needs them.
+pub fn compose_single_view(host: &mut SingleViewHost, frame: ViewFrame) -> RenderInputs {
+    RenderInputs::single_view(
+        std::mem::replace(&mut host.scene_world, freecs::dynamic::DynWorld::new()),
+        std::mem::take(&mut host.scene),
+        std::mem::take(&mut host.mesh_cache),
+        std::mem::take(&mut host.texture_cache),
+        std::mem::take(&mut host.settings),
+        std::mem::take(&mut host.debug_draw),
+        frame,
+    )
+}
+
+/// Returns the state [`compose_single_view`] moved out to `host` after the frame
+/// has finished with it.
+pub fn restore_single_view(host: &mut SingleViewHost, inputs: RenderInputs) {
+    host.scene_world = inputs.scene_world;
+    host.scene = inputs.scene;
+    host.mesh_cache = inputs.mesh_cache;
+    host.texture_cache = inputs.texture_cache;
+    host.settings = inputs.settings;
+    host.debug_draw = inputs.debug_draw;
 }

@@ -137,7 +137,11 @@ fn camera_advance(camera: &mut Camera, delta_time: f32, keys: &HashSet<KeyCode>)
 /// The directional-light components (a sun) an example spawns into the scene
 /// world with `world.spawn(directional_light(..))`. A reusable helper because
 /// `RenderLightData` carries far more fields than a sun sets.
-pub fn directional_light(direction: Vec3, color: Vec3, intensity: f32) -> (RenderLightData, Transform) {
+pub fn directional_light(
+    direction: Vec3,
+    color: Vec3,
+    intensity: f32,
+) -> (RenderLightData, Transform) {
     let light = RenderLight::directional(CAMERA_ENTITY, direction, color, intensity);
     (light.light, Transform(light.transform))
 }
@@ -179,7 +183,13 @@ pub trait Example {
     fn update(_: &mut Scene, _: &mut Self::State, _: f32) {}
 }
 
-fn compose(scene: &mut Scene, width: u32, height: u32, delta_time: f32, uptime_ms: u64) -> RenderInputs {
+fn compose(
+    scene: &mut Scene,
+    width: u32,
+    height: u32,
+    delta_time: f32,
+    uptime_ms: u64,
+) -> RenderInputs {
     let aspect = width as f32 / height.max(1) as f32;
     let camera = CameraFrameInputs::perspective(
         CAMERA_ENTITY,

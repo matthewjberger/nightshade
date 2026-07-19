@@ -215,8 +215,6 @@ pub fn render_sync_materials_system(world: &mut World) {
         .material_registry;
     let mut entity_to_id: std::collections::HashMap<crate::ecs::world::Entity, u32> =
         std::collections::HashMap::new();
-    let mut entity_to_name: std::collections::HashMap<crate::ecs::world::Entity, String> =
-        std::collections::HashMap::new();
     for &entity in mesh_entities
         .iter()
         .chain(skinned_entities.iter())
@@ -225,25 +223,22 @@ pub fn render_sync_materials_system(world: &mut World) {
     {
         use crate::render::generational_registry::{registry_entry, registry_lookup_index};
         let id = match world.get::<crate::ecs::material::components::MaterialRef>(entity) {
-            Some(material_ref) => {
-                entity_to_name.insert(entity, material_ref.name.clone());
-                material_ref
-                    .id
-                    .and_then(|id| {
-                        registry_entry(&registry.registry, id.index, id.generation)
-                            .map(|_| id.index + 1)
-                    })
-                    .or_else(|| {
-                        registry_lookup_index(&registry.registry, &material_ref.name).and_then(
-                            |(index, _generation)| {
-                                registry.registry.entries[index as usize]
-                                    .as_ref()
-                                    .map(|_| index + 1)
-                            },
-                        )
-                    })
-                    .unwrap_or(0)
-            }
+            Some(material_ref) => material_ref
+                .id
+                .and_then(|id| {
+                    registry_entry(&registry.registry, id.index, id.generation)
+                        .map(|_| id.index + 1)
+                })
+                .or_else(|| {
+                    registry_lookup_index(&registry.registry, &material_ref.name).and_then(
+                        |(index, _generation)| {
+                            registry.registry.entries[index as usize]
+                                .as_ref()
+                                .map(|_| index + 1)
+                        },
+                    )
+                })
+                .unwrap_or(0),
             None => 0,
         };
         entity_to_id.insert(entity, id);
@@ -252,9 +247,4 @@ pub fn render_sync_materials_system(world: &mut World) {
     for (&entity, &id) in &entity_to_id {
         world.set(entity, crate::render::render_world::MaterialId(id));
     }
-
-    let table = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_materials;
-    table.entity_to_name = entity_to_name;
 }
