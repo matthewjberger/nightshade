@@ -1037,9 +1037,10 @@ pub struct RenderSettings {
     pub ssr_intensity: f32,
     /// Global ambient light color and intensity.
     pub ambient_light: [f32; 4],
-    /// Enables temporal antialiasing. Off by default; apps and scripts turn it
-    /// on when they want it. When off, the temporal resolve passes the image
-    /// through unchanged and camera jitter is disabled.
+    /// Enables temporal antialiasing. On by default; it resolves screen-space
+    /// sampling noise (soft shadows and the like) that otherwise bands on smooth
+    /// surfaces. When off, the temporal resolve passes the image through
+    /// unchanged and camera jitter is disabled.
     pub taa_enabled: bool,
     /// Temporal resolve blend toward the current frame each frame. Lower keeps
     /// more history (steadier, more ghost-prone), higher favors the current
@@ -2035,7 +2036,7 @@ impl Default for RenderSettings {
             ssr_fade_end: 1.0,
             ssr_intensity: 1.0,
             ambient_light: [0.1, 0.1, 0.1, 1.0],
-            taa_enabled: false,
+            taa_enabled: true,
             taa_blend: 0.12,
             taa_sharpness: 0.5,
             water_enabled: true,
