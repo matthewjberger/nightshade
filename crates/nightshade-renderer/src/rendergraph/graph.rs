@@ -471,15 +471,6 @@ pub fn render_graph_external_color<C: 'static>(
     )
 }
 
-/// Adds a pass with its slot mappings given as an owned vector.
-pub fn render_graph_add_pass_with_slots<C: 'static>(
-    graph: &mut RenderGraph<C>,
-    pass: Box<dyn PassNode<C>>,
-    slots: Vec<(&str, ResourceId)>,
-) -> Result<NodeIndex> {
-    render_graph_add_pass(graph, pass, &slots)
-}
-
 /// Returns a builder that adds `pass` and binds its slots fluently.
 pub fn render_graph_pass<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,

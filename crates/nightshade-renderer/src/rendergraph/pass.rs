@@ -776,19 +776,9 @@ pub struct PassBuilder<'a, C: 'static = ()> {
 }
 
 impl<'a, C: 'static> PassBuilder<'a, C> {
-    /// Binds a read slot to a resource.
-    pub fn read(mut self, slot: &'static str, resource: ResourceId) -> Self {
-        self.slots.push((slot, resource));
-        self
-    }
-
-    /// Binds a write slot to a resource.
-    pub fn write(mut self, slot: &'static str, resource: ResourceId) -> Self {
-        self.slots.push((slot, resource));
-        self
-    }
-
-    /// Binds a slot to a resource.
+    /// Binds a named slot to a resource. Read-versus-write direction is not
+    /// declared here; the graph derives it from the pass's own [`PassNode::reads`]
+    /// and [`PassNode::writes`].
     pub fn slot(mut self, slot: &'static str, resource: ResourceId) -> Self {
         self.slots.push((slot, resource));
         self

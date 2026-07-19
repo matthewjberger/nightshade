@@ -171,18 +171,18 @@ fn configure_render_graph(
 
     let bloom_pass = passes::BloomPass::new(device, width, height);
     render_graph_pass(graph, Box::new(bloom_pass))
-        .read("hdr", resources.scene_color)
-        .write("bloom", bloom_texture)
+        .slot("hdr", resources.scene_color)
+        .slot("bloom", bloom_texture)
         .add()
         .unwrap();
 
     let postprocess_pass = passes::PostProcessPass::new(device, surface_format, 0.005);
     render_graph_pass(graph, Box::new(postprocess_pass))
-        .read("hdr", resources.scene_color)
-        .read("scene_color", resources.scene_color)
-        .read("bloom", bloom_texture)
-        .read("ssao", resources.ssao)
-        .write("output", resources.compute_output)
+        .slot("hdr", resources.scene_color)
+        .slot("scene_color", resources.scene_color)
+        .slot("bloom", bloom_texture)
+        .slot("ssao", resources.ssao)
+        .slot("output", resources.compute_output)
         .add()
         .unwrap();
 
@@ -196,17 +196,17 @@ fn configure_render_graph(
 
     let taa_pass = passes::TaaPass::new(device, surface_format);
     render_graph_pass(graph, Box::new(taa_pass))
-        .read("input", resources.compute_output)
-        .read("depth", resources.depth)
-        .write("output", aa_output)
+        .slot("input", resources.compute_output)
+        .slot("depth", resources.depth)
+        .slot("output", aa_output)
         .add()
         .unwrap();
 
     let swapchain_blit_pass =
         passes::BlitPass::new(device, surface_format).with_name("default_swapchain_blit");
     render_graph_pass(graph, Box::new(swapchain_blit_pass))
-        .read("input", aa_output)
-        .write("output", resources.swapchain)
+        .slot("input", aa_output)
+        .slot("output", resources.swapchain)
         .add()
         .unwrap();
 }

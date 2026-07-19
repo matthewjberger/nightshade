@@ -57,30 +57,30 @@
 //!     // Add bloom post-processing
 //!     let bloom = BloomPass::new(device, width, height);
 //!     render_graph_pass(graph, Box::new(bloom))
-//!         .read("hdr", resources.scene_color)
-//!         .write("bloom", bloom_texture);
+//!         .slot("hdr", resources.scene_color)
+//!         .slot("bloom", bloom_texture);
 //!
 //!     // Add SSAO
 //!     let ssao = SsaoPass::new(device);
 //!     render_graph_pass(graph, Box::new(ssao))
-//!         .read("depth", resources.depth)
-//!         .read("view_normals", resources.view_normals)
-//!         .write("ssao_raw", ssao_raw);
+//!         .slot("depth", resources.depth)
+//!         .slot("view_normals", resources.view_normals)
+//!         .slot("ssao_raw", ssao_raw);
 //!
 //!     let ssao_blur = SsaoBlurPass::new(device);
 //!     render_graph_pass(graph, Box::new(ssao_blur))
-//!         .read("ssao_raw", ssao_raw)
-//!         .read("depth", resources.depth)
-//!         .read("view_normals", resources.view_normals)
-//!         .write("ssao", ssao_final);
+//!         .slot("ssao_raw", ssao_raw)
+//!         .slot("depth", resources.depth)
+//!         .slot("view_normals", resources.view_normals)
+//!         .slot("ssao", ssao_final);
 //!
 //!     // Final post-process with tonemapping
 //!     let postprocess = PostProcessPass::new(device, surface_format, bloom_intensity);
 //!     render_graph_pass(graph, Box::new(postprocess))
-//!         .read("hdr", resources.scene_color)
-//!         .read("bloom", bloom_texture)
-//!         .read("ssao", ssao_final)
-//!         .write("output", resources.swapchain);
+//!         .slot("hdr", resources.scene_color)
+//!         .slot("bloom", bloom_texture)
+//!         .slot("ssao", ssao_final)
+//!         .slot("output", resources.swapchain);
 //! }
 //! ```
 //!

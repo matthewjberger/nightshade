@@ -266,16 +266,16 @@
 //! // Add bloom pass
 //! let bloom_pass = passes::BloomPass::new(device, width, height);
 //! render_graph_pass(graph, Box::new(bloom_pass))
-//!     .read("hdr", targets.scene_color)
-//!     .write("bloom", bloom_texture);
+//!     .slot("hdr", targets.scene_color)
+//!     .slot("bloom", bloom_texture);
 //!
 //! // Add post-process pass combining HDR + bloom
 //! let postprocess = passes::PostProcessPass::new(device, surface_format, 0.3);
 //! render_graph_pass(graph, Box::new(postprocess))
-//!     .read("hdr", targets.scene_color)
-//!     .read("bloom", bloom_texture)
-//!     .read("ssao", targets.ssao)
-//!     .write("output", targets.swapchain);
+//!     .slot("hdr", targets.scene_color)
+//!     .slot("bloom", bloom_texture)
+//!     .slot("ssao", targets.ssao)
+//!     .slot("output", targets.swapchain);
 //! ```
 //!
 //! ## SSAO (Screen-Space Ambient Occlusion)
@@ -284,17 +284,17 @@
 //! // SSAO raw pass
 //! let ssao_pass = passes::SsaoPass::new(device);
 //! render_graph_pass(graph, Box::new(ssao_pass))
-//!     .read("depth", targets.depth)
-//!     .read("view_normals", targets.view_normals)
-//!     .write("ssao_raw", targets.ssao_raw);
+//!     .slot("depth", targets.depth)
+//!     .slot("view_normals", targets.view_normals)
+//!     .slot("ssao_raw", targets.ssao_raw);
 //!
 //! // SSAO blur pass for soft shadows
 //! let ssao_blur = passes::SsaoBlurPass::new(device);
 //! render_graph_pass(graph, Box::new(ssao_blur))
-//!     .read("ssao_raw", targets.ssao_raw)
-//!     .read("depth", targets.depth)
-//!     .read("view_normals", targets.view_normals)
-//!     .write("ssao", targets.ssao);
+//!     .slot("ssao_raw", targets.ssao_raw)
+//!     .slot("depth", targets.depth)
+//!     .slot("view_normals", targets.view_normals)
+//!     .slot("ssao", targets.ssao);
 //! ```
 //!
 //! # Graphics Settings
