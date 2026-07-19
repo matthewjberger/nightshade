@@ -267,19 +267,6 @@ pub struct EguiFrameInputs {
     pub paint_jobs: Vec<egui::ClippedPrimitive>,
 }
 
-/// Why a frame did not render, reported in [`FrameOutputs::skip_reason`] so the
-/// caller can tell a recoverable skip (retry next frame) from a lost surface
-/// that needs recreating.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FrameSkipReason {
-    /// The surface was outdated or lost and could not be reacquired even after
-    /// a reconfigure. The caller should recreate the surface or device.
-    SurfaceLost,
-    /// The surface was momentarily unavailable (occluded, timed out, or a
-    /// transient driver state). Retrying the next frame is expected to recover.
-    SurfaceUnavailable,
-}
-
 /// State the renderer hands back after a frame: writes that belong to the
 /// caller's world, produced instead of performed because the renderer never
 /// sees the world.
@@ -293,10 +280,6 @@ pub struct FrameOutputs {
     /// occluded, timed out, or lost, so callers keep their previous
     /// viewport state instead of applying this frame's empty outputs.
     pub frame_executed: bool,
-    /// When the frame did not render, why. `None` on a rendered frame; set to
-    /// distinguish a transient skip from a lost surface when `frame_executed`
-    /// is false.
-    pub skip_reason: Option<FrameSkipReason>,
 }
 
 /// Everything the renderer consumes for one frame.

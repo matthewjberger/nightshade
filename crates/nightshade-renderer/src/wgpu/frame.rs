@@ -220,12 +220,8 @@ fn run_frame(
         );
     }
 
-    let surface_texture = match presentation::acquire_surface_frame(renderer) {
-        Ok(texture) => texture,
-        Err(reason) => {
-            outputs.skip_reason = Some(reason);
-            return Ok(());
-        }
+    let Some(surface_texture) = presentation::acquire_surface_frame(renderer) else {
+        return Ok(());
     };
     outputs.frame_executed = true;
 
