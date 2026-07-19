@@ -769,6 +769,7 @@ impl ResourceTemplate {
 }
 
 /// Fluent builder for adding a pass and its slot bindings to the graph.
+#[must_use = "call .add() to register the pass with the graph"]
 pub struct PassBuilder<'a, C: 'static = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) pass: Option<Box<dyn PassNode<C>>>,
