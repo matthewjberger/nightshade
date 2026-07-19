@@ -38,7 +38,7 @@ pub fn render_frame(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), crate::wgpu::rendergraph::RenderGraphError> {
     std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
     let result = run_frame(renderer, inputs, outputs);
     std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
@@ -73,7 +73,7 @@ fn run_frame(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), crate::wgpu::rendergraph::RenderGraphError> {
     let _span = tracing::info_span!("render_frame").entered();
     pass_sync::sync_gpu_profile(renderer, inputs);
     renderer.frame_state.index = renderer.frame_state.index.wrapping_add(1);
@@ -166,7 +166,11 @@ fn run_frame(
                 screenshot_request = Some((path, max_dimension));
             }
             #[cfg(not(all(not(target_arch = "wasm32"), feature = "screenshot")))]
-            RendererCommand::CaptureScreenshot { .. } => {}
+            RendererCommand::CaptureScreenshot { .. } => {
+                tracing::warn!(
+                    "CaptureScreenshot ignored: renderer built without the `screenshot` feature"
+                );
+            }
         }
     }
 
@@ -206,8 +210,22 @@ fn run_frame(
 
     crate::wgpu::ibl::apply_ibl_bracket_blend(renderer, inputs);
 
-    let Some(surface_texture) = presentation::acquire_surface_frame(renderer) else {
-        return Ok(());
+    #[cfg(feature = "egui")]
+    if let Some(egui) = inputs.frame.egui.take() {
+        pass_sync::prepare_egui_pass(
+            renderer,
+            &egui.textures_delta,
+            egui.pixels_per_point,
+            egui.paint_jobs,
+        );
+    }
+
+    let surface_texture = match presentation::acquire_surface_frame(renderer) {
+        Ok(texture) => texture,
+        Err(reason) => {
+            outputs.skip_reason = Some(reason);
+            return Ok(());
+        }
     };
     outputs.frame_executed = true;
 
@@ -226,7 +244,12 @@ fn run_frame(
         .collect();
     renderer.cleanup_unused_camera_viewports(&active_camera_entities);
 
-    dispatch_window_renders(renderer, inputs, outputs)?;
+    // The renderer owns the live GPU textures; swap the persisted store into the
+    // inputs so the passes can sample it while the graph runs, then reclaim it.
+    std::mem::swap(&mut renderer.texture_store, &mut inputs.texture_store);
+    let dispatch_result = dispatch_window_renders(renderer, inputs, outputs);
+    std::mem::swap(&mut renderer.texture_store, &mut inputs.texture_store);
+    dispatch_result?;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
     if let Some((path, max_dimension)) = screenshot_request {
@@ -242,7 +265,7 @@ fn dispatch_window_renders(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), crate::wgpu::rendergraph::RenderGraphError> {
     let _span = tracing::info_span!(
         "dispatch_window_renders",
         cameras = inputs.frame.cameras.len(),

@@ -143,6 +143,68 @@ pub struct LineUniform {
     pub view_proj: [[f32; 4]; 4],
 }
 
+impl From<&crate::wgpu::render_configs::RenderLine> for GpuLineData {
+    fn from(line: &crate::wgpu::render_configs::RenderLine) -> Self {
+        Self {
+            start: [line.start.x, line.start.y, line.start.z, 1.0],
+            end: [line.end.x, line.end.y, line.end.z, 1.0],
+            color: [line.color.x, line.color.y, line.color.z, line.color.w],
+            entity_id: line.entity_id,
+            visible: 1,
+            depth_mode: line.depth_mode,
+            _padding: 0,
+        }
+    }
+}
+
+impl From<&crate::wgpu::render_configs::RenderBoundingVolume> for GpuBoundingVolumeData {
+    fn from(volume: &crate::wgpu::render_configs::RenderBoundingVolume) -> Self {
+        Self {
+            center: [volume.center.x, volume.center.y, volume.center.z],
+            _pad0: 0.0,
+            half_extents: [
+                volume.half_extents.x,
+                volume.half_extents.y,
+                volume.half_extents.z,
+            ],
+            _pad1: 0.0,
+            orientation: [
+                volume.orientation.x,
+                volume.orientation.y,
+                volume.orientation.z,
+                volume.orientation.w,
+            ],
+            transform: volume.transform.into(),
+            color: [
+                volume.color.x,
+                volume.color.y,
+                volume.color.z,
+                volume.color.w,
+            ],
+        }
+    }
+}
+
+impl From<&crate::wgpu::render_configs::RenderNormal> for GpuNormalData {
+    fn from(normal: &crate::wgpu::render_configs::RenderNormal) -> Self {
+        Self {
+            position: [normal.position.x, normal.position.y, normal.position.z],
+            _pad0: 0.0,
+            normal: [normal.normal.x, normal.normal.y, normal.normal.z],
+            _pad1: 0.0,
+            transform: normal.transform.into(),
+            color: [
+                normal.color.x,
+                normal.color.y,
+                normal.color.z,
+                normal.color.w,
+            ],
+            length: normal.length,
+            _pad2: [0.0, 0.0, 0.0],
+        }
+    }
+}
+
 /// GPU-driven debug line pass drawing lines, bounding volumes, and normals.
 pub struct LinesPass {
     vertex_buffer: wgpu::Buffer,
@@ -982,14 +1044,15 @@ impl LinesPass {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        line_data: &[GpuLineData],
+        lines: &[crate::wgpu::render_configs::RenderLine],
     ) {
+        let line_data: Vec<GpuLineData> = lines.iter().map(GpuLineData::from).collect();
         let line_count = line_data.len() as u32;
         let total_needed = line_count + self.bv_line_count;
         if total_needed > self.current_capacity {
             self.ensure_capacity(device, queue, total_needed);
         }
-        self.update_line_data(queue, line_data);
+        self.update_line_data(queue, &line_data);
     }
 
     /// Uploads the frame's bounding-volume boxes, growing the box and line
@@ -998,8 +1061,10 @@ impl LinesPass {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        bv_data: &[GpuBoundingVolumeData],
+        volumes: &[crate::wgpu::render_configs::RenderBoundingVolume],
     ) {
+        let bv_data: Vec<GpuBoundingVolumeData> =
+            volumes.iter().map(GpuBoundingVolumeData::from).collect();
         let bv_count = bv_data.len() as u32;
         if bv_count > self.bv_capacity {
             self.ensure_bv_capacity(device, bv_count);
@@ -1008,7 +1073,7 @@ impl LinesPass {
         if total_lines_needed > self.current_capacity {
             self.ensure_capacity(device, queue, total_lines_needed);
         }
-        self.update_bounding_volumes(queue, bv_data);
+        self.update_bounding_volumes(queue, &bv_data);
     }
 
     /// Uploads the frame's normal-visualization lines, growing the normal and
@@ -1017,8 +1082,9 @@ impl LinesPass {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        normal_data: &[GpuNormalData],
+        normals: &[crate::wgpu::render_configs::RenderNormal],
     ) {
+        let normal_data: Vec<GpuNormalData> = normals.iter().map(GpuNormalData::from).collect();
         let normal_count = normal_data.len() as u32;
         if normal_count > self.normal_capacity {
             self.ensure_normal_capacity(device, normal_count);
@@ -1027,7 +1093,7 @@ impl LinesPass {
         if total_lines_needed > self.current_capacity {
             self.ensure_capacity(device, queue, total_lines_needed);
         }
-        self.update_normals(queue, normal_data);
+        self.update_normals(queue, &normal_data);
     }
 
     /// Drops the current frame's bounding-volume lines.

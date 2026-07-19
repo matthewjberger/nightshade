@@ -1,4 +1,4 @@
-#define_import_path nightshade::material_data
+#define_import_path nightshade_renderer::material_data
 
 //! The material table every pass that shades from a material reads.
 //!

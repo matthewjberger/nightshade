@@ -61,6 +61,98 @@ pub fn apply_frame_dirty_state(
     }
 }
 
+/// Rasterizes a world-space text mesh, growing the glyph atlas as needed. The
+/// caller passes its own font engine; the renderer owns the atlas and the GPU
+/// handles, so this is the seam where the two vocabularies meet.
+pub fn generate_world_text_mesh(
+    renderer: &mut WgpuRenderer,
+    font_engine: &mut crate::font_engine::FontEngine,
+    text: &str,
+    params: &crate::text_mesh::TextMeshParams,
+) -> crate::text_data::TextMesh {
+    crate::text_mesh::generate_text_mesh_world(
+        text,
+        &mut crate::text_mesh::TextMeshContext {
+            font_engine,
+            glyph_atlas: &mut renderer.glyph_atlas,
+            device: &renderer.device,
+            queue: &renderer.queue,
+        },
+        params,
+    )
+}
+
+/// Rasterizes a retained-UI text mesh, growing the glyph atlas as needed.
+pub fn generate_ui_text_mesh(
+    renderer: &mut WgpuRenderer,
+    font_engine: &mut crate::font_engine::FontEngine,
+    text: &str,
+    params: &crate::text_mesh::TextMeshParams,
+    wrap_width: Option<f32>,
+) -> crate::text_data::TextMesh {
+    crate::text_mesh::generate_text_mesh_ui(
+        text,
+        &mut crate::text_mesh::TextMeshContext {
+            font_engine,
+            glyph_atlas: &mut renderer.glyph_atlas,
+            device: &renderer.device,
+            queue: &renderer.queue,
+        },
+        params,
+        wrap_width,
+    )
+}
+
+/// The glyph atlas revision, bumped whenever a glyph is rasterized. Compare it
+/// across a batch of meshing to learn whether the atlas grew.
+pub fn glyph_atlas_revision(renderer: &WgpuRenderer) -> u32 {
+    renderer.glyph_atlas.revision
+}
+
+/// Rebinds the glyph atlas into the text passes when it grew past
+/// `pre_revision`; a no-op when the atlas is unchanged.
+pub fn rebind_glyph_atlas_if_grown(renderer: &mut WgpuRenderer, pre_revision: u32) {
+    if renderer.glyph_atlas.revision != pre_revision {
+        rebind_glyph_atlas(renderer);
+    }
+}
+
+/// The retained-UI text mesh signature recorded for `entity` last frame, if any.
+pub fn cached_ui_text_signature(
+    renderer: &WgpuRenderer,
+    entity: nightshade_ecs::Entity,
+) -> Option<u64> {
+    renderer
+        .frame_state
+        .text_mesh_signatures
+        .get(&entity)
+        .copied()
+}
+
+/// Records the retained-UI text mesh signature for `entity`.
+pub fn record_ui_text_signature(
+    renderer: &mut WgpuRenderer,
+    entity: nightshade_ecs::Entity,
+    signature: u64,
+) {
+    renderer
+        .frame_state
+        .text_mesh_signatures
+        .insert(entity, signature);
+}
+
+/// Drops recorded UI text signatures for entities not in `active`, so a removed
+/// text entity's mesh regenerates if it returns.
+pub fn retain_ui_text_signatures(
+    renderer: &mut WgpuRenderer,
+    active: &std::collections::HashSet<nightshade_ecs::Entity>,
+) {
+    renderer
+        .frame_state
+        .text_mesh_signatures
+        .retain(|entity, _| active.contains(entity));
+}
+
 /// Rebinds the glyph atlas texture on every pass that samples it. Call after
 /// the atlas revision changes (a glyph rasterization grew or repacked it).
 pub fn rebind_glyph_atlas(renderer: &mut WgpuRenderer) {

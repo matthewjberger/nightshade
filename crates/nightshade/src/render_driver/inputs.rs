@@ -119,10 +119,7 @@ fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
         }
         crate::ecs::world::RenderCommand::LoadHdrSkyboxFromPath { path } => {
             match std::fs::read(&path) {
-                Ok(bytes) => {
-                    tracing::info!("Successfully read HDR file: {}", path.display());
-                    Some(RendererCommand::LoadHdrSkybox { hdr_data: bytes })
-                }
+                Ok(bytes) => Some(RendererCommand::LoadHdrSkybox { hdr_data: bytes }),
                 Err(error) => {
                     tracing::error!("Failed to read HDR file {}: {}", path.display(), error);
                     None
@@ -302,6 +299,8 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let world_id = world.res::<crate::ecs::world::WorldId>().0;
     let texture_cache =
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
+    #[cfg(feature = "egui")]
+    let egui_frame_inputs = super::egui::take_egui_frame_inputs(world);
     let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     RenderInputs {
         scene_world,
@@ -313,6 +312,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         wind,
         mesh_cache,
         texture_cache,
+        texture_store: Default::default(),
         pending_particle_textures: loading_particle_textures,
         ui: UiFrameInputs {
             rects: std::mem::take(&mut retained.frame.rects),
@@ -347,6 +347,8 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             mouse_position,
             force_render_cameras,
             debug_lines,
+            #[cfg(feature = "egui")]
+            egui: egui_frame_inputs,
         },
         #[cfg(feature = "grass")]
         grass,

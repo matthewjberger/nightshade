@@ -1,10 +1,9 @@
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
-use crate::render::wgpu::passes::geometry::lines::{
-    GpuBoundingVolumeData, GpuLineData, GpuNormalData, extract_frustum_planes,
-};
+use crate::render::wgpu::passes::geometry::lines::extract_frustum_planes;
+use crate::render::wgpu::render_configs::{RenderBoundingVolume, RenderLine, RenderNormal};
 
-pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineData> {
+pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<RenderLine> {
     let line_entities = world.ecs.worlds[CORE].query_entities(
         crate::ecs::world::LINES
             | crate::ecs::world::GLOBAL_TRANSFORM
@@ -27,14 +26,17 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
                 let end_world =
                     transform * nalgebra_glm::Vec4::new(line.end.x, line.end.y, line.end.z, 1.0);
 
-                line_data.push(GpuLineData {
-                    start: [start_world.x, start_world.y, start_world.z, start_world.w],
-                    end: [end_world.x, end_world.y, end_world.z, end_world.w],
-                    color: [line.color.x, line.color.y, line.color.z, line.color.w],
+                line_data.push(RenderLine {
+                    start: nalgebra_glm::vec3(start_world.x, start_world.y, start_world.z),
+                    end: nalgebra_glm::vec3(end_world.x, end_world.y, end_world.z),
+                    color: nalgebra_glm::vec4(
+                        line.color.x,
+                        line.color.y,
+                        line.color.z,
+                        line.color.w,
+                    ),
                     entity_id: entity.id,
-                    visible: 1,
                     depth_mode,
-                    _padding: 0,
                 });
             }
         }
@@ -49,7 +51,7 @@ pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<GpuLineD
 
 const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
-fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
+fn append_wireframe_lines(world: &World, line_data: &mut Vec<RenderLine>) {
     let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let mesh_cache = &world
         .res::<crate::ecs::asset_state::AssetState>()
@@ -133,7 +135,7 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
 }
 
 fn push_mesh_wireframe_edges(
-    line_data: &mut Vec<GpuLineData>,
+    line_data: &mut Vec<RenderLine>,
     entity_id: u32,
     transform: &nalgebra_glm::Mat4,
     mesh: &crate::render::geometry::Mesh,
@@ -158,14 +160,17 @@ fn push_mesh_wireframe_edges(
         ] {
             let start = transform * nalgebra_glm::Vec4::new(a[0], a[1], a[2], 1.0);
             let end = transform * nalgebra_glm::Vec4::new(b[0], b[1], b[2], 1.0);
-            line_data.push(GpuLineData {
-                start: [start.x, start.y, start.z, start.w],
-                end: [end.x, end.y, end.z, end.w],
-                color: WIREFRAME_COLOR,
+            line_data.push(RenderLine {
+                start: nalgebra_glm::vec3(start.x, start.y, start.z),
+                end: nalgebra_glm::vec3(end.x, end.y, end.z),
+                color: nalgebra_glm::vec4(
+                    WIREFRAME_COLOR[0],
+                    WIREFRAME_COLOR[1],
+                    WIREFRAME_COLOR[2],
+                    WIREFRAME_COLOR[3],
+                ),
                 entity_id,
-                visible: 1,
                 depth_mode: 1,
-                _padding: 0,
             });
         }
     }
@@ -174,7 +179,7 @@ fn push_mesh_wireframe_edges(
 pub fn gather_bounding_volume_data(
     world: &World,
     show_bounding_volumes: bool,
-) -> Option<Vec<GpuBoundingVolumeData>> {
+) -> Option<Vec<RenderBoundingVolume>> {
     let show_selected_bounding_volume = world
         .res::<crate::render::config::DebugDraw>()
         .show_selected_bounding_volume;
@@ -236,38 +241,32 @@ pub fn gather_bounding_volume_data(
         {
             let center = (minimum + maximum) * 0.5;
             let half_extents = (maximum - minimum) * 0.5;
-            bv_data.push(GpuBoundingVolumeData {
-                center: [center.x, center.y, center.z],
-                _pad0: 0.0,
-                half_extents: [half_extents.x, half_extents.y, half_extents.z],
-                _pad1: 0.0,
-                orientation: [0.0, 0.0, 0.0, 1.0],
-                transform: IDENTITY_TRANSFORM,
-                color,
+            bv_data.push(RenderBoundingVolume {
+                center,
+                half_extents,
+                orientation: nalgebra_glm::vec4(0.0, 0.0, 0.0, 1.0),
+                transform: nalgebra_glm::Mat4::identity(),
+                color: nalgebra_glm::vec4(color[0], color[1], color[2], color[3]),
             });
             continue;
         }
 
         let obb = &bounding_volume.obb;
-        let m = &global_transform.0;
-        bv_data.push(GpuBoundingVolumeData {
-            center: [obb.center.x, obb.center.y, obb.center.z],
-            _pad0: 0.0,
-            half_extents: [obb.half_extents.x, obb.half_extents.y, obb.half_extents.z],
-            _pad1: 0.0,
-            orientation: [
+        bv_data.push(RenderBoundingVolume {
+            center: nalgebra_glm::vec3(obb.center.x, obb.center.y, obb.center.z),
+            half_extents: nalgebra_glm::vec3(
+                obb.half_extents.x,
+                obb.half_extents.y,
+                obb.half_extents.z,
+            ),
+            orientation: nalgebra_glm::vec4(
                 obb.orientation.i,
                 obb.orientation.j,
                 obb.orientation.k,
                 obb.orientation.w,
-            ],
-            transform: [
-                [m[(0, 0)], m[(1, 0)], m[(2, 0)], m[(3, 0)]],
-                [m[(0, 1)], m[(1, 1)], m[(2, 1)], m[(3, 1)]],
-                [m[(0, 2)], m[(1, 2)], m[(2, 2)], m[(3, 2)]],
-                [m[(0, 3)], m[(1, 3)], m[(2, 3)], m[(3, 3)]],
-            ],
-            color,
+            ),
+            transform: global_transform.0,
+            color: nalgebra_glm::vec4(color[0], color[1], color[2], color[3]),
         });
     }
 
@@ -287,13 +286,6 @@ fn sphere_in_frustum(
     }
     true
 }
-
-const IDENTITY_TRANSFORM: [[f32; 4]; 4] = [
-    [1.0, 0.0, 0.0, 0.0],
-    [0.0, 1.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0],
-];
 
 /// CPU equivalent of the skinned vertex shader: applies morph displacements,
 /// then blends each vertex through its joint matrices (joint global transform
@@ -391,7 +383,7 @@ fn world_position_bounds(
     Some((minimum, maximum))
 }
 
-pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNormalData>> {
+pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<RenderNormal>> {
     let normal_line_length = world
         .res::<crate::render::config::DebugDraw>()
         .normal_line_length;
@@ -482,38 +474,38 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<GpuNo
 
         if is_skinned && let Some(vertices) = skinned_overlay_vertices(world, entity, mesh) {
             for (position, normal) in vertices {
-                normal_data.push(GpuNormalData {
-                    position: [position.x, position.y, position.z],
-                    _pad0: 0.0,
-                    normal: [normal.x, normal.y, normal.z],
-                    _pad1: 0.0,
-                    transform: IDENTITY_TRANSFORM,
-                    color: normal_line_color,
+                normal_data.push(RenderNormal {
+                    position,
+                    normal,
+                    transform: nalgebra_glm::Mat4::identity(),
+                    color: nalgebra_glm::vec4(
+                        normal_line_color[0],
+                        normal_line_color[1],
+                        normal_line_color[2],
+                        normal_line_color[3],
+                    ),
                     length: normal_line_length,
-                    _pad2: [0.0, 0.0, 0.0],
                 });
             }
             continue;
         }
 
-        let m = &global_transform.0;
-        let transform = [
-            [m[(0, 0)], m[(1, 0)], m[(2, 0)], m[(3, 0)]],
-            [m[(0, 1)], m[(1, 1)], m[(2, 1)], m[(3, 1)]],
-            [m[(0, 2)], m[(1, 2)], m[(2, 2)], m[(3, 2)]],
-            [m[(0, 3)], m[(1, 3)], m[(2, 3)], m[(3, 3)]],
-        ];
-
         for vertex in &mesh.vertices {
-            normal_data.push(GpuNormalData {
-                position: vertex.position,
-                _pad0: 0.0,
-                normal: vertex.normal,
-                _pad1: 0.0,
-                transform,
-                color: normal_line_color,
+            normal_data.push(RenderNormal {
+                position: nalgebra_glm::vec3(
+                    vertex.position[0],
+                    vertex.position[1],
+                    vertex.position[2],
+                ),
+                normal: nalgebra_glm::vec3(vertex.normal[0], vertex.normal[1], vertex.normal[2]),
+                transform: global_transform.0,
+                color: nalgebra_glm::vec4(
+                    normal_line_color[0],
+                    normal_line_color[1],
+                    normal_line_color[2],
+                    normal_line_color[3],
+                ),
                 length: normal_line_length,
-                _pad2: [0.0, 0.0, 0.0],
             });
         }
     }

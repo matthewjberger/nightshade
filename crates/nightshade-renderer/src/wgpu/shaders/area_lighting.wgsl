@@ -1,6 +1,6 @@
-#define_import_path nightshade::area_lighting
+#define_import_path nightshade_renderer::area_lighting
 
-#import nightshade::material_sampling::sample_srgb_index
+#import nightshade_renderer::material_sampling::sample_srgb_index
 
 struct AreaLight {
     position: vec4<f32>,

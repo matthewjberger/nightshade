@@ -3,6 +3,7 @@
 
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::passes;
+use crate::wgpu::render_configs::FrameSkipReason;
 #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
 use crate::wgpu::rendergraph::render_graph_get_texture;
 use crate::wgpu::rendergraph::{
@@ -11,10 +12,14 @@ use crate::wgpu::rendergraph::{
 
 /// Acquires the surface texture for this frame, reconfiguring the surface once
 /// if it reports outdated or lost, and registers it (plus the spotlight shadow
-/// atlas) as the graph's external textures. Returns `None` when no frame is
-/// available, such as an occluded or timed-out surface; present the returned
-/// texture after the graph executes.
-pub fn acquire_surface_frame(renderer: &mut WgpuRenderer) -> Option<wgpu::SurfaceTexture> {
+/// atlas) as the graph's external textures. Returns [`FrameSkipReason`] when no
+/// frame is available: [`FrameSkipReason::SurfaceLost`] when an outdated/lost
+/// surface could not be reacquired, [`FrameSkipReason::SurfaceUnavailable`] for
+/// a transient state such as an occluded or timed-out surface. Present the
+/// returned texture after the graph executes.
+pub fn acquire_surface_frame(
+    renderer: &mut WgpuRenderer,
+) -> std::result::Result<wgpu::SurfaceTexture, FrameSkipReason> {
     let surface_texture = match renderer.surface.get_current_texture() {
         wgpu::CurrentSurfaceTexture::Success(frame)
         | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
@@ -26,12 +31,12 @@ pub fn acquire_surface_frame(renderer: &mut WgpuRenderer) -> Option<wgpu::Surfac
                 wgpu::CurrentSurfaceTexture::Success(frame)
                 | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
                 _ => {
-                    return None;
+                    return Err(FrameSkipReason::SurfaceLost);
                 }
             }
         }
         _ => {
-            return None;
+            return Err(FrameSkipReason::SurfaceUnavailable);
         }
     };
 
@@ -67,7 +72,7 @@ pub fn acquire_surface_frame(renderer: &mut WgpuRenderer) -> Option<wgpu::Surfac
         renderer.spotlight_shadow_atlas_texture.height(),
     );
 
-    Some(surface_texture)
+    Ok(surface_texture)
 }
 
 /// Appends the presentation tail to the graph and compiles it: the viewport

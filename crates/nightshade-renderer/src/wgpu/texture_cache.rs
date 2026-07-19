@@ -58,21 +58,17 @@ pub enum TextureOwner {
     Named(String),
 }
 
-/// GPU texture registry with reference-counted, owner-tracked lifetimes.
+/// CPU-side texture registry: reference-counted, owner-tracked id and name
+/// bookkeeping. Holds no GPU handles. The wgpu textures live in the
+/// renderer-owned [`TextureStore`], keyed by the same names. The host owns this
+/// (it allocates ids, refcounts, and drives eviction); the renderer owns the
+/// store, so nothing GPU-able sits on the host's side of the boundary.
 #[derive(Default)]
 pub struct TextureCache {
-    pub(crate) registry: GenerationalRegistry<TextureEntry>,
+    pub(crate) registry: GenerationalRegistry<()>,
     pub(crate) pending_references: HashMap<String, usize>,
     pub(crate) protected_names: std::collections::HashSet<String>,
     pub(crate) owners: HashMap<TextureOwner, Vec<String>>,
-}
-
-impl TextureCache {
-    /// The registered texture entry for `name`, if one is filled.
-    pub fn get(&self, name: &str) -> Option<&TextureEntry> {
-        let index = self.registry.name_to_index.get(name)?;
-        self.registry.entries[*index as usize].as_ref()
-    }
 }
 
 /// A GPU texture together with its default view and sampler.
@@ -83,6 +79,39 @@ pub struct TextureEntry {
     pub view: wgpu::TextureView,
     /// Sampler configured from the upload's settings.
     pub sampler: wgpu::Sampler,
+}
+
+/// The renderer-owned store of live GPU textures, keyed by name. Persists on the
+/// [`WgpuRenderer`](crate::wgpu::WgpuRenderer) across frames and is swapped into
+/// the frame's [`RenderInputs`](crate::wgpu::render_configs::RenderInputs) so the
+/// passes can sample it, never touching the host. The CPU id/refcount
+/// bookkeeping lives in [`TextureCache`].
+#[derive(Default)]
+pub struct TextureStore {
+    entries: HashMap<String, TextureEntry>,
+}
+
+/// The GPU texture entry stored under `name`, if uploaded.
+pub fn texture_store_get<'a>(store: &'a TextureStore, name: &str) -> Option<&'a TextureEntry> {
+    store.entries.get(name)
+}
+
+/// True when a GPU texture is stored under `name`.
+pub fn texture_store_contains(store: &TextureStore, name: &str) -> bool {
+    store.entries.contains_key(name)
+}
+
+/// The names of every stored GPU texture.
+pub fn texture_store_names(store: &TextureStore) -> impl Iterator<Item = &String> {
+    store.entries.keys()
+}
+
+pub(crate) fn texture_store_insert(store: &mut TextureStore, name: String, entry: TextureEntry) {
+    store.entries.insert(name, entry);
+}
+
+pub(crate) fn texture_store_remove(store: &mut TextureStore, name: &str) -> bool {
+    store.entries.remove(name).is_some()
 }
 
 /// Format and sampler settings for a texture upload.
@@ -110,6 +139,7 @@ pub struct TextureUploadRequest<'a> {
 /// its stable id. Returns the existing id when the name is already filled.
 pub fn texture_cache_load_from_raw_rgba_with_format(
     cache: &mut TextureCache,
+    store: &mut TextureStore,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     mip_generator: &super::mip_generator::MipGenerator,
@@ -247,8 +277,9 @@ pub fn texture_cache_load_from_raw_rgba_with_format(
         sampler,
     };
 
-    let (index, generation) = registry_insert(&mut cache.registry, name, entry);
+    let (index, generation) = registry_insert(&mut cache.registry, name.clone(), ());
     cache.registry.reference_counts[index as usize] += pending_refs;
+    texture_store_insert(store, name, entry);
 
     Ok(TextureId::new(index, generation))
 }
@@ -394,31 +425,26 @@ pub enum TextureReloadResult {
 /// Replaces a registered texture's pixels, writing in place when the size is
 /// unchanged and recreating the texture when it differs.
 pub fn texture_cache_reload(
-    cache: &mut TextureCache,
+    cache: &TextureCache,
+    store: &mut TextureStore,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     name: &str,
     rgba_data: &[u8],
-    width: u32,
-    height: u32,
+    dimensions: (u32, u32),
 ) -> TextureReloadResult {
-    let Some(&index) = cache.registry.name_to_index.get(name) else {
+    let (width, height) = dimensions;
+    if !cache.registry.name_to_index.contains_key(name) {
         tracing::warn!("Texture reload: '{}' not found in cache", name);
         return TextureReloadResult::NotFound;
-    };
-    let Some(entry) = cache.registry.entries[index as usize].as_ref() else {
+    }
+    let Some(entry) = texture_store_get(store, name) else {
         tracing::warn!("Texture reload: '{}' entry is empty", name);
         return TextureReloadResult::NotFound;
     };
 
     let existing_size = entry.texture.size();
     if existing_size.width == width && existing_size.height == height {
-        tracing::info!(
-            "Texture reload: '{}' updated in-place ({}x{})",
-            name,
-            width,
-            height
-        );
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &entry.texture,
@@ -472,20 +498,14 @@ pub fn texture_cache_reload(
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
-        if let Some(slot) = cache.registry.entries[index as usize].as_mut() {
-            *slot = TextureEntry {
+        texture_store_insert(
+            store,
+            name.to_string(),
+            TextureEntry {
                 texture,
                 view,
                 sampler,
-            };
-        }
-        tracing::info!(
-            "Texture reload: '{}' recreated ({}x{} -> {}x{})",
-            name,
-            existing_size.width,
-            existing_size.height,
-            width,
-            height
+            },
         );
         TextureReloadResult::Recreated
     }

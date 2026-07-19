@@ -398,28 +398,3 @@ pub fn generate_cubemap_mipmaps(
         queue.submit(Some(encoder.finish()));
     }
 }
-
-/// Creates a 1x1 placeholder cubemap and its cube view for when no HDRI is set.
-pub fn create_dummy_cubemap(device: &wgpu::Device) -> (wgpu::Texture, wgpu::TextureView) {
-    let cubemap = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("Dummy Cubemap Texture"),
-        size: wgpu::Extent3d {
-            width: 1,
-            height: 1,
-            depth_or_array_layers: 6,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Rgba16Float,
-        usage: wgpu::TextureUsages::TEXTURE_BINDING,
-        view_formats: &[],
-    });
-
-    let cubemap_view = cubemap.create_view(&wgpu::TextureViewDescriptor {
-        dimension: Some(wgpu::TextureViewDimension::Cube),
-        ..Default::default()
-    });
-
-    (cubemap, cubemap_view)
-}

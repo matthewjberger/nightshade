@@ -12,7 +12,7 @@ use crate::render::procedural_meshes::{
     create_sphere_mesh, create_subdivided_plane_mesh, create_torus_mesh,
 };
 use crate::render::wgpu::texture_cache::{
-    TextureOwner, texture_cache_acquire, texture_cache_release_entity, texture_cache_remove_unused,
+    TextureOwner, texture_cache_acquire, texture_cache_release_entity,
 };
 
 use crate::prelude::*;
@@ -757,9 +757,6 @@ pub fn cleanup_unused_resources_system(world: &mut World) {
             &mut world
                 .res_mut::<crate::ecs::asset_state::AssetState>()
                 .material_registry,
-        );
-        texture_cache_remove_unused(
-            world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
         );
     }
 }

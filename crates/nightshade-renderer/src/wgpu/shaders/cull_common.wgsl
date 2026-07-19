@@ -1,4 +1,4 @@
-#define_import_path nightshade::cull_common
+#define_import_path nightshade_renderer::cull_common
 
 struct DrawIndexedIndirect {
     index_count: u32,

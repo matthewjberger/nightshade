@@ -14,21 +14,21 @@
 //! - [`texture_cache`]: GPU texture caching and lifecycle management
 //! - [`glyph_atlas`]: dynamic glyph atlas backed by cosmic-text + swash
 
-pub mod brdf_lut;
+pub(crate) mod brdf_lut;
 mod camera_viewport;
 #[cfg(feature = "hdr")]
-pub mod envmap_filter;
+pub(crate) mod envmap_filter;
 mod execution;
 pub mod frame;
-pub mod glyph_atlas;
+pub(crate) mod glyph_atlas;
 #[cfg(feature = "hdr")]
-pub mod hdr;
-pub mod ibl;
+pub(crate) mod hdr;
+pub(crate) mod ibl;
 mod initialization;
-pub mod lights;
-pub mod material_texture_arrays;
-pub mod mip_generator;
-pub mod pass_access;
+pub(crate) mod lights;
+pub(crate) mod material_texture_arrays;
+pub(crate) mod mip_generator;
+pub(crate) mod pass_access;
 pub mod pass_sync;
 pub mod passes;
 pub mod picking;
@@ -36,11 +36,11 @@ pub mod presentation;
 pub mod render_configs;
 mod surface;
 pub mod texture_uploads;
-pub mod view;
+pub(crate) mod view;
 pub use crate::rendergraph;
 pub mod shader_compose;
 mod stagger;
-pub mod texture_array_pool;
+pub(crate) mod texture_array_pool;
 /// GPU texture registry, upload, and lifecycle tracking.
 pub mod texture_cache;
 
@@ -109,8 +109,9 @@ pub struct WgpuRenderer {
     pub spotlight_shadow_atlas_view: wgpu::TextureView,
     /// UI image pass, present when retained-UI images are drawn.
     pub ui_image_pass: Option<Box<passes::UiImagePass>>,
-    /// Dynamic glyph atlas backing text rendering.
-    pub glyph_atlas: glyph_atlas::GlyphAtlas,
+    /// Dynamic glyph atlas backing text rendering. Renderer-internal: drive text
+    /// meshing through [`crate::wgpu::pass_sync`] rather than reaching in here.
+    pub(crate) glyph_atlas: glyph_atlas::GlyphAtlas,
     /// Per-camera viewport texture pool.
     pub camera_viewports: std::collections::HashMap<nightshade_ecs::Entity, CameraViewport>,
     /// BRDF integration lookup texture, retained to keep [`brdf_lut_view`](Self::brdf_lut_view) alive.
@@ -123,8 +124,9 @@ pub struct WgpuRenderer {
     pub ui_texture_array: texture_array_pool::TextureArrayPool,
     /// Compute helper that generates mip chains for uploaded textures.
     pub mip_generator: mip_generator::MipGenerator,
-    /// GPU depth-pick readback state.
-    pub depth_pick: DepthPickState,
+    /// GPU depth-pick readback state. Renderer-internal: poll picks through
+    /// [`crate::wgpu::picking::poll_depth_pick`] rather than reaching in here.
+    pub(crate) depth_pick: DepthPickState,
     /// Screenshot readback state.
     #[cfg(not(target_arch = "wasm32"))]
     pub screenshot: ScreenshotState,
@@ -134,8 +136,14 @@ pub struct WgpuRenderer {
     /// renderer's dispatch so consecutive dispatches don't
     /// pessimistically resize when the size is already current.
     pub window_render_state: WindowRenderState,
-    /// Per-frame and dedup bookkeeping.
-    pub frame_state: FrameState,
+    /// Per-frame and dedup bookkeeping. Renderer-internal.
+    pub(crate) frame_state: FrameState,
+    /// The renderer-owned store of live GPU textures, keyed by name. The host's
+    /// [`TextureCache`](crate::wgpu::texture_cache::TextureCache) holds only the
+    /// CPU id/refcount registry; the wgpu handles live here and are swapped into
+    /// the frame's [`RenderInputs`](render_configs::RenderInputs) so the passes
+    /// can sample them.
+    pub(crate) texture_store: crate::wgpu::texture_cache::TextureStore,
     /// The adapter the renderer selected, published into `RendererState` on the
     /// first frame so game code can adapt quality and controls to the device.
     pub gpu_profile: crate::config::GpuProfile,

@@ -1,6 +1,6 @@
 const PI: f32 = 3.14159265358979323846;
 
-#import nightshade::pbr_brdf::{DistributionGGX, GeometrySchlickGGX, GeometrySmith, fresnelSchlick, fresnelSchlickRoughness, specularAntiAliasing, fresnel_clearcoat, clearcoat_specular_lobe, d_charlie, v_neubelt, sheen_lobe, fresnel0_to_ior, ior_to_fresnel0_v, ior_to_fresnel0_f, eval_sensitivity, d_ggx_anisotropic, v_ggx_anisotropic, eval_iridescence, getRangeAttenuation, getSpotAttenuation, applyVolumeAttenuation, applyIorToRoughness, box_project_reflection, box_projected_roughness}
+#import nightshade_renderer::pbr_brdf::{DistributionGGX, GeometrySchlickGGX, GeometrySmith, fresnelSchlick, fresnelSchlickRoughness, specularAntiAliasing, fresnel_clearcoat, clearcoat_specular_lobe, d_charlie, v_neubelt, sheen_lobe, fresnel0_to_ior, ior_to_fresnel0_v, ior_to_fresnel0_f, eval_sensitivity, d_ggx_anisotropic, v_ggx_anisotropic, eval_iridescence, getRangeAttenuation, getSpotAttenuation, applyVolumeAttenuation, applyIorToRoughness, box_project_reflection, box_projected_roughness}
 
 
 fn getTransmissionSample(reflection: vec3<f32>, roughness: f32, ior: f32) -> vec3<f32> {
@@ -415,7 +415,7 @@ var<storage, read> light_indices: array<u32>;
 @group(1) @binding(9)
 var<uniform> cluster_uniforms: ClusterUniforms;
 
-#import nightshade::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER, UvGrad}
+#import nightshade_renderer::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER, UvGrad}
 
 var<private> material_uv0_ddx: vec2<f32>;
 var<private> material_uv0_ddy: vec2<f32>;
@@ -445,7 +445,7 @@ fn scaled_material_uv_grad(scale: f32) -> UvGrad {
     out.ddy = material_uv0_ddy * scale;
     return out;
 }
-#import nightshade::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}
+#import nightshade_renderer::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}
 
 @group(3) @binding(0)
 var shadow_texture: texture_depth_2d;

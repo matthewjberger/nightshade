@@ -3,8 +3,6 @@ use crate::ecs::loading::{
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
 };
-use crate::render::wgpu;
-use crate::render::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::render::wgpu::pass_sync;
 use crate::render::wgpu::presentation;
 use crate::render::wgpu::render_configs::FrameOutputs;
@@ -17,12 +15,10 @@ use crate::render::wgpu::texture_uploads;
 pub fn render_frame(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &mut crate::ecs::world::World,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), crate::render::wgpu::rendergraph::RenderGraphError> {
     poll_depth_pick_readback(renderer, world);
     drain_loading_tasks(renderer, world);
     super::extract::prepare_text_meshes(renderer, world);
-    #[cfg(feature = "egui")]
-    super::egui::prepare_egui_pass(renderer, world);
 
     let mut inputs = super::inputs::compose_render_inputs(world);
     let mut outputs = FrameOutputs::default();
@@ -119,47 +115,26 @@ pub(crate) fn poll_depth_pick_readback(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
     world: &mut crate::ecs::world::World,
 ) {
-    if !renderer.depth_pick.pending {
+    let Some(readback) = crate::render::wgpu::picking::poll_depth_pick(renderer) else {
         return;
-    }
-    let _ = renderer.device.poll(wgpu::PollType::Poll);
-
-    if !renderer
-        .depth_pick
-        .map_complete
-        .load(std::sync::atomic::Ordering::Relaxed)
-    {
-        return;
-    }
-    let buffer_slice = renderer.depth_pick.staging_buffer.slice(..);
-    let data = buffer_slice.get_mapped_range();
-    let mut depth_values = Vec::new();
-    let mut entity_id_values = Vec::new();
-    for chunk in data.chunks_exact(8) {
-        let depth = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-        let entity_id = u32::from_le_bytes([chunk[4], chunk[5], chunk[6], chunk[7]]);
-        depth_values.push(depth);
-        entity_id_values.push(entity_id);
-    }
-    drop(data);
-    renderer.depth_pick.staging_buffer.unmap();
+    };
 
     world
         .res_mut::<crate::ecs::gpu_picking::GpuPicking>()
         .set_depth_samples(
-            depth_values,
-            entity_id_values,
-            DEPTH_PICK_SAMPLE_SIZE,
-            DEPTH_PICK_SAMPLE_SIZE,
-            renderer.depth_pick.center.0,
-            renderer.depth_pick.center.1,
+            readback.depth_values,
+            readback.entity_id_values,
+            readback.sample_size,
+            readback.sample_size,
+            readback.center.0,
+            readback.center.1,
         );
 
-    if let Some(camera_entity) = renderer.depth_pick.camera
+    if let Some(camera_entity) = readback.camera
         && let Some(matrices) =
             crate::ecs::camera::queries::query_camera_matrices(world, camera_entity)
     {
-        let (texture_width, texture_height) = renderer.depth_pick.texture_size;
+        let (texture_width, texture_height) = readback.texture_size;
         let inverse_view_proj = (matrices.projection * matrices.view)
             .try_inverse()
             .unwrap_or_else(nalgebra_glm::Mat4::identity);
@@ -172,12 +147,6 @@ pub(crate) fn poll_depth_pick_readback(
                 texture_height as f32,
             );
     }
-
-    renderer.depth_pick.pending = false;
-    renderer
-        .depth_pick
-        .map_complete
-        .store(false, std::sync::atomic::Ordering::Relaxed);
 }
 
 pub(crate) fn drain_loading_tasks(
@@ -392,11 +361,11 @@ pub(crate) fn drain_loading_tasks(
         );
     }
 
-    let evicted = crate::render::wgpu::texture_cache::texture_cache_remove_unused(
+    let evicted = texture_uploads::evict_unused_textures(
+        renderer,
         world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(),
     );
     if !evicted.is_empty() {
-        texture_uploads::unregister_evicted_textures(renderer, &evicted);
         for name in &evicted {
             world
                 .res_mut::<crate::ecs::asset_state::AssetState>()

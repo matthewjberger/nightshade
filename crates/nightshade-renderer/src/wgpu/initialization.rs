@@ -863,6 +863,7 @@ impl super::WgpuRenderer {
                 captured_ibl_hour: 0.0,
                 captured_day_night_snapshots: false,
             },
+            texture_store: crate::wgpu::texture_cache::TextureStore::default(),
             gpu_profile,
             ibl_views: crate::config::IblViews::default(),
             meshlet_frozen_cull_view: None,

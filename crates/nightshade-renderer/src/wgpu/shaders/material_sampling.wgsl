@@ -1,4 +1,4 @@
-#define_import_path nightshade::material_sampling
+#define_import_path nightshade_renderer::material_sampling
 
 const NO_LAYER: u32 = 0xFFFFFFFFu;
 

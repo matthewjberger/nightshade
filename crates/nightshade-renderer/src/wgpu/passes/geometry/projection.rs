@@ -408,9 +408,7 @@ pub fn resolve_cookie_layers(
         crate::asset_id::TextureId,
         crate::wgpu::material_texture_arrays::MaterialTextureLayer,
     >,
-    texture_registry: &crate::generational_registry::GenerationalRegistry<
-        crate::wgpu::texture_cache::TextureEntry,
-    >,
+    texture_registry: &crate::generational_registry::GenerationalRegistry<()>,
 ) {
     for (entity, &index) in entity_to_index {
         let Some(light) = configs
@@ -451,9 +449,7 @@ pub fn resolve_area_emissive_layers(
         crate::asset_id::TextureId,
         crate::wgpu::material_texture_arrays::MaterialTextureLayer,
     >,
-    texture_registry: &crate::generational_registry::GenerationalRegistry<
-        crate::wgpu::texture_cache::TextureEntry,
-    >,
+    texture_registry: &crate::generational_registry::GenerationalRegistry<()>,
 ) {
     for (entity, &index) in entity_to_index {
         let Some(light) = configs

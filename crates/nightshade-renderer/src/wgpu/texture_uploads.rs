@@ -3,13 +3,14 @@
 //! every pass that binds them (mesh, skinned mesh, decal).
 
 use crate::asset_id::TextureId;
-use crate::generational_registry::{registry_entry_by_name, registry_name_for};
+use crate::generational_registry::registry_name_for;
 use crate::texture_data::{SamplerSettings, TextureUsage};
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::material_texture_arrays::{MaterialTextureLayer, MaterialTextureUpload};
 use crate::wgpu::texture_cache::{
     TextureCache, TextureReloadResult, TextureUploadRequest, TextureUploadSpec,
-    texture_cache_load_from_raw_rgba_with_format, texture_cache_reload,
+    texture_cache_load_from_raw_rgba_with_format, texture_cache_reload, texture_store_get,
+    texture_store_remove,
 };
 
 /// Inputs for uploading one material texture into the cache and texture arrays.
@@ -52,6 +53,7 @@ pub fn upload_material_texture(
     };
     if let Err(e) = texture_cache_load_from_raw_rgba_with_format(
         texture_cache,
+        &mut renderer.texture_store,
         &renderer.device,
         &renderer.queue,
         &renderer.mip_generator,
@@ -85,7 +87,7 @@ pub fn upload_material_texture(
     );
 
     if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         mesh_pass.register_texture_with_data(
             name.clone(),
@@ -122,7 +124,7 @@ pub fn upload_material_texture(
 
     if let Some(skinned_mesh_pass) =
         crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         skinned_mesh_pass.register_texture(
             name.clone(),
@@ -143,7 +145,7 @@ pub fn upload_material_texture(
     }
 
     if let Some(decal_pass) = crate::wgpu::pass_access::decal_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         decal_pass.register_texture(
             name,
@@ -202,24 +204,23 @@ pub fn reload_material_texture(
 ) {
     let result = texture_cache_reload(
         texture_cache,
+        &mut renderer.texture_store,
         &renderer.device,
         &renderer.queue,
         &name,
         rgba_data,
-        width,
-        height,
+        (width, height),
     );
     if !matches!(result, TextureReloadResult::Recreated) {
         return;
     }
-    let usage_opt = registry_entry_by_name(&texture_cache.registry, &name).map(|entry| match entry
-        .texture
-        .format()
-    {
-        wgpu::TextureFormat::Rgba8UnormSrgb | wgpu::TextureFormat::Bgra8UnormSrgb => {
-            TextureUsage::Color
+    let usage_opt = texture_store_get(&renderer.texture_store, &name).map(|entry| {
+        match entry.texture.format() {
+            wgpu::TextureFormat::Rgba8UnormSrgb | wgpu::TextureFormat::Bgra8UnormSrgb => {
+                TextureUsage::Color
+            }
+            _ => TextureUsage::Linear,
         }
-        _ => TextureUsage::Linear,
     });
     if let Some(usage) = usage_opt {
         renderer.material_texture_arrays.upload(
@@ -238,7 +239,7 @@ pub fn reload_material_texture(
         );
     }
     if let Some(mesh_pass) = crate::wgpu::pass_access::mesh_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         mesh_pass.register_texture_with_data(
             name.clone(),
@@ -249,7 +250,7 @@ pub fn reload_material_texture(
 
     if let Some(skinned_mesh_pass) =
         crate::wgpu::pass_access::skinned_mesh_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         skinned_mesh_pass.register_texture(
             name.clone(),
@@ -259,7 +260,7 @@ pub fn reload_material_texture(
     }
 
     if let Some(decal_pass) = crate::wgpu::pass_access::decal_pass_mut(&mut renderer.graph)
-        && let Some(texture_entry) = registry_entry_by_name(&texture_cache.registry, &name)
+        && let Some(texture_entry) = texture_store_get(&renderer.texture_store, &name)
     {
         decal_pass.register_texture(
             name,
@@ -291,6 +292,25 @@ pub fn unregister_evicted_textures(renderer: &mut WgpuRenderer, evicted: &[Strin
             decal_pass.unregister_texture(name);
         }
     }
+}
+
+/// Evicts every unreferenced texture from `cache` and unregisters each evicted
+/// name from the material arrays and passes in one step, so a texture's GPU
+/// handle can never drop without the renderer being told. Returns the evicted
+/// names. This is the sole owner of texture destruction: callers evict through
+/// here, never through `texture_cache_remove_unused` alone.
+pub fn evict_unused_textures(
+    renderer: &mut WgpuRenderer,
+    cache: &mut crate::wgpu::texture_cache::TextureCache,
+) -> Vec<String> {
+    let evicted = crate::wgpu::texture_cache::texture_cache_remove_unused(cache);
+    if !evicted.is_empty() {
+        unregister_evicted_textures(renderer, &evicted);
+        for name in &evicted {
+            texture_store_remove(&mut renderer.texture_store, name);
+        }
+    }
+    evicted
 }
 
 /// Applies the requested anisotropy level and, when the sampler or the

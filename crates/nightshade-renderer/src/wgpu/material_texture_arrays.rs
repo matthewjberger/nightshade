@@ -11,9 +11,6 @@ use std::collections::HashMap;
 const DEFAULT_LAYER_SIZE: u32 = 1024;
 const DEFAULT_MAX_LAYERS: u32 = 256;
 
-/// Layer sentinel meaning a material slot has no bound texture.
-pub const NO_TEXTURE_LAYER: u32 = 0xFFFFu32;
-
 /// Selects the bindless texture path and its upper texture bound.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct BindlessConfig {

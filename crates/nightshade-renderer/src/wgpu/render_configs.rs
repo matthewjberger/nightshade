@@ -150,17 +150,66 @@ pub enum RendererCommand {
     },
 }
 
+/// One debug line segment in world space. The caller composes these; the
+/// lines pass converts them to its GPU layout, so the contract carries no
+/// GPU-repr type.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderLine {
+    /// Segment start in world space.
+    pub start: nalgebra_glm::Vec3,
+    /// Segment end in world space.
+    pub end: nalgebra_glm::Vec3,
+    /// Line color as linear RGBA.
+    pub color: nalgebra_glm::Vec4,
+    /// Owning entity id for picking.
+    pub entity_id: u32,
+    /// Depth test mode: 0 depth-tested, 1 always on top.
+    pub depth_mode: u32,
+}
+
+/// One oriented bounding volume to expand into wireframe lines. Mirror of the
+/// lines pass's GPU box input, without the GPU padding.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderBoundingVolume {
+    /// Box center in local space.
+    pub center: nalgebra_glm::Vec3,
+    /// Half-size along each local axis.
+    pub half_extents: nalgebra_glm::Vec3,
+    /// Orientation quaternion as (x, y, z, w).
+    pub orientation: nalgebra_glm::Vec4,
+    /// World transform applied to the box.
+    pub transform: nalgebra_glm::Mat4,
+    /// Line color as linear RGBA.
+    pub color: nalgebra_glm::Vec4,
+}
+
+/// One vertex normal to expand into a line segment. Mirror of the lines pass's
+/// GPU normal input, without the GPU padding.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderNormal {
+    /// Normal origin in local space.
+    pub position: nalgebra_glm::Vec3,
+    /// Normal direction in local space.
+    pub normal: nalgebra_glm::Vec3,
+    /// World transform applied to the origin and direction.
+    pub transform: nalgebra_glm::Mat4,
+    /// Line color as linear RGBA.
+    pub color: nalgebra_glm::Vec4,
+    /// Length of the drawn normal line.
+    pub length: f32,
+}
+
 /// Debug line geometry gathered for this frame. `None` for the bounding
 /// volume or normal sets means the corresponding overlay is disabled and the
 /// pass buffers are cleared.
 #[derive(Default)]
 pub struct LinesFrameInputs {
     /// Explicit debug line segments to draw.
-    pub lines: Vec<crate::wgpu::passes::geometry::lines::GpuLineData>,
+    pub lines: Vec<RenderLine>,
     /// Bounding-volume wireframes, or `None` when that overlay is off.
-    pub bounding_volumes: Option<Vec<crate::wgpu::passes::geometry::lines::GpuBoundingVolumeData>>,
+    pub bounding_volumes: Option<Vec<RenderBoundingVolume>>,
     /// Vertex-normal lines, or `None` when that overlay is off.
-    pub normals: Option<Vec<crate::wgpu::passes::geometry::lines::GpuNormalData>>,
+    pub normals: Option<Vec<RenderNormal>>,
 }
 
 /// One frame's orchestration snapshot: everything the caller captured for
@@ -197,6 +246,38 @@ pub struct FrameInputs {
     pub force_render_cameras: std::collections::HashSet<Entity>,
     /// Debug line geometry gathered for this frame.
     pub debug_lines: LinesFrameInputs,
+    /// The egui overlay's tessellated output for this frame, or `None` when
+    /// nothing was drawn. Carried here so egui flows through the frame inputs
+    /// like every other input rather than mutating the renderer through a side
+    /// channel; the frame driver applies it before the graph executes.
+    #[cfg(feature = "egui")]
+    pub egui: Option<EguiFrameInputs>,
+}
+
+/// The egui overlay's tessellated output for one frame. A renderer-owned
+/// wrapper over the egui payload so the frame inputs, not a bare function call
+/// on the renderer, carry the overlay across the boundary.
+#[cfg(feature = "egui")]
+pub struct EguiFrameInputs {
+    /// Texture atlas deltas egui produced this frame.
+    pub textures_delta: egui::TexturesDelta,
+    /// The overlay's device pixel ratio.
+    pub pixels_per_point: f32,
+    /// The tessellated clipped primitives to draw.
+    pub paint_jobs: Vec<egui::ClippedPrimitive>,
+}
+
+/// Why a frame did not render, reported in [`FrameOutputs::skip_reason`] so the
+/// caller can tell a recoverable skip (retry next frame) from a lost surface
+/// that needs recreating.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameSkipReason {
+    /// The surface was outdated or lost and could not be reacquired even after
+    /// a reconfigure. The caller should recreate the surface or device.
+    SurfaceLost,
+    /// The surface was momentarily unavailable (occluded, timed out, or a
+    /// transient driver state). Retrying the next frame is expected to recover.
+    SurfaceUnavailable,
 }
 
 /// State the renderer hands back after a frame: writes that belong to the
@@ -212,6 +293,10 @@ pub struct FrameOutputs {
     /// occluded, timed out, or lost, so callers keep their previous
     /// viewport state instead of applying this frame's empty outputs.
     pub frame_executed: bool,
+    /// When the frame did not render, why. `None` on a rendered frame; set to
+    /// distinguish a transient skip from a lost surface when `frame_executed`
+    /// is false.
+    pub skip_reason: Option<FrameSkipReason>,
 }
 
 /// Everything the renderer consumes for one frame.
@@ -239,8 +324,12 @@ pub struct RenderInputs {
     pub wind: crate::wind::Wind,
     /// Named mesh geometry with dirty tracking.
     pub mesh_cache: crate::mesh_cache::MeshCache,
-    /// GPU texture registry and lifecycle state.
+    /// CPU texture registry: id/refcount/name bookkeeping the host owns.
     pub texture_cache: crate::wgpu::texture_cache::TextureCache,
+    /// Live GPU textures. Renderer-owned: the frame driver swaps its persisted
+    /// store in at frame start, so callers compose this field as
+    /// `Default::default()`.
+    pub texture_store: crate::wgpu::texture_cache::TextureStore,
     /// Particle textures decoded and waiting for upload.
     pub pending_particle_textures: Vec<crate::particles::ParticleTextureUpload>,
     /// The retained-UI content for the current frame.
@@ -346,6 +435,7 @@ impl RenderInputs {
             wind: crate::wind::Wind::default(),
             mesh_cache,
             texture_cache,
+            texture_store: Default::default(),
             pending_particle_textures: Vec::new(),
             ui: UiFrameInputs {
                 rects: Vec::new(),
@@ -381,6 +471,8 @@ impl RenderInputs {
                 mouse_position: nalgebra_glm::Vec2::zeros(),
                 force_render_cameras: std::collections::HashSet::new(),
                 debug_lines: LinesFrameInputs::default(),
+                #[cfg(feature = "egui")]
+                egui: None,
             },
             #[cfg(feature = "grass")]
             grass: Default::default(),
@@ -400,8 +492,8 @@ impl RenderInputs {
 /// frame's [`RenderInputs`] and back out, never copied.
 ///
 /// A field added here must also be threaded through [`compose_single_view`] and
-/// [`restore_single_view`]; one left out silently resets to its default each
-/// frame.
+/// [`restore_single_view`]; the latter rebuilds the whole struct, so a field
+/// left out of it fails to compile rather than silently resetting to default.
 pub struct SingleViewHost {
     /// The scene as the renderer's ECS world.
     pub scene_world: nightshade_ecs::dynamic::DynWorld,
@@ -439,10 +531,12 @@ pub fn compose_single_view(host: &mut SingleViewHost, frame: ViewFrame) -> Rende
 /// Returns the state [`compose_single_view`] moved out to `host` after the frame
 /// has finished with it.
 pub fn restore_single_view(host: &mut SingleViewHost, inputs: RenderInputs) {
-    host.scene_world = inputs.scene_world;
-    host.state = inputs.scene;
-    host.mesh_cache = inputs.mesh_cache;
-    host.texture_cache = inputs.texture_cache;
-    host.settings = inputs.settings;
-    host.debug_draw = inputs.debug_draw;
+    *host = SingleViewHost {
+        scene_world: inputs.scene_world,
+        state: inputs.scene,
+        mesh_cache: inputs.mesh_cache,
+        texture_cache: inputs.texture_cache,
+        settings: inputs.settings,
+        debug_draw: inputs.debug_draw,
+    };
 }

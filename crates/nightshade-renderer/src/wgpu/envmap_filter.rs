@@ -9,7 +9,9 @@ const PREFILTERED_SAMPLES: u32 = 512;
 const DISTRIBUTION_LAMBERTIAN: u32 = 0;
 const DISTRIBUTION_GGX: u32 = 1;
 
-/// When `true`, filtered cubemaps are written to disk for inspection.
+/// When `true`, filtered cubemaps are written to disk for inspection. Native
+/// only, since the disk-dump path it gates does not exist on wasm.
+#[cfg(not(target_arch = "wasm32"))]
 pub const DEBUG_DUMP_CUBEMAPS: bool = false;
 
 #[cfg(not(target_arch = "wasm32"))]

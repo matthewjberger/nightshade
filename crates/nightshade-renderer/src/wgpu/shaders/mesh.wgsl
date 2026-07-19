@@ -1,6 +1,6 @@
 const PI: f32 = 3.14159265358979323846;
 
-#import nightshade::pbr_brdf::{DistributionGGX, GeometrySchlickGGX, GeometrySmith, V_SmithGGXCorrelated, fresnelSchlick, fresnelSchlickRoughness, specularAntiAliasing, fresnel_clearcoat, clearcoat_specular_lobe, d_charlie, v_neubelt, sheen_lobe, fresnel0_to_ior, ior_to_fresnel0_v, ior_to_fresnel0_f, eval_sensitivity, d_ggx_anisotropic, v_ggx_anisotropic, eval_iridescence, schlick_to_f0, getRangeAttenuation, getSpotAttenuation, applyVolumeAttenuation, applyIorToRoughness, specular_occlusion, box_project_reflection, box_projected_roughness}
+#import nightshade_renderer::pbr_brdf::{DistributionGGX, GeometrySchlickGGX, GeometrySmith, V_SmithGGXCorrelated, fresnelSchlick, fresnelSchlickRoughness, specularAntiAliasing, fresnel_clearcoat, clearcoat_specular_lobe, d_charlie, v_neubelt, sheen_lobe, fresnel0_to_ior, ior_to_fresnel0_v, ior_to_fresnel0_f, eval_sensitivity, d_ggx_anisotropic, v_ggx_anisotropic, eval_iridescence, schlick_to_f0, getRangeAttenuation, getSpotAttenuation, applyVolumeAttenuation, applyIorToRoughness, specular_occlusion, box_project_reflection, box_projected_roughness}
 
 
 fn getTransmissionSample(reflection: vec3<f32>, roughness: f32, ior: f32) -> vec3<f32> {
@@ -158,7 +158,7 @@ struct ModelMatrix {
     normal_matrix: mat3x3<f32>,
 };
 
-#import nightshade::material_data::{Material, TextureTransform}
+#import nightshade_renderer::material_data::{Material, TextureTransform}
 
 const NORMAL_MAP_FLIP_Y: u32 = 1u;
 const NORMAL_MAP_TWO_COMPONENT: u32 = 2u;
@@ -354,8 +354,8 @@ fn get_cluster_index(frag_coord: vec2<f32>, linear_depth: f32) -> u32 {
            clamped_slice * cluster_uniforms.cluster_count.x * cluster_uniforms.cluster_count.y;
 }
 
-#import nightshade::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER, UvGrad}
-#import nightshade::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}
+#import nightshade_renderer::material_sampling::{sample_srgb_layer, sample_linear_layer, sample_srgb_index, NO_LAYER, UvGrad}
+#import nightshade_renderer::area_lighting::{area_light_count, area_light_at, evaluate_one_area_light}
 
 var<private> material_uv0_ddx: vec2<f32>;
 var<private> material_uv0_ddy: vec2<f32>;

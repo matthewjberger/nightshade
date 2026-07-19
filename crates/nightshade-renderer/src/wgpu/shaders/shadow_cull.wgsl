@@ -1,4 +1,4 @@
-#import nightshade::cull_common::{DrawIndexedIndirect, sphere_in_frustum}
+#import nightshade_renderer::cull_common::{DrawIndexedIndirect, sphere_in_frustum}
 
 struct ShadowOccluder {
     transform_index: u32,

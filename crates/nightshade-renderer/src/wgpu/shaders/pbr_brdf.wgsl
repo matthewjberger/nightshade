@@ -1,4 +1,4 @@
-#define_import_path nightshade::pbr_brdf
+#define_import_path nightshade_renderer::pbr_brdf
 
 const PI: f32 = 3.14159265358979323846;
 

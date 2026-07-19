@@ -2,7 +2,7 @@ use crate::ecs::text::components::TextProperties;
 use crate::render::text_data::FontKind;
 use crate::render::text_mesh::TextMeshParams;
 use crate::render::wgpu::WgpuRenderer;
-use crate::render::wgpu::pass_sync::rebind_glyph_atlas;
+use crate::render::wgpu::pass_sync;
 
 /// Resolves a text component into the renderer's shaping parameters, collapsing
 /// the monospace request onto the mono font and leaving the icon fonts as chosen.
@@ -48,7 +48,7 @@ pub(crate) fn prepare_text_meshes(
     renderer: &mut WgpuRenderer,
     world: &mut crate::ecs::world::World,
 ) {
-    let pre_revision = renderer.glyph_atlas.revision;
+    let pre_revision = pass_sync::glyph_atlas_revision(renderer);
 
     let mut dirty_entries: Vec<(
         nightshade_ecs::Entity,
@@ -73,16 +73,12 @@ pub(crate) fn prepare_text_meshes(
             None => continue,
         };
         let params = text_mesh_params(&properties);
-        let mesh = crate::render::text_mesh::generate_text_mesh_world(
+        let mesh = pass_sync::generate_world_text_mesh(
+            renderer,
+            &mut world
+                .res_mut::<crate::ecs::text::resources::TextState>()
+                .font_engine,
             &text_content,
-            &mut crate::render::text_mesh::TextMeshContext {
-                font_engine: &mut world
-                    .res_mut::<crate::ecs::text::resources::TextState>()
-                    .font_engine,
-                glyph_atlas: &mut renderer.glyph_atlas,
-                device: &renderer.device,
-                queue: &renderer.queue,
-            },
             &params,
         );
         if let Some(text) = world.get_mut::<crate::ecs::text::components::Text>(entity) {
@@ -103,7 +99,7 @@ pub(crate) fn prepare_text_meshes(
         let signature = compute_ui_text_signature(instance);
         let cached = instance
             .entity
-            .and_then(|e| renderer.frame_state.text_mesh_signatures.get(&e).copied());
+            .and_then(|e| pass_sync::cached_ui_text_signature(renderer, e));
         if cached == Some(signature) {
             if let Some(entity) = instance.entity {
                 active_entities.insert(entity);
@@ -123,43 +119,25 @@ pub(crate) fn prepare_text_meshes(
             ..TextProperties::default()
         };
         let params = text_mesh_params(&properties);
-        instance.mesh = crate::render::text_mesh::generate_text_mesh_ui(
+        instance.mesh = pass_sync::generate_ui_text_mesh(
+            renderer,
+            &mut world
+                .res_mut::<crate::ecs::text::resources::TextState>()
+                .font_engine,
             &instance.text,
-            &mut crate::render::text_mesh::TextMeshContext {
-                font_engine: &mut world
-                    .res_mut::<crate::ecs::text::resources::TextState>()
-                    .font_engine,
-                glyph_atlas: &mut renderer.glyph_atlas,
-                device: &renderer.device,
-                queue: &renderer.queue,
-            },
             &params,
             instance.wrap_width,
         );
         if let Some(entity) = instance.entity {
-            renderer
-                .frame_state
-                .text_mesh_signatures
-                .insert(entity, signature);
+            pass_sync::record_ui_text_signature(renderer, entity, signature);
             active_entities.insert(entity);
         }
     }
-    let stale: Vec<nightshade_ecs::Entity> = renderer
-        .frame_state
-        .text_mesh_signatures
-        .keys()
-        .copied()
-        .filter(|e| !active_entities.contains(e))
-        .collect();
-    for entity in stale {
-        renderer.frame_state.text_mesh_signatures.remove(&entity);
-    }
+    pass_sync::retain_ui_text_signatures(renderer, &active_entities);
     world
         .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
         .frame
         .text_meshes = frame_text;
 
-    if renderer.glyph_atlas.revision != pre_revision {
-        rebind_glyph_atlas(renderer);
-    }
+    pass_sync::rebind_glyph_atlas_if_grown(renderer, pre_revision);
 }
