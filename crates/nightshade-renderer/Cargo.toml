@@ -52,15 +52,7 @@ pollster = "0.4"
 winit = { workspace = true }
 
 [[example]]
-name = "window"
-required-features = ["wgpu"]
-
-[[example]]
-name = "minimal"
-required-features = ["wgpu", "screenshot"]
-
-[[example]]
-name = "shapes"
+name = "pbr"
 required-features = ["wgpu", "hdr"]
 
 [[example]]
@@ -68,67 +60,7 @@ name = "spinning"
 required-features = ["wgpu", "hdr"]
 
 [[example]]
-name = "pbr"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "decals"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "lights"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
 name = "shadows"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "sky"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "fog"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "transparency"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "instancing"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "post_processing"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "water"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "ui"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "gpu_particles"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "textures"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "morph"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "vertex_colors"
-required-features = ["wgpu", "hdr"]
-
-[[example]]
-name = "alpha_mask"
 required-features = ["wgpu", "hdr"]
 
 [features]

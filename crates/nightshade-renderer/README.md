@@ -40,43 +40,23 @@ value rather than being cloned.
 
 ## Getting started
 
-Two runnable examples build a scene by hand and drive the renderer directly.
-They are the fastest way to see the whole contract in one place; the scene
-composition they share lives in `examples/common/scene.rs`, which is heavily
-commented with the input contract.
+Runnable examples drive the renderer directly through a small windowing harness
+in `examples/common/driver.rs` — a fly camera and a frame loop built from free
+functions and plain data, with no engine layer. Each example fills a plain
+`Scene` of renderer data using the raw renderer and freecs API (`world.spawn`,
+`RenderMaterials::add`, `mesh_cache_insert`, `world.set`), which is the fastest
+way to see the whole contract in one place.
 
-- **`examples/window.rs`** opens a window and renders a spinning triangle,
-  presenting to the surface every frame. This is the common host loop: create
-  the renderer, install the presentation passes, then compose and render each
-  frame.
+- **`pbr`** — a grid of spheres from dielectric to metal and rough to smooth
+  under a directional sun and a procedural sky.
+- **`spinning`** — a field of primitives, each spun every frame by writing its
+  `Transform` straight into the scene world.
+- **`shadows`** — mixed shapes on a floor, tagged as shadow casters so the sun
+  casts shadows across it.
 
-  ```sh
-  cargo run --example window --features wgpu
-  ```
-
-- **`examples/minimal.rs`** renders a few frames offscreen (into an invisible
-  window's surface) and writes the result to `examples/output/triangle.png`
-  through the screenshot readback path, then exits.
-
-  ```sh
-  cargo run --example minimal --features wgpu,screenshot
-  ```
-
-Beyond those two, a set of small single-capability examples each drive the
-renderer through a shared minimal host in `examples/common/driver.rs` (window,
-camera, and the per-frame `RenderInputs` composition, with no engine layer):
-`shapes`, `pbr`, `lights`, `shadows`, `sky`, `fog`, `transparency`,
-`alpha_mask`, `textures`, `instancing`, `morph`, `gpu_particles`, `water`,
-`vertex_colors`, `decals`, `post_processing`, and `ui`. They enable the `hdr` feature for procedural
-image-based lighting. Run one directly with
-`cargo run --example pbr --features wgpu,hdr`, or from the crate's `justfile`
-pick one with fzf:
-
-```sh
-just run          # fuzzy-pick an example
-just run pbr      # or run one by name
-just list         # list them
-```
+Run one with `cargo run --example pbr --features wgpu,hdr`. Setting
+`NS_SHOT=<path>` renders a few frames offscreen and writes a PNG instead of
+opening a window (add the `screenshot` feature).
 
 The three steps every host repeats:
 
@@ -98,12 +78,12 @@ The three steps every host repeats:
 
 `RenderInputs` deliberately has no `Default`: every field is load-bearing and
 the move-in / move-out cycle is the contract. Build one compose function against
-the struct and the compiler walks you through the fields. The examples' shared
-module is exactly that function.
+the struct and the compiler walks you through the fields; the examples' harness
+does exactly that in `examples/common/driver.rs`.
 
 For the full design (the frame flow, every `RenderInputs` sub-struct, the
 module map, the feature gating, and how the nightshade engine layer drives the
-renderer) read [ARCHITECTURE.md](ARCHITECTURE.md).
+renderer) read [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## What it renders
 
@@ -131,7 +111,7 @@ are used where the device supports them.
 Because the draw arguments are populated on the GPU across the culling and batch
 passes, a scene needs a couple of frames of warmup before its first draws land.
 A continuously-rendering host never notices, but a one-shot capture should
-render a few frames before reading back (the `minimal` example does).
+render a few frames before reading back.
 
 ## Using the frame graph alone
 
@@ -161,7 +141,7 @@ cached-viewport frames can run a cheap compose-only subset.
 | `rendergraph` | The frame graph alone: pass scheduling, transient resource aliasing, store-op optimization |
 | `text` | The cosmic-text font engine and glyph shaping. Implied by `wgpu` |
 | `hdr` | HDR decoding and image loading for skyboxes and IBL captures |
-| `screenshot` | GPU readback capture to PNG (used by the `minimal` example) |
+| `screenshot` | GPU readback capture to PNG (used by NS_SHOT headless capture) |
 | `egui` | An egui overlay pass |
 | `debug_render` | Line, bounding volume, and normal overlays plus the selection outline |
 | `grass` | GPU grass pass |
