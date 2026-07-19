@@ -8,15 +8,13 @@ plus the dependencies in `Cargo.toml` into a new binary crate and it runs.
 ## Run
 
 ```sh
-just run              # open a window
-just shot out.png     # render offscreen and write out.png
+just run
 ```
 
 or with cargo directly:
 
 ```sh
 cargo run --release
-NS_SHOT=out.png cargo run --release
 ```
 
 ## Controls
@@ -37,5 +35,5 @@ The `Cargo.toml` here depends on the renderer by path for local development.
 Copy the directory elsewhere and point the dependency at a published version:
 
 ```toml
-nightshade-renderer = { version = "0.56", features = ["wgpu", "hdr", "screenshot"] }
+nightshade-renderer = { version = "0.56", features = ["wgpu", "hdr"] }
 ```

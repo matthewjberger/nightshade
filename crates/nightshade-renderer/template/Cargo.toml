@@ -1,6 +1,6 @@
 # A standalone binary crate detached from the parent workspace so it builds on
 # its own. Copy this directory out of the repo and swap the path dependency for
-# `nightshade-renderer = { version = "0.56", features = ["wgpu", "hdr", "screenshot"] }`.
+# `nightshade-renderer = { version = "0.56", features = ["wgpu", "hdr"] }`.
 [workspace]
 
 [package]
@@ -13,7 +13,7 @@ name = "standalone"
 path = "standalone.rs"
 
 [dependencies]
-nightshade-renderer = { path = "..", features = ["wgpu", "hdr", "screenshot"] }
+nightshade-renderer = { path = "..", features = ["wgpu", "hdr"] }
 winit = "0.30.13"
 pollster = "0.4"
 nalgebra-glm = "0.20.0"

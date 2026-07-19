@@ -1,7 +1,3 @@
 # Open the window and render the starter scene.
 run:
     cargo run --release
-
-# Render a few frames offscreen and write a PNG (headless).
-shot file="standalone.png":
-    NS_SHOT={{file}} cargo run --release
