@@ -148,12 +148,10 @@ pub fn render_sync_materials_system(world: &mut World) {
             }
         }
 
-        table.name_to_id.clear();
+        table.material_ids.clear();
         for (index, name_slot) in registry.registry.index_to_name.iter().enumerate() {
-            if let Some(name) = name_slot
-                && registry.registry.entries[index].is_some()
-            {
-                table.name_to_id.insert(name.clone(), index as u32 + 1);
+            if name_slot.is_some() && registry.registry.entries[index].is_some() {
+                table.material_ids.insert(index as u32 + 1);
             }
         }
 

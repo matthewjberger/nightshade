@@ -1329,19 +1329,21 @@ pub struct RenderMaterialEntry {
 #[derive(Clone, Default)]
 pub struct RenderMaterials {
     pub entries: Vec<RenderMaterialEntry>,
-    pub name_to_id: std::collections::HashMap<String, u32>,
+    /// The set of live material ids (`entries` index + 1). Used to check whether
+    /// a material an entity references is already known to the GPU-side cache.
+    pub material_ids: std::collections::HashSet<u32>,
     pub transparent_ids: std::collections::HashSet<u32>,
     pub mask_ids: std::collections::HashSet<u32>,
     pub double_sided_ids: std::collections::HashSet<u32>,
-    /// Bumped whenever the table or the entity maps change, so consumers can
-    /// gate their material conversions on a counter.
+    /// Bumped whenever the table changes, so consumers can gate their material
+    /// conversions on a counter.
     pub generation: u64,
 }
 
 impl RenderMaterials {
     /// Adds a material and returns its id. Material id `N` is `entries[N - 1]`;
-    /// id 0 is the renderer's built-in default. Updates the transparent / mask /
-    /// double-sided id sets from the material and bumps `generation`.
+    /// id 0 is the renderer's built-in default. Updates the live / transparent /
+    /// mask / double-sided id sets from the material and bumps `generation`.
     pub fn add(&mut self, material: crate::material::Material) -> u32 {
         self.add_textured(material, crate::material::MaterialTextureIds::default())
     }
@@ -1361,6 +1363,7 @@ impl RenderMaterials {
             texture_ids,
         });
         let id = self.entries.len() as u32;
+        self.material_ids.insert(id);
         if transparent {
             self.transparent_ids.insert(id);
         }

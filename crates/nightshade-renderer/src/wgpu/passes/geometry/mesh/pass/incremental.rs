@@ -406,6 +406,11 @@ impl MeshPass {
             && !fd.transform_dirty.is_empty()
     }
 
+    /// Whether this frame's adds and removes can route through the incremental
+    /// path instead of a full rebuild. The added-entity check compares each
+    /// entity's `MaterialId` against the cached id set, which is only valid while
+    /// the material table is unchanged this frame; the `material_dirty` guard
+    /// below keeps that true, so do not relax it without reworking the check.
     pub(in super::super) fn can_do_incremental_entity_update(
         &self,
         configs: &crate::wgpu::render_configs::RenderInputs,

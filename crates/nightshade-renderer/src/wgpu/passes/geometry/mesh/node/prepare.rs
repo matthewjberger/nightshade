@@ -111,7 +111,7 @@ impl MeshPass {
                 .iter()
                 .map(|(entity, material)| (entity, material.0))
                 .collect(),
-            material_ids: render_materials.name_to_id.values().copied().collect(),
+            material_ids: render_materials.material_ids.clone(),
             transparent_material_ids: render_materials.transparent_ids.clone(),
             double_sided_material_ids: render_materials.double_sided_ids.clone(),
             mask_material_ids: render_materials.mask_ids.clone(),
