@@ -19,7 +19,7 @@ cargo run --release
 
 ## Controls
 
-W/A/S/D move, Q/E down/up, arrow keys look, Esc quits.
+W/A/S/D move, Q/E down/up, mouse to look, Esc quits.
 
 ## What it shows
 
