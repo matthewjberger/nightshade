@@ -266,10 +266,10 @@ impl SkinnedMeshPass {
                 let material_id = materials.len() as u32;
                 let material_data = {
                     let render_materials = &configs.scene.render_materials;
-                    let global_id = render_materials
-                        .entity_to_id
-                        .get(&entity)
-                        .copied()
+                    let global_id = configs
+                        .scene_world
+                        .get::<crate::render_world::MaterialId>(entity)
+                        .map(|material| material.0)
                         .unwrap_or(0);
                     match global_id
                         .checked_sub(1)

@@ -250,15 +250,11 @@ pub fn render_sync_materials_system(world: &mut World) {
     }
 
     for (&entity, &id) in &entity_to_id {
-        if world.ecs.worlds[CORE].entity_has_components(entity, crate::ecs::world::SKIN) {
-            continue;
-        }
         world.set(entity, crate::render::render_world::MaterialId(id));
     }
 
     let table = &mut world
         .res_mut::<crate::render::config::RendererState>()
         .render_materials;
-    table.entity_to_id = entity_to_id;
     table.entity_to_name = entity_to_name;
 }

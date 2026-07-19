@@ -1329,7 +1329,6 @@ pub struct RenderMaterialEntry {
 pub struct RenderMaterials {
     pub entries: Vec<RenderMaterialEntry>,
     pub name_to_id: std::collections::HashMap<String, u32>,
-    pub entity_to_id: std::collections::HashMap<freecs::Entity, u32>,
     pub entity_to_name: std::collections::HashMap<freecs::Entity, String>,
     pub transparent_ids: std::collections::HashSet<u32>,
     pub mask_ids: std::collections::HashSet<u32>,
@@ -1373,11 +1372,6 @@ impl RenderMaterials {
         }
         self.generation += 1;
         id
-    }
-
-    /// Assigns an existing material id to an entity.
-    pub fn assign(&mut self, entity: freecs::Entity, id: u32) {
-        self.entity_to_id.insert(entity, id);
     }
 }
 

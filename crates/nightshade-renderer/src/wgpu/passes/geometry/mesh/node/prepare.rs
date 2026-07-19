@@ -40,10 +40,10 @@ fn classify_entity(
     entity: freecs::Entity,
 ) -> EntityClass {
     let render_materials = &configs.scene.render_materials;
-    let material_id = render_materials
-        .entity_to_id
-        .get(&entity)
-        .copied()
+    let material_id = configs
+        .scene_world
+        .get::<crate::render_world::MaterialId>(entity)
+        .map(|material| material.0)
         .unwrap_or(0);
     let is_transparent = render_materials.transparent_ids.contains(&material_id);
     let is_mask = render_materials.mask_ids.contains(&material_id);
@@ -105,7 +105,12 @@ impl MeshPass {
 
         MaterialCollection {
             materials_data,
-            material_map: render_materials.entity_to_id.clone(),
+            material_map: configs
+                .scene_world
+                .query_ref::<&crate::render_world::MaterialId>()
+                .iter()
+                .map(|(entity, material)| (entity, material.0))
+                .collect(),
             name_to_material_id: render_materials.name_to_id.clone(),
             transparent_material_ids: render_materials.transparent_ids.clone(),
             double_sided_material_ids: render_materials.double_sided_ids.clone(),
