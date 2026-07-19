@@ -928,6 +928,7 @@ fn sync_water(world: &mut World) {
 #[cfg(feature = "meshlet")]
 fn sync_meshlets(world: &mut World) {
     let collected: Vec<(
+        crate::ecs::world::Entity,
         u64,
         nalgebra_glm::Mat4,
         Option<crate::ecs::material::components::MaterialRef>,
@@ -938,72 +939,82 @@ fn sync_meshlets(world: &mut World) {
             Option<&crate::ecs::material::components::MaterialRef>,
         )>()
         .iter()
-        .map(|(_, (meshlet_mesh, global_transform, material_ref))| {
+        .map(|(entity, (meshlet_mesh, global_transform, material_ref))| {
             (
+                entity,
                 meshlet_mesh.asset_id,
                 global_transform.0,
                 material_ref.cloned(),
             )
         })
         .collect();
-    let mut instances: Vec<crate::render::config::MeshletInstance> =
-        Vec::with_capacity(collected.len());
-    {
+    let placements: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::MeshletPlacement,
+    )> = {
         use crate::render::generational_registry::{registry_entry, registry_lookup_index};
         let registry = &world
             .res::<crate::ecs::asset_state::AssetState>()
             .material_registry;
-        for (asset_id, transform, material_ref) in &collected {
-            let material_id = material_ref.as_ref().map_or(0, |reference| {
-                reference
-                    .id
-                    .and_then(|id| {
-                        registry_entry(&registry.registry, id.index, id.generation)
-                            .map(|_| id.index + 1)
-                    })
-                    .or_else(|| {
-                        registry_lookup_index(&registry.registry, &reference.name).and_then(
-                            |(index, _generation)| {
-                                registry.registry.entries[index as usize]
-                                    .as_ref()
-                                    .map(|_| index + 1)
-                            },
-                        )
-                    })
-                    .unwrap_or(0)
-            });
-            instances.push(crate::render::config::MeshletInstance {
-                transform: *transform,
-                asset_id: *asset_id,
-                root_bvh_node_index: 0,
-                material_id,
-            });
-        }
-    }
+        collected
+            .iter()
+            .map(|(entity, asset_id, transform, material_ref)| {
+                let material_id = material_ref.as_ref().map_or(0, |reference| {
+                    reference
+                        .id
+                        .and_then(|id| {
+                            registry_entry(&registry.registry, id.index, id.generation)
+                                .map(|_| id.index + 1)
+                        })
+                        .or_else(|| {
+                            registry_lookup_index(&registry.registry, &reference.name).and_then(
+                                |(index, _generation)| {
+                                    registry.registry.entries[index as usize]
+                                        .as_ref()
+                                        .map(|_| index + 1)
+                                },
+                            )
+                        })
+                        .unwrap_or(0)
+                });
+                (
+                    *entity,
+                    crate::render::config::MeshletPlacement {
+                        transform: *transform,
+                        asset_id: *asset_id,
+                        material_id,
+                    },
+                )
+            })
+            .collect()
+    };
 
     let mut assets = std::mem::take(
         &mut world
             .res_mut::<crate::render::config::RendererState>()
-            .meshlets
-            .assets,
+            .meshlet_assets,
     );
-    for instance in &instances {
-        if assets.contains_key(&instance.asset_id) {
+    for (_, asset_id, _, _) in &collected {
+        if assets.contains_key(asset_id) {
             continue;
         }
         let Some(asset) = world
             .res::<crate::ecs::meshlet::resources::MeshletAssets>()
-            .get(instance.asset_id)
+            .get(*asset_id)
             .cloned()
         else {
             continue;
         };
-        assets.insert(instance.asset_id, asset);
+        assets.insert(*asset_id, asset);
     }
-
     world
         .res_mut::<crate::render::config::RendererState>()
-        .meshlets = crate::render::config::MeshletInstances { instances, assets };
+        .meshlet_assets = assets;
+
+    clear_render_component(world, render_world::MESHLET);
+    for (entity, placement) in placements {
+        world.set(entity, placement);
+    }
 }
 
 fn sync_cloth(world: &mut World) {

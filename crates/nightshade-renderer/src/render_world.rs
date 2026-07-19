@@ -89,5 +89,6 @@ freecs::dynamic_schema! {
         bounds: crate::config::RenderBounds => BOUNDS,
         text: crate::config::RenderText => TEXT,
         cloth: crate::config::RenderClothData => CLOTH,
+        meshlet: crate::config::MeshletPlacement => MESHLET,
     }
 }

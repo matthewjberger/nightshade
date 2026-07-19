@@ -1659,35 +1659,30 @@ pub struct RenderBounds {
     pub sphere_radius: f32,
 }
 
-/// One placement of a baked meshlet mesh in the scene, snapshotted once per
-/// frame. `asset_id` keys the asset in [`MeshletInstances::assets`], and
-/// `root_bvh_node_index` addresses the mesh's root node in the shared bvh
-/// buffer once the asset has been uploaded. The index is unresolved until
-/// then, so the meshlet pass fills it in from its own upload ledger.
-#[cfg(feature = "meshlet")]
+/// One placement of a baked meshlet mesh in the scene, held as a scene-world
+/// component on the meshlet entity. `asset_id` keys the baked asset in the
+/// renderer's meshlet asset cache; the mesh's root bvh node is resolved by the
+/// meshlet pass from its own upload ledger, so it is not carried here.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct MeshletInstance {
+pub struct MeshletPlacement {
     pub transform: nalgebra_glm::Mat4,
     pub asset_id: u64,
-    pub root_bvh_node_index: u32,
     /// The material this places, as the registry index plus one, with zero the
-    /// built-in default grey. Resolved from the registry where the instance is
-    /// collected rather than looked up in the pass against a material table:
-    /// the registry is the source of truth and is already current here, so the
-    /// id never trails the table's separate rebuild, which is what left every
-    /// mesh grey the frame the table lagged the collection.
+    /// built-in default grey. Resolved from the registry where the placement is
+    /// written rather than looked up in the pass against a material table: the
+    /// registry is the source of truth and is already current there, so the id
+    /// never trails the table's separate rebuild, which is what left every mesh
+    /// grey the frame the table lagged the collection.
     pub material_id: u32,
 }
 
-/// Every meshlet placement in the scene plus the baked assets they reference,
-/// snapshotted once per frame. The meshlet pass uploads assets it has not seen
-/// before, then rasterizes one cluster per (instance, meshlet) pair.
+/// The renderer's cache of baked meshlet assets, keyed by asset id. Persists
+/// across frames like the mesh and texture caches: the engine inserts an asset
+/// the first time a [`MeshletPlacement`] references it, and the meshlet pass
+/// uploads any asset it has not seen before.
 #[cfg(feature = "meshlet")]
-#[derive(Clone, Default)]
-pub struct MeshletInstances {
-    pub instances: Vec<MeshletInstance>,
-    pub assets: std::collections::HashMap<u64, std::sync::Arc<crate::meshlet::asset::MeshletMesh>>,
-}
+pub type MeshletAssetCache =
+    std::collections::HashMap<u64, std::sync::Arc<crate::meshlet::asset::MeshletMesh>>;
 
 /// Runtime-only renderer bookkeeping that apps generally do not edit
 /// directly. Carried in `RenderInputs::scene`.
@@ -1757,11 +1752,11 @@ pub struct RendererState {
     /// skinned pass resolves geometry from its own registry without reading the
     /// `RenderMesh` component. Static meshes live in the scene world instead.
     pub render_object_meshes: std::collections::HashMap<freecs::Entity, String>,
-    /// Every meshlet placement in the scene plus the assets they reference,
-    /// collected once per frame so the meshlet pass reads them here instead of
-    /// the ECS.
+    /// The renderer's meshlet asset cache. Placements live in the scene world
+    /// as [`MeshletPlacement`] components; this holds only the baked assets they
+    /// reference, kept warm across frames.
     #[cfg(feature = "meshlet")]
-    pub meshlets: MeshletInstances,
+    pub meshlet_assets: MeshletAssetCache,
     /// The color the outline pass draws the selection outline with, resolved
     /// once per frame. The covered entities carry the
     /// [`crate::render_world::SelectionOutline`] tag in the scene world.
@@ -2104,7 +2099,7 @@ impl Default for RendererState {
             render_materials: RenderMaterials::default(),
             render_object_meshes: std::collections::HashMap::new(),
             #[cfg(feature = "meshlet")]
-            meshlets: MeshletInstances::default(),
+            meshlet_assets: MeshletAssetCache::default(),
             render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
             render_shadow_casters: RenderShadowCasters::default(),
             render_skinned_meshes: Vec::new(),
