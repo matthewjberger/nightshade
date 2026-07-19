@@ -25,7 +25,7 @@ tracing-web = "0.1"
 tracing-tracy = "0.11"
 tracing-chrome = "0.7"
 arboard = "3"
-freecs = { version = "4.7.0", features = ["dynamic", "snapshot", "state"] }
+nightshade-ecs = { version = "0.56.0", path = "crates/nightshade-ecs", features = ["dynamic", "snapshot", "state"] }
 webbrowser = "1"
 gilrs = "0.11.0"
 gltf = { version = "1.4.1", features = [

@@ -466,7 +466,7 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
         transform.translation = nalgebra_glm::vec3(0.0, 1.3, 0.0);
     }
 
-    if let Some(parent) = world.get_mut::<freecs::dynamic::ChildOf>(camera_entity) {
+    if let Some(parent) = world.get_mut::<nightshade_ecs::dynamic::ChildOf>(camera_entity) {
         *parent = crate::ecs::transform::components::ChildOf(player_entity);
     }
 

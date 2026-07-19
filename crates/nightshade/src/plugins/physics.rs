@@ -123,7 +123,7 @@ pub fn install(world: &mut crate::ecs::world::World) {
 /// Registers the physics step and collision-event systems into the frame
 /// update stage, stepping from the start.
 #[cfg(feature = "physics")]
-pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::world::World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(stages, Stage::FrameUpdate, systems::run_physics_systems);
     push_frame_system(

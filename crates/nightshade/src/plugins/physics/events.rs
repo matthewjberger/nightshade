@@ -1,4 +1,4 @@
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use rapier3d::prelude::*;
 use std::sync::Mutex;
 

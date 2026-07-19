@@ -14,16 +14,16 @@ pub fn run_systems(world: &mut World) {
 /// Pull-syncs the maintained hierarchy index from the core world's
 /// structural log and change ticks. Runs at the top of the transform pass
 /// every frame; call it directly before reading
-/// `world.res::<freecs::dynamic::HierarchyIndex>()` when links may have changed this frame.
+/// `world.res::<nightshade_ecs::dynamic::HierarchyIndex>()` when links may have changed this frame.
 /// Must run before the render sync trims the structural log, so never gate
 /// the transform-pass sync behind a condition.
 pub fn sync_hierarchy_index(world: &mut World) {
-    let mut hierarchy = std::mem::take(world.res_mut::<freecs::dynamic::HierarchyIndex>());
+    let mut hierarchy = std::mem::take(world.res_mut::<nightshade_ecs::dynamic::HierarchyIndex>());
     hierarchy.sync(&mut world.ecs.worlds[CORE]);
-    *world.res_mut::<freecs::dynamic::HierarchyIndex>() = hierarchy;
+    *world.res_mut::<nightshade_ecs::dynamic::HierarchyIndex>() = hierarchy;
 }
 
-pub fn update_parent(world: &mut World, child: freecs::Entity, new_parent: Option<Entity>) {
+pub fn update_parent(world: &mut World, child: nightshade_ecs::Entity, new_parent: Option<Entity>) {
     match new_parent {
         Some(parent) => world.set(child, ChildOf(parent)),
         None => {
@@ -94,7 +94,7 @@ pub fn update_global_transforms_system(world: &mut World) {
     seen.clear();
     seen.extend(dirty_entities.iter().copied());
     {
-        let hierarchy = &world.res::<freecs::dynamic::HierarchyIndex>();
+        let hierarchy = &world.res::<nightshade_ecs::dynamic::HierarchyIndex>();
         let mut index = 0;
         while index < dirty_entities.len() {
             let entity = dirty_entities[index];
@@ -124,7 +124,7 @@ pub fn update_global_transforms_system(world: &mut World) {
 
     for entity in dirty_entities.iter().copied() {
         let parent_is_dirty = world
-            .get::<freecs::dynamic::ChildOf>(entity)
+            .get::<nightshade_ecs::dynamic::ChildOf>(entity)
             .map(|child_of| child_of.0)
             .is_some_and(|parent_entity| seen.contains(&parent_entity));
         if !parent_is_dirty {
@@ -156,7 +156,7 @@ pub fn update_global_transforms_system(world: &mut World) {
         }
 
         for child in world
-            .res::<freecs::dynamic::HierarchyIndex>()
+            .res::<nightshade_ecs::dynamic::HierarchyIndex>()
             .children(current)
         {
             stack.push(*child);
@@ -194,7 +194,7 @@ fn computed_global_transform(world: &World, current: Entity) -> nalgebra_glm::Ma
     };
 
     match world
-        .get::<freecs::dynamic::ChildOf>(current)
+        .get::<nightshade_ecs::dynamic::ChildOf>(current)
         .map(|child_of| child_of.0)
     {
         Some(parent_entity) => {
@@ -229,7 +229,7 @@ pub fn propagate_subtree_global_transforms(world: &mut World, root: Entity) {
             *global_transform = GlobalTransform(new_global_transform);
         }
         for child in world
-            .res::<freecs::dynamic::HierarchyIndex>()
+            .res::<nightshade_ecs::dynamic::HierarchyIndex>()
             .children(current)
         {
             stack.push(*child);

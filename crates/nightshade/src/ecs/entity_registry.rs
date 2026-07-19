@@ -1,6 +1,6 @@
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 
 #[derive(Default, Clone)]

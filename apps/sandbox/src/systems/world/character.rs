@@ -406,7 +406,7 @@ fn draw_skeleton(sandbox_world: &SandboxResources, world: &mut World) {
             push_joint_cross(&mut bone_lines, joint_position);
 
             let Some(parent) = world
-                .get::<freecs::dynamic::ChildOf>(joint_entity)
+                .get::<nightshade_ecs::dynamic::ChildOf>(joint_entity)
                 .map(|child_of| child_of.0)
             else {
                 continue;

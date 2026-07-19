@@ -17,7 +17,7 @@ use crate::wgpu::render_configs::CameraFrameInputs;
 
 /// Collects directional and local lights into packed GPU light data, capped at `max_lights`.
 pub fn collect_lights(
-    world: &freecs::dynamic::DynWorld,
+    world: &nightshade_ecs::dynamic::DynWorld,
     max_lights: usize,
 ) -> LightCollectionResult {
     let mut directional_lights = Vec::new();
@@ -26,7 +26,7 @@ pub fn collect_lights(
     let mut directional_entities = Vec::new();
     let mut local_entities = Vec::new();
 
-    let sources: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
+    let sources: Vec<(nightshade_ecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
         .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
         .iter()
         .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
@@ -115,13 +115,13 @@ pub fn collect_lights(
 
 /// Collects area lights into packed GPU data, capped at `max_area_lights`.
 pub fn collect_area_lights(
-    world: &freecs::dynamic::DynWorld,
+    world: &nightshade_ecs::dynamic::DynWorld,
     max_area_lights: usize,
 ) -> AreaLightCollectionResult {
     let mut area_lights_data = Vec::new();
     let mut entity_to_index = std::collections::HashMap::new();
 
-    let sources: Vec<(freecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
+    let sources: Vec<(nightshade_ecs::Entity, RenderLightData, nalgebra_glm::Mat4)> = world
         .query_ref::<(&RenderLightData, &crate::render_world::Transform)>()
         .iter()
         .map(|(entity, (light, transform))| (entity, light.clone(), transform.0))
@@ -330,7 +330,7 @@ pub fn calculate_cascade_shadows(
 /// Collects the frame's full lighting: light lists, area lights, the cascade
 /// shadow fit for the dispatching camera, and the sun.
 pub fn build_render_lighting(
-    world: &freecs::dynamic::DynWorld,
+    world: &nightshade_ecs::dynamic::DynWorld,
     camera: Option<&CameraFrameInputs>,
 ) -> RenderLighting {
     const MAX_LIGHTS: usize = 1024;

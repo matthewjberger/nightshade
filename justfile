@@ -167,14 +167,16 @@ sync-template-api:
 pull-template-api:
     git subtree pull --prefix=template_api {{template_api_repo}} main --squash
 
-# Publishes the nightshade-renderer, nightshade, and nightshade-api crates to crates.io
+# Publishes the nightshade-ecs, nightshade-renderer, nightshade, and nightshade-api crates to crates.io
 publish-crate:
+    cargo publish -p nightshade-ecs
     cargo publish -p nightshade-renderer
     cargo publish -p nightshade
     cargo publish -p nightshade-api
 
-# Dry run of publishing the nightshade-renderer, nightshade, and nightshade-api crates
+# Dry run of publishing the nightshade-ecs, nightshade-renderer, nightshade, and nightshade-api crates
 publish-crate-dry:
+    cargo publish -p nightshade-ecs --dry-run
     cargo publish -p nightshade-renderer --dry-run
     cargo publish -p nightshade --dry-run
     cargo publish -p nightshade-api --dry-run

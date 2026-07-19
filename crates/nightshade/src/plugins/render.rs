@@ -1,5 +1,5 @@
 //! The renderer composition. The renderer itself deliberately lives
-//! outside the [`World`]: it is freecs-free, consumes one owned
+//! outside the [`World`]: it is nightshade_ecs-free, consumes one owned
 //! `RenderInputs` per frame, and its lifecycle (window surface, resize,
 //! present) belongs to the runner. This plugin declares that a renderer
 //! exists and installs the world-side sync systems that feed it.
@@ -11,7 +11,7 @@ use crate::ecs::world::World;
 /// Registers the scene, material, animation, and skinning sync systems
 /// into the render stage, after every system that writes render-facing
 /// state.
-pub fn register_frame_systems(stages: &mut freecs::Stages<World>) {
+pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(
         stages,

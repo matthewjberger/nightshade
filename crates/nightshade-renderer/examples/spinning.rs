@@ -6,8 +6,8 @@
 //! cargo run --example spinning --features wgpu,hdr
 //! ```
 
-use freecs::Entity;
 use nalgebra_glm as glm;
+use nightshade_ecs::Entity;
 use nightshade_renderer::config::Atmosphere;
 use nightshade_renderer::material::Material;
 use nightshade_renderer::mesh_cache::mesh_cache_insert;

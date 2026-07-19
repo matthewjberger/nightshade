@@ -655,7 +655,7 @@ pub struct DayNightState {
     /// When true, the driver advances `hour` each frame.
     pub auto_cycle: bool,
     /// The directional light driven as the sun, if any.
-    pub sun_entity: Option<freecs::Entity>,
+    pub sun_entity: Option<nightshade_ecs::Entity>,
     /// Hours the renderer bakes image based lighting snapshots at when the
     /// day/night hour starts changing, so lighting blends smoothly between them.
     pub ibl_snapshot_hours: Vec<f32>,
@@ -1362,7 +1362,7 @@ pub struct RenderLighting {
     /// True when at least one directional light is present.
     pub has_directional_light: bool,
     /// Entity to index map into `lights_data`.
-    pub entity_to_lights_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub entity_to_lights_index: std::collections::HashMap<nightshade_ecs::Entity, usize>,
     /// Shadow view-projection for each directional cascade.
     pub cascade_view_projections: [[[f32; 4]; 4]; crate::wgpu::passes::NUM_SHADOW_CASCADES],
     /// World-space diameter each cascade covers.
@@ -1382,7 +1382,7 @@ pub struct RenderLighting {
     /// GPU-ready records for every area light.
     pub area_lights_data: Vec<crate::wgpu::passes::geometry::projection::AreaLightData>,
     /// Entity to index map into `area_lights_data`.
-    pub area_entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub area_entity_to_index: std::collections::HashMap<nightshade_ecs::Entity, usize>,
     /// Resolved sun direction in world space.
     pub sun_direction: nalgebra_glm::Vec3,
     /// Resolved sun color.
@@ -1474,13 +1474,13 @@ pub struct SkinnedJointData {
 #[derive(Clone)]
 pub struct SkinnedSkeletonData {
     /// Entity carrying the skin.
-    pub skin_entity: freecs::Entity,
+    pub skin_entity: nightshade_ecs::Entity,
     /// Entity carrying the animation player.
-    pub player_entity: freecs::Entity,
+    pub player_entity: nightshade_ecs::Entity,
     /// The entity above the skeleton's root joints, captured at build time so
     /// the per-frame armature-root refresh is one transform read instead of a
     /// joint-parent walk.
-    pub armature_parent: Option<freecs::Entity>,
+    pub armature_parent: Option<nightshade_ecs::Entity>,
     /// Number of joints in the skeleton.
     pub joint_count: u32,
     /// Number of animation layers the player exposes.
@@ -1520,11 +1520,11 @@ pub struct SkinnedAnimationSnapshot {
     /// Resolved skeletons, rebuilt only when the animation gate sees a change.
     pub skeletons: Vec<SkinnedSkeletonData>,
     /// Per-player runtime state (current time, blend time, blend duration).
-    pub player_runtime: std::collections::HashMap<freecs::Entity, [f32; 3]>,
+    pub player_runtime: std::collections::HashMap<nightshade_ecs::Entity, [f32; 3]>,
     /// Per-layer runtime state (time and weight), keyed by player and layer.
-    pub layer_runtime: std::collections::HashMap<(freecs::Entity, usize), [f32; 2]>,
+    pub layer_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 2]>,
     /// Current armature-root world transform for each player.
-    pub armature_roots: std::collections::HashMap<freecs::Entity, nalgebra_glm::Mat4>,
+    pub armature_roots: std::collections::HashMap<nightshade_ecs::Entity, nalgebra_glm::Mat4>,
 }
 
 /// A resolved material for the renderer: the engine-side material data plus its
@@ -1682,7 +1682,7 @@ pub struct RenderLightData {
 #[derive(Clone)]
 pub struct RenderLight {
     /// The scene entity this light belongs to.
-    pub entity: freecs::Entity,
+    pub entity: nightshade_ecs::Entity,
     /// The light's render parameters.
     pub light: RenderLightData,
     /// World transform, whose forward axis is read as `-column2`.
@@ -1741,7 +1741,7 @@ fn direction_transform(
 impl RenderLight {
     /// A shadow-casting directional light (a sun) pointing along `direction`.
     pub fn directional(
-        entity: freecs::Entity,
+        entity: nightshade_ecs::Entity,
         direction: nalgebra_glm::Vec3,
         color: nalgebra_glm::Vec3,
         intensity: f32,
@@ -1757,7 +1757,7 @@ impl RenderLight {
 
     /// A point light at `position` reaching out to `range`.
     pub fn point(
-        entity: freecs::Entity,
+        entity: nightshade_ecs::Entity,
         position: nalgebra_glm::Vec3,
         color: nalgebra_glm::Vec3,
         intensity: f32,
@@ -1773,7 +1773,7 @@ impl RenderLight {
     /// A spot light at `position` aimed along `direction`, with `[inner, outer]`
     /// cone half-angles in radians.
     pub fn spot(
-        entity: freecs::Entity,
+        entity: nightshade_ecs::Entity,
         position: nalgebra_glm::Vec3,
         direction: nalgebra_glm::Vec3,
         color: nalgebra_glm::Vec3,
@@ -1864,7 +1864,7 @@ pub struct RenderWaterData {
 #[derive(Clone)]
 pub struct RenderWater {
     /// The scene entity this water body belongs to.
-    pub entity: freecs::Entity,
+    pub entity: nightshade_ecs::Entity,
     /// The water body's render parameters.
     pub water: RenderWaterData,
     /// World transform.
@@ -1927,7 +1927,7 @@ pub struct RenderClothData {
 #[derive(Clone, Default)]
 pub struct RenderShadowCasters {
     /// Skinned entities that cast shadows.
-    pub skinned: Vec<freecs::Entity>,
+    pub skinned: Vec<nightshade_ecs::Entity>,
 }
 
 /// One visible 3D text entity, held as a scene-world component with its world
@@ -2058,14 +2058,15 @@ pub struct RendererState {
     /// Per-entity dynamic render state (transform, visibility, morph weights) for
     /// skinned meshes, extracted once per frame so the skinned pass reads it here
     /// instead of scanning the ECS. Static meshes live in the scene world.
-    pub render_skinned_dynamic_state: std::collections::HashMap<freecs::Entity, DynamicRenderState>,
+    pub render_skinned_dynamic_state:
+        std::collections::HashMap<nightshade_ecs::Entity, DynamicRenderState>,
     /// Scene materials resolved once per frame by the engine. Render passes read
     /// materials here instead of walking the material registry themselves.
     pub render_materials: RenderMaterials,
     /// Per-entity mesh name for skinned meshes, extracted once per frame so the
     /// skinned pass resolves geometry from its own registry without reading the
     /// `RenderMesh` component. Static meshes live in the scene world instead.
-    pub render_skinned_mesh_names: std::collections::HashMap<freecs::Entity, String>,
+    pub render_skinned_mesh_names: std::collections::HashMap<nightshade_ecs::Entity, String>,
     /// The renderer's meshlet asset cache. Placements live in the scene world
     /// as [`MeshletPlacement`] components; this holds only the baked assets they
     /// reference, kept warm across frames.
@@ -2080,7 +2081,7 @@ pub struct RendererState {
     pub render_shadow_casters: RenderShadowCasters,
     /// Skinned-mesh entities collected once per frame in query order, so the
     /// skinned-mesh pass enumerates draws here instead of walking the ECS.
-    pub render_skinned_meshes: Vec<freecs::Entity>,
+    pub render_skinned_meshes: Vec<nightshade_ecs::Entity>,
     /// When set, the mesh pass derives its cull frustum planes from this
     /// view-projection instead of the active camera's, pinning culling to a
     /// fixed viewpoint.

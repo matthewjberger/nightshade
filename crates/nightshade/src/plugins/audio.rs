@@ -76,7 +76,7 @@ pub use systems::*;
 /// Registers the bus construction and per-frame source sync at the start
 /// of the frame, right after the event swap, where they have always run.
 #[cfg(feature = "audio")]
-pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::world::World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(stages, Stage::FrameStart, systems::build_audio_buses_system);
     push_frame_system(stages, Stage::FrameStart, systems::update_audio_system);

@@ -1,4 +1,4 @@
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 #[derive(Default)]
 pub struct Scratch {

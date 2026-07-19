@@ -6,7 +6,7 @@ use crate::render::wgpu::render_configs::{
     LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
 };
 
-fn snapshot_camera(world: &World, entity: freecs::Entity) -> CameraFrameInputs {
+fn snapshot_camera(world: &World, entity: nightshade_ecs::Entity) -> CameraFrameInputs {
     let matrices =
         crate::ecs::camera::queries::query_camera_matrices(world, entity).map(|matrices| {
             CameraMatricesInputs {
@@ -193,7 +193,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .is_some();
 
     let dirty_world_spheres: Vec<(nalgebra_glm::Vec3, f32)> = {
-        let dirty: Vec<freecs::Entity> = world
+        let dirty: Vec<nightshade_ecs::Entity> = world
             .res::<crate::render::mesh_state::MeshRenderState>()
             .dirty_entities_for_culling()
             .collect();
@@ -292,7 +292,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
     let scene_world = std::mem::replace(
         &mut world.ecs.worlds[RENDER],
-        freecs::dynamic::DynWorld::new(),
+        nightshade_ecs::dynamic::DynWorld::new(),
     );
     let mesh_cache = std::mem::take(
         &mut world

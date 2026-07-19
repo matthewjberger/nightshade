@@ -372,7 +372,7 @@ pub fn initialize_physics_bodies_system(world: &mut World) {
 }
 
 pub fn process_pending_joints_system(world: &mut World) {
-    use freecs::dynamic::ResourceHostExt;
+    use nightshade_ecs::dynamic::ResourceHostExt;
     world.resource_scope::<PhysicsWorld, _>(|world, physics| {
         let mut indices_to_remove = Vec::new();
         let mut joints_to_register = Vec::new();
@@ -591,7 +591,7 @@ fn drain_collision_events(world: &mut World) {
 fn resolve_collider_to_entity(
     world: &World,
     collider_handle: ColliderHandle,
-) -> Option<freecs::Entity> {
+) -> Option<nightshade_ecs::Entity> {
     let collider = world
         .plugin_resource::<PhysicsWorld>()
         .collider_set

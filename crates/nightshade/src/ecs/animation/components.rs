@@ -1,7 +1,7 @@
 //! Animation component definitions.
 
-use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
+use nightshade_ecs::Entity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

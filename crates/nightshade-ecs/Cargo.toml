@@ -1,0 +1,31 @@
+[package]
+name = "nightshade-ecs"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Archetype-based dynamic ECS with runtime component registration, snapshots, and a state-machine scheduler."
+keywords = ["ecs", "gamedev", "archetype", "entity"]
+categories = ["game-engines", "data-structures"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["serde", "dynamic"]
+serde = ["dep:serde"]
+dynamic = []
+snapshot = ["dynamic", "serde", "dep:postcard"]
+raw_storage = ["dynamic"]
+state = ["dynamic"]
+
+[dependencies]
+paste = { package = "pastey", version = "0.2" }
+serde = { workspace = true, optional = true }
+postcard = { version = "1.1", features = ["alloc"], optional = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+rayon = { workspace = true }

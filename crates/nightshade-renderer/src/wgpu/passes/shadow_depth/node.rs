@@ -135,7 +135,7 @@ const CUBEMAP_FACE_DIRECTIONS: [(nalgebra_glm::Vec3, nalgebra_glm::Vec3); POINT_
 
 fn caster_visible(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: &freecs::Entity,
+    entity: &nightshade_ecs::Entity,
 ) -> bool {
     if let Some(visible) = configs
         .scene_world
@@ -326,7 +326,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
             self.occluder_transforms.clear();
 
             struct Caster {
-                entity: freecs::Entity,
+                entity: nightshade_ecs::Entity,
                 transform: nalgebra_glm::Mat4,
                 visible: bool,
                 mesh_name: String,
@@ -373,14 +373,16 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
                 self.shadow_caster_entities.push(caster.entity);
             }
 
-            let instanced_casters: Vec<(freecs::Entity, crate::config::InstancedObjectData)> =
-                configs
-                    .scene_world
-                    .query_ref::<&crate::config::InstancedObjectData>()
-                    .with_tag_type::<crate::render_world::ShadowCaster>()
-                    .iter()
-                    .map(|(entity, instanced)| (entity, instanced.clone()))
-                    .collect();
+            let instanced_casters: Vec<(
+                nightshade_ecs::Entity,
+                crate::config::InstancedObjectData,
+            )> = configs
+                .scene_world
+                .query_ref::<&crate::config::InstancedObjectData>()
+                .with_tag_type::<crate::render_world::ShadowCaster>()
+                .iter()
+                .map(|(entity, instanced)| (entity, instanced.clone()))
+                .collect();
             for (entity, instanced) in &instanced_casters {
                 let entity = *entity;
                 if instanced.render_layer == crate::render_layer::RenderLayer::OVERLAY {
@@ -760,14 +762,14 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
         self.point_light_shadow_data.clear();
 
         let mut point_light_candidates: Vec<(
-            freecs::Entity,
+            nightshade_ecs::Entity,
             f32,
             crate::config::RenderLightData,
             nalgebra_glm::Mat4,
         )> = Vec::new();
 
         let point_lights: Vec<(
-            freecs::Entity,
+            nightshade_ecs::Entity,
             crate::config::RenderLightData,
             nalgebra_glm::Mat4,
         )> = configs

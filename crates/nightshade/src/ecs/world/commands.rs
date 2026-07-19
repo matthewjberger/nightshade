@@ -398,7 +398,7 @@ pub fn despawn_entities_with_cache_cleanup(world: &mut World, entities: &[Entity
 pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
     crate::ecs::transform::systems::sync_hierarchy_index(world);
     let mut targets = world
-        .res::<freecs::dynamic::HierarchyIndex>()
+        .res::<nightshade_ecs::dynamic::HierarchyIndex>()
         .descendants(entity);
     targets.insert(0, entity);
     despawn_entities_with_cache_cleanup(world, &targets);

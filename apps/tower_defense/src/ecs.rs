@@ -1,7 +1,7 @@
 use nightshade::prelude::*;
 use std::collections::HashMap;
 
-freecs::dynamic_schema! {
+nightshade_ecs::dynamic_schema! {
     pub fn register_tower_defense_components {
         position: Position => POSITION,
         tower: Tower => TOWER,

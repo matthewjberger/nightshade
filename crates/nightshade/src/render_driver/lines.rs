@@ -101,12 +101,14 @@ fn append_wireframe_lines(world: &World, line_data: &mut Vec<GpuLineData>) {
         push_mesh_wireframe_edges(line_data, entity.id, &global_transform.0, mesh);
     }
 
-    let instanced_objects: Vec<(freecs::Entity, crate::render::config::InstancedObjectData)> =
-        world.ecs.worlds[crate::ecs::world::RENDER]
-            .query_ref::<&crate::render::config::InstancedObjectData>()
-            .iter()
-            .map(|(entity, data)| (entity, data.clone()))
-            .collect();
+    let instanced_objects: Vec<(
+        nightshade_ecs::Entity,
+        crate::render::config::InstancedObjectData,
+    )> = world.ecs.worlds[crate::ecs::world::RENDER]
+        .query_ref::<&crate::render::config::InstancedObjectData>()
+        .iter()
+        .map(|(entity, data)| (entity, data.clone()))
+        .collect();
     for (entity, instanced) in &instanced_objects {
         let entity = *entity;
         let mesh = {
@@ -299,7 +301,7 @@ const IDENTITY_TRANSFORM: [[f32; 4]; 4] = [
 /// or `None` when the entity has no usable skin for the mesh.
 fn skinned_overlay_vertices(
     world: &World,
-    entity: freecs::Entity,
+    entity: nightshade_ecs::Entity,
     mesh: &crate::render::geometry::Mesh,
 ) -> Option<Vec<(nalgebra_glm::Vec3, nalgebra_glm::Vec3)>> {
     use crate::ecs::world::{Vec3, Vec4};

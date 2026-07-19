@@ -283,7 +283,7 @@ pub struct LightCollectionResult {
     /// Count of directional lights found.
     pub num_directional_lights: u32,
     /// Map from source entity to its index in `lights_data`.
-    pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub entity_to_index: std::collections::HashMap<nightshade_ecs::Entity, usize>,
 }
 
 /// Maximum number of area lights shaded per fragment. Area lights are few and
@@ -353,14 +353,14 @@ pub struct AreaLightCollectionResult {
     /// GPU area-light records in buffer order.
     pub area_lights_data: Vec<AreaLightData>,
     /// Map from source entity to its index in `area_lights_data`.
-    pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    pub entity_to_index: std::collections::HashMap<nightshade_ecs::Entity, usize>,
 }
 
 /// Writes each area light's resolved shadow slot into its GPU record.
 pub fn apply_area_light_shadow_indices(
     area_lights_data: &mut [AreaLightData],
-    entity_to_shadow_index: &std::collections::HashMap<freecs::Entity, i32>,
-    entity_to_area_index: &std::collections::HashMap<freecs::Entity, usize>,
+    entity_to_shadow_index: &std::collections::HashMap<nightshade_ecs::Entity, i32>,
+    entity_to_area_index: &std::collections::HashMap<nightshade_ecs::Entity, usize>,
 ) {
     for (entity, &shadow_index) in entity_to_shadow_index {
         if let Some(&area_index) = entity_to_area_index.get(entity)
@@ -403,7 +403,7 @@ pub fn default_shadow_normal_bias_value() -> f32 {
 pub fn resolve_cookie_layers(
     configs: &crate::wgpu::render_configs::RenderInputs,
     lights_data: &mut [LightData],
-    entity_to_index: &std::collections::HashMap<freecs::Entity, usize>,
+    entity_to_index: &std::collections::HashMap<nightshade_ecs::Entity, usize>,
     material_layer_map: &std::collections::HashMap<
         crate::asset_id::TextureId,
         crate::wgpu::material_texture_arrays::MaterialTextureLayer,
@@ -446,7 +446,7 @@ pub fn resolve_cookie_layers(
 pub fn resolve_area_emissive_layers(
     configs: &crate::wgpu::render_configs::RenderInputs,
     area_lights_data: &mut [AreaLightData],
-    entity_to_index: &std::collections::HashMap<freecs::Entity, usize>,
+    entity_to_index: &std::collections::HashMap<nightshade_ecs::Entity, usize>,
     material_layer_map: &std::collections::HashMap<
         crate::asset_id::TextureId,
         crate::wgpu::material_texture_arrays::MaterialTextureLayer,
@@ -487,7 +487,7 @@ pub struct SpotlightShadowResult {
     /// Per-slot shadow sampling data for the spotlight and area-light atlas.
     pub shadow_data: Vec<crate::wgpu::passes::SpotlightShadowData>,
     /// Map from source entity to its atlas slot index.
-    pub entity_to_shadow_index: std::collections::HashMap<freecs::Entity, i32>,
+    pub entity_to_shadow_index: std::collections::HashMap<nightshade_ecs::Entity, i32>,
 }
 
 /// Whether a light is shadowed through the spotlight depth atlas. Spotlights
@@ -531,8 +531,8 @@ pub fn collect_spotlight_shadows(
 /// Writes each spotlight's resolved shadow slot into its GPU light record.
 pub fn apply_spotlight_shadow_indices(
     lights_data: &mut [LightData],
-    entity_to_shadow_index: &std::collections::HashMap<freecs::Entity, i32>,
-    entity_to_lights_index: &std::collections::HashMap<freecs::Entity, usize>,
+    entity_to_shadow_index: &std::collections::HashMap<nightshade_ecs::Entity, i32>,
+    entity_to_lights_index: &std::collections::HashMap<nightshade_ecs::Entity, usize>,
 ) {
     for (entity, &shadow_index) in entity_to_shadow_index {
         if let Some(&lights_index) = entity_to_lights_index.get(entity)
@@ -552,17 +552,17 @@ pub fn collect_point_light_shadows(
     configs: &crate::wgpu::render_configs::RenderInputs,
     camera_position: nalgebra_glm::Vec3,
     lights_data: &mut [LightData],
-    entity_to_lights_index: &std::collections::HashMap<freecs::Entity, usize>,
+    entity_to_lights_index: &std::collections::HashMap<nightshade_ecs::Entity, usize>,
 ) -> Vec<crate::wgpu::passes::shadow_depth::PointLightShadowData> {
     let mut point_light_candidates: Vec<(
-        freecs::Entity,
+        nightshade_ecs::Entity,
         f32,
         crate::config::RenderLightData,
         nalgebra_glm::Mat4,
     )> = Vec::new();
 
     let lights: Vec<(
-        freecs::Entity,
+        nightshade_ecs::Entity,
         crate::config::RenderLightData,
         nalgebra_glm::Mat4,
     )> = configs

@@ -196,7 +196,7 @@
 //!
 //! These allow fine-grained control over dependencies:
 //!
-//! - **`core`** - Foundation: ECS (freecs), math (nalgebra), windowing (winit), time, petgraph.
+//! - **`core`** - Foundation: ECS (nightshade_ecs), math (nalgebra), windowing (winit), time, petgraph.
 //!
 //! - **`assets`** - Asset loading: gltf, image, half, bincode, serde_json. Requires `core`.
 //!
@@ -652,10 +652,10 @@ pub mod prelude {
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::current_state;
     pub use crate::systems::*;
-    pub use freecs::state::{
+    pub use nightshade_ecs::state::{
         in_state, next_state, on_enter, on_exit, run_if, while_in, while_in_any,
     };
-    pub use freecs::system_param::{ParamSet, Query, Res, ResMut};
+    pub use nightshade_ecs::system_param::{ParamSet, Query, Res, ResMut};
     pub use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
@@ -919,9 +919,9 @@ pub mod prelude {
     pub use egui;
     #[cfg(feature = "engine")]
     pub use ehttp;
-    pub use freecs;
     #[cfg(feature = "assets")]
     pub use image;
+    pub use nightshade_ecs;
     #[cfg(feature = "engine")]
     pub use rand::{self, Rng};
     pub use serde;

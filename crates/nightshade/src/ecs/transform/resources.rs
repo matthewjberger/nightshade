@@ -1,4 +1,4 @@
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use std::collections::HashSet;
 
 #[derive(Default, Clone)]

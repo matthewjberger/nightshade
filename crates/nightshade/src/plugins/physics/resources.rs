@@ -1,7 +1,7 @@
 use super::events::{CollisionEvent, CollisionEventCollector, ContactForceEvent};
 #[cfg(feature = "debug_render")]
 use crate::ecs::lines::components::Line;
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use rapier3d::prelude::*;
 use std::collections::HashMap;
 
@@ -57,7 +57,7 @@ pub struct PhysicsWorld {
     pub max_substeps: u32,
     pub interpolation_alpha: f32,
     pub debug_draw: bool,
-    pub debug_entity: Option<freecs::Entity>,
+    pub debug_entity: Option<nightshade_ecs::Entity>,
     pub debug_version: u64,
     #[cfg(feature = "debug_render")]
     pub(crate) debug_static_lines_cache: HashMap<ColliderHandle, Vec<Line>>,

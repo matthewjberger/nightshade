@@ -199,7 +199,7 @@ pub struct CascadeData {
 #[derive(Debug, Clone)]
 pub struct SpotlightShadowSlot {
     /// Light entity assigned to the slot.
-    pub entity: freecs::Entity,
+    pub entity: nightshade_ecs::Entity,
     /// World-to-light clip-space matrix.
     pub view_projection: nalgebra_glm::Mat4,
     /// Atlas slot index.
@@ -236,7 +236,7 @@ pub struct SpotlightShadowData {
 #[derive(Debug, Clone)]
 pub struct PointLightShadowSlot {
     /// Light entity assigned to the slot.
-    pub entity: freecs::Entity,
+    pub entity: nightshade_ecs::Entity,
     /// Light world position.
     pub position: nalgebra_glm::Vec3,
     /// Light range in world units.
@@ -255,7 +255,7 @@ pub struct PointLightShadowSlot {
 #[derive(Clone, Copy, Default)]
 pub struct ShadowSlotCache {
     /// Light that last rendered into the slot, if any.
-    pub occupant: Option<freecs::Entity>,
+    pub occupant: Option<nightshade_ecs::Entity>,
     /// Content hash of the occupant's view-projection and affecting occluders.
     pub hash: u64,
 }

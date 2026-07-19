@@ -12,7 +12,7 @@ use crate::wgpu::passes::geometry::material_gpu::{
 };
 pub(in super::super) struct MaterialCollection {
     pub(in super::super) materials_data: Vec<MaterialData>,
-    pub(in super::super) material_map: HashMap<freecs::Entity, u32>,
+    pub(in super::super) material_map: HashMap<nightshade_ecs::Entity, u32>,
     pub(in super::super) material_ids: std::collections::HashSet<u32>,
     pub(in super::super) transparent_material_ids: std::collections::HashSet<u32>,
     pub(in super::super) double_sided_material_ids: std::collections::HashSet<u32>,
@@ -23,7 +23,7 @@ struct BatchAccumulator {
     transforms: Vec<ModelMatrix>,
     custom_data: Vec<[f32; 4]>,
     objects: Vec<ObjectData>,
-    entities: Vec<freecs::Entity>,
+    entities: Vec<nightshade_ecs::Entity>,
 }
 
 struct EntityClass {
@@ -37,7 +37,7 @@ struct EntityClass {
 
 fn classify_entity(
     configs: &crate::wgpu::render_configs::RenderInputs,
-    entity: freecs::Entity,
+    entity: nightshade_ecs::Entity,
 ) -> EntityClass {
     let render_materials = &configs.scene.render_materials;
     let material_id = configs
@@ -126,7 +126,7 @@ impl MeshPass {
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
         struct ObjectSource {
-            entity: freecs::Entity,
+            entity: nightshade_ecs::Entity,
             transform: nalgebra_glm::Mat4,
             mesh_name: String,
             material_id: u32,
@@ -321,7 +321,7 @@ impl MeshPass {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        let dirty: Vec<freecs::Entity> = self
+        let dirty: Vec<nightshade_ecs::Entity> = self
             .frame_dirty
             .as_mut()
             .map(|fd| std::mem::take(&mut fd.material_dirty).into_iter().collect())
@@ -411,7 +411,11 @@ impl MeshPass {
         objects: &mut Vec<ObjectData>,
         combos: &mut HashMap<(u32, u32, u32), u32>,
     ) {
-        let instanced_data: Vec<(freecs::Entity, u32, crate::config::InstancedObjectData)> = {
+        let instanced_data: Vec<(
+            nightshade_ecs::Entity,
+            u32,
+            crate::config::InstancedObjectData,
+        )> = {
             let mut list: Vec<_> = configs
                 .scene_world
                 .query_ref::<(
@@ -524,7 +528,7 @@ impl MeshPass {
         let materials = self.collect_and_upload_materials(configs, device, queue);
 
         let regular = self.state().regular_object_count as usize;
-        let regular_entities: Vec<freecs::Entity> = {
+        let regular_entities: Vec<nightshade_ecs::Entity> = {
             let state = self.state();
             state
                 .cached_entities

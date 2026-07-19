@@ -15,6 +15,6 @@ path = "src/main.rs"
 
 [dependencies]
 nightshade = { workspace = true, features = ["tracing", "physics", "gamepad", "grass", "terrain", "shell"] }
-freecs.workspace = true
+nightshade-ecs.workspace = true
 nalgebra-glm.workspace = true
 serde.workspace = true

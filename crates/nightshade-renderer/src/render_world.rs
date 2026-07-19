@@ -1,8 +1,8 @@
 //! The renderer's own ECS schema.
 //!
 //! The renderer owns this world. A standalone host stands one up with
-//! `freecs::dynamic::DynWorld::from_registry(register_render_components())`; a
-//! host with its own freecs group composes it in as a member world with
+//! `nightshade_ecs::dynamic::DynWorld::from_registry(register_render_components())`; a
+//! host with its own nightshade_ecs group composes it in as a member world with
 //! `add_world_at`, sharing entity identity so no scene data is copied across
 //! the boundary. Every type here is the renderer's own, keeping the schema
 //! self-contained and the renderer a decoupled leaf of its host's composition.
@@ -72,7 +72,7 @@ pub struct ShadowCaster;
 /// migrates the entity's archetype.
 pub struct SelectionOutline;
 
-freecs::dynamic_schema! {
+nightshade_ecs::dynamic_schema! {
     pub fn register_render_components {
         transform: Transform => TRANSFORM,
         mesh: MeshName => MESH,
@@ -92,3 +92,26 @@ freecs::dynamic_schema! {
         meshlet: crate::config::MeshletPlacement => MESHLET,
     }
 }
+
+nightshade_ecs::impl_component!(
+    Transform,
+    MeshName,
+    MaterialId,
+    Visible,
+    MorphWeights,
+    CullingMask,
+    Layer,
+    RenderEmitter,
+    crate::config::RenderLightData,
+    crate::config::RenderDecalData,
+    crate::config::RenderWaterData,
+    crate::config::InstancedObjectData,
+    crate::config::RenderBounds,
+    crate::config::RenderText,
+    crate::config::RenderClothData,
+    crate::config::MeshletPlacement,
+    crate::bounding_volume::BoundingVolume,
+    crate::particles::ParticleEmitter,
+    crate::render_layer::RenderLayer,
+    crate::config::ViewportUpdateMode,
+);

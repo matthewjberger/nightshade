@@ -9,7 +9,7 @@ impl super::WgpuRenderer {
     /// Drops cached viewports for cameras no longer in `active_camera_entities`.
     pub fn cleanup_unused_camera_viewports(
         &mut self,
-        active_camera_entities: &std::collections::HashSet<freecs::Entity>,
+        active_camera_entities: &std::collections::HashSet<nightshade_ecs::Entity>,
     ) {
         self.camera_viewports
             .retain(|entity, _| active_camera_entities.contains(entity));

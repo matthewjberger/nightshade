@@ -6,7 +6,11 @@ use crate::ecs::world::{
 use nalgebra_glm::Vec3;
 
 use crate::prelude::*;
-pub fn spawn_navmesh_agent(world: &mut World, position: Vec3, speed: f32) -> freecs::Entity {
+pub fn spawn_navmesh_agent(
+    world: &mut World,
+    position: Vec3,
+    speed: f32,
+) -> nightshade_ecs::Entity {
     let entity = spawn_entities(
         world,
         NAME | LOCAL_TRANSFORM
@@ -53,7 +57,7 @@ pub fn spawn_navmesh_agent(world: &mut World, position: Vec3, speed: f32) -> fre
     entity
 }
 
-pub fn set_agent_destination(world: &mut World, entity: freecs::Entity, destination: Vec3) {
+pub fn set_agent_destination(world: &mut World, entity: nightshade_ecs::Entity, destination: Vec3) {
     if let Some(agent) = world.get_mut::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
     {
         agent.target_position = Some(destination);
@@ -61,14 +65,14 @@ pub fn set_agent_destination(world: &mut World, entity: freecs::Entity, destinat
     }
 }
 
-pub fn stop_agent(world: &mut World, entity: freecs::Entity) {
+pub fn stop_agent(world: &mut World, entity: nightshade_ecs::Entity) {
     if let Some(agent) = world.get_mut::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
     {
         agent.clear_destination();
     }
 }
 
-pub fn set_agent_speed(world: &mut World, entity: freecs::Entity, speed: f32) {
+pub fn set_agent_speed(world: &mut World, entity: nightshade_ecs::Entity, speed: f32) {
     if let Some(agent) = world.get_mut::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
     {
         agent.movement_speed = speed;
@@ -83,13 +87,13 @@ pub fn set_navmesh_debug_draw(world: &mut World, enabled: bool) {
     world.plugin_resource_mut::<NavMeshWorld>().debug_draw = enabled;
 }
 
-pub fn get_agent_state(world: &World, entity: freecs::Entity) -> Option<NavMeshAgentState> {
+pub fn get_agent_state(world: &World, entity: nightshade_ecs::Entity) -> Option<NavMeshAgentState> {
     world
         .get::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
         .map(|agent| agent.state)
 }
 
-pub fn get_agent_path_length(world: &World, entity: freecs::Entity) -> Option<usize> {
+pub fn get_agent_path_length(world: &World, entity: nightshade_ecs::Entity) -> Option<usize> {
     world
         .get::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
         .map(|agent| agent.remaining_waypoints())

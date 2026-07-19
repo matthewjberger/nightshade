@@ -266,7 +266,7 @@ fn build_skeletons(
                 .copied()
                 .unwrap_or_default();
             let parent_local = world
-                .get::<freecs::dynamic::ChildOf>(joint)
+                .get::<nightshade_ecs::dynamic::ChildOf>(joint)
                 .map(|child_of| child_of.0)
                 .and_then(|parent| local_index_of.get(&parent).copied());
             let cur_channels = joint_cur.get(&joint).cloned().unwrap_or_default();
@@ -416,7 +416,7 @@ fn joint_depth(
     let mut depth = 0u32;
     let mut current = joints[local];
     while let Some(parent) = world
-        .get::<freecs::dynamic::ChildOf>(current)
+        .get::<nightshade_ecs::dynamic::ChildOf>(current)
         .map(|child_of| child_of.0)
     {
         if !local_index_of.contains_key(&parent) {
@@ -482,7 +482,7 @@ fn skin_armature_parent(world: &World, skin_entity: Entity) -> Option<Entity> {
         .collect();
     skin.joints.iter().find_map(|joint| {
         let parent = world
-            .get::<freecs::dynamic::ChildOf>(*joint)
+            .get::<nightshade_ecs::dynamic::ChildOf>(*joint)
             .map(|child_of| child_of.0)?;
         if local_index_of.contains_key(&parent) {
             return None;

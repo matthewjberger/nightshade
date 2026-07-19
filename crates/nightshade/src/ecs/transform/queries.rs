@@ -6,25 +6,34 @@ use crate::ecs::world::{World, components::ChildOf};
 /// runs every frame in the transform pass; call
 /// [`sync_hierarchy_index`](super::systems::sync_hierarchy_index) first
 /// when links changed earlier in the same frame.
-pub fn query_children(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
+pub fn query_children(
+    world: &World,
+    entity: nightshade_ecs::Entity,
+) -> Vec<nightshade_ecs::Entity> {
     world
-        .res::<freecs::dynamic::HierarchyIndex>()
+        .res::<nightshade_ecs::dynamic::HierarchyIndex>()
         .children(entity)
         .to_vec()
 }
 
 /// The entity's whole subtree below it as of the last hierarchy sync,
 /// excluding the entity itself.
-pub fn query_descendants(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
+pub fn query_descendants(
+    world: &World,
+    entity: nightshade_ecs::Entity,
+) -> Vec<nightshade_ecs::Entity> {
     world
-        .res::<freecs::dynamic::HierarchyIndex>()
+        .res::<nightshade_ecs::dynamic::HierarchyIndex>()
         .descendants(entity)
 }
 
-pub fn query_ancestors(world: &World, entity: freecs::Entity) -> Vec<freecs::Entity> {
+pub fn query_ancestors(
+    world: &World,
+    entity: nightshade_ecs::Entity,
+) -> Vec<nightshade_ecs::Entity> {
     let mut chain = vec![entity];
     let mut current = entity;
-    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
+    while let Some(ChildOf(parent)) = world.get::<nightshade_ecs::dynamic::ChildOf>(current) {
         chain.push(*parent);
         current = *parent;
     }
@@ -32,14 +41,14 @@ pub fn query_ancestors(world: &World, entity: freecs::Entity) -> Vec<freecs::Ent
 }
 
 #[cfg(feature = "assets")]
-pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity {
+pub fn find_group_root(world: &World, entity: nightshade_ecs::Entity) -> nightshade_ecs::Entity {
     let mut current = entity;
-    let mut highest_prefab_root: Option<freecs::Entity> = None;
+    let mut highest_prefab_root: Option<nightshade_ecs::Entity> = None;
     loop {
         if world.ecs.worlds[CORE].entity_has_components(current, PREFAB_SOURCE) {
             highest_prefab_root = Some(current);
         }
-        match world.get::<freecs::dynamic::ChildOf>(current) {
+        match world.get::<nightshade_ecs::dynamic::ChildOf>(current) {
             Some(ChildOf(parent)) => current = *parent,
             _ => break,
         }
@@ -48,9 +57,9 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
 }
 
 #[cfg(not(feature = "assets"))]
-pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity {
+pub fn find_group_root(world: &World, entity: nightshade_ecs::Entity) -> nightshade_ecs::Entity {
     let mut current = entity;
-    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
+    while let Some(ChildOf(parent)) = world.get::<nightshade_ecs::dynamic::ChildOf>(current) {
         current = *parent;
     }
     current
@@ -58,15 +67,15 @@ pub fn find_group_root(world: &World, entity: freecs::Entity) -> freecs::Entity 
 
 pub fn chain_from_root_to_leaf(
     world: &World,
-    root: freecs::Entity,
-    leaf: freecs::Entity,
-) -> Vec<freecs::Entity> {
+    root: nightshade_ecs::Entity,
+    leaf: nightshade_ecs::Entity,
+) -> Vec<nightshade_ecs::Entity> {
     if leaf == root {
         return vec![root];
     }
     let mut chain = vec![leaf];
     let mut current = leaf;
-    while let Some(ChildOf(parent)) = world.get::<freecs::dynamic::ChildOf>(current) {
+    while let Some(ChildOf(parent)) = world.get::<nightshade_ecs::dynamic::ChildOf>(current) {
         chain.push(*parent);
         if *parent == root {
             break;

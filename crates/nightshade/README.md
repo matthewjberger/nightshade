@@ -4,7 +4,7 @@
 
 # Nightshade
 
-A data-oriented 3D game engine written in Rust. Targets native (Windows, macOS, Linux) and the web via WebGPU. Ships a glTF-first PBR renderer with the full KHR extension set, a freecs-backed ECS, a retained-mode UI, and a browser-playable scene editor.
+A data-oriented 3D game engine written in Rust. Targets native (Windows, macOS, Linux) and the web via WebGPU. Ships a glTF-first PBR renderer with the full KHR extension set, a nightshade_ecs-backed ECS, a retained-mode UI, and a browser-playable scene editor.
 
 See the [project README](https://github.com/matthewjberger/nightshade) for screenshots, the live demo, and the project status.
 

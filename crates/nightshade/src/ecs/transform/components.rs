@@ -4,9 +4,9 @@ mod ignore_parent_scale;
 mod local_transform;
 mod rotation;
 
-pub use freecs::dynamic::ChildOf;
 pub use ignore_parent_scale::*;
 pub use local_transform::*;
+pub use nightshade_ecs::dynamic::ChildOf;
 pub use rotation::*;
 
 use nalgebra_glm::{Mat4, Vec3};

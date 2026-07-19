@@ -6,7 +6,7 @@ use crate::ecs::world::{
         BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
     },
 };
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 use crate::prelude::*;
 pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec3) -> Entity {

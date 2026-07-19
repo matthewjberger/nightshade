@@ -14,11 +14,11 @@ nightshade-renderer = "0.56.0"
 
 ## The seam: one input per frame
 
-The renderer owns the scene as its own freecs ECS world. Every frame the host
+The renderer owns the scene as its own nightshade_ecs ECS world. Every frame the host
 composes a single [`RenderInputs`] value (that scene world plus settings, the
 mesh and texture caches, and the cameras to dispatch), calls `render_frame`, and
 reads back a [`FrameOutputs`] with the writes that belong to the host. A host
-that runs its own freecs group composes the renderer's schema in as a member
+that runs its own nightshade_ecs group composes the renderer's schema in as a member
 world, so a render entity is the host entity and no scene data copies across the
 boundary. A standalone host stands the world up from the registry and spawns
 into it. Either way the passes and the frame graph are monomorphized on one
@@ -30,7 +30,7 @@ value rather than being cloned.
                  │  compose_frame()
                  ▼
         RenderInputs  ──────────►  render_frame(renderer, &mut inputs, &mut outputs)
-          scene_world (freecs)              │
+          scene_world (nightshade_ecs)              │
           settings / scene: RendererState   │  graph executes per view
           mesh_cache / texture_cache        │  (mesh, shadows, sky, post, UI…)
           frame: cameras + commands         ▼
@@ -43,7 +43,7 @@ value rather than being cloned.
 Runnable examples drive the renderer directly through a small windowing harness
 in `examples/common/driver.rs`, a fly camera and a frame loop built from free
 functions and plain data, with no engine layer. Each example fills a
-[`SingleViewHost`] of renderer data using the raw renderer and freecs API
+[`SingleViewHost`] of renderer data using the raw renderer and nightshade_ecs API
 (`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`, `world.set`).
 
 - **`pbr`**: a grid of spheres from dielectric to metal and rough to smooth

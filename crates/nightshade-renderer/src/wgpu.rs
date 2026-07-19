@@ -112,7 +112,7 @@ pub struct WgpuRenderer {
     /// Dynamic glyph atlas backing text rendering.
     pub glyph_atlas: glyph_atlas::GlyphAtlas,
     /// Per-camera viewport texture pool.
-    pub camera_viewports: std::collections::HashMap<freecs::Entity, CameraViewport>,
+    pub camera_viewports: std::collections::HashMap<nightshade_ecs::Entity, CameraViewport>,
     /// BRDF integration lookup texture, retained to keep [`brdf_lut_view`](Self::brdf_lut_view) alive.
     pub _brdf_lut_texture: wgpu::Texture,
     /// View over the BRDF integration lookup texture sampled during shading.
@@ -210,7 +210,7 @@ pub struct DepthPickState {
     /// Size of the depth texture the pick sampled.
     pub texture_size: (u32, u32),
     /// Camera the pending pick belongs to, if any.
-    pub camera: Option<freecs::Entity>,
+    pub camera: Option<nightshade_ecs::Entity>,
 }
 
 /// Screenshot capture and readback resources.
@@ -239,7 +239,7 @@ pub struct FrameState {
     /// Settings signature applied on the previous frame, for change detection.
     pub last_settings_signature: Option<u64>,
     /// Per-entity text mesh signatures, used to skip unchanged rebuilds.
-    pub text_mesh_signatures: std::collections::HashMap<freecs::Entity, u64>,
+    pub text_mesh_signatures: std::collections::HashMap<nightshade_ecs::Entity, u64>,
     /// Atmosphere captured for the current IBL bake, if any.
     pub captured_ibl_atmosphere: Option<crate::config::Atmosphere>,
     /// Time of day captured for the current IBL bake.

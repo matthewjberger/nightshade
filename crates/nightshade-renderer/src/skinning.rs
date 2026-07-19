@@ -2,8 +2,8 @@
 //! refreshes it in `render_sync_skinning_system`; the skinned-mesh and shadow
 //! passes read it from `renderer_state.render_skinning`.
 
-use freecs::Entity;
 use nalgebra_glm::Mat4;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 
 /// Per-skin layout uploaded to the GPU: the joint count and the base offsets

@@ -26,7 +26,7 @@ W/A/S/D move, Q/E down/up, mouse to look, Esc quits.
 A procedural sky and a directional sun over a floor of colored shapes. Each
 shape spins in place (a per-frame `world.set` of its `Transform`) and casts a
 shadow (a `ShadowCaster` tag). The scene is built entirely with the raw renderer
-and freecs API: `world.spawn` of component tuples, `RenderMaterials::add`, and
+and nightshade_ecs API: `world.spawn` of component tuples, `RenderMaterials::add`, and
 `mesh_cache_insert`.
 
 The frame loop keeps its persistent state in a `SingleViewHost` and draws with

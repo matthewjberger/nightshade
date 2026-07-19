@@ -9,7 +9,7 @@ pub struct NavMeshWorld {
     pub adjacency: HashMap<usize, Vec<NavMeshConnection>>,
     pub spatial_hash: SpatialHash,
     pub debug_draw: bool,
-    pub debug_entity: Option<freecs::Entity>,
+    pub debug_entity: Option<nightshade_ecs::Entity>,
     pub algorithm: PathfindingAlgorithm,
 }
 

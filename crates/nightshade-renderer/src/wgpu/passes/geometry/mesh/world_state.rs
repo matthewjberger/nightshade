@@ -1,4 +1,4 @@
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 

@@ -4,9 +4,9 @@ mod resources;
 pub use components::*;
 pub use resources::*;
 
-use nightshade::prelude::freecs;
+use nightshade::prelude::nightshade_ecs;
 
-freecs::dynamic_schema! {
+nightshade_ecs::dynamic_schema! {
     serde pub fn register_sandbox_components {
         enemy: Enemy => ENEMY,
     }

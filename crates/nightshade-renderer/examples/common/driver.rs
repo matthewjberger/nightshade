@@ -1,7 +1,7 @@
 //! A thin windowing and frame-loop harness for the nightshade-renderer
 //! examples. It owns only the window, a fly camera, and the render loop; each
 //! example fills a [`SingleViewHost`] of renderer data using the raw renderer
-//! and freecs API (`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`,
+//! and nightshade_ecs API (`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`,
 //! `world.set`) and the loop draws it with `render_frame`. Everything here is a
 //! free function or a plain data struct.
 //!
@@ -13,8 +13,8 @@ use std::sync::Arc;
 use glm::{Mat4, Vec3};
 use nalgebra_glm as glm;
 
-use freecs::Entity;
-use freecs::dynamic::DynWorld;
+use nightshade_ecs::Entity;
+use nightshade_ecs::dynamic::DynWorld;
 use nightshade_renderer::config::{
     EffectiveShading, RenderLight, RenderLightData, RenderSettings, RendererState,
 };

@@ -13,7 +13,7 @@ use crate::wgpu::passes::geometry::projection::{
     atlas_shadow_fov, light_casts_atlas_shadow, transform_forward,
 };
 use crate::wgpu::render_configs::CameraFrameInputs;
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 /// Tests whether a world-space sphere lies inside or intersects the six frustum
 /// planes, each stored as `(a, b, c, d)` with an outward-pointing normal.
@@ -115,7 +115,7 @@ pub fn shadow_atlas_size() -> u32 {
 /// cull only applies when a single camera drives the view, so tiled multi-camera
 /// layouts keep every candidate.
 pub fn assign_spotlight_atlas(
-    scene_world: &freecs::dynamic::DynWorld,
+    scene_world: &nightshade_ecs::dynamic::DynWorld,
     active_camera: Option<&CameraFrameInputs>,
     use_camera_frustum: bool,
     atlas_size: u32,

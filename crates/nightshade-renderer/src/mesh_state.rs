@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 /// Accumulates the frame's mesh dirty state and hands it to the passes.
 #[derive(Debug, Default)]

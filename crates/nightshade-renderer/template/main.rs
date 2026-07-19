@@ -1,5 +1,5 @@
 //! A standalone `nightshade-renderer` starter in one file: open a window, build
-//! a small scene in the renderer's own freecs world, and draw it every frame —
+//! a small scene in the renderer's own nightshade_ecs world, and draw it every frame —
 //! no engine layer, no shared harness. Copy this file plus the dependencies in
 //! `Cargo.toml` into a new binary crate and it runs.
 //!
@@ -16,8 +16,8 @@ use std::time::Instant;
 use glm::{Mat4, Vec3};
 use nalgebra_glm as glm;
 
-use freecs::Entity;
-use freecs::dynamic::DynWorld;
+use nightshade_ecs::Entity;
+use nightshade_ecs::dynamic::DynWorld;
 use nightshade_renderer::config::{
     Atmosphere, EffectiveShading, RenderLight, RenderSettings, RendererState,
 };

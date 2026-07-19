@@ -1,6 +1,6 @@
 use crate::config::{SkinnedAnimationSnapshot, SkinnedChannelData};
 use crate::skinning::SkinningCache;
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use wgpu::util::DeviceExt;
 
 #[repr(C)]

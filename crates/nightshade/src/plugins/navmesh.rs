@@ -130,7 +130,7 @@ pub use systems::run_navmesh_systems;
 /// Registers the pathfinding and agent-steering pass into the frame update
 /// stage, before transform propagation picks up the agents' writes.
 #[cfg(feature = "navmesh")]
-pub fn register_frame_systems(stages: &mut freecs::Stages<crate::ecs::world::World>) {
+pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::world::World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(stages, Stage::FrameUpdate, systems::run_navmesh_systems);
 }

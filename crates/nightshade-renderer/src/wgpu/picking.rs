@@ -13,7 +13,7 @@ pub fn dispatch_pick_compute(
     renderer: &mut WgpuRenderer,
     screen_x: u32,
     screen_y: u32,
-    camera: Option<freecs::Entity>,
+    camera: Option<nightshade_ecs::Entity>,
 ) {
     if renderer.depth_pick.pending {
         return;

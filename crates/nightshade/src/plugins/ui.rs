@@ -62,7 +62,7 @@ pub fn install(world: &mut World) {
 /// Registers the retained-UI runner into the post-update stage, explicitly
 /// after the transform propagation the layout depends on so the ordering
 /// holds regardless of plugin composition order.
-pub fn register_frame_systems(stages: &mut freecs::Stages<World>) {
+pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
     stages
         .stage_mut(Stage::FramePostUpdate.name())
         .insert_after(

@@ -25,7 +25,7 @@ exclude = [
 default = ["engine", "wgpu"]
 
 core = [
-    "dep:freecs",
+    "dep:nightshade-ecs",
     "dep:bytemuck",
     "dep:bitflags",
     "dep:tracing",
@@ -142,7 +142,7 @@ enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
-freecs = { workspace = true, optional = true }
+nightshade-ecs = { workspace = true, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }
 gltf = { workspace = true, optional = true }

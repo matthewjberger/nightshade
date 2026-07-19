@@ -51,7 +51,7 @@ pub(crate) fn prepare_text_meshes(
     let pre_revision = renderer.glyph_atlas.revision;
 
     let mut dirty_entries: Vec<(
-        freecs::Entity,
+        nightshade_ecs::Entity,
         usize,
         crate::ecs::text::components::TextProperties,
     )> = Vec::new();
@@ -97,7 +97,7 @@ pub(crate) fn prepare_text_meshes(
             .frame
             .text_meshes,
     );
-    let mut active_entities: std::collections::HashSet<freecs::Entity> =
+    let mut active_entities: std::collections::HashSet<nightshade_ecs::Entity> =
         std::collections::HashSet::new();
     for instance in &mut frame_text {
         let signature = compute_ui_text_signature(instance);
@@ -144,7 +144,7 @@ pub(crate) fn prepare_text_meshes(
             active_entities.insert(entity);
         }
     }
-    let stale: Vec<freecs::Entity> = renderer
+    let stale: Vec<nightshade_ecs::Entity> = renderer
         .frame_state
         .text_mesh_signatures
         .keys()

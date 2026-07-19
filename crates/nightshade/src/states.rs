@@ -1,5 +1,5 @@
-//! App-builder sugar over freecs's state machine (the `state` feature). The
-//! machinery lives in [`freecs::state`]; this wires it onto the [`App`] builder
+//! App-builder sugar over nightshade_ecs's state machine (the `state` feature). The
+//! machinery lives in [`nightshade_ecs::state`]; this wires it onto the [`App`] builder
 //! and the [`Stage::First`] transition step, and adapts `current_state` to the
 //! engine [`World`] so call sites name only the state type.
 //!
@@ -24,15 +24,15 @@ use crate::app::{App, Stage};
 use crate::ecs::world::World;
 
 /// The current value of state type `S`, adapting
-/// [`freecs::state::current_state`] to the engine [`World`] so call sites name
+/// [`nightshade_ecs::state::current_state`] to the engine [`World`] so call sites name
 /// only `S`.
 pub fn current_state<S: Copy + PartialEq + Send + Sync + 'static>(world: &World) -> S {
-    freecs::state::current_state::<S, World>(world)
+    nightshade_ecs::state::current_state::<S, World>(world)
 }
 
 impl App {
-    /// Inserts the [`State`](freecs::state::State) and
-    /// [`NextState`](freecs::state::NextState) resources for `S` at `initial`
+    /// Inserts the [`State`](nightshade_ecs::state::State) and
+    /// [`NextState`](nightshade_ecs::state::NextState) resources for `S` at `initial`
     /// and registers the transition-apply step onto [`Stage::First`], so a
     /// transition requested during a frame lands at the start of the next and
     /// no frame observes a mid-frame flip. Enter hooks for `initial` run on the
@@ -41,25 +41,28 @@ impl App {
         &mut self,
         initial: S,
     ) -> &mut Self {
-        freecs::state::insert_state(&mut self.world, initial);
+        nightshade_ecs::state::insert_state(&mut self.world, initial);
         self.add_system(
             Stage::First,
-            freecs::state::apply_state_transition::<S, World>,
+            nightshade_ecs::state::apply_state_transition::<S, World>,
         );
         self
     }
 
     /// Runs `systems` once each time `S` enters `state`, after the transition
     /// step, reading the emitted
-    /// [`StateTransition`](freecs::state::StateTransition) through its own
+    /// [`StateTransition`](nightshade_ecs::state::StateTransition) through its own
     /// cursor so each entry fires exactly once. Takes a single system or a
     /// tuple. Requires [`insert_state`](App::insert_state) first.
     pub fn on_enter<S: Copy + PartialEq + Send + Sync + 'static, Marker>(
         &mut self,
         state: S,
-        systems: impl freecs::state::IntoGroupRunner<World, Marker>,
+        systems: impl nightshade_ecs::state::IntoGroupRunner<World, Marker>,
     ) -> &mut Self {
-        self.add_system(Stage::First, freecs::state::on_enter(state, systems));
+        self.add_system(
+            Stage::First,
+            nightshade_ecs::state::on_enter(state, systems),
+        );
         self
     }
 
@@ -69,9 +72,9 @@ impl App {
     pub fn on_exit<S: Copy + PartialEq + Send + Sync + 'static, Marker>(
         &mut self,
         state: S,
-        systems: impl freecs::state::IntoGroupRunner<World, Marker>,
+        systems: impl nightshade_ecs::state::IntoGroupRunner<World, Marker>,
     ) -> &mut Self {
-        self.add_system(Stage::First, freecs::state::on_exit(state, systems));
+        self.add_system(Stage::First, nightshade_ecs::state::on_exit(state, systems));
         self
     }
 }

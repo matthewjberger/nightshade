@@ -1,6 +1,6 @@
 use crate::plugins::physics::resources::PhysicsWorld;
-use freecs::Entity;
 use nalgebra_glm::Vec3;
+use nightshade_ecs::Entity;
 use rapier3d::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

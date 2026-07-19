@@ -1,6 +1,6 @@
 use bitflags::bitflags;
-use freecs::Entity;
 use nalgebra_glm::Vec3;
+use nightshade_ecs::Entity;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy)]

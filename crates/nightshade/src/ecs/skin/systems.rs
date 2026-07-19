@@ -2,8 +2,8 @@ use crate::ecs::mesh::components::RenderMesh;
 use crate::ecs::skin::components::Skin;
 use crate::ecs::world::CORE;
 use crate::ecs::world::{RENDER_MESH, SKIN, World};
-use freecs::Entity;
 use nalgebra_glm::Mat4;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 
 use crate::render::skinning::{GpuSkinData, SkinningCache};

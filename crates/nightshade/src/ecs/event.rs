@@ -23,7 +23,7 @@
 //!    one.
 
 use crate::ecs::world::{Entity, World};
-use freecs::system_param::EventHost;
+use nightshade_ecs::system_param::EventHost;
 
 /// Schema for an [`Entity`] field. The engine entity is a foreign type that
 /// cannot derive `Schema`, so this matches its serde form, the same `{ id,
@@ -95,7 +95,7 @@ pub struct JournalEntry {
 /// journal never grows without bound on a long running session.
 const JOURNAL_CAPACITY: usize = 4096;
 
-/// The event cycle's shared state alongside the freecs event bus that carries
+/// The event cycle's shared state alongside the nightshade_ecs event bus that carries
 /// the events themselves: the cycle counter and an optional journal a tool
 /// drains to watch what was published.
 #[derive(Default)]
@@ -106,7 +106,7 @@ pub struct Events {
 }
 
 /// Publishes an event for participants to read next cycle. The event lands on
-/// the freecs bus and becomes visible through [`events`] once the frame
+/// the nightshade_ecs bus and becomes visible through [`events`] once the frame
 /// settles it, so a participant never sees its own cycle's emissions.
 pub fn emit_event(world: &mut World, event: Event) {
     let events = world.res_mut::<crate::ecs::event::Events>();
@@ -121,7 +121,7 @@ pub fn emit_event(world: &mut World, event: Event) {
 }
 
 /// The events visible to participants this cycle: the set frozen at frame
-/// start on the freecs bus, broadcast to every reader.
+/// start on the nightshade_ecs bus, broadcast to every reader.
 pub fn events(world: &World) -> &[Event] {
     world.event_bus().read_frame::<Event>()
 }
@@ -158,7 +158,7 @@ fn record(events: &mut Events, entry: JournalEntry) {
     events.journal.push(entry);
 }
 
-/// Frame start: advances the freecs bus one frame, so the events emitted last
+/// Frame start: advances the nightshade_ecs bus one frame, so the events emitted last
 /// cycle become this cycle's frozen readable set and older ones expire, and
 /// steps the cycle counter. [`events`] reads the settled set through the bus.
 pub fn advance_event_frame_system(world: &mut World) {

@@ -17,4 +17,4 @@ nightshade-renderer = { path = "..", features = ["wgpu", "hdr"] }
 winit = "0.30.13"
 pollster = "0.4"
 nalgebra-glm = "0.20.0"
-freecs = { version = "4.7.0", features = ["dynamic"] }
+nightshade-ecs = { path = "../../nightshade-ecs", features = ["dynamic"] }

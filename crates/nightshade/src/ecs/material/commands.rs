@@ -10,7 +10,7 @@ use crate::ecs::world::components::MaterialRef;
 ///
 /// [`MaterialVariants`]: super::components::MaterialVariants
 pub fn material_variant_apply(world: &mut World, variant_name: Option<&str>) -> usize {
-    let mut updates: Vec<(freecs::Entity, String)> = Vec::new();
+    let mut updates: Vec<(nightshade_ecs::Entity, String)> = Vec::new();
     for (entity, (variants, material_ref)) in world
         .query_ref::<(
             &super::components::MaterialVariants,

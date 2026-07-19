@@ -38,7 +38,7 @@
 use crate::ecs::world::World;
 use crate::render::wgpu;
 use crate::state::{RenderResources, State};
-use freecs::dynamic::ResourceHostExt;
+use nightshade_ecs::dynamic::ResourceHostExt;
 
 /// A unit of app composition. Engine capabilities and games alike
 /// implement this and register their worlds, resources, systems, and
@@ -308,14 +308,17 @@ impl_plugin_group_for_tuple!(
 /// registered in tuple order. The `Marker` parameter is inferred from the
 /// shape and never written at call sites.
 pub trait SystemCollection<Marker> {
-    fn push_onto(self, schedule: &mut freecs::Schedule<World>);
+    fn push_onto(self, schedule: &mut nightshade_ecs::Schedule<World>);
 }
 
 /// Resolves a unique schedule name from a system's type name. Distinct systems
 /// that share a type name (the same closure registered per state value, say
 /// `on_enter` in a loop) collide otherwise; each gets a `#suffix` so all of
 /// them coexist in the schedule instead of the second registration panicking.
-fn unique_schedule_name(schedule: &freecs::Schedule<World>, base: &'static str) -> &'static str {
+fn unique_schedule_name(
+    schedule: &nightshade_ecs::Schedule<World>,
+    base: &'static str,
+) -> &'static str {
     if !schedule.contains(base) {
         return base;
     }
@@ -337,7 +340,7 @@ impl<F> SystemCollection<WorldSystemMarker> for F
 where
     F: FnMut(&mut World) + Send + 'static,
 {
-    fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+    fn push_onto(self, schedule: &mut nightshade_ecs::Schedule<World>) {
         let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
         schedule.push(name, self);
     }
@@ -348,7 +351,7 @@ where
     T: Send + Sync + 'static,
     F: FnMut(&mut T, &mut World) + Send + 'static,
 {
-    fn push_onto(mut self, schedule: &mut freecs::Schedule<World>) {
+    fn push_onto(mut self, schedule: &mut nightshade_ecs::Schedule<World>) {
         let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
         schedule.push(name, move |world: &mut World| {
             game_scope(world, |state: &mut T, world| self(state, world));
@@ -356,18 +359,18 @@ where
     }
 }
 
-/// Marks a freecs system-parameter function, `fn(Res<A>, ResMut<B>, &mut
+/// Marks a nightshade_ecs system-parameter function, `fn(Res<A>, ResMut<B>, &mut
 /// World)`, whose resource arguments resolve out of the ECS resource map
 /// while `&mut World` stays free for queries. `World` implements
-/// [`freecs::dynamic::ResourceHost`], so these register alongside the plain
+/// [`nightshade_ecs::dynamic::ResourceHost`], so these register alongside the plain
 /// and game system shapes.
 pub struct ParamSystemMarker<Marker>(std::marker::PhantomData<Marker>);
 
 impl<Marker, F> SystemCollection<ParamSystemMarker<Marker>> for F
 where
-    F: freecs::system_param::IntoSystem<World, Marker>,
+    F: nightshade_ecs::system_param::IntoSystem<World, Marker>,
 {
-    fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+    fn push_onto(self, schedule: &mut nightshade_ecs::Schedule<World>) {
         let name = unique_schedule_name(schedule, std::any::type_name_of_val(&self));
         schedule.push(name, self.into_runner());
     }
@@ -378,7 +381,7 @@ macro_rules! impl_system_collection_for_tuple {
         impl<$($marker),+, $($system_type: SystemCollection<$marker>),+>
             SystemCollection<($($marker,)+)> for ($($system_type,)+)
         {
-            fn push_onto(self, schedule: &mut freecs::Schedule<World>) {
+            fn push_onto(self, schedule: &mut nightshade_ecs::Schedule<World>) {
                 let ($($system_value,)+) = self;
                 $($system_value.push_onto(schedule);)+
             }
@@ -604,8 +607,11 @@ impl Stage {
 /// Pushes a plain per-frame system into a named frame stage of `stages`,
 /// naming it the same way [`App::add_system`] does so the App and
 /// runner-owned frame stages register systems identically.
-pub(crate) fn push_frame_system<F>(stages: &mut freecs::Stages<World>, stage: Stage, system: F)
-where
+pub(crate) fn push_frame_system<F>(
+    stages: &mut nightshade_ecs::Stages<World>,
+    stage: Stage,
+    system: F,
+) where
     F: FnMut(&mut World) + Send + 'static,
 {
     stages
@@ -617,7 +623,7 @@ where
 /// of `stages`, which must already declare the [`Stage::FRAME_STAGES`]. Both
 /// [`App::new`] and [`build_default_frame_stages`] populate through this, so
 /// the App and runner-owned schedules stay in lock-step.
-pub(crate) fn register_default_frame_systems(stages: &mut freecs::Stages<World>) {
+pub(crate) fn register_default_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
     push_frame_system(
         stages,
         Stage::FrameStart,
@@ -711,13 +717,13 @@ pub(crate) fn register_default_frame_systems(stages: &mut freecs::Stages<World>)
     );
 }
 
-/// Builds a [`freecs::Stages`] holding only the engine's frame stages,
+/// Builds a [`nightshade_ecs::Stages`] holding only the engine's frame stages,
 /// populated with the default per-frame systems, for runners that drive
 /// their own [`State`] loop instead of composing an [`App`]. The stage
 /// order matches the tail of [`App`]'s stages, so a runner that runs these
 /// after its own logic reproduces the App's per-frame order.
-pub fn build_default_frame_stages() -> freecs::Stages<World> {
-    let mut stages = freecs::Stages::new();
+pub fn build_default_frame_stages() -> nightshade_ecs::Stages<World> {
+    let mut stages = nightshade_ecs::Stages::new();
     for stage in Stage::FRAME_STAGES {
         stages.add_stage(stage.name());
     }
@@ -731,7 +737,7 @@ pub fn build_default_frame_stages() -> freecs::Stages<World> {
 /// registration does, so the caller never spells one out. Runners that pull a
 /// system out of their own frame stages (the caller-owned loop lifting the
 /// input reset so edge-triggered input survives the frame boundary) call this.
-pub fn remove_frame_system<F>(stages: &mut freecs::Stages<World>, system: F) -> bool {
+pub fn remove_frame_system<F>(stages: &mut nightshade_ecs::Stages<World>, system: F) -> bool {
     let name = std::any::type_name_of_val(&system);
     let mut removed = false;
     for (_, schedule) in &mut stages.stages {
@@ -773,8 +779,8 @@ type UpdateRenderGraphFn = Box<
 /// systems that must observe every update system's writes.
 pub struct App {
     pub world: World,
-    pub startup: freecs::Schedule<World>,
-    pub stages: freecs::Stages<World>,
+    pub startup: nightshade_ecs::Schedule<World>,
+    pub stages: nightshade_ecs::Stages<World>,
     pub(crate) log_guards: Vec<Box<dyn std::any::Any>>,
     render_graph_config: Vec<RenderGraphConfigFn>,
     pre_render: Vec<PreRenderFn>,
@@ -791,7 +797,7 @@ impl Default for App {
 
 impl App {
     pub fn new() -> Self {
-        let mut stages = freecs::Stages::new();
+        let mut stages = nightshade_ecs::Stages::new();
         for stage in Stage::PER_FRAME {
             stages.add_stage(stage.name());
         }
@@ -805,7 +811,7 @@ impl App {
             .create_renderer = false;
         Self {
             world,
-            startup: freecs::Schedule::new(),
+            startup: nightshade_ecs::Schedule::new(),
             stages,
             log_guards: Vec::new(),
             render_graph_config: Vec::new(),
@@ -1025,10 +1031,10 @@ impl App {
 /// Temporarily removes a group resource so a system can hold it alongside
 /// full `&mut World` access, then puts it back. The safe equivalent of a
 /// resource scope: systems keep the plain `(game, world)` signature with
-/// no aliasing and no `unsafe`. Delegates to the freecs host scope through
+/// no aliasing and no `unsafe`. Delegates to the nightshade_ecs host scope through
 /// the engine `World`'s `ResourceHost` impl: the resource is absent inside
 /// the closure and is reinserted even if `body` unwinds. Systems that want
-/// several resources at once can import `freecs::dynamic::ResourceHostExt`
+/// several resources at once can import `nightshade_ecs::dynamic::ResourceHostExt`
 /// and call `world.resources_scope` instead of nesting.
 ///
 /// Panics if the resource was never inserted or is already scoped.
@@ -1043,8 +1049,8 @@ pub fn game_scope<T: Send + Sync + 'static, R>(
 /// engine runner: startup once at initialize, stages every frame, render
 /// hooks forwarded.
 struct StageState {
-    startup: freecs::Schedule<World>,
-    stages: freecs::Stages<World>,
+    startup: nightshade_ecs::Schedule<World>,
+    stages: nightshade_ecs::Stages<World>,
     render_graph_config: Vec<RenderGraphConfigFn>,
     pre_render: Vec<PreRenderFn>,
     update_render_graph: Vec<UpdateRenderGraphFn>,

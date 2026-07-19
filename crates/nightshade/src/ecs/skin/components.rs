@@ -1,5 +1,5 @@
-use freecs::Entity;
 use nalgebra_glm::Mat4;
+use nightshade_ecs::Entity;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

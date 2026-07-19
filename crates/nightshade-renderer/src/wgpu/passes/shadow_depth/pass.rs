@@ -49,12 +49,12 @@ pub struct ShadowDepthPass {
     pub(super) current_index_offset: u32,
     pub(super) compaction_counter: u64,
 
-    pub(super) shadow_caster_entities: Vec<freecs::Entity>,
+    pub(super) shadow_caster_entities: Vec<nightshade_ecs::Entity>,
 
     pub(super) occluders: Vec<super::types::ShadowOccluder>,
     pub(super) occluder_transforms: Vec<[[f32; 4]; 4]>,
     pub(super) occluder_cache: Vec<super::node::OccluderCacheEntry>,
-    pub(super) all_caster_entities: Vec<freecs::Entity>,
+    pub(super) all_caster_entities: Vec<nightshade_ecs::Entity>,
     pub(super) last_visible_signature: u64,
     pub(super) occluders_initialized: bool,
     /// Set when the shadow occluder set changed so the pass rebuilds its draw
@@ -99,7 +99,7 @@ pub struct ShadowDepthPass {
     pub(super) current_skinned_vertex_offset: u32,
     pub(super) current_skinned_index_offset: u32,
     pub(super) skinned_compaction_counter: u64,
-    pub(super) skinned_shadow_caster_entities: Vec<freecs::Entity>,
+    pub(super) skinned_shadow_caster_entities: Vec<nightshade_ecs::Entity>,
     pub(super) total_joints_to_dispatch: u32,
 
     pub(super) spotlight_shadow_slots: Vec<SpotlightShadowSlot>,

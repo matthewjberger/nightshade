@@ -132,7 +132,7 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
     let structural_cursor = world
         .res::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .structural_cursor;
-    let changes: Vec<freecs::StructuralChange> = world.ecs.worlds[CORE]
+    let changes: Vec<nightshade_ecs::StructuralChange> = world.ecs.worlds[CORE]
         .structural_changes_since(structural_cursor)
         .to_vec();
     if let Some(first) = changes.first()

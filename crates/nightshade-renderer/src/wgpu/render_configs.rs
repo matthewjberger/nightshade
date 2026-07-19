@@ -4,7 +4,7 @@
 //! it to the render graph costs nothing, and the graph and passes are
 //! monomorphized on this concrete type with no engine coupling.
 
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
@@ -220,7 +220,7 @@ pub struct RenderInputs {
     /// Meshes, instances, lights, decals, water, and emitters live here as
     /// components; a host spawns into it or composes it as a member world.
     /// Skinned meshes and the material table stay on [`Self::scene`].
-    pub scene_world: freecs::dynamic::DynWorld,
+    pub scene_world: nightshade_ecs::dynamic::DynWorld,
     /// User-facing render settings: post-processing, atmosphere, layers.
     pub settings: crate::config::RenderSettings,
     /// Debug visualization toggles.
@@ -319,7 +319,7 @@ impl RenderInputs {
     /// [`crate::wgpu::frame::render_single_view`] rather than calling it
     /// directly.
     pub fn single_view(
-        scene_world: freecs::dynamic::DynWorld,
+        scene_world: nightshade_ecs::dynamic::DynWorld,
         scene: crate::config::RendererState,
         mesh_cache: crate::mesh_cache::MeshCache,
         texture_cache: crate::wgpu::texture_cache::TextureCache,
@@ -404,7 +404,7 @@ impl RenderInputs {
 /// frame.
 pub struct SingleViewHost {
     /// The scene as the renderer's ECS world.
-    pub scene_world: freecs::dynamic::DynWorld,
+    pub scene_world: nightshade_ecs::dynamic::DynWorld,
     /// The persistent per-frame scene snapshot.
     pub state: crate::config::RendererState,
     /// Named mesh geometry with dirty tracking.
@@ -423,7 +423,10 @@ pub struct SingleViewHost {
 /// `frame.commands`) before rendering if the host needs them.
 pub fn compose_single_view(host: &mut SingleViewHost, frame: ViewFrame) -> RenderInputs {
     RenderInputs::single_view(
-        std::mem::replace(&mut host.scene_world, freecs::dynamic::DynWorld::new()),
+        std::mem::replace(
+            &mut host.scene_world,
+            nightshade_ecs::dynamic::DynWorld::new(),
+        ),
         std::mem::take(&mut host.state),
         std::mem::take(&mut host.mesh_cache),
         std::mem::take(&mut host.texture_cache),

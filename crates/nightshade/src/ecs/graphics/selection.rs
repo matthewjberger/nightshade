@@ -4,7 +4,7 @@
 //! selected-entity bounding volume. Apps and editor tools write it directly;
 //! the render sync resolves it into the outline id list the renderer consumes.
 
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 /// The selected entities and how they are highlighted. Held at
 /// `world.res::<crate::ecs::graphics::selection::Selection>()`.

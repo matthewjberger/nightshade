@@ -4,7 +4,7 @@ pub(super) use super::super::projection::{
     AreaLightData, AreaUniforms, LightData, MAX_AREA_LIGHTS,
 };
 
-use freecs::Entity;
+use nightshade_ecs::Entity;
 
 pub(super) const INITIAL_INSTANCES: usize = 1_000;
 pub const MAX_INSTANCES: usize = 1_000_000;

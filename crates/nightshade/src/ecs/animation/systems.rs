@@ -2,8 +2,8 @@ use crate::ecs::animation::components::{
     AnimationClip, AnimationProperty, AnimationValue, sample_animation_channel,
 };
 use crate::ecs::world::{ANIMATION_PLAYER, MORPH_WEIGHTS, World};
-use freecs::Entity;
 use nalgebra_glm::{Quat, Vec3};
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 
 use crate::prelude::*;
@@ -319,7 +319,7 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
 
         pending.extend_from_slice(
             world
-                .res::<freecs::dynamic::HierarchyIndex>()
+                .res::<nightshade_ecs::dynamic::HierarchyIndex>()
                 .children(current),
         );
     }

@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use freecs::Entity;
 use kira::{
     AudioManager, AudioManagerSettings, Capacities, DefaultBackend,
     listener::ListenerHandle,
@@ -8,6 +7,7 @@ use kira::{
     sound::static_sound::{StaticSoundData, StaticSoundHandle},
     track::{SendTrackHandle, SpatialTrackHandle, TrackHandle},
 };
+use nightshade_ecs::Entity;
 
 #[derive(Default)]
 pub struct AudioBuses {

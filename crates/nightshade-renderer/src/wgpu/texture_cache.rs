@@ -1,7 +1,7 @@
 use crate::asset_id::TextureId;
 use crate::generational_registry::*;
 use crate::texture_data::{SamplerFilter, SamplerSettings, SamplerWrap, TextureUsage};
-use freecs::Entity;
+use nightshade_ecs::Entity;
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
