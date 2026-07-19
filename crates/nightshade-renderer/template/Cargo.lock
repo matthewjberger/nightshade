@@ -641,17 +641,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
-name = "freecs"
-version = "4.9.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9a3bf85c0c5f7c907692ce6ced29c3d54294644a09f89145b8f1fa7b26146bf"
-dependencies = [
- "pastey",
- "rayon",
- "serde",
-]
-
-[[package]]
 name = "futures-core"
 version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1297,19 +1286,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "nightshade-ecs"
+version = "0.56.0"
+dependencies = [
+ "pastey",
+ "rayon",
+ "serde",
+]
+
+[[package]]
 name = "nightshade-renderer"
 version = "0.56.0"
 dependencies = [
  "bytemuck",
  "cosmic-text",
  "enum2schema",
- "freecs",
  "half",
  "image",
  "js-sys",
  "naga_oil",
  "nalgebra",
  "nalgebra-glm",
+ "nightshade-ecs",
  "petgraph",
  "raw-window-handle",
  "serde",
@@ -1324,8 +1322,8 @@ dependencies = [
 name = "nightshade-renderer-standalone"
 version = "0.1.0"
 dependencies = [
- "freecs",
  "nalgebra-glm",
+ "nightshade-ecs",
  "nightshade-renderer",
  "pollster",
  "winit",
