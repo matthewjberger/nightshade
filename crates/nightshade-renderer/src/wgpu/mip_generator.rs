@@ -1,3 +1,6 @@
+//! Generates the mip chain of a 2D-array texture layer with a bilinear
+//! render-pass downsample, format-aware so sRGB textures stay gamma-correct.
+
 use std::num::NonZeroU64;
 
 #[repr(C)]
@@ -9,6 +12,8 @@ struct MipParams {
     _padding2: u32,
 }
 
+/// Reusable pipelines and sampler for downsampling `Rgba8` texture mips, with
+/// separate pipelines for sRGB and linear formats.
 pub struct MipGenerator {
     bind_group_layout: wgpu::BindGroupLayout,
     pipeline_srgb: wgpu::RenderPipeline,
@@ -17,6 +22,7 @@ pub struct MipGenerator {
 }
 
 impl MipGenerator {
+    /// Builds the sRGB and linear downsample pipelines and their sampler.
     pub fn new(device: &wgpu::Device) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

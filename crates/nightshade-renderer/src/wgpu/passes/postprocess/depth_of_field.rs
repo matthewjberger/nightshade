@@ -1,3 +1,5 @@
+//! Depth of field post-process pass with bokeh and tilt-shift.
+
 use crate::config::DepthOfFieldQuality;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
@@ -22,6 +24,8 @@ struct DoFParams {
     _padding: u32,
 }
 
+/// Post-process pass that blurs the HDR color by a circle of confusion derived
+/// from scene depth, with optional bokeh highlights and tilt-shift.
 pub struct DepthOfFieldPass {
     pipeline: wgpu::RenderPipeline,
     coc_visualization_pipeline: wgpu::RenderPipeline,
@@ -34,6 +38,7 @@ pub struct DepthOfFieldPass {
 }
 
 impl DepthOfFieldPass {
+    /// Builds the depth of field pass at the given output format and size.
     pub fn new(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
@@ -209,6 +214,7 @@ impl DepthOfFieldPass {
         }
     }
 
+    /// Resizes the pass to `width` by `height` and rewrites its params buffer.
     pub fn resize(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32) {
         self.width = width;
         self.height = height;

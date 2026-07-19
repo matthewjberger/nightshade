@@ -39,6 +39,8 @@ fn apply_ibl_views(
     ibl_views.prefiltered_view = Some(prefiltered_view);
 }
 
+/// Loads HDR skybox images through the sky pass and fans the captured IBL
+/// views out to the mesh and skinned mesh passes and `ibl_views`.
 #[cfg(feature = "hdr")]
 pub fn load_hdr_skyboxes(
     renderer: &mut WgpuRenderer,

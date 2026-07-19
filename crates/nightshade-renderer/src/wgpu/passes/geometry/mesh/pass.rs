@@ -1,3 +1,6 @@
+//! The mesh pass: GPU-driven rendering of world and overlay meshes, including
+//! order-independent transparency and transmission.
+
 mod batching;
 mod bind_groups;
 mod compute;
@@ -15,6 +18,7 @@ use crate::mesh_state::MeshRenderStateInner;
 use super::types::{MeshBoundsData, MeshData, MeshLodInfo};
 use super::world_state::{WorldGpuBuffers, WorldRenderState};
 
+/// GPU resources and per-world state for the mesh geometry pass.
 pub struct MeshPass {
     pub(super) opaque_pipeline: wgpu::RenderPipeline,
     pub(super) opaque_double_sided_pipeline: wgpu::RenderPipeline,
@@ -165,11 +169,13 @@ pub struct MeshPass {
     pub(super) instanced_compute_uniforms_slots: usize,
     pub(super) scene_bind_group_dirty: bool,
     pub(super) scratch_mesh_updates: Vec<(u32, super::types::ModelMatrix)>,
+    /// Mesh render-state changes pending handoff to the pass's prepare step.
     pub frame_dirty: Option<MeshRenderStateInner>,
     /// Whether the pass's prepare ran since `frame_dirty` was last handed
     /// over. When false, the next handoff merges instead of replacing so a
     /// skipped or compose-only frame's dirty marks are not lost.
     pub frame_dirty_consumed: bool,
+    /// Mesh ids whose GPU data changed and must be re-uploaded.
     pub dirty_mesh_ids: HashSet<u32>,
     pub(super) last_mesh_cache_clear_generation: u64,
     pub(super) mesh_geo_dirty: bool,

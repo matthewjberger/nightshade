@@ -20,6 +20,8 @@ struct SsrParams {
     _padding: [f32; 2],
 }
 
+/// Screen-space reflections pass. Ray-marches the half-resolution depth and
+/// normal buffers against the scene color to produce a raw reflection target.
 pub struct SsrPass {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -31,6 +33,8 @@ pub struct SsrPass {
 }
 
 impl SsrPass {
+    /// Compiles the SSR shader and builds the pipeline, samplers, and parameter
+    /// buffer.
     pub fn new(device: &wgpu::Device) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

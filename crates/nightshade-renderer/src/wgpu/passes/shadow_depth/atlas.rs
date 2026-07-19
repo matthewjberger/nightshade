@@ -15,6 +15,8 @@ use crate::wgpu::passes::geometry::projection::{
 use crate::wgpu::render_configs::CameraFrameInputs;
 use freecs::Entity;
 
+/// Tests whether a world-space sphere lies inside or intersects the six frustum
+/// planes, each stored as `(a, b, c, d)` with an outward-pointing normal.
 pub fn sphere_in_frustum(center: nalgebra_glm::Vec3, radius: f32, planes: &[[f32; 4]; 6]) -> bool {
     for plane in planes {
         let distance = plane[0] * center.x + plane[1] * center.y + plane[2] * center.z + plane[3];
@@ -25,6 +27,8 @@ pub fn sphere_in_frustum(center: nalgebra_glm::Vec3, radius: f32, planes: &[[f32
     true
 }
 
+/// Extracts and normalizes the six frustum planes from a column-major
+/// view-projection matrix. Order is left, right, bottom, top, near, far.
 pub fn full_frustum_planes(view_projection: &[[f32; 4]; 4]) -> [[f32; 4]; 6] {
     let row = |index: usize| {
         [
@@ -69,20 +73,34 @@ pub fn full_frustum_planes(view_projection: &[[f32; 4]; 4]) -> [[f32; 4]; 6] {
 /// into this slot, and the mesh pass samples it through the matching
 /// [`SpotlightShadowData`] entry.
 pub struct SpotlightAtlasSlot {
+    /// Light entity that owns this slot.
     pub entity: Entity,
+    /// Light view-projection matrix the depth pass renders occluders with.
     pub view_projection: nalgebra_glm::Mat4,
+    /// Slot origin x within the atlas, in pixels.
     pub atlas_x_pixels: u32,
+    /// Slot origin y within the atlas, in pixels.
     pub atlas_y_pixels: u32,
+    /// Square slot side length, in pixels.
     pub atlas_size_pixels: u32,
+    /// Depth-comparison bias for sampling this slot.
     pub bias: f32,
+    /// Index of this slot within the assignment.
     pub slot_index: u32,
 }
 
+/// Result of packing shadow-casting spotlights and area lights into the atlas for
+/// one frame. The depth pass renders from `slots` and the mesh pass samples from
+/// `data`, both keyed the same by `entity_to_index`.
 #[derive(Default)]
 pub struct SpotlightAtlasAssignment {
+    /// Assigned slots, one per shadow-casting light that fit the atlas.
     pub slots: Vec<SpotlightAtlasSlot>,
+    /// Per-slot sampling data uploaded for the mesh pass, index-aligned with `slots`.
     pub data: Vec<SpotlightShadowData>,
+    /// Maps each light entity to its slot index, or -1 when unassigned.
     pub entity_to_index: HashMap<Entity, i32>,
+    /// Default slot side length when a light requests no explicit resolution, in pixels.
     pub default_slot_size: u32,
 }
 

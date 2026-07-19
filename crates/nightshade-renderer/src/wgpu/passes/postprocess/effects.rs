@@ -1,6 +1,7 @@
 use crate::config::EffectsUniforms;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 
+/// Post-process pass applying color grading and screen effects, or a passthrough blit when disabled.
 pub struct EffectsPass {
     pipeline: wgpu::RenderPipeline,
     blit_pipeline: wgpu::RenderPipeline,
@@ -16,10 +17,12 @@ pub struct EffectsPass {
 }
 
 impl EffectsPass {
+    /// Creates the pass reading the `input` slot and writing the `output` slot.
     pub fn new(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         Self::with_slots(device, surface_format, "input", "output")
     }
 
+    /// Creates the pass reading and writing the named graph slots.
     pub fn with_slots(
         device: &wgpu::Device,
         surface_format: wgpu::TextureFormat,

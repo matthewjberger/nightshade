@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
 impl TextureUsage {
+    /// The wgpu texture format for this usage, sRGB for color and linear otherwise.
     pub fn wgpu_format(self) -> wgpu::TextureFormat {
         match self {
             Self::Color => wgpu::TextureFormat::Rgba8UnormSrgb,
@@ -15,6 +16,7 @@ impl TextureUsage {
 }
 
 impl SamplerWrap {
+    /// The wgpu address mode for this wrap setting.
     pub fn wgpu_address_mode(self) -> wgpu::AddressMode {
         match self {
             Self::Repeat => wgpu::AddressMode::Repeat,
@@ -25,6 +27,7 @@ impl SamplerWrap {
 }
 
 impl SamplerFilter {
+    /// The wgpu min/mag filter mode for this filter setting.
     pub fn wgpu_filter_mode(self) -> wgpu::FilterMode {
         match self {
             Self::Nearest => wgpu::FilterMode::Nearest,
@@ -32,6 +35,7 @@ impl SamplerFilter {
         }
     }
 
+    /// The wgpu mipmap filter mode for this filter setting.
     pub fn wgpu_mipmap_filter_mode(self) -> wgpu::MipmapFilterMode {
         match self {
             Self::Nearest => wgpu::MipmapFilterMode::Nearest,
@@ -46,11 +50,15 @@ impl SamplerFilter {
 /// not tied to an entity.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum TextureOwner {
+    /// The textures of an entity's own material.
     EntityMaterial(Entity),
+    /// The prefab variant textures of an entity.
     EntityVariants(Entity),
+    /// A named keep-alive not tied to any entity.
     Named(String),
 }
 
+/// GPU texture registry with reference-counted, owner-tracked lifetimes.
 #[derive(Default)]
 pub struct TextureCache {
     pub(crate) registry: GenerationalRegistry<TextureEntry>,
@@ -60,31 +68,46 @@ pub struct TextureCache {
 }
 
 impl TextureCache {
+    /// The registered texture entry for `name`, if one is filled.
     pub fn get(&self, name: &str) -> Option<&TextureEntry> {
         let index = self.registry.name_to_index.get(name)?;
         self.registry.entries[*index as usize].as_ref()
     }
 }
 
+/// A GPU texture together with its default view and sampler.
 pub struct TextureEntry {
+    /// The GPU texture resource.
     pub texture: wgpu::Texture,
+    /// Default view over all mip levels.
     pub view: wgpu::TextureView,
+    /// Sampler configured from the upload's settings.
     pub sampler: wgpu::Sampler,
 }
 
+/// Format and sampler settings for a texture upload.
 #[derive(Debug, Clone, Copy)]
 pub struct TextureUploadSpec {
+    /// GPU format the texture is created with.
     pub format: wgpu::TextureFormat,
+    /// Sampler settings used to build the entry's sampler.
     pub sampler: SamplerSettings,
 }
 
+/// A single raw-RGBA texture upload into the cache.
 pub struct TextureUploadRequest<'a> {
+    /// Registry name the texture is stored under.
     pub name: String,
+    /// Tightly packed RGBA8 pixel data for mip level 0.
     pub rgba_data: &'a [u8],
+    /// Width and height in pixels.
     pub dimensions: (u32, u32),
+    /// Format and sampler settings for the upload.
     pub spec: TextureUploadSpec,
 }
 
+/// Uploads raw RGBA8 pixels as a texture, generating a mip chain, and returns
+/// its stable id. Returns the existing id when the name is already filled.
 pub fn texture_cache_load_from_raw_rgba_with_format(
     cache: &mut TextureCache,
     device: &wgpu::Device,
@@ -230,6 +253,8 @@ pub fn texture_cache_load_from_raw_rgba_with_format(
     Ok(TextureId::new(index, generation))
 }
 
+/// Reserves a stable id for `name` before its texture is uploaded, so callers
+/// can reference it ahead of the pixel data arriving.
 pub fn texture_cache_reserve_id(cache: &mut TextureCache, name: String) -> TextureId {
     let (index, generation) = registry_reserve_name(&mut cache.registry, name);
     TextureId::new(index, generation)
@@ -329,6 +354,8 @@ pub fn texture_cache_texture_name(cache: &TextureCache, index: u32) -> Option<&s
     registry_name_for(&cache.registry, index)
 }
 
+/// Evicts every entry with a zero reference count, except protected names, and
+/// returns the removed names.
 pub fn texture_cache_remove_unused(cache: &mut TextureCache) -> Vec<String> {
     let mut removed = Vec::new();
     for index in 0..cache.registry.entries.len() {
@@ -349,16 +376,23 @@ pub fn texture_cache_remove_unused(cache: &mut TextureCache) -> Vec<String> {
     removed
 }
 
+/// Marks `name` as protected so [`texture_cache_remove_unused`] never evicts it.
 pub fn texture_cache_protect(cache: &mut TextureCache, name: String) {
     cache.protected_names.insert(name);
 }
 
+/// Outcome of [`texture_cache_reload`].
 pub enum TextureReloadResult {
+    /// The pixels were written into the existing texture at the same size.
     UpdatedInPlace,
+    /// The texture was recreated because the new dimensions differ.
     Recreated,
+    /// No entry with the given name exists.
     NotFound,
 }
 
+/// Replaces a registered texture's pixels, writing in place when the size is
+/// unchanged and recreating the texture when it differs.
 pub fn texture_cache_reload(
     cache: &mut TextureCache,
     device: &wgpu::Device,

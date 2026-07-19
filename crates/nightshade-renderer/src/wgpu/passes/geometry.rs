@@ -1,3 +1,10 @@
+//! Geometry render passes and their shared GPU data. Groups the forward mesh,
+//! skinned mesh, and meshlet passes with the overlay, water, decal, sky, cloth,
+//! and helper passes drawn against the scene color and depth targets, plus the
+//! projection, cluster, material, and shadow-input helpers they share.
+
+/// View and projection matrix construction plus the frustum-culling and
+/// light-collection helpers the geometry passes share.
 pub mod projection;
 pub use projection::{
     atlas_shadow_fov, extract_frustum_planes, light_casts_atlas_shadow, sphere_in_frustum,
@@ -5,7 +12,9 @@ pub use projection::{
 
 pub mod cluster;
 pub mod ltc;
+/// Conversion from CPU materials to the packed GPU material data.
 pub mod material_gpu;
+/// Shared shadow-input helpers the geometry passes read.
 pub mod shadow_inputs;
 
 mod cloth;
@@ -25,6 +34,7 @@ pub use grass::GrassPass;
 mod grid;
 pub use grid::GridPass;
 
+/// Debug line, bounding-volume, and vertex-normal overlay drawing.
 pub mod lines;
 pub use lines::{GpuBoundingVolumeData, LinesPass};
 

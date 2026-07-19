@@ -6,6 +6,7 @@ use crate::wgpu::rendergraph::{
     render_graph_add_color_texture, render_graph_add_depth_texture, render_graph_add_pass,
 };
 
+/// Selects a present mode, returning `Fifo` when vsync is enabled and the lowest-latency supported mode otherwise.
 pub(super) fn pick_present_mode(
     modes: &[wgpu::PresentMode],
     vsync_enabled: bool,
@@ -27,6 +28,7 @@ pub(super) fn pick_present_mode(
 }
 
 impl super::WgpuRenderer {
+    /// Builds the renderer and its full render graph for the given window surface.
     pub async fn new_async<W>(
         window_handle: W,
         initial_width: u32,

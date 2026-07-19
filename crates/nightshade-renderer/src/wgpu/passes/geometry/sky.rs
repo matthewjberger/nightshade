@@ -37,6 +37,7 @@ fn create_dummy_cubemap(device: &wgpu::Device) -> (wgpu::Texture, wgpu::TextureV
     (cubemap, cubemap_view)
 }
 
+/// Full-screen sky pass with procedural and HDR atmosphere variants plus IBL capture.
 pub struct SkyPass {
     uniform_buffer: wgpu::Buffer,
     procedural_bind_group: wgpu::BindGroup,
@@ -70,7 +71,9 @@ pub struct SkyPass {
     procedural_cubemap_bind_group_layout: wgpu::BindGroupLayout,
     #[cfg(feature = "hdr")]
     procedural_uniform_buffer: wgpu::Buffer,
+    /// Captured IBL brackets as (hour, irradiance, prefiltered) for time-of-day blending.
     pub ibl_snapshots: Vec<(f32, wgpu::Texture, wgpu::Texture)>,
+    /// Atmosphere the current snapshots were captured for.
     pub ibl_snapshot_atmosphere: Option<crate::config::Atmosphere>,
 }
 
@@ -118,6 +121,7 @@ fn build_sky_pipeline(
 }
 
 impl SkyPass {
+    /// Builds all sky pipelines, bind groups, and a dummy cubemap.
     pub fn new(
         device: &wgpu::Device,
         color_format: wgpu::TextureFormat,
@@ -487,6 +491,7 @@ impl SkyPass {
         }
     }
 
+    /// Loads an HDR skybox from `bytes` and returns its irradiance and prefiltered views.
     #[cfg(feature = "hdr")]
     pub fn load_hdr_skybox(
         &mut self,
@@ -584,6 +589,8 @@ impl SkyPass {
         (irradiance_view, prefiltered_view)
     }
 
+    /// Renders the procedural atmosphere at `time` into a cubemap, returning its
+    /// irradiance and prefiltered views when the atmosphere is procedural.
     #[cfg(feature = "hdr")]
     pub fn capture_procedural_atmosphere(
         &mut self,
@@ -746,6 +753,7 @@ impl SkyPass {
         Some((irradiance_view, prefiltered_view))
     }
 
+    /// Captures a per-hour IBL snapshot for the atmosphere for time-of-day blending.
     #[cfg(feature = "hdr")]
     pub fn capture_ibl_snapshots(
         &mut self,
@@ -858,6 +866,7 @@ impl SkyPass {
         }
     }
 
+    /// Returns the two snapshot indices bracketing `hour` and the blend factor between them.
     pub fn select_ibl_bracket(
         &self,
         atmosphere: Atmosphere,
@@ -1090,6 +1099,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for SkyPass {
     }
 }
 
+/// GPU uniforms for the sky shaders.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SkyUniform {
@@ -1104,6 +1114,7 @@ pub struct SkyUniform {
 }
 
 impl SkyUniform {
+    /// Packs camera matrices, time, mip level, and hour into the uniform.
     pub fn new(
         projection: nalgebra_glm::Mat4,
         view: nalgebra_glm::Mat4,

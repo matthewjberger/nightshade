@@ -3,6 +3,8 @@ use super::passes;
 use super::rendergraph::render_graph_get_pass_mut;
 
 impl WgpuRenderer {
+    /// Switches the surface present mode to match `vsync_enabled`,
+    /// reconfiguring only when it changes.
     pub fn sync_present_mode(&mut self, vsync_enabled: bool) {
         let desired =
             super::initialization::pick_present_mode(&self.supported_present_modes, vsync_enabled);
@@ -13,6 +15,8 @@ impl WgpuRenderer {
         self.surface.configure(&self.device, &self.surface_config);
     }
 
+    /// Reconfigures the surface and render buffers for a new window size,
+    /// ignoring a zero extent.
     pub fn resize_surface(
         &mut self,
         width: u32,
@@ -30,6 +34,8 @@ impl WgpuRenderer {
         Ok(())
     }
 
+    /// Registers an external texture view under `name` for sampling in the mesh
+    /// pass.
     pub fn register_render_texture(&mut self, name: &str, view: wgpu::TextureView) {
         let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some(&format!("{}_sampler", name)),

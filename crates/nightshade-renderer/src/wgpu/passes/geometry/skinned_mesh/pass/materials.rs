@@ -2,6 +2,8 @@ use super::super::super::material_gpu;
 use super::SkinnedMeshPass;
 
 impl SkinnedMeshPass {
+    /// Rebinds the skinned mesh material textures from `arrays`, using the
+    /// bindless layout when available.
     pub fn apply_material_textures(
         &mut self,
         device: &wgpu::Device,

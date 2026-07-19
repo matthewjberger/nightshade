@@ -1,3 +1,6 @@
+//! A fullscreen pass copying one texture to another through a filtered
+//! sampler.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::{
     BindGroup, BindGroupLayout, Operations, RenderPassColorAttachment, RenderPipeline, Sampler,
@@ -33,7 +36,9 @@ fn fragment_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 ";
 
+/// A fullscreen-triangle pass sampling the `input` texture into `output`.
 pub struct BlitPass {
+    /// The render pipeline that draws the fullscreen triangle.
     pub pipeline: RenderPipeline,
     bind_group_layout: BindGroupLayout,
     sampler: Sampler,
@@ -44,6 +49,7 @@ pub struct BlitPass {
 }
 
 impl BlitPass {
+    /// Builds the blit pipeline targeting `surface_format`.
     pub fn create_pipeline(
         device: &wgpu::Device,
         surface_format: wgpu::TextureFormat,
@@ -120,6 +126,7 @@ impl BlitPass {
         })
     }
 
+    /// Creates a blit pass with a clamped, linearly filtered sampler.
     pub fn new(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Blit Bind Group Layout"),
@@ -165,16 +172,19 @@ impl BlitPass {
         }
     }
 
+    /// Sets the pass name used in the render graph.
     pub fn with_name(mut self, name: &str) -> Self {
         self.name = name.to_string();
         self
     }
 
+    /// Sets whether the pass runs during the full render phase.
     pub fn with_runs_in_full(mut self, value: bool) -> Self {
         self.runs_in_full = value;
         self
     }
 
+    /// Sets whether the pass runs during the compose-only phase.
     pub fn with_runs_in_compose_only(mut self, value: bool) -> Self {
         self.runs_in_compose_only = value;
         self

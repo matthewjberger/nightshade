@@ -299,12 +299,12 @@
 //!
 //! # Graphics Settings
 //!
-//! Shading and post-processing arrive in [`RenderInputs::settings`]
-//! ([`RenderSettings`](config::RenderSettings)), debug overlays in
-//! [`RenderInputs::debug_draw`] ([`DebugDraw`](config::DebugDraw)), and the
-//! per-frame scene snapshot in [`RenderInputs::scene`]
-//! ([`RendererState`](config::RendererState)). The caller composes these
-//! before the frame; passes only read them.
+//! Shading and post-processing arrive in the `settings` field
+//! ([`RenderSettings`](config::RenderSettings)), debug overlays in the
+//! `debug_draw` field ([`DebugDraw`](config::DebugDraw)), and the per-frame
+//! scene snapshot in the `scene` field
+//! ([`RendererState`](config::RendererState)) of the frame's `RenderInputs`.
+//! The caller composes these before the frame, and passes only read them.
 //!
 //! # Built-in Targets
 //!
@@ -343,6 +343,7 @@ pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
 pub mod text_data;
+/// Generation of textured glyph meshes from shaped text runs.
 #[cfg(feature = "wgpu")]
 pub mod text_mesh;
 pub mod texture_data;

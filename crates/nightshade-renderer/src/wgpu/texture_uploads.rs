@@ -12,15 +12,23 @@ use crate::wgpu::texture_cache::{
     texture_cache_load_from_raw_rgba_with_format, texture_cache_reload,
 };
 
+/// Inputs for uploading one material texture into the cache and texture arrays.
 pub struct MaterialTextureUploadRequest<'a> {
+    /// Target texture id in the cache registry.
     pub texture: TextureId,
+    /// Tightly packed 8-bit RGBA source pixels.
     pub rgba_data: &'a [u8],
+    /// Source width in pixels.
     pub width: u32,
+    /// Source height in pixels.
     pub height: u32,
+    /// How the texture is sampled, selecting its GPU format.
     pub usage: TextureUsage,
+    /// Sampler wrap and filtering settings.
     pub sampler: SamplerSettings,
 }
 
+/// Uploads a material texture and fans its views out to every pass that binds it.
 pub fn upload_material_texture(
     renderer: &mut WgpuRenderer,
     texture_cache: &mut TextureCache,
@@ -145,6 +153,7 @@ pub fn upload_material_texture(
     }
 }
 
+/// Reserves a material texture-array layer without uploading pixels, returning whether it succeeded.
 pub fn reserve_material_layer(
     renderer: &mut WgpuRenderer,
     texture_cache: &TextureCache,
@@ -182,6 +191,7 @@ pub fn reserve_material_layer(
     true
 }
 
+/// Replaces an existing texture's pixels and refreshes the passes that bind it.
 pub fn reload_material_texture(
     renderer: &mut WgpuRenderer,
     texture_cache: &mut TextureCache,
@@ -259,6 +269,7 @@ pub fn reload_material_texture(
     }
 }
 
+/// Releases evicted textures from the arrays and every pass that referenced them.
 pub fn unregister_evicted_textures(renderer: &mut WgpuRenderer, evicted: &[String]) {
     for name in evicted {
         renderer.material_texture_arrays.release(name);

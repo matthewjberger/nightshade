@@ -28,6 +28,8 @@ struct BloomMip {
 
 const MIP_CHAIN_CACHE_CAPACITY: usize = 4;
 
+/// Postprocess pass producing a bloom texture by threshold-downsampling the
+/// HDR scene down a mip chain then additively upsampling it back up.
 pub struct BloomPass {
     downsample_pipeline: wgpu::RenderPipeline,
     upsample_pipeline: wgpu::RenderPipeline,
@@ -48,6 +50,7 @@ pub struct BloomPass {
 }
 
 impl BloomPass {
+    /// Builds the pass and its mip chain sized for a `width` by `height` target.
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
         let downsample_shader = crate::wgpu::shader_compose::compile_wgsl(
             device,
@@ -313,6 +316,8 @@ impl BloomPass {
         }
     }
 
+    /// Rebuilds the mip chain for a new target size, reusing a cached chain
+    /// when one for that size is still held.
     pub fn resize(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32) {
         if self.current_size == (width, height) {
             return;

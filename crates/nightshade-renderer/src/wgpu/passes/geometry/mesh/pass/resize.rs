@@ -2,6 +2,8 @@ use super::super::pass::{OIT_RESOURCE_CACHE_CAPACITY, OitResourceBundle};
 use super::MeshPass;
 
 impl MeshPass {
+    /// Resizes the order-independent-transparency render targets to `width` by
+    /// `height`, reusing a cached bundle for that size when one exists.
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         if self.oit_texture_size == (width, height) || width == 0 || height == 0 {
             return;
@@ -175,6 +177,8 @@ impl MeshPass {
         }
     }
 
+    /// Sets the image-based lighting views for the current world and marks the
+    /// scene bind group for rebuild.
     pub fn update_ibl_textures(
         &mut self,
         brdf_lut_view: wgpu::TextureView,
@@ -194,6 +198,8 @@ impl MeshPass {
         }
     }
 
+    /// Sets two image-based lighting probes and a blend factor for the current
+    /// world so the shader can cross-fade between them.
     pub fn update_ibl_textures_blended(
         &mut self,
         brdf_lut_view: wgpu::TextureView,
@@ -221,6 +227,8 @@ impl MeshPass {
         }
     }
 
+    /// Sets the image-based lighting views for a specific world, marking the
+    /// scene bind group dirty only when that world is current.
     pub fn update_ibl_textures_for_world(
         &mut self,
         world_id: u64,
@@ -239,6 +247,8 @@ impl MeshPass {
         }
     }
 
+    /// Sets the point-light shadow cubemap array view and marks the scene bind
+    /// group for rebuild.
     pub fn update_point_shadow_cubemap(&mut self, view: wgpu::TextureView) {
         self.point_shadow_cubemap_view = view;
         self.scene_bind_group_dirty = true;

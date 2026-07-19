@@ -1,3 +1,6 @@
+//! Frame-graph resource vocabulary: identifiers, descriptors, and bound
+//! handles for the textures and buffers a render graph reads and writes.
+
 use super::error::{RenderGraphError, Result};
 use std::collections::HashMap;
 use wgpu::{
@@ -5,30 +8,43 @@ use wgpu::{
     TextureFormat, TextureUsages, TextureView, TextureViewDescriptor,
 };
 
+/// Stable identifier for a resource within a render graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ResourceId(pub u32);
 
 impl ResourceId {
+    /// Wraps a raw index as a [`ResourceId`].
     pub fn new(id: u32) -> Self {
         Self(id)
     }
 
+    /// Sentinel id marking an explicit ordering dependency that binds no resource.
     pub const EXPLICIT_DEPENDENCY: ResourceId = ResourceId(u32::MAX);
 }
 
+/// Backend-agnostic description of a render-graph texture.
 #[derive(Debug, Clone)]
 pub struct RenderGraphTextureDescriptor {
+    /// Pixel format.
     pub format: TextureFormat,
+    /// Width in texels.
     pub width: u32,
+    /// Height in texels.
     pub height: u32,
+    /// Permitted usages.
     pub usage: TextureUsages,
+    /// Multisample count.
     pub sample_count: u32,
+    /// Number of mip levels.
     pub mip_level_count: u32,
+    /// Texture dimensionality.
     pub dimension: wgpu::TextureDimension,
+    /// Depth for 3D textures or array layer count otherwise.
     pub depth_or_array_layers: u32,
 }
 
 impl RenderGraphTextureDescriptor {
+    /// Builds the wgpu [`TextureDescriptor`] for this description under `label`.
     pub fn to_wgpu_descriptor<'a>(&self, label: Option<&'a str>) -> TextureDescriptor<'a> {
         TextureDescriptor {
             label,
@@ -47,14 +63,19 @@ impl RenderGraphTextureDescriptor {
     }
 }
 
+/// Backend-agnostic description of a render-graph buffer.
 #[derive(Debug, Clone)]
 pub struct RenderGraphBufferDescriptor {
+    /// Size in bytes.
     pub size: u64,
+    /// Permitted usages.
     pub usage: BufferUsages,
+    /// Whether the buffer is mapped at creation.
     pub mapped_at_creation: bool,
 }
 
 impl RenderGraphBufferDescriptor {
+    /// Builds the wgpu [`BufferDescriptor`] for this description under `label`.
     pub fn to_wgpu_descriptor<'a>(&self, label: Option<&'a str>) -> BufferDescriptor<'a> {
         BufferDescriptor {
             label,
@@ -65,58 +86,93 @@ impl RenderGraphBufferDescriptor {
     }
 }
 
+/// Kind and lifetime of a render-graph resource.
 #[derive(Debug, Clone)]
 pub enum ResourceType {
+    /// Color target owned outside the graph, optionally cleared.
     ExternalColor {
+        /// Clear color applied at load, or `None` to preserve contents.
         clear_color: Option<wgpu::Color>,
     },
+    /// Color target allocated by the graph, optionally cleared.
     TransientColor {
+        /// Size and format the graph allocates the texture with.
         descriptor: RenderGraphTextureDescriptor,
+        /// Clear color applied at load, or `None` to preserve contents.
         clear_color: Option<wgpu::Color>,
+        /// Force the store op even when no later pass reads the target.
         force_store: bool,
     },
+    /// Depth target owned outside the graph, optionally cleared.
     ExternalDepth {
+        /// Clear depth applied at load, or `None` to preserve contents.
         clear_depth: Option<f32>,
     },
+    /// Depth target allocated by the graph, optionally cleared.
     TransientDepth {
+        /// Size and format the graph allocates the texture with.
         descriptor: RenderGraphTextureDescriptor,
+        /// Clear depth applied at load, or `None` to preserve contents.
         clear_depth: Option<f32>,
+        /// Force the store op even when no later pass reads the target.
         force_store: bool,
     },
+    /// Buffer owned outside the graph.
     ExternalBuffer,
+    /// Buffer allocated by the graph.
     TransientBuffer {
+        /// Size and usage the graph allocates the buffer with.
         descriptor: RenderGraphBufferDescriptor,
     },
 }
 
+/// Registered metadata for one resource.
 #[derive(Debug, Clone)]
 pub struct ResourceDescriptor {
+    /// Debug label.
     pub name: String,
+    /// Kind and lifetime.
     pub resource_type: ResourceType,
+    /// Whether the resource is supplied from outside the graph.
     pub is_external: bool,
+    /// Whether the resource keeps its size across graph resizes.
     pub fixed_size: bool,
 }
 
+/// Concrete backend resource bound to a [`ResourceId`].
 pub enum ResourceHandle {
+    /// Externally owned texture and its view, with dimensions.
     ExternalTexture {
+        /// The backing texture, or `None` when only a view was supplied.
         texture: Option<Texture>,
+        /// The view the passes bind.
         view: TextureView,
+        /// Texture width in pixels.
         width: u32,
+        /// Texture height in pixels.
         height: u32,
     },
+    /// Graph-owned texture and its view.
     TransientTexture {
+        /// The graph-allocated texture.
         texture: Texture,
+        /// The view the passes bind.
         view: TextureView,
     },
+    /// Externally owned buffer.
     ExternalBuffer {
+        /// The externally owned buffer.
         buffer: Buffer,
     },
+    /// Graph-owned buffer.
     TransientBuffer {
+        /// The graph-allocated buffer.
         buffer: Buffer,
     },
 }
 
 impl ResourceHandle {
+    /// Returns the texture view, panicking on a buffer handle.
     pub fn view(&self) -> &TextureView {
         match self {
             ResourceHandle::ExternalTexture { view, .. } => view,
@@ -125,6 +181,7 @@ impl ResourceHandle {
         }
     }
 
+    /// Returns the backing texture when the handle holds one.
     pub fn texture(&self) -> Option<&Texture> {
         match self {
             ResourceHandle::ExternalTexture {
@@ -137,14 +194,20 @@ impl ResourceHandle {
     }
 }
 
+/// Registry of resource descriptors and their bound handles for one graph.
 pub struct RenderGraphResources {
+    /// Registered descriptor per resource.
     pub(super) descriptors: HashMap<ResourceId, ResourceDescriptor>,
+    /// Bound backend resource per resource.
     pub(super) handles: HashMap<ResourceId, ResourceHandle>,
+    /// Monotonic version bumped whenever a handle is rebound.
     pub(super) versions: HashMap<ResourceId, u64>,
+    /// Next id to assign.
     pub(super) next_id: u32,
 }
 
 impl RenderGraphResources {
+    /// Creates an empty registry.
     pub fn new() -> Self {
         Self {
             descriptors: HashMap::new(),
@@ -154,15 +217,18 @@ impl RenderGraphResources {
         }
     }
 
+    /// Current version of `id`, or zero when never bound.
     pub fn get_version(&self, id: ResourceId) -> u64 {
         *self.versions.get(&id).unwrap_or(&0)
     }
 
+    /// Bumps the version of `id`.
     pub(super) fn increment_version(&mut self, id: ResourceId) {
         let version = self.versions.entry(id).or_insert(0);
         *version += 1;
     }
 
+    /// Registers an externally supplied resource and returns its id.
     pub fn register_external_resource(
         &mut self,
         name: String,
@@ -182,6 +248,7 @@ impl RenderGraphResources {
         id
     }
 
+    /// Binds an external texture handle to `id` and bumps its version.
     pub fn set_external_texture(
         &mut self,
         id: ResourceId,
@@ -202,12 +269,14 @@ impl RenderGraphResources {
         self.increment_version(id);
     }
 
+    /// Binds an external buffer handle to `id` and bumps its version.
     pub fn set_external_buffer(&mut self, id: ResourceId, buffer: Buffer) {
         self.handles
             .insert(id, ResourceHandle::ExternalBuffer { buffer });
         self.increment_version(id);
     }
 
+    /// Registers a graph-owned resource that resizes with the graph.
     pub fn register_transient_resource(
         &mut self,
         name: String,
@@ -216,6 +285,7 @@ impl RenderGraphResources {
         self.register_transient_resource_opts(name, resource_type, false)
     }
 
+    /// Registers a graph-owned resource that keeps a fixed size.
     pub fn register_transient_resource_fixed(
         &mut self,
         name: String,
@@ -224,6 +294,7 @@ impl RenderGraphResources {
         self.register_transient_resource_opts(name, resource_type, true)
     }
 
+    /// Registers a graph-owned resource, choosing whether its size is fixed.
     pub(super) fn register_transient_resource_opts(
         &mut self,
         name: String,
@@ -244,14 +315,17 @@ impl RenderGraphResources {
         id
     }
 
+    /// Bound handle for `id`, if any.
     pub fn get_handle(&self, id: ResourceId) -> Option<&ResourceHandle> {
         self.handles.get(&id)
     }
 
+    /// Registered descriptor for `id`, if any.
     pub fn get_descriptor(&self, id: ResourceId) -> Option<&ResourceDescriptor> {
         self.descriptors.get(&id)
     }
 
+    /// Resolves `id` to a color view with its load and store ops for `node_index`.
     pub fn get_color_attachment(
         &self,
         id: ResourceId,
@@ -304,6 +378,7 @@ impl RenderGraphResources {
         Ok((handle.view(), load_op, store_op))
     }
 
+    /// Resolves `id` to a depth view with its load and store ops for `node_index`.
     pub fn get_depth_attachment(
         &self,
         id: ResourceId,
@@ -356,14 +431,17 @@ impl RenderGraphResources {
         Ok((handle.view(), load_op, store_op))
     }
 
+    /// Texture view bound to `id`, if any.
     pub fn get_texture_view(&self, id: ResourceId) -> Option<&TextureView> {
         self.get_handle(id).map(|handle| handle.view())
     }
 
+    /// Backing texture bound to `id`, if any.
     pub fn get_texture(&self, id: ResourceId) -> Option<&Texture> {
         self.get_handle(id).and_then(|handle| handle.texture())
     }
 
+    /// Resizes a transient texture resource to `width` by `height`.
     pub fn update_transient_descriptor(
         &mut self,
         id: ResourceId,
@@ -438,6 +516,8 @@ impl RenderGraphResources {
         Ok(())
     }
 
+    /// Allocates pooled backing resources for every unbound transient resource,
+    /// reusing cached textures and honoring the aliasing plan.
     pub fn allocate_transient_resources_with_aliasing(
         &mut self,
         device: &Device,

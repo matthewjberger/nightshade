@@ -24,6 +24,9 @@ use wgpu::{
     TextureView,
 };
 
+/// Directed acyclic graph of render passes with automatic dependency ordering,
+/// transient resource aliasing, and store-op computation. `C` is the per-frame
+/// config type threaded to each pass at execution.
 pub struct RenderGraph<C = ()> {
     pub(super) graph: DiGraph<GraphNode<C>, ResourceId>,
     pub(super) pass_nodes: HashMap<String, NodeIndex>,
@@ -44,6 +47,8 @@ pub struct RenderGraph<C = ()> {
     pub(super) texture_cache_clock: u64,
 }
 
+/// A transient texture retained after a resize so a later frame of the same
+/// size can reuse it instead of reallocating.
 pub struct TextureCacheEntry {
     pub(super) descriptor: RenderGraphTextureDescriptor,
     pub(super) texture: Texture,
@@ -57,6 +62,7 @@ pub struct TextureCacheEntry {
 /// keep the cache bounded.
 pub(super) const TEXTURE_CACHE_MAX_AGE: u64 = 120;
 
+/// Creates an empty render graph.
 pub fn render_graph_new<C: 'static>() -> RenderGraph<C> {
     RenderGraph {
         graph: DiGraph::new(),
@@ -79,6 +85,9 @@ pub fn render_graph_new<C: 'static>() -> RenderGraph<C> {
     }
 }
 
+/// Adds a pass, resolving its declared read and write slots against
+/// `slot_mappings` to concrete resource ids, and returns the new node index.
+/// Errors when a declared slot has no mapping.
 pub fn render_graph_add_pass<C: 'static>(
     graph: &mut RenderGraph<C>,
     pass: Box<dyn PassNode<C>>,
@@ -156,6 +165,7 @@ pub fn render_graph_add_pass<C: 'static>(
     Ok(index)
 }
 
+/// Registers a named sub-graph and its input slots for a parent pass to dispatch.
 pub fn render_graph_add_sub_graph<C: 'static>(
     graph: &mut RenderGraph<C>,
     name: String,
@@ -166,6 +176,7 @@ pub fn render_graph_add_sub_graph<C: 'static>(
     graph.sub_graph_inputs.insert(name, input_slots);
 }
 
+/// Returns the named sub-graph, or `None` if unregistered.
 pub fn render_graph_get_sub_graph<'a, C: 'static>(
     graph: &'a RenderGraph<C>,
     name: &str,
@@ -173,6 +184,7 @@ pub fn render_graph_get_sub_graph<'a, C: 'static>(
     graph.sub_graphs.get(name)
 }
 
+/// Returns a mutable reference to the named sub-graph, or `None` if unregistered.
 pub fn render_graph_get_sub_graph_mut<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     name: &str,
@@ -180,6 +192,8 @@ pub fn render_graph_get_sub_graph_mut<'a, C: 'static>(
     graph.sub_graphs.get_mut(name)
 }
 
+/// Returns a mutable reference to the named pass as a trait object, or `None`
+/// if no pass has that name.
 pub fn render_graph_get_pass_mut<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     name: &str,
@@ -213,6 +227,8 @@ fn render_graph_refresh_store_ops<C: 'static>(graph: &mut RenderGraph<C>) {
     graph.store_ops = render_graph_compute_store_ops(graph, &execution_order);
 }
 
+/// Enables or disables a single pass by name, refreshing store ops if the flag
+/// changed. Errors when no pass has that name.
 pub fn render_graph_set_pass_enabled<C: 'static>(
     graph: &mut RenderGraph<C>,
     name: &str,
@@ -254,6 +270,8 @@ pub fn render_graph_enable_only_passes<C: 'static>(
     }
 }
 
+/// Adds an explicit ordering edge forcing `before` to run ahead of `after`. A
+/// self-dependency is ignored. Errors when either pass name is unknown.
 pub fn render_graph_add_dependency<C: 'static>(
     graph: &mut RenderGraph<C>,
     before: &str,
@@ -293,6 +311,7 @@ pub fn render_graph_add_dependency<C: 'static>(
     Ok(())
 }
 
+/// Snapshots the enabled flag of every pass keyed by name.
 pub fn render_graph_save_pass_enabled_states<C: 'static>(
     graph: &RenderGraph<C>,
 ) -> HashMap<String, bool> {
@@ -308,6 +327,7 @@ pub fn render_graph_save_pass_enabled_states<C: 'static>(
         .collect()
 }
 
+/// Restores previously saved enabled flags, refreshing store ops if any changed.
 pub fn render_graph_restore_pass_enabled_states<C: 'static>(
     graph: &mut RenderGraph<C>,
     states: &HashMap<String, bool>,
@@ -323,6 +343,7 @@ pub fn render_graph_restore_pass_enabled_states<C: 'static>(
     }
 }
 
+/// Returns a builder for a color texture resource named `name`.
 pub fn render_graph_add_color_texture<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     name: &str,
@@ -346,6 +367,7 @@ pub fn render_graph_add_color_texture<'a, C: 'static>(
     }
 }
 
+/// Returns a builder for a depth texture resource named `name`.
 pub fn render_graph_add_depth_texture<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     name: &str,
@@ -369,6 +391,7 @@ pub fn render_graph_add_depth_texture<'a, C: 'static>(
     }
 }
 
+/// Returns a builder for a buffer resource named `name`.
 pub fn render_graph_add_buffer<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     name: &str,
@@ -384,6 +407,7 @@ pub fn render_graph_add_buffer<'a, C: 'static>(
     }
 }
 
+/// Registers a transient color resource from a template and returns its id.
 pub fn render_graph_transient_color_from_template<C: 'static>(
     graph: &mut RenderGraph<C>,
     name: &str,
@@ -408,6 +432,8 @@ pub fn render_graph_transient_color_from_template<C: 'static>(
     )
 }
 
+/// Registers a transient color resource from a template with a clear color and
+/// returns its id.
 pub fn render_graph_transient_color_from_template_with_clear<C: 'static>(
     graph: &mut RenderGraph<C>,
     name: &str,
@@ -433,6 +459,8 @@ pub fn render_graph_transient_color_from_template_with_clear<C: 'static>(
     )
 }
 
+/// Registers an external color resource, supplied by the caller each frame, and
+/// returns its id.
 pub fn render_graph_external_color<C: 'static>(
     graph: &mut RenderGraph<C>,
     name: &str,
@@ -443,6 +471,7 @@ pub fn render_graph_external_color<C: 'static>(
     )
 }
 
+/// Adds a pass with its slot mappings given as an owned vector.
 pub fn render_graph_add_pass_with_slots<C: 'static>(
     graph: &mut RenderGraph<C>,
     pass: Box<dyn PassNode<C>>,
@@ -451,6 +480,7 @@ pub fn render_graph_add_pass_with_slots<C: 'static>(
     render_graph_add_pass(graph, pass, &slots)
 }
 
+/// Returns a builder that adds `pass` and binds its slots fluently.
 pub fn render_graph_pass<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     pass: Box<dyn PassNode<C>>,
@@ -462,6 +492,7 @@ pub fn render_graph_pass<'a, C: 'static>(
     }
 }
 
+/// Returns a resource pool that hands out transient resources sharing `template`.
 pub fn render_graph_resource_pool<'a, C: 'static>(
     graph: &'a mut RenderGraph<C>,
     template: &ResourceTemplate,
@@ -472,6 +503,7 @@ pub fn render_graph_resource_pool<'a, C: 'static>(
     }
 }
 
+/// Supplies the backing texture and view for an external resource this frame.
 pub fn render_graph_set_external_texture<C: 'static>(
     graph: &mut RenderGraph<C>,
     id: ResourceId,
@@ -485,6 +517,7 @@ pub fn render_graph_set_external_texture<C: 'static>(
         .set_external_texture(id, texture, view, width, height);
 }
 
+/// Supplies the backing buffer for an external resource this frame.
 pub fn render_graph_set_external_buffer<C: 'static>(
     graph: &mut RenderGraph<C>,
     id: ResourceId,
@@ -493,6 +526,7 @@ pub fn render_graph_set_external_buffer<C: 'static>(
     graph.resources.set_external_buffer(id, buffer);
 }
 
+/// Returns the aliased pool texture backing `id`, or `None` when unallocated.
 pub fn render_graph_get_texture<C: 'static>(
     graph: &RenderGraph<C>,
     id: ResourceId,
@@ -506,6 +540,7 @@ pub fn render_graph_get_texture<C: 'static>(
     }
 }
 
+/// Returns the texture view for `id`, or `None` when unallocated.
 pub fn render_graph_get_texture_view<C: 'static>(
     graph: &RenderGraph<C>,
     id: ResourceId,
@@ -972,6 +1007,9 @@ fn render_graph_compute_dead_passes<C: 'static>(
     all_passes.difference(&required_passes).copied().collect()
 }
 
+/// Builds dependency edges, topologically sorts the passes, and computes store
+/// ops, clear ops, resource aliasing, and dead-pass culling. Errors on a cyclic
+/// dependency.
 pub fn render_graph_compile<C: 'static>(graph: &mut RenderGraph<C>) -> Result<()> {
     render_graph_build_dependency_edges(graph);
 
@@ -1037,6 +1075,8 @@ fn render_graph_recompile_if_needed<C: 'static>(graph: &mut RenderGraph<C>) -> R
     Ok(())
 }
 
+/// Recompiles if needed, allocates transient resources, and runs every enabled
+/// pass, returning the submitted command buffers. Runs the full phase.
 pub fn render_graph_execute<C: 'static>(
     graph: &mut RenderGraph<C>,
     device: &Device,
@@ -1046,6 +1086,7 @@ pub fn render_graph_execute<C: 'static>(
     render_graph_execute_with_phase(graph, device, queue, configs, ExecutePhase::Full)
 }
 
+/// Like [`render_graph_execute`] but restricted to the passes that run in `phase`.
 pub fn render_graph_execute_with_phase<C: 'static>(
     graph: &mut RenderGraph<C>,
     device: &Device,
@@ -1342,12 +1383,15 @@ fn render_graph_execute_serial<C: 'static>(
     Ok(command_buffers)
 }
 
+/// Returns a mutable reference to the graph's resource table.
 pub fn render_graph_resources_mut<C: 'static>(
     graph: &mut RenderGraph<C>,
 ) -> &mut RenderGraphResources {
     &mut graph.resources
 }
 
+/// Resizes one transient resource to `width` by `height`, deferring
+/// reallocation to the next execute. A no-op when the size already matches.
 pub fn render_graph_resize_transient_resource<C: 'static>(
     graph: &mut RenderGraph<C>,
     _device: &Device,
@@ -1416,6 +1460,8 @@ fn drain_aliasing_pool_into_cache<C: 'static>(graph: &mut RenderGraph<C>) {
         .retain(|entry| now.saturating_sub(entry.inserted_at) <= TEXTURE_CACHE_MAX_AGE);
 }
 
+/// Resizes every non-fixed transient texture that tracked the old dimensions so
+/// it keeps the same fraction of the new dimensions.
 pub fn render_graph_resize_all_transient_proportional<C: 'static>(
     graph: &mut RenderGraph<C>,
     old_width: u32,
@@ -1464,6 +1510,8 @@ pub fn render_graph_resize_all_transient_proportional<C: 'static>(
     render_graph_resize_all_transient_textures(graph, &resizes)
 }
 
+/// Resizes the listed transient textures to their given sizes, deferring
+/// reallocation to the next execute. Sizes that already match are skipped.
 pub fn render_graph_resize_all_transient_textures<C: 'static>(
     graph: &mut RenderGraph<C>,
     resizes: &[(ResourceId, u32, u32)],
@@ -1542,6 +1590,8 @@ pub(super) enum PoolDescriptorInfo {
     Buffer(RenderGraphBufferDescriptor),
 }
 
+/// One slot in the aliased resource pool, holding a possibly shared texture or
+/// buffer and the pass index at which its current lifetime ends.
 pub struct PoolSlot {
     pub(super) resource: Option<PooledResource>,
     pub(super) descriptor_info: Option<PoolDescriptorInfo>,
@@ -1575,7 +1625,10 @@ impl Ord for PoolHeapEntry {
     }
 }
 
+/// The result of resource-lifetime aliasing: which pool slot backs each resource.
 pub struct ResourceAliasingInfo {
+    /// Maps each resource id to the index of its assigned pool slot.
     pub aliases: HashMap<ResourceId, usize>,
+    /// The pool slots holding the shared backing resources.
     pub pools: Vec<PoolSlot>,
 }

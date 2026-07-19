@@ -9,6 +9,7 @@ use super::super::types::{
 use super::MeshPass;
 
 impl MeshPass {
+    /// Registers a texture view and sampler under `name` for material binding.
     pub fn register_texture(
         &mut self,
         name: String,
@@ -18,6 +19,7 @@ impl MeshPass {
         self.registered_textures.insert(name, (view, sampler));
     }
 
+    /// The GPU mesh id registered under `name`, if the mesh is loaded.
     pub fn mesh_id_for_name(&self, name: &str) -> Option<u32> {
         self.meshes.get(name).copied()
     }
@@ -67,6 +69,7 @@ impl MeshPass {
         );
     }
 
+    /// Registers a texture view and sampler under `name` for material binding.
     pub fn register_texture_with_data(
         &mut self,
         name: String,
@@ -76,6 +79,7 @@ impl MeshPass {
         self.registered_textures.insert(name, (view, sampler));
     }
 
+    /// Records the bindless array layer a material texture id resolves to.
     pub fn add_material_layer_mapping(
         &mut self,
         texture: crate::asset_id::TextureId,
@@ -84,10 +88,12 @@ impl MeshPass {
         self.material_layer_map.insert(texture, layer);
     }
 
+    /// Drops the texture registered under `name`.
     pub fn unregister_texture(&mut self, name: &str) {
         self.registered_textures.remove(name);
     }
 
+    /// Drops registered textures whose names no longer exist in the texture cache.
     pub fn sync_textures(&mut self, texture_cache: &crate::wgpu::texture_cache::TextureCache) {
         if texture_cache.registry.name_to_index.is_empty() {
             return;
@@ -96,6 +102,8 @@ impl MeshPass {
             .retain(|name, _| texture_cache.registry.name_to_index.contains_key(name));
     }
 
+    /// Reconciles the GPU mesh registry with the mesh cache, uploading new
+    /// meshes, refreshing changed ones in place, and evicting stale entries.
     pub fn sync_meshes_from_cache(
         &mut self,
         device: &wgpu::Device,
@@ -262,6 +270,8 @@ impl MeshPass {
         }
     }
 
+    /// Uploads a mesh's vertices, indices, bounds, and morph data into the
+    /// shared buffers, growing them as needed, and assigns it a GPU mesh id.
     pub(in super::super) fn add_mesh(
         &mut self,
         device: &wgpu::Device,
@@ -601,6 +611,8 @@ impl MeshPass {
         self.current_index_offset += mesh.indices.len() as u32;
     }
 
+    /// Rebuilds the per-mesh LOD tables from the configured LOD chains,
+    /// mapping each base mesh to its ordered LOD ids and screen thresholds.
     pub(in super::super) fn resolve_lod_chains(
         &mut self,
         chains: &[crate::config::MeshLodChain],
@@ -658,6 +670,8 @@ impl MeshPass {
         }
     }
 
+    /// Rebuilds the current world's entity-to-slot GPU registry from its
+    /// cached instance entities.
     pub(in super::super) fn populate_gpu_registry_from_instances(&mut self) {
         let state = self.world_states[self.current_world_id as usize]
             .as_mut()

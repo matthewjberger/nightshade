@@ -33,6 +33,7 @@ impl Default for TextureTransform {
 }
 
 impl TextureTransform {
+    /// Identity transform: zero offset, zero rotation, unit scale, `uv_set` 0.
     pub const IDENTITY: Self = Self {
         offset: [0.0, 0.0],
         rotation: 0.0,
@@ -108,14 +109,17 @@ pub struct Material {
     pub blend_opaque_alpha_threshold: f32,
     /// Path to base color texture.
     pub base_texture: Option<String>,
+    /// UV transform for the base color texture.
     #[serde(default)]
     pub base_texture_transform: TextureTransform,
     /// Path to emissive texture.
     pub emissive_texture: Option<String>,
+    /// UV transform for the emissive texture.
     #[serde(default)]
     pub emissive_texture_transform: TextureTransform,
     /// Path to normal map texture.
     pub normal_texture: Option<String>,
+    /// UV transform for the normal map.
     #[serde(default)]
     pub normal_texture_transform: TextureTransform,
     /// Normal map intensity multiplier.
@@ -157,10 +161,12 @@ pub struct Material {
     pub reflection_box_max: [f32; 3],
     /// Path to metallic (B) / roughness (G) texture.
     pub metallic_roughness_texture: Option<String>,
+    /// UV transform for the metallic-roughness texture.
     #[serde(default)]
     pub metallic_roughness_texture_transform: TextureTransform,
     /// Path to ambient occlusion texture (R channel).
     pub occlusion_texture: Option<String>,
+    /// UV transform for the occlusion texture.
     #[serde(default)]
     pub occlusion_texture_transform: TextureTransform,
     /// Occlusion effect strength (0 = none, 1 = full).
@@ -178,15 +184,19 @@ pub struct Material {
     /// Transmission factor for refractive materials (KHR_materials_transmission).
     #[serde(default)]
     pub transmission_factor: f32,
+    /// Path to the transmission texture.
     #[serde(default)]
     pub transmission_texture: Option<String>,
+    /// UV transform for the transmission texture.
     #[serde(default)]
     pub transmission_texture_transform: TextureTransform,
     /// Volume thickness for transmission (KHR_materials_volume).
     #[serde(default)]
     pub thickness: f32,
+    /// Path to the volume thickness texture.
     #[serde(default)]
     pub thickness_texture: Option<String>,
+    /// UV transform for the thickness texture.
     #[serde(default)]
     pub thickness_texture_transform: TextureTransform,
     /// Light absorption color inside the volume.
@@ -204,12 +214,16 @@ pub struct Material {
     /// Specular color tint.
     #[serde(default = "default_specular_color_factor")]
     pub specular_color_factor: [f32; 3],
+    /// Path to the specular strength texture.
     #[serde(default)]
     pub specular_texture: Option<String>,
+    /// UV transform for the specular texture.
     #[serde(default)]
     pub specular_texture_transform: TextureTransform,
+    /// Path to the specular color texture.
     #[serde(default)]
     pub specular_color_texture: Option<String>,
+    /// UV transform for the specular color texture.
     #[serde(default)]
     pub specular_color_texture_transform: TextureTransform,
     /// Emissive intensity multiplier (KHR_materials_emissive_strength).
@@ -219,15 +233,19 @@ pub struct Material {
     /// Fraction of base color light transmitted as Lambertian through the surface.
     #[serde(default)]
     pub diffuse_transmission_factor: f32,
+    /// Path to the diffuse transmission factor texture.
     #[serde(default)]
     pub diffuse_transmission_texture: Option<String>,
+    /// UV transform for the diffuse transmission texture.
     #[serde(default)]
     pub diffuse_transmission_texture_transform: TextureTransform,
     /// Color tint applied to the diffuse-transmitted light.
     #[serde(default = "default_diffuse_transmission_color")]
     pub diffuse_transmission_color_factor: [f32; 3],
+    /// Path to the diffuse transmission color texture.
     #[serde(default)]
     pub diffuse_transmission_color_texture: Option<String>,
+    /// UV transform for the diffuse transmission color texture.
     #[serde(default)]
     pub diffuse_transmission_color_texture_transform: TextureTransform,
     /// Chromatic dispersion strength (KHR_materials_dispersion).
@@ -240,15 +258,19 @@ pub struct Material {
     /// Rotation of anisotropic direction in radians around the surface normal.
     #[serde(default)]
     pub anisotropy_rotation: f32,
+    /// Path to the anisotropy direction and strength texture.
     #[serde(default)]
     pub anisotropy_texture: Option<String>,
+    /// UV transform for the anisotropy texture.
     #[serde(default)]
     pub anisotropy_texture_transform: TextureTransform,
     /// Iridescence strength (KHR_materials_iridescence). 0 = none, 1 = full thin-film effect.
     #[serde(default)]
     pub iridescence_factor: f32,
+    /// Path to the iridescence strength texture.
     #[serde(default)]
     pub iridescence_texture: Option<String>,
+    /// UV transform for the iridescence texture.
     #[serde(default)]
     pub iridescence_texture_transform: TextureTransform,
     /// Index of refraction for the iridescent thin-film layer.
@@ -260,43 +282,55 @@ pub struct Material {
     /// Maximum film thickness in nanometers (modulated by iridescence_thickness_texture.g).
     #[serde(default = "default_iridescence_thickness_max")]
     pub iridescence_thickness_maximum: f32,
+    /// Path to the iridescence thickness texture.
     #[serde(default)]
     pub iridescence_thickness_texture: Option<String>,
+    /// UV transform for the iridescence thickness texture.
     #[serde(default)]
     pub iridescence_thickness_texture_transform: TextureTransform,
     /// Sheen color (KHR_materials_sheen). Multiplied with sheen_color_texture if present.
     #[serde(default)]
     pub sheen_color_factor: [f32; 3],
+    /// Path to the sheen color texture.
     #[serde(default)]
     pub sheen_color_texture: Option<String>,
+    /// UV transform for the sheen color texture.
     #[serde(default)]
     pub sheen_color_texture_transform: TextureTransform,
     /// Sheen roughness (0 = sharp, 1 = smooth velvet).
     #[serde(default)]
     pub sheen_roughness_factor: f32,
+    /// Path to the sheen roughness texture.
     #[serde(default)]
     pub sheen_roughness_texture: Option<String>,
+    /// UV transform for the sheen roughness texture.
     #[serde(default)]
     pub sheen_roughness_texture_transform: TextureTransform,
     /// Clearcoat layer strength (KHR_materials_clearcoat). 0 = none, 1 = full coat.
     #[serde(default)]
     pub clearcoat_factor: f32,
+    /// Path to the clearcoat strength texture.
     #[serde(default)]
     pub clearcoat_texture: Option<String>,
+    /// UV transform for the clearcoat texture.
     #[serde(default)]
     pub clearcoat_texture_transform: TextureTransform,
     /// Clearcoat layer roughness.
     #[serde(default)]
     pub clearcoat_roughness_factor: f32,
+    /// Path to the clearcoat roughness texture.
     #[serde(default)]
     pub clearcoat_roughness_texture: Option<String>,
+    /// UV transform for the clearcoat roughness texture.
     #[serde(default)]
     pub clearcoat_roughness_texture_transform: TextureTransform,
     /// Optional separate normal map for the clearcoat layer.
     #[serde(default)]
     pub clearcoat_normal_texture: Option<String>,
+    /// UV transform for the clearcoat normal map.
     #[serde(default)]
     pub clearcoat_normal_texture_transform: TextureTransform,
+    /// Clearcoat normal map intensity multiplier.
     #[serde(default = "default_normal_scale")]
     pub clearcoat_normal_scale: f32,
 }
@@ -310,27 +344,49 @@ pub struct Material {
 /// by `material_registry_resolve_uploaded_textures` from the renderer drain.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MaterialTextureIds {
+    /// Resolved id for the base color texture.
     pub base: Option<TextureId>,
+    /// Resolved id for the emissive texture.
     pub emissive: Option<TextureId>,
+    /// Resolved id for the normal map.
     pub normal: Option<TextureId>,
+    /// Resolved id for the detail albedo texture.
     pub detail_base: Option<TextureId>,
+    /// Resolved id for the detail normal map.
     pub detail_normal: Option<TextureId>,
+    /// Resolved id for the height map.
     pub height: Option<TextureId>,
+    /// Resolved id for the metallic-roughness texture.
     pub metallic_roughness: Option<TextureId>,
+    /// Resolved id for the occlusion texture.
     pub occlusion: Option<TextureId>,
+    /// Resolved id for the transmission texture.
     pub transmission: Option<TextureId>,
+    /// Resolved id for the thickness texture.
     pub thickness: Option<TextureId>,
+    /// Resolved id for the specular strength texture.
     pub specular: Option<TextureId>,
+    /// Resolved id for the specular color texture.
     pub specular_color: Option<TextureId>,
+    /// Resolved id for the diffuse transmission texture.
     pub diffuse_transmission: Option<TextureId>,
+    /// Resolved id for the diffuse transmission color texture.
     pub diffuse_transmission_color: Option<TextureId>,
+    /// Resolved id for the anisotropy texture.
     pub anisotropy: Option<TextureId>,
+    /// Resolved id for the iridescence texture.
     pub iridescence: Option<TextureId>,
+    /// Resolved id for the iridescence thickness texture.
     pub iridescence_thickness: Option<TextureId>,
+    /// Resolved id for the sheen color texture.
     pub sheen_color: Option<TextureId>,
+    /// Resolved id for the sheen roughness texture.
     pub sheen_roughness: Option<TextureId>,
+    /// Resolved id for the clearcoat texture.
     pub clearcoat: Option<TextureId>,
+    /// Resolved id for the clearcoat roughness texture.
     pub clearcoat_roughness: Option<TextureId>,
+    /// Resolved id for the clearcoat normal map.
     pub clearcoat_normal: Option<TextureId>,
 }
 

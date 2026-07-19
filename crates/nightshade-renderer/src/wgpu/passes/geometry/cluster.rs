@@ -1,10 +1,15 @@
 //! Shared clustered-lighting GPU types and grid dimensions, used by both the
 //! static and skinned mesh passes.
 
+/// Cluster grid tile count along X.
 pub const CLUSTER_GRID_X: u32 = 16;
+/// Cluster grid tile count along Y.
 pub const CLUSTER_GRID_Y: u32 = 9;
+/// Cluster grid depth-slice count along Z.
 pub const CLUSTER_GRID_Z: u32 = 24;
+/// Maximum lights recorded per cluster.
 pub const MAX_LIGHTS_PER_CLUSTER: u32 = 256;
+/// Total froxel count across the grid.
 pub const TOTAL_CLUSTERS: u32 = CLUSTER_GRID_X * CLUSTER_GRID_Y * CLUSTER_GRID_Z;
 
 /// Distance from the camera at which the logarithmic depth slices begin,
@@ -24,30 +29,45 @@ pub fn cluster_slice_near(camera_z_near: f32) -> f32 {
     camera_z_near.max(CLUSTER_SLICE_NEAR)
 }
 
+/// GPU uniforms driving cluster bounds and light assignment.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ClusterUniforms {
+    /// Inverse projection matrix, clip to view space.
     pub inverse_projection: [[f32; 4]; 4],
+    /// Render target size in pixels.
     pub screen_size: [f32; 2],
+    /// Near distance the slices start from.
     pub z_near: f32,
+    /// Far distance the slices reach.
     pub z_far: f32,
+    /// Grid dimensions X, Y, Z in the first three lanes.
     pub cluster_count: [u32; 4],
+    /// Screen tile size in pixels.
     pub tile_size: [f32; 2],
+    /// Number of local lights.
     pub num_lights: u32,
+    /// Number of directional lights.
     pub num_directional_lights: u32,
 }
 
+/// View-space axis-aligned bounds of one cluster.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ClusterBounds {
+    /// Minimum corner in view space.
     pub min_point: [f32; 4],
+    /// Maximum corner in view space.
     pub max_point: [f32; 4],
 }
 
+/// Per-cluster slice into the light index list.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LightGrid {
+    /// Start index into the light index list.
     pub offset: u32,
+    /// Number of lights in the cluster.
     pub count: u32,
 }
 
@@ -55,13 +75,18 @@ pub struct LightGrid {
 /// assignment) plus their bind group layouts, shared by the static and skinned
 /// mesh passes so both build the cluster light grid from one implementation.
 pub struct ClusterCompute {
+    /// Compute pipeline building per-cluster bounds.
     pub bounds_pipeline: wgpu::ComputePipeline,
+    /// Compute pipeline assigning lights to clusters.
     pub assign_pipeline: wgpu::ComputePipeline,
+    /// Bind group layout for the bounds pass.
     pub bounds_bind_group_layout: wgpu::BindGroupLayout,
+    /// Bind group layout for the assignment pass.
     pub assign_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl ClusterCompute {
+    /// Compiles both cluster compute pipelines and their bind group layouts.
     pub fn new(device: &wgpu::Device) -> Self {
         let bounds_shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

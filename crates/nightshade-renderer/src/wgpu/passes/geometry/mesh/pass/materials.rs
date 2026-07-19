@@ -2,6 +2,8 @@ use super::super::super::material_gpu;
 use super::MeshPass;
 
 impl MeshPass {
+    /// Rebuilds the material texture bind group from the shared texture arrays,
+    /// using the bindless path when the arrays and pass both support it.
     pub fn apply_material_textures(
         &mut self,
         device: &wgpu::Device,

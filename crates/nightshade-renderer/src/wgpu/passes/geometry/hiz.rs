@@ -1,3 +1,6 @@
+//! Hierarchical-Z pyramid: downsamples scene depth into a mip chain for GPU
+//! occlusion culling.
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct HizParams {
@@ -21,6 +24,8 @@ struct MipLevelData {
 
 const SPD_MIP_COUNT: u32 = 4;
 
+/// Builds a hierarchical depth (Hi-Z) pyramid from the scene depth buffer for
+/// occlusion culling.
 pub struct HizPass {
     downsample_pipeline: wgpu::ComputePipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -47,6 +52,8 @@ pub struct HizPass {
 }
 
 impl HizPass {
+    /// Creates the Hi-Z pass with its downsample and single-pass-downsample
+    /// pipelines.
     pub fn new(device: &wgpu::Device) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,
@@ -242,6 +249,7 @@ impl HizPass {
         }
     }
 
+    /// Marks the bind groups stale so they rebuild before the next execute.
     pub fn invalidate_bind_groups(&mut self) {
         self.bind_groups_dirty = true;
     }
@@ -251,6 +259,7 @@ impl HizPass {
         (max_dim as f32).log2().floor() as u32 + 1
     }
 
+    /// Reallocates the Hi-Z texture and per-mip resources for a new render size.
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         if self.width == width && self.height == height {
             return;
@@ -375,6 +384,8 @@ impl HizPass {
         self.spd_params_buffer.unmap();
     }
 
+    /// Rebuilds the downsample bind groups against `depth_view` when marked
+    /// dirty.
     pub fn rebuild_bind_groups(&mut self, device: &wgpu::Device, depth_view: &wgpu::TextureView) {
         if !self.bind_groups_dirty {
             return;
@@ -457,6 +468,7 @@ impl HizPass {
         self.bind_groups_dirty = false;
     }
 
+    /// Records the compute passes that fill the Hi-Z mip chain.
     pub fn execute(&self, encoder: &mut wgpu::CommandEncoder) {
         if self.width == 0 || self.height == 0 {
             return;
@@ -488,14 +500,19 @@ impl HizPass {
         }
     }
 
+    /// Returns the full-mip Hi-Z texture view, or `None` before the first
+    /// resize.
     pub fn hiz_view(&self) -> Option<&wgpu::TextureView> {
         self.hiz_full_view.as_ref()
     }
 
+    /// Returns the full-mip Hi-Z view, falling back to a 1x1 dummy before the
+    /// first resize.
     pub fn hiz_view_or_dummy(&self) -> &wgpu::TextureView {
         self.hiz_full_view.as_ref().unwrap_or(&self.dummy_view)
     }
 
+    /// Returns the number of mip levels in the current Hi-Z pyramid.
     pub fn mip_count(&self) -> u32 {
         self.mip_count
     }

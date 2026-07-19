@@ -1,5 +1,6 @@
-//! CPU-side collection of the frame's light lists from [`RendererState`]
-//! into the packed GPU structures the mesh and shadow passes consume, plus
+//! CPU-side collection of the frame's light lists from
+//! [`RendererState`](crate::config::RendererState) into the packed GPU
+//! structures the mesh and shadow passes consume, plus
 //! the cascade shadow fit against the dispatching camera's frustum.
 
 use crate::config::{RenderAreaLightShape, RenderLightData, RenderLightType, RenderLighting};
@@ -14,6 +15,7 @@ use crate::wgpu::passes::geometry::projection::{
 use crate::wgpu::passes::shadow_depth::{CASCADE_SPLIT_DISTANCES, scale_cascade_splits};
 use crate::wgpu::render_configs::CameraFrameInputs;
 
+/// Collects directional and local lights into packed GPU light data, capped at `max_lights`.
 pub fn collect_lights(
     world: &freecs::dynamic::DynWorld,
     max_lights: usize,
@@ -111,6 +113,7 @@ pub fn collect_lights(
     }
 }
 
+/// Collects area lights into packed GPU data, capped at `max_area_lights`.
 pub fn collect_area_lights(
     world: &freecs::dynamic::DynWorld,
     max_area_lights: usize,
@@ -198,6 +201,7 @@ pub fn collect_area_lights(
     }
 }
 
+/// Fits the directional cascade shadow projections to the camera frustum.
 pub fn calculate_cascade_shadows(
     camera: Option<&CameraFrameInputs>,
     directional_light: Option<&(RenderLightData, nalgebra_glm::Mat4)>,

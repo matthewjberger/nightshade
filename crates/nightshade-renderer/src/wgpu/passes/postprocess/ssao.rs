@@ -1,3 +1,6 @@
+//! Screen-space ambient occlusion: samples depth and view-space normals
+//! against a hemisphere kernel to write a per-pixel occlusion factor.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
 
@@ -18,6 +21,7 @@ struct SsaoParams {
     _padding: f32,
 }
 
+/// The screen-space ambient occlusion pass writing an occlusion buffer.
 pub struct SsaoPass {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -33,6 +37,8 @@ pub struct SsaoPass {
 }
 
 impl SsaoPass {
+    /// Builds the pass with its precomputed hemisphere kernel and noise
+    /// texture.
     pub fn new(device: &wgpu::Device) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

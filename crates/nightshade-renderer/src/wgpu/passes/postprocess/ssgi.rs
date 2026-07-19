@@ -1,3 +1,5 @@
+//! Screen-space global illumination pass.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
 
@@ -17,6 +19,7 @@ struct SsgiParams {
     _padding: [f32; 2],
 }
 
+/// Screen-space global illumination pass sampling scene color along depth-guided rays.
 pub struct SsgiPass {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -33,6 +36,7 @@ pub struct SsgiPass {
 }
 
 impl SsgiPass {
+    /// Builds the pass along with its sampling kernel and noise resources.
     pub fn new(device: &wgpu::Device) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

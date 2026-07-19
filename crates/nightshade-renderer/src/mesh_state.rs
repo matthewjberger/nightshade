@@ -5,32 +5,48 @@ use std::collections::{HashMap, HashSet};
 
 use freecs::Entity;
 
+/// Accumulates the frame's mesh dirty state and hands it to the passes.
 #[derive(Debug, Default)]
 pub struct MeshRenderState {
+    /// The dirty state accumulated for the current frame.
     pub inner: MeshRenderStateInner,
 }
 
+/// The dirty sets, queues, and flags describing what changed this frame.
 #[derive(Debug, Default)]
 pub struct MeshRenderStateInner {
+    /// Entities whose world transform changed this frame.
     pub transform_dirty: HashSet<Entity>,
+    /// Entities whose material assignment changed this frame.
     pub material_dirty: HashSet<Entity>,
+    /// Instanced entities whose local instance matrices changed this frame.
     pub instanced_local_matrices_dirty: HashSet<Entity>,
+    /// Per-entity custom data overrides, RGBA with alpha driving fade.
     pub custom_data_overrides: HashMap<Entity, [f32; 4]>,
+    /// Entities whose custom data changed this frame.
     pub custom_data_dirty: HashSet<Entity>,
     /// Entities whose non-structural per-object state (visibility, morph
     /// weights) changed this frame. The pass refreshes exactly these slots
     /// instead of scanning every registered object.
     pub object_state_dirty: HashSet<Entity>,
+    /// The instanced-transform compute pass must dispatch this frame.
     pub instanced_compute_dispatch_needed: bool,
+    /// The set of instanced meshes changed this frame.
     pub instanced_meshes_changed: bool,
+    /// Entities registered with the passes this frame, in order.
     pub entities_added: Vec<Entity>,
+    /// Entities removed from the passes this frame, in order.
     pub entities_removed: Vec<Entity>,
+    /// Draw batches must be rebuilt this frame.
     pub batches_invalidated: bool,
+    /// The passes must rebuild every registered object this frame.
     pub full_rebuild_needed: bool,
+    /// This state has been through at least one frame.
     pub frame_initialized: bool,
 }
 
 impl MeshRenderState {
+    /// Creates a state whose first frame forces a full rebuild.
     pub fn new() -> Self {
         Self {
             inner: MeshRenderStateInner {
@@ -51,26 +67,33 @@ impl MeshRenderState {
         }
     }
 
+    /// Marks `entity`'s transform changed this frame.
     pub fn mark_transform_dirty(&mut self, entity: Entity) {
         self.inner.transform_dirty.insert(entity);
     }
 
+    /// Marks `entity`'s per-object state (visibility, morph weights) changed.
     pub fn mark_object_state_dirty(&mut self, entity: Entity) {
         self.inner.object_state_dirty.insert(entity);
     }
 
+    /// Marks `entity`'s instanced local matrices changed this frame.
     pub fn mark_instanced_local_matrices_dirty(&mut self, entity: Entity) {
         self.inner.instanced_local_matrices_dirty.insert(entity);
     }
 
+    /// Requests the instanced-transform compute pass dispatch this frame.
     pub fn mark_instanced_compute_dispatch_needed(&mut self) {
         self.inner.instanced_compute_dispatch_needed = true;
     }
 
+    /// Marks the set of instanced meshes changed this frame.
     pub fn mark_instanced_meshes_changed(&mut self) {
         self.inner.instanced_meshes_changed = true;
     }
 
+    /// Sets `entity`'s custom data, invalidating batches when the alpha
+    /// crosses the opaque threshold.
     pub fn set_entity_custom_data(&mut self, entity: Entity, data: [f32; 4]) {
         let old_alpha = self
             .inner
@@ -84,6 +107,7 @@ impl MeshRenderState {
         self.inner.custom_data_dirty.insert(entity);
     }
 
+    /// Resets `entity`'s custom data to fully opaque and invalidates batches.
     pub fn mark_entity_fade_complete(&mut self, entity: Entity) {
         self.inner
             .custom_data_overrides
@@ -92,20 +116,25 @@ impl MeshRenderState {
         self.inner.batches_invalidated = true;
     }
 
+    /// Requests a full rebuild of every registered object next frame.
     pub fn request_full_rebuild(&mut self) {
         self.inner.full_rebuild_needed = true;
     }
 
+    /// Marks `entity`'s material changed and invalidates batches.
     pub fn mark_material_dirty(&mut self, entity: Entity) {
         self.inner.material_dirty.insert(entity);
         self.inner.batches_invalidated = true;
     }
 
+    /// Queues `entity` for registration and invalidates batches.
     pub fn mark_entity_added(&mut self, entity: Entity) {
         self.inner.entities_added.push(entity);
         self.inner.batches_invalidated = true;
     }
 
+    /// Queues `entity` for removal, invalidates batches, and drops its
+    /// pending dirty marks.
     pub fn mark_entity_removed(&mut self, entity: Entity) {
         self.inner.entities_removed.push(entity);
         self.inner.batches_invalidated = true;
@@ -113,6 +142,7 @@ impl MeshRenderState {
         self.inner.material_dirty.remove(&entity);
     }
 
+    /// Returns true when any dirty set, queue, or rebuild flag is active.
     pub fn has_any_changes(&self) -> bool {
         !self.inner.transform_dirty.is_empty()
             || !self.inner.material_dirty.is_empty()
@@ -147,18 +177,23 @@ impl MeshRenderState {
             || !self.inner.entities_removed.is_empty()
     }
 
+    /// Returns whether this state has been through at least one frame.
     pub fn frame_initialized(&self) -> bool {
         self.inner.frame_initialized
     }
 
+    /// Returns whether a full rebuild is pending.
     pub fn full_rebuild_needed(&self) -> bool {
         self.inner.full_rebuild_needed
     }
 
+    /// Returns whether draw batches are invalidated this frame.
     pub fn batches_invalidated(&self) -> bool {
         self.inner.batches_invalidated
     }
 
+    /// Moves the accumulated frame state out, leaving a cleared state marked
+    /// as initialized.
     pub fn take_frame_state(&mut self) -> MeshRenderStateInner {
         std::mem::replace(
             &mut self.inner,

@@ -13,21 +13,34 @@ const PIXELS_TO_WORLD: f32 = 0.01;
 /// `font_kind` is the already-resolved font, `line_height` the multiplier
 /// applied to `font_size`.
 pub struct TextMeshParams {
+    /// Font size in pixels before the world scale is applied.
     pub font_size: f32,
+    /// Line spacing multiplier applied to `font_size`.
     pub line_height: f32,
+    /// The already-resolved font to shape with.
     pub font_kind: FontKind,
+    /// Horizontal alignment of each line.
     pub alignment: TextAlignment,
+    /// Vertical alignment of the block relative to the origin.
     pub vertical_alignment: VerticalAlignment,
+    /// Glyph index to anchor horizontally on, overriding `alignment` when set.
     pub anchor_character: Option<usize>,
 }
 
+/// Borrowed resources the mesher needs to shape glyphs and grow the atlas.
 pub struct TextMeshContext<'a> {
+    /// Font system used to shape the string.
     pub font_engine: &'a mut FontEngine,
+    /// Atlas glyphs are rasterized into and sampled from.
     pub glyph_atlas: &'a mut GlyphAtlas,
+    /// GPU device for atlas allocations.
     pub device: &'a wgpu::Device,
+    /// GPU queue for atlas uploads.
     pub queue: &'a wgpu::Queue,
 }
 
+/// Shapes `text` and builds a world-space text mesh, with positions in world
+/// units and Y pointing up.
 pub fn generate_text_mesh_world(
     text: &str,
     ctx: &mut TextMeshContext<'_>,
@@ -95,6 +108,8 @@ pub fn generate_text_mesh_world(
     mesh
 }
 
+/// Shapes `text` and builds a UI-space text mesh, with positions in pixels and
+/// Y pointing down, optionally wrapping at `wrap_width`.
 pub fn generate_text_mesh_ui(
     text: &str,
     ctx: &mut TextMeshContext<'_>,

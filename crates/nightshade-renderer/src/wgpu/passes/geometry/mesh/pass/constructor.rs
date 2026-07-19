@@ -15,6 +15,7 @@ use super::MeshPass;
 use crate::wgpu::passes::geometry::material_gpu::material_texture_bind_group_layout_entries;
 
 impl MeshPass {
+    /// Builds every mesh-pass pipeline, buffer, bind group, and the built-in primitive meshes.
     pub async fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -1961,11 +1962,13 @@ impl MeshPass {
         pass
     }
 
+    /// Mip level count for a transmission texture of `width` by `height`.
     pub(in super::super) fn transmission_mip_count(width: u32, height: u32) -> u32 {
         let max_dimension = width.max(height).max(1);
         32 - max_dimension.leading_zeros()
     }
 
+    /// Creates the transmission color texture with a view per mip level.
     pub(in super::super) fn create_transmission_textures(
         device: &wgpu::Device,
         width: u32,

@@ -2,21 +2,34 @@ use crate::text_data::TextVertex;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use nalgebra_glm::{Mat4, Vec4};
 
+/// Render pass drawing signed-distance-field text, screen-space or billboarded.
 pub struct TextPass {
+    /// Pipeline drawing text glyph quads.
     pub render_pipeline: wgpu::RenderPipeline,
+    /// Layout for the glyph atlas texture, sampler, and character colors.
     pub texture_bind_group_layout: wgpu::BindGroupLayout,
+    /// Layout for the per-instance text uniform.
     pub text_bind_group_layout: wgpu::BindGroupLayout,
 
+    /// Glyph quad vertices for all instances.
     pub vertex_buffer: wgpu::Buffer,
+    /// Glyph quad indices for all instances.
     pub index_buffer: wgpu::Buffer,
+    /// Scene view and projection uniform.
     pub uniform_buffer: wgpu::Buffer,
+    /// Per-instance text uniforms, addressed by dynamic offset.
     pub text_uniform_buffer: wgpu::Buffer,
+    /// Per-character color overrides read by the shader.
     pub character_color_buffer: wgpu::Buffer,
 
+    /// Bind group for the scene uniform.
     pub uniform_bind_group: wgpu::BindGroup,
+    /// Bind groups for the per-instance text uniform buffer.
     pub text_bind_groups: Vec<wgpu::BindGroup>,
+    /// Bind group for the glyph atlas, absent until an atlas is set.
     pub atlas_bind_group: Option<wgpu::BindGroup>,
 
+    /// Text instances collected for the current frame.
     pub text_instances: Vec<TextInstance>,
     scratch_vertices: Vec<TextVertex>,
     scratch_indices: Vec<u32>,
@@ -31,41 +44,63 @@ pub struct TextPass {
     cached_sampler: Option<wgpu::Sampler>,
 }
 
+/// One text mesh queued for drawing this frame.
 #[derive(Clone)]
 pub struct TextInstance {
+    /// First vertex of this instance in the shared vertex buffer.
     pub vertex_offset: u32,
+    /// First index of this instance in the shared index buffer.
     pub index_offset: u32,
+    /// Number of indices this instance draws.
     pub index_count: u32,
+    /// World transform of the text.
     pub transform: Mat4,
+    /// Fill color as linear RGBA.
     pub color: Vec4,
+    /// Outline color as linear RGBA.
     pub outline_color: Vec4,
+    /// Outline width in signed-distance units.
     pub outline_width: f32,
+    /// Edge smoothing width in signed-distance units.
     pub smoothing: f32,
+    /// Whether the text always faces the camera.
     pub billboard: bool,
 }
 
+/// Per-instance text uniform matching the shader layout.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TextUniforms {
+    /// Model transform applied to the glyph quads.
     pub model: Mat4,
+    /// Fill color as linear RGBA.
     pub color: Vec4,
+    /// Outline color as linear RGBA.
     pub outline_color: Vec4,
+    /// Outline width in signed-distance units.
     pub outline_width: f32,
+    /// Edge smoothing width in signed-distance units.
     pub smoothing: f32,
+    /// Padding for 16-byte alignment.
     pub _padding: [f32; 2],
 }
 
+/// Scene camera uniform shared by all text instances.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SceneUniforms {
+    /// View matrix.
     pub view: Mat4,
+    /// Projection matrix.
     pub projection: Mat4,
+    /// Camera position in world space, w unused.
     pub camera_position: Vec4,
 }
 
 const INITIAL_CHARACTER_COLOR_CAPACITY: usize = 10000;
 
 impl TextPass {
+    /// Creates the pass, its pipeline, and the initial glyph buffers.
     pub fn new(
         device: &wgpu::Device,
         color_format: wgpu::TextureFormat,
@@ -373,11 +408,13 @@ impl TextPass {
         }
     }
 
+    /// Points the pass at a new glyph atlas view and rebuilds its bind group.
     pub fn update_glyph_atlas(&mut self, device: &wgpu::Device, atlas_view: &wgpu::TextureView) {
         self.cached_atlas_view = Some(atlas_view.clone());
         self.rebuild_atlas_bind_group(device);
     }
 
+    /// Records the text draw for every collected instance.
     pub fn record(&self, render_pass: &mut wgpu::RenderPass<'_>, device: &wgpu::Device) {
         if self.text_instances.is_empty() {
             return;

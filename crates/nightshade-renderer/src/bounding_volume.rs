@@ -1,13 +1,20 @@
+//! Bounding volumes for culling and picking: an oriented box and a combined
+//! box-plus-sphere volume, with transform and ray-intersection math.
+
 use nalgebra_glm::Mat3;
 use nalgebra_glm::{Mat4, Quat, Vec3, Vec4};
 
+/// Box defined by a center, half-extents, and an orientation.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, enum2schema::Schema)]
 #[serde(default)]
 pub struct OrientedBoundingBox {
+    /// Center in the current space.
     #[schema(type = "array", items = "number", len = 3)]
     pub center: Vec3,
+    /// Half-sizes along the box's local axes.
     #[schema(type = "array", items = "number", len = 3)]
     pub half_extents: Vec3,
+    /// Rotation from local axes to the current space.
     #[schema(type = "array", items = "number", len = 4)]
     pub orientation: Quat,
 }
@@ -23,6 +30,7 @@ impl Default for OrientedBoundingBox {
 }
 
 impl OrientedBoundingBox {
+    /// Builds a box from center, half-extents, and orientation.
     pub fn new(center: Vec3, half_extents: Vec3, orientation: Quat) -> Self {
         Self {
             center,
@@ -31,6 +39,7 @@ impl OrientedBoundingBox {
         }
     }
 
+    /// Builds an axis-aligned box spanning `min` to `max`.
     pub fn from_aabb(min: Vec3, max: Vec3) -> Self {
         let center = (min + max) * 0.5;
         let half_extents = (max - min) * 0.5;
@@ -41,6 +50,7 @@ impl OrientedBoundingBox {
         }
     }
 
+    /// Returns the box transformed by `matrix`, absorbing scale into the half-extents.
     pub fn transform(&self, matrix: &Mat4) -> Self {
         let transformed_center =
             (matrix * Vec4::new(self.center.x, self.center.y, self.center.z, 1.0)).xyz();
@@ -80,6 +90,7 @@ impl OrientedBoundingBox {
         }
     }
 
+    /// The eight world-space corners of the box.
     pub fn get_corners(&self) -> [Vec3; 8] {
         let rotation_matrix = nalgebra_glm::quat_to_mat3(&self.orientation);
 
@@ -99,6 +110,7 @@ impl OrientedBoundingBox {
         ]
     }
 
+    /// Returns the nearest positive ray hit distance, or `None` when the ray misses.
     pub fn intersect_ray(&self, ray_origin: Vec3, ray_direction: Vec3) -> Option<f32> {
         let inv_orientation = self.orientation.conjugate();
         let local_ray_origin =
@@ -153,10 +165,13 @@ impl OrientedBoundingBox {
     }
 }
 
+/// An oriented box paired with a bounding-sphere radius.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, enum2schema::Schema)]
 #[serde(default)]
 pub struct BoundingVolume {
+    /// Oriented box.
     pub obb: OrientedBoundingBox,
+    /// Radius of the enclosing sphere about the box center.
     pub sphere_radius: f32,
 }
 
@@ -170,10 +185,12 @@ impl Default for BoundingVolume {
 }
 
 impl BoundingVolume {
+    /// Builds a volume from an oriented box and sphere radius.
     pub fn new(obb: OrientedBoundingBox, sphere_radius: f32) -> Self {
         Self { obb, sphere_radius }
     }
 
+    /// Bounding volume for a named primitive mesh type.
     pub fn from_mesh_type(mesh_type: &str) -> Self {
         let (half_extents, sphere_radius) = match mesh_type {
             "Cube" => {
@@ -216,6 +233,7 @@ impl BoundingVolume {
         }
     }
 
+    /// Returns the volume transformed by `matrix`, scaling the sphere by the largest axis scale.
     pub fn transform(&self, matrix: &Mat4) -> Self {
         let transformed_obb = self.obb.transform(matrix);
 

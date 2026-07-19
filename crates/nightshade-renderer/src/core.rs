@@ -1,5 +1,6 @@
 //! Renderer creation.
 
+/// Creates a wgpu renderer bound to `window_handle` at the given initial size.
 #[cfg(feature = "wgpu")]
 pub async fn create_renderer<W>(
     window_handle: W,

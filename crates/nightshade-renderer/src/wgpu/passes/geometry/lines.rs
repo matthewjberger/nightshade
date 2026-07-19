@@ -6,94 +6,144 @@ const INITIAL_LINE_CAPACITY: u32 = 1024;
 const INITIAL_BV_CAPACITY: u32 = 1024;
 const INITIAL_NORMAL_CAPACITY: u32 = 1024;
 const BUFFER_GROWTH_FACTOR: f32 = 2.0;
+/// Upper bound on debug lines drawn in one frame.
 pub const MAX_LINES: u32 = 1_000_000;
+/// Upper bound on bounding-volume boxes per frame.
 pub const MAX_BOUNDING_VOLUMES: u32 = 100_000;
+/// Upper bound on normal-visualization lines per frame.
 pub const MAX_NORMALS: u32 = 1_000_000;
 
+/// GPU indexed indirect draw command matching the wgpu layout.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct DrawIndexedIndirectCommand {
+    /// Indices drawn per instance.
     pub index_count: u32,
+    /// Instances drawn.
     pub instance_count: u32,
+    /// First index read from the index buffer.
     pub first_index: u32,
+    /// Value added to each index before fetching a vertex.
     pub vertex_offset: i32,
+    /// First instance id.
     pub first_instance: u32,
 }
 
+/// One oriented bounding volume expanded into wireframe lines on the GPU.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuBoundingVolumeData {
+    /// Box center in local space.
     pub center: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad0: f32,
+    /// Half-size along each local axis.
     pub half_extents: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad1: f32,
+    /// Orientation quaternion as (x, y, z, w).
     pub orientation: [f32; 4],
+    /// World transform applied to the box.
     pub transform: [[f32; 4]; 4],
+    /// Line color as linear RGBA.
     pub color: [f32; 4],
 }
 
+/// Uniform inputs for the bounding-volume line generation compute pass.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct BoundingVolumeParams {
+    /// Number of bounding volumes to expand.
     pub bounding_volume_count: u32,
+    /// First line-buffer slot the generated lines are written to.
     pub line_offset: u32,
+    /// Padding for 16-byte alignment.
     pub _padding: [u32; 2],
 }
 
+/// One vertex normal expanded into a line segment on the GPU.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuNormalData {
+    /// Normal origin in local space.
     pub position: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad0: f32,
+    /// Normal direction in local space.
     pub normal: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad1: f32,
+    /// World transform applied to the origin and direction.
     pub transform: [[f32; 4]; 4],
+    /// Line color as linear RGBA.
     pub color: [f32; 4],
+    /// Length of the drawn normal line.
     pub length: f32,
+    /// Padding for 16-byte alignment.
     pub _pad2: [f32; 3],
 }
 
+/// Uniform inputs for the normal line generation compute pass.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct NormalParams {
     pub(crate) normal_count: u32,
+    /// First line-buffer slot the generated lines are written to.
     pub line_offset: u32,
+    /// Padding for 16-byte alignment.
     pub _padding: [u32; 2],
 }
 
+/// One debug line segment stored in the shared line buffer.
 #[repr(C, align(16))]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuLineData {
+    /// Segment start position, w unused.
     pub start: [f32; 4],
+    /// Segment end position, w unused.
     pub end: [f32; 4],
+    /// Line color as linear RGBA.
     pub color: [f32; 4],
+    /// Owning entity id for picking.
     pub entity_id: u32,
+    /// Nonzero when the line is drawn.
     pub visible: u32,
+    /// Depth test mode selector.
     pub depth_mode: u32,
+    /// Padding for 16-byte alignment.
     pub _padding: u32,
 }
 
+/// Uniform inputs for the line frustum-culling compute pass.
 #[repr(C, align(16))]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CullingData {
+    /// Combined view-projection matrix.
     pub view_proj: [[f32; 4]; 4],
+    /// Six frustum planes as (a, b, c, d).
     pub frustum_planes: [[f32; 4]; 6],
     pub(crate) line_count: u32,
+    /// Padding for 16-byte alignment.
     pub _padding: [u32; 15],
 }
 
+/// Vertex of the unit primitive instancing stretches into each line segment.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LineVertex {
+    /// Endpoint position, x is 0 at the segment start and 1 at the end.
     pub position: [f32; 3],
 }
 
+/// View-projection uniform for the line render pipeline.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LineUniform {
+    /// Combined view-projection matrix.
     pub view_proj: [[f32; 4]; 4],
 }
 
+/// GPU-driven debug line pass drawing lines, bounding volumes, and normals.
 pub struct LinesPass {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -147,6 +197,7 @@ fn main_compute_pipeline(
 }
 
 impl LinesPass {
+    /// Creates the pass, its pipelines, and the initial GPU buffers.
     pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
         let vertices = [
             LineVertex {
@@ -797,6 +848,7 @@ impl LinesPass {
         }
     }
 
+    /// Dispatches the compute pass expanding bounding volumes into lines.
     pub fn generate_bv_lines(&self, encoder: &mut wgpu::CommandEncoder) {
         if self.bv_count == 0 {
             return;
@@ -872,6 +924,7 @@ impl LinesPass {
         }
     }
 
+    /// Dispatches the compute pass expanding normals into lines.
     pub fn generate_normal_lines(&self, encoder: &mut wgpu::CommandEncoder) {
         if self.normal_count == 0 {
             return;
@@ -890,10 +943,12 @@ impl LinesPass {
         compute_pass.dispatch_workgroups(dispatch_size, 1, 1);
     }
 
+    /// Total lines to draw across debug lines, bounding volumes, and normals.
     pub fn total_line_count(&self) -> u32 {
         self.line_count + self.bv_line_count + self.normal_line_count
     }
 
+    /// Writes the view-projection matrix to the render uniform buffer.
     pub fn update_uniforms(&self, queue: &wgpu::Queue, view_proj: nalgebra_glm::Mat4) {
         let uniform = LineUniform {
             view_proj: view_proj.into(),
@@ -901,6 +956,7 @@ impl LinesPass {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniform]));
     }
 
+    /// Writes the view-projection and frustum planes to the culling buffer.
     pub fn update_culling_data(
         &self,
         queue: &wgpu::Queue,
@@ -974,11 +1030,13 @@ impl LinesPass {
         self.update_normals(queue, normal_data);
     }
 
+    /// Drops the current frame's bounding-volume lines.
     pub fn clear_bounding_volumes(&mut self) {
         self.bv_count = 0;
         self.bv_line_count = 0;
     }
 
+    /// Drops the current frame's normal lines.
     pub fn clear_normals(&mut self) {
         self.normal_count = 0;
         self.normal_line_count = 0;
@@ -998,6 +1056,7 @@ impl LinesPass {
         }
     }
 
+    /// Encodes the line-generation and, when enabled, culling compute passes.
     pub fn encode_compute(&self, encoder: &mut wgpu::CommandEncoder, culling_enabled: bool) {
         if self.total_line_count() == 0 {
             return;
@@ -1011,6 +1070,7 @@ impl LinesPass {
         }
     }
 
+    /// Records the line draw, using indirect culling output when enabled.
     pub fn record(&self, render_pass: &mut wgpu::RenderPass<'_>, culling_enabled: bool) {
         let total_lines = self.total_line_count();
         if total_lines == 0 {
@@ -1040,6 +1100,7 @@ impl LinesPass {
         }
     }
 
+    /// Dispatches the frustum-culling compute pass building the indirect draw commands.
     pub fn cull_lines(&self, encoder: &mut wgpu::CommandEncoder) {
         let total = self.total_line_count();
         if total > 0 {
@@ -1149,6 +1210,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for LinesPass {
     }
 }
 
+/// Extracts the six normalized frustum planes from a view-projection matrix.
 pub fn extract_frustum_planes(view_proj: &nalgebra_glm::Mat4) -> [nalgebra_glm::Vec4; 6] {
     let mut planes = [nalgebra_glm::Vec4::zeros(); 6];
 

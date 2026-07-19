@@ -6,6 +6,9 @@ use crate::wgpu::DEPTH_PICK_SAMPLE_SIZE;
 use crate::wgpu::WgpuRenderer;
 use crate::wgpu::rendergraph::render_graph_get_texture_view;
 
+/// Dispatches the depth-pick compute shader around a screen position, starting an async readback the caller polls on a later frame.
+///
+/// No-op while a previous pick is still pending.
 pub fn dispatch_pick_compute(
     renderer: &mut WgpuRenderer,
     screen_x: u32,

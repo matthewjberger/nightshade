@@ -6,12 +6,18 @@ use freecs::Entity;
 use nalgebra_glm::Mat4;
 use std::collections::HashMap;
 
+/// Per-skin layout uploaded to the GPU: the joint count and the base offsets
+/// into the shared bone, inverse-bind-matrix, and output-palette arrays.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuSkinData {
+    /// Number of joints in this skin.
     pub joint_count: u32,
+    /// Offset of this skin's first joint in the bone matrix array.
     pub base_bone_index: u32,
+    /// Offset of this skin's first inverse bind matrix.
     pub base_ibm_index: u32,
+    /// Offset of this skin's first entry in the output palette.
     pub base_output_index: u32,
 }
 
@@ -49,16 +55,24 @@ pub fn skinned_world_bounds(
 /// components; the render passes only read it.
 #[derive(Default, Clone)]
 pub struct SkinningCache {
+    /// Inverse bind matrices for every deduplicated skin, concatenated.
     pub inverse_bind_matrices: Vec<Mat4>,
+    /// Per-skin layout records indexed by skin index.
     pub skin_data: Vec<GpuSkinData>,
+    /// Skin index assigned to each skinned entity.
     pub entity_skin_indices: HashMap<Entity, u32>,
+    /// Joint entities for every skin, concatenated in skin order.
     pub joint_entities: Vec<Entity>,
+    /// Total joint count across all skins.
     pub total_joints: u32,
+    /// Entity ids of the skinned instances in upload order.
     pub skinned_entity_ids: Vec<u32>,
+    /// Whether the static per-skin data has been uploaded to the GPU.
     pub static_data_uploaded: bool,
 }
 
 impl SkinningCache {
+    /// Offset of the skin's joint palette in the output array, or 0 if absent.
     pub fn get_joint_offset(&self, skin_index: u32) -> u32 {
         if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
             skin_data.base_output_index
@@ -67,6 +81,7 @@ impl SkinningCache {
         }
     }
 
+    /// Offset of the skin's first bone in the bone matrix array, or 0 if absent.
     pub fn get_base_bone_index(&self, skin_index: u32) -> u32 {
         if let Some(skin_data) = self.skin_data.get(skin_index as usize) {
             skin_data.base_bone_index

@@ -1,14 +1,25 @@
+//! Bindless material texture arrays on the GPU.
+//!
+//! Material textures are packed into two `D2Array` textures (one sRGB, one
+//! linear) sampled by layer index, or into a bindless array of individual
+//! textures when the device supports it. Layer slots are reserved up front,
+//! streamed in place, and returned to a free list on eviction.
+
 use crate::texture_data::{SamplerWrap, TextureUsage};
 use std::collections::HashMap;
 
 const DEFAULT_LAYER_SIZE: u32 = 1024;
 const DEFAULT_MAX_LAYERS: u32 = 256;
 
+/// Layer sentinel meaning a material slot has no bound texture.
 pub const NO_TEXTURE_LAYER: u32 = 0xFFFFu32;
 
+/// Selects the bindless texture path and its upper texture bound.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct BindlessConfig {
+    /// Whether the bindless path is used instead of the fixed array textures.
     pub enabled: bool,
+    /// Maximum number of individual textures the bindless array holds.
     pub max_textures: u32,
 }
 
@@ -20,52 +31,86 @@ fn wrap_code(wrap: SamplerWrap) -> u32 {
     }
 }
 
+/// Packs a layer index with its two wrap modes into a single `u32`: layer in
+/// the low 16 bits, `wrap_u` at bit 16, `wrap_v` at bit 18.
 pub fn pack_layer(layer: u32, wrap_u: SamplerWrap, wrap_v: SamplerWrap) -> u32 {
     (layer & 0xFFFFu32) | (wrap_code(wrap_u) << 16) | (wrap_code(wrap_v) << 18)
 }
 
+/// Where a named material texture lives in the arrays and how it wraps.
 #[derive(Copy, Clone, Debug)]
 pub struct MaterialTextureLayer {
+    /// Color space bucket that decides which array texture holds the layer.
     pub usage: TextureUsage,
+    /// Array layer index, or bindless slot index in the bindless path.
     pub layer: u32,
+    /// Horizontal sampler wrap mode.
     pub wrap_u: SamplerWrap,
+    /// Vertical sampler wrap mode.
     pub wrap_v: SamplerWrap,
 }
 
 impl MaterialTextureLayer {
+    /// Layer index and wrap modes packed into one `u32` for the shader.
     pub fn packed(&self) -> u32 {
         pack_layer(self.layer, self.wrap_u, self.wrap_v)
     }
 }
 
+/// A pending texture upload identified by name with its pixels and sampling.
 pub struct MaterialTextureUpload<'a> {
+    /// Key the layer is registered under and reused across reservations.
     pub name: String,
+    /// Tightly packed RGBA8 source pixels.
     pub rgba_data: &'a [u8],
+    /// Source width in pixels.
     pub width: u32,
+    /// Source height in pixels.
     pub height: u32,
+    /// Color space bucket for the destination array.
     pub usage: TextureUsage,
+    /// Horizontal sampler wrap mode.
     pub wrap_u: SamplerWrap,
+    /// Vertical sampler wrap mode.
     pub wrap_v: SamplerWrap,
 }
 
+/// Default anisotropic filtering clamp for the material samplers.
 pub const DEFAULT_ANISOTROPY: u16 = 16;
 
+/// GPU-side material texture storage and its samplers, plus layer bookkeeping.
 pub struct MaterialTextureArrays {
+    /// Square edge length of every array layer in pixels.
     pub layer_size: u32,
+    /// Maximum number of layers each array texture holds.
     pub max_layers: u32,
+    /// Mip level count of the array textures.
     pub mip_level_count: u32,
+    /// `D2Array` texture holding sRGB (color) layers.
     pub srgb_texture: wgpu::Texture,
+    /// `D2Array` texture holding linear (non-color) layers.
     pub linear_texture: wgpu::Texture,
+    /// Array view of `srgb_texture`.
     pub srgb_view: wgpu::TextureView,
+    /// Array view of `linear_texture`.
     pub linear_view: wgpu::TextureView,
+    /// Sampler with repeat addressing.
     pub sampler_repeat: wgpu::Sampler,
+    /// Sampler with mirrored repeat addressing.
     pub sampler_mirror: wgpu::Sampler,
+    /// Sampler with clamp-to-edge addressing.
     pub sampler_clamp: wgpu::Sampler,
+    /// Anisotropy clamp the current samplers were built with.
     pub anisotropy_clamp: u16,
+    /// Next unused sRGB layer when the free list is empty.
     pub srgb_next_layer: u32,
+    /// Next unused linear layer when the free list is empty.
     pub linear_next_layer: u32,
+    /// Map from texture name to its assigned layer and sampling.
     pub layer_map: HashMap<String, MaterialTextureLayer>,
+    /// Freed sRGB layers available for reuse.
     pub srgb_free_layers: Vec<u32>,
+    /// Freed linear layers available for reuse.
     pub linear_free_layers: Vec<u32>,
     placeholder_pixels: Option<Vec<u8>>,
     bindless: bool,
@@ -122,10 +167,12 @@ fn build_wrap_samplers(device: &wgpu::Device, anisotropy_clamp: u16) -> [wgpu::S
 }
 
 impl MaterialTextureArrays {
+    /// Creates arrays at the default layer size and layer count.
     pub fn new(device: &wgpu::Device) -> Self {
         Self::with_size(device, DEFAULT_LAYER_SIZE, DEFAULT_MAX_LAYERS)
     }
 
+    /// Creates arrays sized to `layer_size` square with `max_layers` layers.
     pub fn with_size(device: &wgpu::Device, layer_size: u32, max_layers: u32) -> Self {
         let largest = layer_size.max(1);
         let mip_level_count = (largest as f32).log2().floor() as u32 + 1;
@@ -203,6 +250,8 @@ impl MaterialTextureArrays {
         }
     }
 
+    /// Creates arrays in bindless mode, backed by up to `max_textures`
+    /// individually sized textures and a white 1x1 placeholder view.
     pub fn new_bindless(device: &wgpu::Device, queue: &wgpu::Queue, max_textures: u32) -> Self {
         let mut arrays = Self::with_size(device, DEFAULT_LAYER_SIZE, 1);
         let placeholder = device.create_texture(&wgpu::TextureDescriptor {
@@ -394,6 +443,9 @@ impl MaterialTextureArrays {
         }
     }
 
+    /// Writes `request`'s pixels into its layer, resampling to the layer size
+    /// and regenerating mips. Reuses the reserved layer when one exists,
+    /// otherwise allocates. Returns the layer index, or `None` when exhausted.
     pub fn upload(
         &mut self,
         device: &wgpu::Device,
@@ -559,18 +611,24 @@ impl MaterialTextureArrays {
         Some(slot)
     }
 
+    /// Whether the arrays run in bindless mode.
     pub fn is_bindless(&self) -> bool {
         self.bindless
     }
 
+    /// Maximum number of textures the bindless array holds.
     pub fn bindless_max(&self) -> u32 {
         self.bindless_max
     }
 
+    /// Returns and clears the flag marking the bindless views as changed since
+    /// the last read.
     pub fn take_bindless_dirty(&mut self) -> bool {
         std::mem::take(&mut self.bindless_dirty)
     }
 
+    /// Bindless texture views in slot order, or the placeholder view alone when
+    /// no slots exist yet.
     pub fn bindless_view_refs(&self) -> Vec<&wgpu::TextureView> {
         if self.bindless_views.is_empty() {
             return self.bindless_placeholder_view.iter().collect();
@@ -578,18 +636,22 @@ impl MaterialTextureArrays {
         self.bindless_views.iter().collect()
     }
 
+    /// Looks up the layer registered for `name`.
     pub fn get_layer(&self, name: &str) -> Option<MaterialTextureLayer> {
         self.layer_map.get(name).copied()
     }
 
+    /// Array view of the sRGB texture.
     pub fn srgb_view(&self) -> &wgpu::TextureView {
         &self.srgb_view
     }
 
+    /// Array view of the linear texture.
     pub fn linear_view(&self) -> &wgpu::TextureView {
         &self.linear_view
     }
 
+    /// The repeat, mirror, and clamp samplers, in that order.
     pub fn samplers(&self) -> [wgpu::Sampler; 3] {
         [
             self.sampler_repeat.clone(),

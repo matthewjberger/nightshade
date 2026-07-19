@@ -1,5 +1,6 @@
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 
+/// Render pass that draws the debug reference ground grid.
 pub struct GridPass {
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
@@ -7,6 +8,8 @@ pub struct GridPass {
 }
 
 impl GridPass {
+    /// Builds the grid pass pipeline, bind group, and uniform buffer for the
+    /// given color and depth attachment formats.
     pub fn new(
         device: &wgpu::Device,
         color_format: wgpu::TextureFormat,
@@ -112,6 +115,8 @@ impl GridPass {
         }
     }
 
+    /// Records the grid draw into `render_pass`, skipping it when the grid
+    /// debug draw is off.
     pub fn record(
         &self,
         render_pass: &mut wgpu::RenderPass<'_>,
@@ -222,6 +227,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for GridPass {
     }
 }
 
+/// GPU uniform block for the grid shader.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GridUniform {
@@ -235,6 +241,7 @@ pub struct GridUniform {
 }
 
 impl GridUniform {
+    /// Builds the uniform from camera matrices and orthographic parameters.
     pub fn new(
         projection: nalgebra_glm::Mat4,
         view: nalgebra_glm::Mat4,

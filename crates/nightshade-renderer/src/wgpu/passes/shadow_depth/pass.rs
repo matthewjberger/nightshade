@@ -1,3 +1,6 @@
+//! The shadow depth pass: builds and renders directional cascades, spotlight
+//! atlas slots, and point-light cubemap shadows.
+
 use crate::geometry::{SkinnedVertex, Vertex};
 use crate::mesh_cache::mesh_cache_iter;
 use crate::skinning::GpuSkinData;
@@ -21,6 +24,9 @@ use super::types::{
     SpotlightShadowData, SpotlightShadowSlot,
 };
 
+/// GPU resources and CPU bookkeeping for the shadow depth pass, covering
+/// directional cascades, spotlight atlas slots, and point-light cubemap
+/// shadows.
 pub struct ShadowDepthPass {
     pub(super) uniform_buffer: wgpu::Buffer,
     pub(super) uniform_bind_group_layout: wgpu::BindGroupLayout,
@@ -51,6 +57,8 @@ pub struct ShadowDepthPass {
     pub(super) all_caster_entities: Vec<freecs::Entity>,
     pub(super) last_visible_signature: u64,
     pub(super) occluders_initialized: bool,
+    /// Set when the shadow occluder set changed so the pass rebuilds its draw
+    /// data.
     pub shadow_scene_dirty: bool,
 
     pub(super) skinned_pipeline: wgpu::RenderPipeline,
@@ -104,9 +112,12 @@ pub struct ShadowDepthPass {
     pub(super) shadow_view_dirty: Vec<bool>,
     pub(super) depth_clear_pipeline: wgpu::RenderPipeline,
 
+    /// Cubemap array storing point-light shadow depth, six faces per slot.
     pub point_light_cubemap: wgpu::Texture,
     pub(super) point_light_cubemap_view: wgpu::TextureView,
     pub(super) point_light_face_views: Vec<wgpu::TextureView>,
+    /// Shared depth attachment reused when rendering each point-light cubemap
+    /// face.
     pub point_light_depth_texture: wgpu::Texture,
     pub(super) point_light_depth_view: wgpu::TextureView,
     pub(super) point_light_uniform_buffer: wgpu::Buffer,
@@ -145,6 +156,8 @@ fn buffer_bind_group(
 }
 
 impl ShadowDepthPass {
+    /// Creates the shadow depth pass with its pipelines, buffers, and built-in
+    /// meshes.
     pub async fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Shadow Uniform Buffer"),
@@ -928,6 +941,8 @@ impl ShadowDepthPass {
         ))
     }
 
+    /// Registers a static mesh in the shadow geometry buffers under `name`,
+    /// growing the buffers when needed.
     pub fn add_mesh(
         &mut self,
         device: &wgpu::Device,
@@ -1072,6 +1087,8 @@ impl ShadowDepthPass {
         }
     }
 
+    /// Uploads any newly cached static meshes into the shadow buffers and
+    /// compacts dead geometry.
     pub fn sync_meshes(
         &mut self,
         device: &wgpu::Device,
@@ -1326,6 +1343,8 @@ impl ShadowDepthPass {
         }
     }
 
+    /// Uploads any newly cached skinned meshes into the skinned shadow buffers
+    /// and compacts dead geometry.
     pub fn sync_skinned_meshes(
         &mut self,
         device: &wgpu::Device,
@@ -1458,7 +1477,7 @@ impl ShadowDepthPass {
     /// Reclaims the skinned shadow buffers once despawned skinned geometry
     /// dominates the occupied range, mirroring the static path. Skinned meshes
     /// carry no built-in primitives and no persistent culling table, so the
-    /// rebuild simply clears the name map and offsets and lets the add loop
+    /// rebuild clears the name map and offsets and lets the add loop
     /// repack the live cache. The per-frame skinned object buffer is rebuilt
     /// from this map every frame, so the reassigned offsets take effect at once.
     ///
@@ -1577,6 +1596,7 @@ impl ShadowDepthPass {
         }
     }
 
+    /// Rebuilds the skinned draw bind group after its buffers are reallocated.
     pub fn rebuild_skinned_bind_group(&mut self, device: &wgpu::Device) {
         self.skinned_bind_group = buffer_bind_group(
             device,
@@ -1590,6 +1610,8 @@ impl ShadowDepthPass {
         );
     }
 
+    /// Rebuilds the per-view skinned cull bind groups after their buffers are
+    /// reallocated.
     pub fn rebuild_skinned_cull_bind_groups(&mut self, device: &wgpu::Device) {
         self.skinned_cull_bind_groups = self
             .skinned_cull_uniform_buffers
@@ -1610,6 +1632,8 @@ impl ShadowDepthPass {
             .collect();
     }
 
+    /// Rebuilds the skinning compute bind group after its buffers are
+    /// reallocated.
     pub fn rebuild_skinning_compute_bind_group(&mut self, device: &wgpu::Device) {
         self.skinning_compute_bind_group = buffer_bind_group(
             device,
@@ -1624,26 +1648,32 @@ impl ShadowDepthPass {
         );
     }
 
+    /// Returns the active spotlight shadow slots.
     pub fn spotlight_shadow_slots(&self) -> &[SpotlightShadowSlot] {
         &self.spotlight_shadow_slots
     }
 
+    /// Returns the GPU shadow parameters for each active spotlight.
     pub fn spotlight_shadow_data(&self) -> &[SpotlightShadowData] {
         &self.spotlight_shadow_data
     }
 
+    /// Returns the current directional-light cascade data.
     pub fn cascade_data(&self) -> &CascadeData {
         &self.cascade_data
     }
 
+    /// Returns the active point-light shadow slots.
     pub fn point_light_shadow_slots(&self) -> &[PointLightShadowSlot] {
         &self.point_light_shadow_slots
     }
 
+    /// Returns the GPU shadow parameters for each active point light.
     pub fn point_light_shadow_data(&self) -> &[PointLightShadowData] {
         &self.point_light_shadow_data
     }
 
+    /// Returns the cubemap-array view of the point-light shadow texture.
     pub fn point_light_cubemap_view(&self) -> &wgpu::TextureView {
         &self.point_light_cubemap_view
     }

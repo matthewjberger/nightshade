@@ -18,6 +18,8 @@ pub(super) struct SkinnedOitBundle {
     pub reveal_view: wgpu::TextureView,
 }
 
+/// The skinned-mesh geometry pass: GPU skinning, culling, batching, and
+/// order-independent transparency for animated meshes, kept per rendered world.
 pub struct SkinnedMeshPass {
     pub(super) skinning_compute_pipeline: wgpu::ComputePipeline,
     pub(super) skinning_compute_bind_group: wgpu::BindGroup,
@@ -147,6 +149,7 @@ pub struct SkinnedMeshPass {
     pub(super) current_world_id: u64,
     pub(super) world_states: Vec<Option<SkinnedWorldRenderState>>,
     pub(super) frame_counter: u64,
+    /// Skinned mesh names whose geometry changed and must be re-uploaded.
     pub dirty_skinned_mesh_names: HashSet<String>,
     pub(super) last_mesh_cache_clear_generation: u64,
 }
@@ -208,6 +211,8 @@ fn skinned_texture_bind_group_layout_entries(
 }
 
 impl SkinnedMeshPass {
+    /// Selects the world these operations target, creating its render state
+    /// on first use.
     pub fn set_current_world(&mut self, world_id: u64) {
         self.current_world_id = world_id;
         let index = world_id as usize;

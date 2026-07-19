@@ -1,26 +1,36 @@
+//! Generational resource handles and their type tags.
+
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+/// Type tag marking a [`Handle`] as referring to a material.
 pub struct Material;
+/// Type tag marking a [`Handle`] as referring to a mesh.
 pub struct Mesh;
+/// Type tag marking a [`Handle`] as referring to a texture.
 pub struct Texture;
 
+/// Generational handle to a `T` resource, pairing a slot index with a generation.
 #[derive(Serialize, Deserialize)]
 pub struct Handle<T> {
+    /// Slot index into the owning registry.
     pub index: u32,
+    /// Generation stamp guarding against stale reuse of the slot.
     pub generation: u32,
     #[serde(skip)]
     _marker: PhantomData<fn() -> T>,
 }
 
 impl<T> Handle<T> {
+    /// Sentinel handle that refers to no resource.
     pub const INVALID: Self = Self {
         index: u32::MAX,
         generation: 0,
         _marker: PhantomData,
     };
 
+    /// Builds a handle from a slot index and generation.
     pub const fn new(index: u32, generation: u32) -> Self {
         Self {
             index,
@@ -29,6 +39,7 @@ impl<T> Handle<T> {
         }
     }
 
+    /// Returns `true` when the index is not the invalid sentinel.
     pub fn is_valid(self) -> bool {
         self.index != u32::MAX
     }
@@ -73,6 +84,9 @@ impl<T> std::fmt::Debug for Handle<T> {
     }
 }
 
+/// Handle identifying a material.
 pub type MaterialId = Handle<Material>;
+/// Handle identifying a mesh.
 pub type MeshId = Handle<Mesh>;
+/// Handle identifying a texture.
 pub type TextureId = Handle<Texture>;

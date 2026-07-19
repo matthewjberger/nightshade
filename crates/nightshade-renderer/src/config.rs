@@ -14,31 +14,47 @@ use serde::{Deserialize, Serialize};
 ///   pixel-perfect control over which tiles render each frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ViewportFocusPolicy {
+    /// Focused viewport re-renders every frame, background tiles keep their mode.
     #[default]
     FocusedAlways,
+    /// Every viewport respects its own `ViewportUpdateMode`.
     Manual,
 }
 
 /// Debug visualization mode for PBR rendering components.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum PbrDebugMode {
+    /// Normal shading with no debug override.
     #[default]
     None,
+    /// Albedo base color channel.
     BaseColor,
+    /// Shading normal.
     Normal,
+    /// Metallic channel.
     Metallic,
+    /// Roughness channel.
     Roughness,
+    /// Ambient occlusion channel.
     Occlusion,
+    /// Emissive channel.
     Emissive,
+    /// Fresnel term of the `PBR` `BRDF`.
     F,
+    /// Geometry (visibility) term of the `PBR` `BRDF`.
     G,
+    /// Normal distribution term of the `PBR` `BRDF`.
     D,
+    /// Diffuse lighting contribution.
     Diffuse,
+    /// Specular lighting contribution.
     Specular,
+    /// Texture mip level shown as a rainbow ramp.
     MipRainbow,
 }
 
 impl PbrDebugMode {
+    /// Every debug mode in menu order.
     pub const ALL: &'static [PbrDebugMode] = &[
         PbrDebugMode::None,
         PbrDebugMode::BaseColor,
@@ -55,6 +71,7 @@ impl PbrDebugMode {
         PbrDebugMode::MipRainbow,
     ];
 
+    /// Human-readable label for the mode.
     pub fn name(&self) -> &'static str {
         match self {
             PbrDebugMode::None => "None",
@@ -73,6 +90,7 @@ impl PbrDebugMode {
         }
     }
 
+    /// Shader mode index passed to the fragment shader.
     pub fn as_u32(&self) -> u32 {
         match self {
             PbrDebugMode::None => 0,
@@ -105,12 +123,14 @@ pub enum DepthOfFieldQuality {
 }
 
 impl DepthOfFieldQuality {
+    /// Every quality level in ascending order.
     pub const ALL: &'static [DepthOfFieldQuality] = &[
         DepthOfFieldQuality::Low,
         DepthOfFieldQuality::Medium,
         DepthOfFieldQuality::High,
     ];
 
+    /// Human-readable label for the quality level.
     pub fn name(&self) -> &'static str {
         match self {
             DepthOfFieldQuality::Low => "Low",
@@ -119,6 +139,7 @@ impl DepthOfFieldQuality {
         }
     }
 
+    /// Samples per pixel for this quality level.
     pub fn sample_count(&self) -> u32 {
         match self {
             DepthOfFieldQuality::Low => 8,
@@ -218,6 +239,7 @@ impl DepthOfField {
         }
     }
 
+    /// Preset for extreme close-ups with a razor-thin focal plane.
     pub fn macro_shot() -> Self {
         Self {
             enabled: true,
@@ -236,6 +258,7 @@ impl DepthOfField {
         }
     }
 
+    /// Preset for distant scenes with a wide sharp range.
     pub fn landscape() -> Self {
         Self {
             enabled: true,
@@ -254,6 +277,7 @@ impl DepthOfField {
         }
     }
 
+    /// Preset that enables the tilt-shift miniature band.
     pub fn tilt_shift() -> Self {
         Self {
             enabled: true,
@@ -296,6 +320,7 @@ pub enum TonemapAlgorithm {
 }
 
 impl TonemapAlgorithm {
+    /// Every tonemapping algorithm in menu order.
     pub const ALL: &'static [TonemapAlgorithm] = &[
         TonemapAlgorithm::Aces,
         TonemapAlgorithm::Aces2,
@@ -307,6 +332,7 @@ impl TonemapAlgorithm {
         TonemapAlgorithm::None,
     ];
 
+    /// Shader algorithm index passed to the tonemapping pass.
     pub fn as_u32(&self) -> u32 {
         match self {
             TonemapAlgorithm::Aces => 0,
@@ -320,6 +346,7 @@ impl TonemapAlgorithm {
         }
     }
 
+    /// Human-readable label for the algorithm.
     pub fn name(&self) -> &'static str {
         match self {
             TonemapAlgorithm::Aces => "ACES",
@@ -361,6 +388,7 @@ pub enum ColorGradingPreset {
 }
 
 impl ColorGradingPreset {
+    /// Every color grading preset in menu order.
     pub const ALL: &'static [ColorGradingPreset] = &[
         ColorGradingPreset::Default,
         ColorGradingPreset::Vibrant,
@@ -374,6 +402,7 @@ impl ColorGradingPreset {
         ColorGradingPreset::Custom,
     ];
 
+    /// Human-readable label for the preset.
     pub fn name(&self) -> &'static str {
         match self {
             ColorGradingPreset::Default => "Default",
@@ -389,6 +418,7 @@ impl ColorGradingPreset {
         }
     }
 
+    /// Expands the preset into a full `ColorGrading` value.
     pub fn to_color_grading(&self) -> ColorGrading {
         let preset = *self;
         match self {
@@ -615,11 +645,16 @@ impl Default for Fog {
     }
 }
 
+/// Day/night driver state: current hour, cycle speed, and the sun entity.
 #[derive(Clone)]
 pub struct DayNightState {
+    /// Time of day in hours (0 to 24).
     pub hour: f32,
+    /// Hours advanced per second when `auto_cycle` is on.
     pub speed: f32,
+    /// When true, the driver advances `hour` each frame.
     pub auto_cycle: bool,
+    /// The directional light driven as the sun, if any.
     pub sun_entity: Option<freecs::Entity>,
     /// Hours the renderer bakes image based lighting snapshots at when the
     /// day/night hour starts changing, so lighting blends smoothly between them.
@@ -686,6 +721,7 @@ pub enum Atmosphere {
 }
 
 impl Atmosphere {
+    /// Every atmosphere option in menu order.
     pub const ALL: &'static [Atmosphere] = &[
         Atmosphere::None,
         Atmosphere::Sky,
@@ -708,6 +744,7 @@ impl Atmosphere {
         Atmosphere::PrefilterMip4,
     ];
 
+    /// Mip level a debug mip variant selects, 0 for non-debug options.
     pub fn mip_level(&self) -> f32 {
         match self {
             Atmosphere::HdrMip0 | Atmosphere::PrefilterMip0 => 0.0,
@@ -719,6 +756,7 @@ impl Atmosphere {
         }
     }
 
+    /// The next atmosphere in `ALL`, wrapping around at the end.
     pub fn next(self) -> Self {
         let all = Self::ALL;
         let current_index = all.iter().position(|&a| a == self).unwrap_or(0);
@@ -726,6 +764,7 @@ impl Atmosphere {
         all[next_index]
     }
 
+    /// The previous atmosphere in `ALL`, wrapping around at the start.
     pub fn previous(self) -> Self {
         let all = Self::ALL;
         let current_index = all.iter().position(|&a| a == self).unwrap_or(0);
@@ -737,6 +776,7 @@ impl Atmosphere {
         all[prev_index]
     }
 
+    /// True for the procedurally generated skyboxes.
     pub fn is_procedural(&self) -> bool {
         matches!(
             self,
@@ -749,6 +789,7 @@ impl Atmosphere {
         )
     }
 
+    /// Shader cubemap-type index for procedural skyboxes, `None` otherwise.
     pub fn as_procedural_cubemap_type(&self) -> Option<u32> {
         match self {
             Atmosphere::Sky => Some(0),
@@ -762,10 +803,14 @@ impl Atmosphere {
     }
 }
 
+/// Texture views for the image-based lighting inputs the lit passes bind.
 #[derive(Default)]
 pub struct IblViews {
+    /// View of the precomputed split-sum `BRDF` lookup texture.
     pub brdf_lut_view: Option<wgpu::TextureView>,
+    /// View of the diffuse irradiance cubemap.
     pub irradiance_view: Option<wgpu::TextureView>,
+    /// View of the prefiltered specular cubemap.
     pub prefiltered_view: Option<wgpu::TextureView>,
 }
 
@@ -779,15 +824,21 @@ impl Clone for IblViews {
     }
 }
 
+/// One level-of-detail step: a mesh and the screen size below which it is used.
 #[derive(Clone)]
 pub struct MeshLodLevel {
+    /// Registered name of the mesh this level draws.
     pub mesh_name: String,
+    /// Minimum on-screen size in pixels for this level to remain active.
     pub min_screen_pixels: f32,
 }
 
+/// A base mesh and its ordered chain of lower-detail replacements.
 #[derive(Clone)]
 pub struct MeshLodChain {
+    /// Registered name of the full-detail mesh.
     pub base_mesh: String,
+    /// Lower-detail levels, ordered from highest to lowest detail.
     pub levels: Vec<MeshLodLevel>,
 }
 
@@ -799,43 +850,81 @@ pub struct MeshLodChain {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct EffectsUniforms {
+    /// Elapsed time in seconds, driving animated effects.
     pub time: f32,
+    /// Per-channel radial color separation strength.
     pub chromatic_aberration: f32,
+    /// Sinusoidal screen-space wave distortion strength.
     pub wave_distortion: f32,
+    /// Hue shift amount applied across the frame.
     pub color_shift: f32,
+    /// Kaleidoscope mirror segment count (0 disables).
     pub kaleidoscope_segments: f32,
+    /// CRT scanline overlay strength.
     pub crt_scanlines: f32,
+    /// Edge vignette darkening strength.
     pub vignette: f32,
+    /// Plasma color-field overlay intensity.
     pub plasma_intensity: f32,
+    /// Digital glitch displacement strength.
     pub glitch_intensity: f32,
+    /// Mirror-reflection mode selector.
     pub mirror_mode: f32,
+    /// Color inversion amount (0 to 1).
     pub invert: f32,
+    /// Static hue rotation in radians.
     pub hue_rotation: f32,
+    /// Raymarch scene selector, see `RaymarchMode`.
     pub raymarch_mode: f32,
+    /// Blend weight of the raymarched layer over the scene.
     pub raymarch_blend: f32,
+    /// Film grain noise strength.
     pub film_grain: f32,
+    /// Unsharp-mask sharpening strength.
     pub sharpen: f32,
+    /// Pixelation block size (0 disables).
     pub pixelate: f32,
+    /// Color posterization level count (0 disables).
     pub color_posterize: f32,
+    /// Radial motion blur strength.
     pub radial_blur: f32,
+    /// Tunnel raymarch scroll speed.
     pub tunnel_speed: f32,
+    /// Fractal raymarch iteration count.
     pub fractal_iterations: f32,
+    /// Bloom-style glow intensity.
     pub glow_intensity: f32,
+    /// Screen shake displacement amount.
     pub screen_shake: f32,
+    /// Pulsing zoom amount.
     pub zoom_pulse: f32,
+    /// Anime speed-line overlay strength.
     pub speed_lines: f32,
+    /// Color grade preset selector, see `ColorGradeMode`.
     pub color_grade_mode: f32,
+    /// VHS tape distortion strength.
     pub vhs_distortion: f32,
+    /// Lens flare intensity.
     pub lens_flare: f32,
+    /// Edge-detection glow strength.
     pub edge_glow: f32,
+    /// Saturation multiplier (1 is neutral).
     pub saturation: f32,
+    /// Warp-speed streak effect strength.
     pub warp_speed: f32,
+    /// Concentric pulse ring strength.
     pub pulse_rings: f32,
+    /// Heat-haze distortion strength.
     pub heat_distortion: f32,
+    /// Matrix digital-rain overlay strength.
     pub digital_rain: f32,
+    /// Strobe flash strength.
     pub strobe: f32,
+    /// Animated color cycling speed.
     pub color_cycle_speed: f32,
+    /// Frame feedback (trails) blend amount.
     pub feedback_amount: f32,
+    /// ASCII-art rendering mode strength.
     pub ascii_mode: f32,
 }
 
@@ -884,16 +973,24 @@ impl Default for EffectsUniforms {
     }
 }
 
+/// Raymarched scene the effects pass can composite over the frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RaymarchMode {
+    /// No raymarched layer.
     Off = 0,
+    /// Scrolling tunnel.
     Tunnel = 1,
+    /// Iterated fractal field.
     Fractal = 2,
+    /// Mandelbulb distance field.
     Mandelbulb = 3,
+    /// Swirling plasma vortex.
     PlasmaVortex = 4,
+    /// Geometric primitive scene.
     Geometric = 5,
 }
 
+/// Maps a shader mode index to `RaymarchMode`, falling back to `Off`.
 impl From<u32> for RaymarchMode {
     fn from(value: u32) -> Self {
         match value {
@@ -907,17 +1004,26 @@ impl From<u32> for RaymarchMode {
     }
 }
 
+/// Stylized color grade the effects pass can apply.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ColorGradeMode {
+    /// No grade.
     None = 0,
+    /// Neon cyberpunk palette.
     Cyberpunk = 1,
+    /// Warm sunset palette.
     Sunset = 2,
+    /// Grayscale.
     Grayscale = 3,
+    /// Sepia tone.
     Sepia = 4,
+    /// Green Matrix tint.
     Matrix = 5,
+    /// Hot-metal gradient.
     HotMetal = 6,
 }
 
+/// Maps a shader mode index to `ColorGradeMode`, falling back to `None`.
 impl From<u32> for ColorGradeMode {
     fn from(value: u32) -> Self {
         match value {
@@ -939,8 +1045,11 @@ impl From<u32> for ColorGradeMode {
 /// for the current frame) to the GPU.
 #[derive(Clone, Debug)]
 pub struct EffectsState {
+    /// Effect parameter values uploaded to the GPU each frame.
     pub uniforms: EffectsUniforms,
+    /// When false, the effects pass is skipped.
     pub enabled: bool,
+    /// When true, `hue_rotation` advances automatically each frame.
     pub animate_hue: bool,
 }
 
@@ -1020,20 +1129,35 @@ pub struct RenderSettings {
     pub ssao_bias: f32,
     /// SSAO darkening intensity.
     pub ssao_intensity: f32,
+    /// Number of `SSAO` samples per pixel.
     pub ssao_sample_count: u32,
+    /// Depth difference above which the `SSAO` blur stops crossing an edge.
     pub ssao_blur_depth_threshold: f32,
+    /// Normal-similarity exponent guiding the `SSAO` blur across edges.
     pub ssao_blur_normal_power: f32,
+    /// Enable screen-space global illumination.
     pub ssgi_enabled: bool,
+    /// `SSGI` gather radius in world units.
     pub ssgi_radius: f32,
+    /// `SSGI` bounce-light intensity.
     pub ssgi_intensity: f32,
+    /// Maximum ray-march steps per `SSGI` sample.
     pub ssgi_max_steps: u32,
+    /// Enable screen-space reflections.
     pub ssr_enabled: bool,
+    /// Maximum ray-march steps per `SSR` ray.
     pub ssr_max_steps: u32,
+    /// Depth thickness a `SSR` ray treats as a valid hit, in world units.
     pub ssr_thickness: f32,
+    /// Maximum `SSR` ray distance in world units.
     pub ssr_max_distance: f32,
+    /// `SSR` ray-march step length in texels.
     pub ssr_stride: f32,
+    /// Screen-edge fraction where `SSR` reflections begin to fade.
     pub ssr_fade_start: f32,
+    /// Screen-edge fraction where `SSR` reflections fully fade out.
     pub ssr_fade_end: f32,
+    /// `SSR` reflection intensity.
     pub ssr_intensity: f32,
     /// Global ambient light color and intensity.
     pub ambient_light: [f32; 4],
@@ -1083,6 +1207,7 @@ pub struct DebugDraw {
     pub texture_debug_stripes: bool,
     /// Animation speed for debug stripes.
     pub texture_debug_stripes_speed: f32,
+    /// Show the raw `SSAO` buffer instead of the shaded scene.
     pub ssao_visualization: bool,
     /// When false, material textures sample at mip 0 with no anisotropy,
     /// reproducing the unfiltered look for comparison.
@@ -1114,11 +1239,16 @@ pub struct DebugDraw {
 /// so apps can pick quality presets without depending on wgpu directly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GpuDeviceType {
+    /// Unknown or unclassified device.
     #[default]
     Other,
+    /// Integrated GPU sharing system memory.
     IntegratedGpu,
+    /// Discrete GPU with dedicated memory.
     DiscreteGpu,
+    /// Virtualized or paravirtual GPU.
     VirtualGpu,
+    /// Software (CPU) rasterizer.
     Cpu,
 }
 
@@ -1127,13 +1257,20 @@ pub enum GpuDeviceType {
 /// appropriate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GpuBackend {
+    /// Unknown or unclassified backend.
     #[default]
     Other,
+    /// Vulkan.
     Vulkan,
+    /// Apple Metal.
     Metal,
+    /// Direct3D 12.
     Dx12,
+    /// Desktop OpenGL.
     Gl,
+    /// Native WebGPU.
     WebGpu,
+    /// WebGL browser fallback.
     WebGl,
 }
 
@@ -1141,8 +1278,11 @@ pub enum GpuBackend {
 /// `RendererState` so game code can adapt quality and controls to the device.
 #[derive(Debug, Clone, Default)]
 pub struct GpuProfile {
+    /// Graphics backend the renderer is running on.
     pub backend: GpuBackend,
+    /// Class of the selected GPU.
     pub device_type: GpuDeviceType,
+    /// Adapter name reported by the driver.
     pub name: String,
 }
 
@@ -1169,22 +1309,39 @@ impl GpuProfile {
 /// `projection` carries the TAA jitter, matching `query_active_camera_matrices`.
 #[derive(Clone, Debug)]
 pub struct RenderView {
+    /// World-to-view matrix.
     pub view: nalgebra_glm::Mat4,
+    /// View-to-clip projection, carrying the `TAA` jitter.
     pub projection: nalgebra_glm::Mat4,
+    /// Combined world-to-clip matrix.
     pub view_projection: nalgebra_glm::Mat4,
+    /// View-to-world matrix.
     pub inverse_view: nalgebra_glm::Mat4,
+    /// Clip-to-view matrix.
     pub inverse_projection: nalgebra_glm::Mat4,
+    /// Clip-to-world matrix.
     pub inverse_view_projection: nalgebra_glm::Mat4,
+    /// Camera position in world space.
     pub camera_position: nalgebra_glm::Vec3,
+    /// Camera right axis in world space.
     pub camera_right: nalgebra_glm::Vec3,
+    /// Camera up axis in world space.
     pub camera_up: nalgebra_glm::Vec3,
+    /// Six world-space frustum planes for culling.
     pub frustum_planes: [nalgebra_glm::Vec4; 6],
+    /// Near clip distance in world units.
     pub z_near: f32,
+    /// Far clip distance in world units.
     pub z_far: f32,
+    /// Vertical field of view in radians.
     pub y_fov_rad: f32,
+    /// Aspect ratio (width over height).
     pub aspect: f32,
+    /// Orthographic half-width and half-height, `None` for perspective.
     pub orthographic: Option<(f32, f32)>,
+    /// Render target size in pixels.
     pub screen_size: (u32, u32),
+    /// Fixed aspect the view is letterboxed to, if constrained.
     pub constrained_aspect: Option<f32>,
 }
 
@@ -1196,22 +1353,39 @@ pub struct RenderView {
 #[cfg(feature = "wgpu")]
 #[derive(Clone, Default)]
 pub struct RenderLighting {
+    /// GPU-ready light records for every non-area light.
     pub lights_data: Vec<crate::wgpu::passes::geometry::projection::LightData>,
+    /// Number of directional lights in the scene.
     pub num_directional_lights: u32,
+    /// Primary directional light direction in world space.
     pub directional_light_direction: [f32; 4],
+    /// True when at least one directional light is present.
     pub has_directional_light: bool,
+    /// Entity to index map into `lights_data`.
     pub entity_to_lights_index: std::collections::HashMap<freecs::Entity, usize>,
+    /// Shadow view-projection for each directional cascade.
     pub cascade_view_projections: [[[f32; 4]; 4]; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// World-space diameter each cascade covers.
     pub cascade_diameters: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// View-space far split distance for each cascade.
     pub cascade_split_distances: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// Directional light view-projection for single-map shadows.
     pub light_view_projection: [[f32; 4]; 4],
+    /// Depth bias applied when sampling shadow maps.
     pub shadow_bias: f32,
+    /// Normal-scaled bias applied when sampling shadow maps.
     pub shadow_normal_bias: f32,
+    /// Angular size of the directional light for soft shadows.
     pub directional_light_size: f32,
+    /// Shadow enable flag, 1.0 on and 0.0 off.
     pub shadows_enabled: f32,
+    /// GPU-ready records for every area light.
     pub area_lights_data: Vec<crate::wgpu::passes::geometry::projection::AreaLightData>,
+    /// Entity to index map into `area_lights_data`.
     pub area_entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
+    /// Resolved sun direction in world space.
     pub sun_direction: nalgebra_glm::Vec3,
+    /// Resolved sun color.
     pub sun_color: nalgebra_glm::Vec3,
 }
 
@@ -1219,11 +1393,17 @@ pub struct RenderLighting {
 /// full rebuild: whether the object is visible and its current morph weights.
 #[derive(Clone, Copy, Debug)]
 pub struct DynamicRenderState {
+    /// Visibility flag, 1 visible and 0 hidden.
     pub visible: u32,
+    /// Active morph target weights.
     pub morph_weights: [f32; 8],
+    /// World transform.
     pub transform: nalgebra_glm::Mat4,
+    /// Culling layer bitmask tested against camera masks.
     pub culling_mask: u32,
+    /// Overlay flag, 1 for overlay-layer entities.
     pub is_overlay: u32,
+    /// Render layer index.
     pub render_layer: u32,
 }
 
@@ -1232,13 +1412,21 @@ pub struct DynamicRenderState {
 /// `InstancedMesh` component.
 #[derive(Clone, Default)]
 pub struct InstancedObjectData {
+    /// Per-instance world matrices.
     pub world_models: Vec<[[f32; 4]; 4]>,
+    /// Per-instance normal matrices.
     pub world_normals: Vec<[[f32; 4]; 3]>,
+    /// Per-instance local transforms relative to the parent.
     pub local_matrices: Vec<nalgebra_glm::Mat4>,
+    /// Per-instance color tints.
     pub custom_tints: Vec<[f32; 4]>,
+    /// Registered name of the instanced mesh.
     pub mesh_name: String,
+    /// Render layer index.
     pub render_layer: u32,
+    /// Visibility flag, 1 visible and 0 hidden.
     pub visible: u32,
+    /// World transform of the instancing entity's parent.
     pub parent_transform: nalgebra_glm::Mat4,
 }
 
@@ -1246,10 +1434,15 @@ pub struct InstancedObjectData {
 /// engine so the renderer never clones keyframe data per frame.
 #[derive(Clone)]
 pub struct SkinnedChannelData {
+    /// Animated property selector (translation, rotation, scale, or weights).
     pub property: u32,
+    /// Interpolation mode (step, linear, or cubic spline).
     pub interpolation: u32,
+    /// Keyframe timestamps in seconds.
     pub input: Vec<f32>,
+    /// Keyframe output values, one entry per timestamp.
     pub values: Vec<[f32; 4]>,
+    /// Output values consumed per keyframe.
     pub stride: u32,
 }
 
@@ -1258,13 +1451,21 @@ pub struct SkinnedChannelData {
 /// cross-fade source clip, and each animation layer.
 #[derive(Clone)]
 pub struct SkinnedJointData {
+    /// Index of this joint within the skeleton.
     pub local_index: u32,
+    /// Parent joint index, `None` for a root joint.
     pub parent_local: Option<u32>,
+    /// Rest-pose translation.
     pub rest_translation: [f32; 3],
+    /// Rest-pose rotation quaternion.
     pub rest_rotation: [f32; 4],
+    /// Rest-pose scale.
     pub rest_scale: [f32; 3],
+    /// Animation channels for the current clip.
     pub cur_channels: Vec<SkinnedChannelData>,
+    /// Animation channels for the cross-fade source clip.
     pub blend_channels: Vec<SkinnedChannelData>,
+    /// Animation channels for each additional animation layer.
     pub layer_channels: Vec<Vec<SkinnedChannelData>>,
 }
 
@@ -1272,14 +1473,19 @@ pub struct SkinnedJointData {
 /// depth-ordered joints, and how many animation layers the player exposes.
 #[derive(Clone)]
 pub struct SkinnedSkeletonData {
+    /// Entity carrying the skin.
     pub skin_entity: freecs::Entity,
+    /// Entity carrying the animation player.
     pub player_entity: freecs::Entity,
     /// The entity above the skeleton's root joints, captured at build time so
     /// the per-frame armature-root refresh is one transform read instead of a
     /// joint-parent walk.
     pub armature_parent: Option<freecs::Entity>,
+    /// Number of joints in the skeleton.
     pub joint_count: u32,
+    /// Number of animation layers the player exposes.
     pub layer_count: u32,
+    /// Joints in the renderer's depth-first dispatch order.
     pub joints_ordered: Vec<SkinnedJointData>,
 }
 
@@ -1290,8 +1496,11 @@ pub struct SkinnedSkeletonData {
 /// frame.
 #[derive(Default, Clone)]
 pub struct RenderSkinning {
+    /// Static skinning layout, rebuilt only when the skinned set changes.
     pub cache: crate::skinning::SkinningCache,
+    /// Current bone matrices for every skinned joint.
     pub bone_transforms: Vec<nalgebra_glm::Mat4>,
+    /// Bumped whenever `cache` is rebuilt.
     pub static_generation: u64,
     /// Bumped whenever any bone transform changed since the last sync, so
     /// consumers can gate uploads on a counter instead of comparing the
@@ -1306,10 +1515,15 @@ pub struct RenderSkinning {
 /// the runtime maps refresh every frame.
 #[derive(Clone, Default)]
 pub struct SkinnedAnimationSnapshot {
+    /// Bumped when the heavy `skeletons` payload is rebuilt.
     pub signature: u64,
+    /// Resolved skeletons, rebuilt only when the animation gate sees a change.
     pub skeletons: Vec<SkinnedSkeletonData>,
+    /// Per-player runtime state (current time, blend time, blend duration).
     pub player_runtime: std::collections::HashMap<freecs::Entity, [f32; 3]>,
+    /// Per-layer runtime state (time and weight), keyed by player and layer.
     pub layer_runtime: std::collections::HashMap<(freecs::Entity, usize), [f32; 2]>,
+    /// Current armature-root world transform for each player.
     pub armature_roots: std::collections::HashMap<freecs::Entity, nalgebra_glm::Mat4>,
 }
 
@@ -1319,7 +1533,9 @@ pub struct SkinnedAnimationSnapshot {
 /// id 0 is the built-in default material.
 #[derive(Clone, Default)]
 pub struct RenderMaterialEntry {
+    /// Engine-side material parameters.
     pub material: crate::material::Material,
+    /// Resolved texture ids for the material's texture slots.
     pub texture_ids: crate::material::MaterialTextureIds,
 }
 
@@ -1328,12 +1544,16 @@ pub struct RenderMaterialEntry {
 /// entity's `MaterialRef` themselves.
 #[derive(Clone, Default)]
 pub struct RenderMaterials {
+    /// Resolved materials, where id `N` is `entries[N - 1]`.
     pub entries: Vec<RenderMaterialEntry>,
     /// The set of live material ids (`entries` index + 1). Used to check whether
     /// a material an entity references is already known to the GPU-side cache.
     pub material_ids: std::collections::HashSet<u32>,
+    /// Ids of materials with a blended or dithered alpha mode.
     pub transparent_ids: std::collections::HashSet<u32>,
+    /// Ids of materials with an alpha-mask cutout mode.
     pub mask_ids: std::collections::HashSet<u32>,
+    /// Ids of materials that render both faces.
     pub double_sided_ids: std::collections::HashSet<u32>,
     /// Bumped whenever the table changes, so consumers can gate their material
     /// conversions on a counter.
@@ -1385,10 +1605,14 @@ impl RenderMaterials {
 /// passes do not read that type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RenderLightType {
+    /// Infinitely distant light with parallel rays.
     #[default]
     Directional,
+    /// Omnidirectional point light.
     Point,
+    /// Cone-shaped spotlight.
     Spot,
+    /// Shaped area light.
     Area,
 }
 
@@ -1396,10 +1620,14 @@ pub enum RenderLightType {
 /// the render passes do not read that type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RenderAreaLightShape {
+    /// Flat rectangle.
     #[default]
     Rectangle,
+    /// Flat disk.
     Disk,
+    /// Sphere.
     Sphere,
+    /// Capsule-like tube.
     Tube,
 }
 
@@ -1408,31 +1636,56 @@ pub enum RenderAreaLightShape {
 /// instead of that component.
 #[derive(Clone, Default)]
 pub struct RenderLightData {
+    /// Kind of light.
     pub light_type: RenderLightType,
+    /// Linear RGB color.
     pub color: nalgebra_glm::Vec3,
+    /// Brightness multiplier.
     pub intensity: f32,
+    /// Reach distance in world units for point and spot lights.
     pub range: f32,
+    /// Spotlight inner cone half-angle in radians.
     pub inner_cone_angle: f32,
+    /// Spotlight outer cone half-angle in radians.
     pub outer_cone_angle: f32,
+    /// Whether the light casts shadows.
     pub cast_shadows: bool,
+    /// Depth bias applied when sampling this light's shadow map.
     pub shadow_bias: f32,
+    /// Shadow map edge length in texels.
     pub shadow_resolution: u32,
+    /// Maximum shadow distance in world units.
     pub shadow_distance: f32,
+    /// Optional projected cookie texture name.
     pub cookie_texture: Option<String>,
+    /// Area light shape.
     pub area_shape: RenderAreaLightShape,
+    /// Area light width in world units.
     pub area_width: f32,
+    /// Area light height in world units.
     pub area_height: f32,
+    /// Area light radius in world units.
     pub area_radius: f32,
+    /// Whether the area light emits from both faces.
     pub area_two_sided: bool,
+    /// Optional emissive texture name for the area light.
     pub area_emissive_texture: Option<String>,
+    /// Normal-scaled bias applied when sampling this light's shadow map.
     pub shadow_normal_bias: f32,
+    /// Shadow penumbra softness.
     pub shadow_softness: f32,
 }
 
+/// One scene light with its world transform, snapshotted once per frame so the
+/// lighting, shadow, and projection passes read lights here instead of walking
+/// the ECS themselves.
 #[derive(Clone)]
 pub struct RenderLight {
+    /// The scene entity this light belongs to.
     pub entity: freecs::Entity,
+    /// The light's render parameters.
     pub light: RenderLightData,
+    /// World transform, whose forward axis is read as `-column2`.
     pub transform: nalgebra_glm::Mat4,
 }
 
@@ -1544,14 +1797,23 @@ impl RenderLight {
 /// component.
 #[derive(Clone, Default)]
 pub struct RenderDecalData {
+    /// Optional base color texture name.
     pub texture: Option<String>,
+    /// Optional emissive texture name.
     pub emissive_texture: Option<String>,
+    /// Emissive brightness multiplier.
     pub emissive_strength: f32,
+    /// Tint color multiplied into the decal.
     pub color: [f32; 4],
+    /// Decal footprint size in world units.
     pub size: nalgebra_glm::Vec2,
+    /// Projection depth along the decal's forward axis in world units.
     pub depth: f32,
+    /// Maximum angle between surface and decal normals before the decal fades.
     pub normal_threshold: f32,
+    /// Distance from the projector where fading begins.
     pub fade_start: f32,
+    /// Distance from the projector where the decal fully fades out.
     pub fade_end: f32,
 }
 
@@ -1559,23 +1821,41 @@ pub struct RenderDecalData {
 /// component, so the water pass reads them here instead of that component.
 #[derive(Clone, Debug, Default)]
 pub struct RenderWaterData {
+    /// Half the water plane's size in world units.
     pub half_extents: nalgebra_glm::Vec2,
+    /// Mesh grid subdivision count.
     pub tessellation: u32,
+    /// Gerstner wave height in world units.
     pub wave_amplitude: f32,
+    /// Gerstner wave crest steepness.
     pub wave_steepness: f32,
+    /// Distance between wave crests in world units.
     pub wave_length: f32,
+    /// Wave travel speed.
     pub wave_speed: f32,
+    /// Wave travel direction in radians.
     pub wave_direction_radians: f32,
+    /// Linear color in shallow water.
     pub shallow_color: [f32; 3],
+    /// Linear color in deep water.
     pub deep_color: [f32; 3],
+    /// Depth over which color fades from shallow to deep, in world units.
     pub depth_fade_distance: f32,
+    /// Distance from shoreline edges where foam appears, in world units.
     pub edge_foam_distance: f32,
+    /// Overall foam coverage amount.
     pub foam_amount: f32,
+    /// Linear foam color.
     pub foam_color: [f32; 3],
+    /// Surface roughness.
     pub roughness: f32,
+    /// Fresnel falloff exponent.
     pub fresnel_power: f32,
+    /// Reflection blend strength.
     pub reflection_strength: f32,
+    /// Refraction blend strength.
     pub refraction_strength: f32,
+    /// Specular highlight strength.
     pub specular_strength: f32,
 }
 
@@ -1583,8 +1863,11 @@ pub struct RenderWaterData {
 /// water pass reads it here instead of walking `WATER | GLOBAL_TRANSFORM`.
 #[derive(Clone)]
 pub struct RenderWater {
+    /// The scene entity this water body belongs to.
     pub entity: freecs::Entity,
+    /// The water body's render parameters.
     pub water: RenderWaterData,
+    /// World transform.
     pub transform: nalgebra_glm::Mat4,
 }
 
@@ -1592,9 +1875,12 @@ pub struct RenderWater {
 /// `ClothPinning` component enum so the cloth pass does not read that type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RenderClothPinning {
+    /// Pin the entire top row of particles.
     #[default]
     TopRow,
+    /// Pin only the two top corner particles.
     TopCorners,
+    /// Pin nothing, the cloth falls freely.
     None,
 }
 
@@ -1605,19 +1891,33 @@ pub enum RenderClothPinning {
 /// rebuilds and resets.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct RenderClothData {
+    /// Particle grid column count.
     pub columns: u32,
+    /// Particle grid row count.
     pub rows: u32,
+    /// Cloth width in world units.
     pub width: f32,
+    /// Cloth height in world units.
     pub height: f32,
+    /// Which particles anchor to the entity transform.
     pub pinning: RenderClothPinning,
+    /// Constraint stiffness.
     pub stiffness: f32,
+    /// Velocity damping factor.
     pub damping: f32,
+    /// Simulation substeps per frame.
     pub substeps: u32,
+    /// Constraint solver iterations per substep.
     pub solver_iterations: u32,
+    /// Gravity acceleration applied to particles.
     pub gravity: nalgebra_glm::Vec3,
+    /// Response strength to scene wind.
     pub wind_response: f32,
+    /// Ground collision plane height, `None` to disable.
     pub ground_height: Option<f32>,
+    /// Texture repeat count across the cloth.
     pub texture_tiling: nalgebra_glm::Vec2,
+    /// Counter bumped to force a simulation reset.
     pub reset_epoch: u32,
 }
 
@@ -1626,6 +1926,7 @@ pub struct RenderClothData {
 /// carry the [`crate::render_world::ShadowCaster`] tag in the scene world.
 #[derive(Clone, Default)]
 pub struct RenderShadowCasters {
+    /// Skinned entities that cast shadows.
     pub skinned: Vec<freecs::Entity>,
 }
 
@@ -1636,14 +1937,23 @@ pub struct RenderShadowCasters {
 /// carries this component.
 #[derive(Clone, Default)]
 pub struct RenderText {
+    /// Cached glyph mesh for the text.
     pub mesh: crate::text_data::TextMesh,
+    /// Base fill color.
     pub color: nalgebra_glm::Vec4,
+    /// Outline color.
     pub outline_color: nalgebra_glm::Vec4,
+    /// Outline width in signed-distance-field units.
     pub outline_width: f32,
+    /// Edge smoothing width for the signed distance field.
     pub smoothing: f32,
+    /// Whether the text faces the camera.
     pub billboard: bool,
+    /// World transform.
     pub transform: nalgebra_glm::Mat4,
+    /// Number of drawn characters.
     pub char_count: usize,
+    /// Optional per-character color overrides.
     pub character_colors: Option<Vec<Option<nalgebra_glm::Vec4>>>,
 }
 
@@ -1652,7 +1962,9 @@ pub struct RenderText {
 /// the `BoundingVolume` component so the renderer never reads that component.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RenderBounds {
+    /// Bounding sphere center in local space.
     pub center: nalgebra_glm::Vec3,
+    /// Bounding sphere radius in local space.
     pub sphere_radius: f32,
 }
 
@@ -1662,7 +1974,9 @@ pub struct RenderBounds {
 /// meshlet pass from its own upload ledger, so it is not carried here.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MeshletPlacement {
+    /// World transform for this placement.
     pub transform: nalgebra_glm::Mat4,
+    /// Key of the baked asset in the renderer's meshlet asset cache.
     pub asset_id: u64,
     /// The material this places, as the registry index plus one, with zero the
     /// built-in default grey. Resolved from the registry where the placement is
@@ -1710,6 +2024,7 @@ pub struct RendererState {
     /// Enable the GPU-driven batch table build (classification + combo table on
     /// the GPU). When false the CPU builds the batch tables.
     pub gpu_batching_enabled: bool,
+    /// On-screen size in pixels below which an entity is culled.
     pub min_screen_pixel_size: f32,
     /// Minimum window size in logical pixels. `None` disables the floor.
     pub min_window_size: Option<(u32, u32)>,
@@ -1721,7 +2036,9 @@ pub struct RendererState {
     pub letterbox_amount: f32,
     /// Target letterbox amount for animation.
     pub letterbox_target: f32,
+    /// Day/night cycle driver state.
     pub day_night: DayNightState,
+    /// Registered level-of-detail chains, keyed by base mesh.
     pub mesh_lod_chains: Vec<MeshLodChain>,
     /// View-local shading derived for the camera the renderer is currently
     /// executing the graph against. Renderer writes this at the start of
@@ -1799,16 +2116,22 @@ pub struct RendererState {
     pub gpu_profile: Option<GpuProfile>,
 }
 
+/// Frame-time budget the adaptive sampler drives optional effect quality toward.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PerformanceTarget {
+    /// No budget, effects run at full quality.
     #[default]
     Unbounded,
+    /// Target 60 frames per second.
     Interactive,
+    /// Target 30 frames per second.
     Balanced,
+    /// Target 15 frames per second, favoring quality.
     Quality,
 }
 
 impl PerformanceTarget {
+    /// Target frame time in milliseconds, `None` when unbounded.
     pub fn target_frame_time_ms(self) -> Option<f32> {
         match self {
             PerformanceTarget::Unbounded => None,
@@ -1819,13 +2142,20 @@ impl PerformanceTarget {
     }
 }
 
+/// Frame-time driven scaling of optional post-process sample counts.
 #[derive(Debug, Clone)]
 pub struct AdaptiveSamplingState {
+    /// Frame-time budget the scaler drives toward.
     pub target: PerformanceTarget,
+    /// Exponentially smoothed frame time in milliseconds.
     pub frame_time_rolling_ms: f32,
+    /// Frames accumulated into the rolling average.
     pub frame_time_sample_count: u32,
+    /// Current `SSAO` sample-count scale (0.25 to 1.0).
     pub ssao_sample_scale: f32,
+    /// Current `SSGI` sample-count scale (0.25 to 1.0).
     pub ssgi_sample_scale: f32,
+    /// Current `SSR` step-count scale (0.25 to 1.0).
     pub ssr_step_scale: f32,
 }
 
@@ -1843,6 +2173,8 @@ impl Default for AdaptiveSamplingState {
 }
 
 impl AdaptiveSamplingState {
+    /// Folds a frame time into the rolling average and nudges the sample
+    /// scales toward the target budget.
     pub fn record_frame_time(&mut self, frame_time_ms: f32) {
         const WINDOW: u32 = 100;
         if self.frame_time_sample_count == 0 {
@@ -2115,6 +2447,7 @@ impl Default for RendererState {
     }
 }
 
+/// Neutral grey the flat-shading debug mode paints surfaces with.
 pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72, 0.72, 0.72, 1.0);
 
 /// Update mode for a camera's viewport tile.
@@ -2133,11 +2466,16 @@ pub const FLAT_SHADING_COLOR: nalgebra_glm::Vec4 = nalgebra_glm::Vec4::new(0.72,
 ///   the camera was never rendered).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ViewportUpdateMode {
+    /// Re-render every frame.
     #[default]
     Always,
+    /// Re-render every frame while the camera is dispatched.
     WhenVisible,
+    /// Re-render only on camera or scene change, else blit the cached frame.
     WhenDirty,
+    /// Render once on first visibility, then reuse the cached frame.
     Once,
+    /// Never render after the first frame.
     Disabled,
 }
 
@@ -2148,43 +2486,81 @@ pub enum ViewportUpdateMode {
 pub const WIREFRAME_SENTINEL_COLOR: nalgebra_glm::Vec4 =
     nalgebra_glm::Vec4::new(0.0, 0.0, 0.0, 2.0);
 
+/// Per-camera shading the render passes read, resolved from `RenderSettings`
+/// and `DebugDraw` plus any per-camera overrides.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EffectiveShading {
+    /// Disable all lighting for this view.
     pub unlit_mode: bool,
+    /// Enable bloom for this view.
     pub bloom_enabled: bool,
+    /// Enable `SSAO` for this view.
     pub ssao_enabled: bool,
+    /// Enable `SSGI` for this view.
     pub ssgi_enabled: bool,
+    /// Enable `SSR` for this view.
     pub ssr_enabled: bool,
+    /// Draw vertex normal debug lines.
     pub show_normals: bool,
+    /// Draw bounding volume debug outlines.
     pub show_bounding_volumes: bool,
+    /// Render surfaces as wireframe.
     pub show_wireframe: bool,
+    /// Draw the selection outline for tagged entities.
     pub selection_outline_enabled: bool,
+    /// Flat debug color painted over surfaces, `None` for normal shading.
     pub flat_shading_color: Option<nalgebra_glm::Vec4>,
+    /// Render the shadow depth passes for this view.
     pub shadow_depth_enabled: bool,
+    /// Run the debug line pass for this view.
     pub lines_enabled: bool,
+    /// Color grading and tonemapping for this view.
     pub color_grading: ColorGrading,
+    /// Depth of field settings for this view.
     pub depth_of_field: DepthOfField,
+    /// Bloom intensity multiplier.
     pub bloom_intensity: f32,
+    /// Bloom luminance extraction threshold.
     pub bloom_threshold: f32,
+    /// Soft-knee width around the bloom threshold.
     pub bloom_knee: f32,
+    /// Bloom upsample blur radius in normalized UV units.
     pub bloom_filter_radius: f32,
+    /// `SSAO` sample radius in world units.
     pub ssao_radius: f32,
+    /// `SSAO` depth bias.
     pub ssao_bias: f32,
+    /// `SSAO` darkening intensity.
     pub ssao_intensity: f32,
+    /// `SSAO` samples per pixel.
     pub ssao_sample_count: u32,
+    /// Show the raw `SSAO` buffer.
     pub ssao_visualization: bool,
+    /// Depth threshold guiding the `SSAO` blur across edges.
     pub ssao_blur_depth_threshold: f32,
+    /// Normal-similarity exponent guiding the `SSAO` blur.
     pub ssao_blur_normal_power: f32,
+    /// `SSGI` gather radius in world units.
     pub ssgi_radius: f32,
+    /// `SSGI` bounce-light intensity.
     pub ssgi_intensity: f32,
+    /// Maximum ray-march steps per `SSGI` sample.
     pub ssgi_max_steps: u32,
+    /// Maximum ray-march steps per `SSR` ray.
     pub ssr_max_steps: u32,
+    /// Depth thickness a `SSR` ray treats as a hit, in world units.
     pub ssr_thickness: f32,
+    /// Maximum `SSR` ray distance in world units.
     pub ssr_max_distance: f32,
+    /// `SSR` step length in texels.
     pub ssr_stride: f32,
+    /// Screen-edge fraction where `SSR` reflections begin to fade.
     pub ssr_fade_start: f32,
+    /// Screen-edge fraction where `SSR` reflections fully fade.
     pub ssr_fade_end: f32,
+    /// `SSR` reflection intensity.
     pub ssr_intensity: f32,
+    /// Global ambient light color and intensity.
     pub ambient_light: [f32; 4],
     /// Bitmask of "culling layers" this view will render. Compared
     /// against each entity's `CullingMask`
@@ -2330,15 +2706,21 @@ impl Default for EffectiveShading {
     }
 }
 
+/// A camera tile's rectangle in screen pixels.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ViewportRect {
+    /// Left edge in screen pixels.
     pub x: f32,
+    /// Top edge in screen pixels.
     pub y: f32,
+    /// Width in screen pixels.
     pub width: f32,
+    /// Height in screen pixels.
     pub height: f32,
 }
 
 impl ViewportRect {
+    /// True when `screen_pos` lies within the rectangle.
     pub fn contains(&self, screen_pos: nalgebra_glm::Vec2) -> bool {
         screen_pos.x >= self.x
             && screen_pos.x <= self.x + self.width
@@ -2346,6 +2728,7 @@ impl ViewportRect {
             && screen_pos.y <= self.y + self.height
     }
 
+    /// Converts a screen position into coordinates relative to the top-left.
     pub fn to_local(&self, screen_pos: nalgebra_glm::Vec2) -> nalgebra_glm::Vec2 {
         nalgebra_glm::Vec2::new(screen_pos.x - self.x, screen_pos.y - self.y)
     }

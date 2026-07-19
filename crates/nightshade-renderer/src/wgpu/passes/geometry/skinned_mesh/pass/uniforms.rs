@@ -3,6 +3,7 @@ use super::super::types::BlendedIblViews;
 use super::SkinnedMeshPass;
 
 impl SkinnedMeshPass {
+    /// Sets the IBL BRDF LUT, irradiance, and prefiltered views for one world.
     pub fn update_ibl_textures_for_world(
         &mut self,
         world_id: u64,
@@ -17,6 +18,7 @@ impl SkinnedMeshPass {
         }
     }
 
+    /// Sets the blended pair of IBL views and blend factor for one world.
     pub fn update_ibl_textures_blended_for_world(&mut self, world_id: u64, views: BlendedIblViews) {
         if let Some(Some(world_state)) = self.world_states.get_mut(world_id as usize) {
             world_state.ibl_brdf_lut_view = Some(views.brdf_lut);
@@ -28,6 +30,7 @@ impl SkinnedMeshPass {
         }
     }
 
+    /// Sets the shared IBL BRDF LUT, irradiance, and prefiltered views.
     pub fn set_ibl_textures(
         &mut self,
         brdf_lut_view: wgpu::TextureView,
@@ -39,10 +42,12 @@ impl SkinnedMeshPass {
         self.prefiltered_env_view = Some(prefiltered_env_view);
     }
 
+    /// Replaces the point-light shadow cubemap view.
     pub fn update_point_shadow_cubemap(&mut self, view: wgpu::TextureView) {
         self.point_shadow_cubemap_view = view;
     }
 
+    /// Drops per-world state not used within the staleness window.
     pub fn cleanup_stale_world_states(&mut self) {
         const STALE_THRESHOLD_FRAMES: u64 = 300;
         let current_frame = self.frame_counter;
@@ -59,6 +64,7 @@ impl SkinnedMeshPass {
         }
     }
 
+    /// Resizes the OIT accumulation and reveal textures, reusing cached sizes.
     pub fn resize_oit_textures(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         if self.oit_texture_size == (width, height) || width == 0 || height == 0 {
             return;

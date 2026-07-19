@@ -1,3 +1,5 @@
+//! Temporal anti-aliasing resolve pass.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
 
@@ -14,6 +16,8 @@ struct TaaParams {
     input_resolution: [f32; 2],
 }
 
+/// Render-graph pass that blends the current frame against reprojected history
+/// to resolve temporal anti-aliasing, ping-ponging between two history targets.
 pub struct TaaPass {
     resolve_pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -31,6 +35,8 @@ pub struct TaaPass {
 }
 
 impl TaaPass {
+    /// Builds the resolve pipeline, samplers, and uniform buffer for output
+    /// textures of `format`.
     pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
         let shader = crate::wgpu::shader_compose::compile_wgsl(
             device,

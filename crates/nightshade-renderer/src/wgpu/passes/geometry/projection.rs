@@ -4,18 +4,23 @@ pub fn transform_translation(matrix: &nalgebra_glm::Mat4) -> nalgebra_glm::Vec3 
     nalgebra_glm::vec3(matrix[(0, 3)], matrix[(1, 3)], matrix[(2, 3)])
 }
 
+/// World-space right axis of a transform matrix, its first column.
 pub fn transform_right(matrix: &nalgebra_glm::Mat4) -> nalgebra_glm::Vec3 {
     nalgebra_glm::vec3(matrix[(0, 0)], matrix[(1, 0)], matrix[(2, 0)])
 }
 
+/// World-space up axis of a transform matrix, its second column.
 pub fn transform_up(matrix: &nalgebra_glm::Mat4) -> nalgebra_glm::Vec3 {
     nalgebra_glm::vec3(matrix[(0, 1)], matrix[(1, 1)], matrix[(2, 1)])
 }
 
+/// World-space forward axis of a transform matrix, the negated third column.
 pub fn transform_forward(matrix: &nalgebra_glm::Mat4) -> nalgebra_glm::Vec3 {
     nalgebra_glm::vec3(-matrix[(0, 2)], -matrix[(1, 2)], -matrix[(2, 2)])
 }
 
+/// Orthographic projection with a reverse-Z depth range for a directional
+/// light, mapping `near` to 1.0 and `far` to 0.0.
 pub fn reverse_z_ortho_light(
     left: f32,
     right: f32,
@@ -48,6 +53,8 @@ pub fn reverse_z_ortho_light(
     )
 }
 
+/// The eight world-space corner positions of a perspective view frustum,
+/// near plane first then far plane.
 pub fn get_frustum_corners_world_space(
     view: &nalgebra_glm::Mat4,
     fov: f32,
@@ -82,8 +89,11 @@ pub fn get_frustum_corners_world_space(
     corners_world
 }
 
+/// Output of [`calculate_cascade_view_projection`].
 pub struct CascadeViewProjectionResult {
+    /// Combined light view-projection matrix for the cascade.
     pub view_projection: nalgebra_glm::Mat4,
+    /// Side length of the cascade's orthographic box in world units.
     pub cascade_diameter: f32,
 }
 
@@ -165,6 +175,8 @@ pub fn calculate_cascade_view_projection(
     }
 }
 
+/// The six normalized frustum planes of a view-projection matrix, each a
+/// `Vec4` of `(normal.xyz, distance)` with the normal pointing inward.
 pub fn extract_frustum_planes(view_proj: &nalgebra_glm::Mat4) -> [nalgebra_glm::Vec4; 6] {
     let mut planes = [nalgebra_glm::Vec4::zeros(); 6];
 
@@ -210,6 +222,8 @@ pub fn extract_frustum_planes(view_proj: &nalgebra_glm::Mat4) -> [nalgebra_glm::
     planes
 }
 
+/// Whether a world-space sphere lies inside or intersects the frustum, false
+/// only when it is fully outside at least one plane.
 pub fn sphere_in_frustum(
     center: &nalgebra_glm::Vec3,
     radius: f32,
@@ -224,32 +238,51 @@ pub fn sphere_in_frustum(
     true
 }
 
+/// GPU representation of a punctual light in the clustered lighting buffer.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LightData {
+    /// World position, w lane unused.
     pub position: [f32; 4],
+    /// Normalized world-space direction, w lane unused.
     pub direction: [f32; 4],
+    /// Linear color premultiplied by intensity, w lane unused.
     pub color: [f32; 4],
+    /// Light type discriminant matching the shader's enum.
     pub light_type: u32,
+    /// Falloff range in world units.
     pub range: f32,
+    /// Cosine of the inner spot cone angle.
     pub inner_cone: f32,
+    /// Cosine of the outer spot cone angle.
     pub outer_cone: f32,
+    /// Shadow atlas slot index, or -1 when the light casts no shadow.
     pub shadow_index: i32,
+    /// World-space radius used for soft-shadow penumbra sizing.
     pub light_size: f32,
+    /// Packed cookie texture layer, or [`COOKIE_LAYER_NONE`] when absent.
     pub cookie_layer: u32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _padding: f32,
 }
 
+/// Sentinel `cookie_layer` value meaning the light has no cookie texture.
 pub const COOKIE_LAYER_NONE: u32 = 0xFFFFFFFF;
 
 pub use crate::wgpu::passes::shadow_depth::{CASCADE_SPLIT_DISTANCES, scale_cascade_splits};
 
+/// Maximum number of spotlight shadow slots in the depth atlas.
 pub const MAX_SPOTLIGHT_SHADOWS: usize = 64;
 
+/// Output of a punctual-light collection pass over the scene.
 pub struct LightCollectionResult {
+    /// GPU light records in buffer order.
     pub lights_data: Vec<LightData>,
+    /// The active directional light and its world transform, if any.
     pub directional_light: Option<(crate::config::RenderLightData, nalgebra_glm::Mat4)>,
+    /// Count of directional lights found.
     pub num_directional_lights: u32,
+    /// Map from source entity to its index in `lights_data`.
     pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
 }
 
@@ -260,9 +293,13 @@ pub const MAX_AREA_LIGHTS: usize = 16;
 /// Sentinel emissive-texture layer meaning "no texture" for an area light.
 pub const AREA_EMISSIVE_LAYER_NONE: u32 = 0xFFFFFFFF;
 
+/// Area-light shape discriminant for a rectangle emitter.
 pub const AREA_SHAPE_RECTANGLE: u32 = 0;
+/// Area-light shape discriminant for a disk emitter.
 pub const AREA_SHAPE_DISK: u32 = 1;
+/// Area-light shape discriminant for a sphere emitter.
 pub const AREA_SHAPE_SPHERE: u32 = 2;
+/// Area-light shape discriminant for a tube emitter.
 pub const AREA_SHAPE_TUBE: u32 = 3;
 
 /// GPU representation of an area light. The emitter normal (emission direction)
@@ -271,17 +308,29 @@ pub const AREA_SHAPE_TUBE: u32 = 3;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct AreaLightData {
+    /// World position, w lane holds the emitter normal x.
     pub position: [f32; 4],
+    /// Right basis vector, w lane holds the emitter normal y.
     pub right: [f32; 4],
+    /// Up basis vector, w lane holds the emitter normal z.
     pub up: [f32; 4],
+    /// Linear color premultiplied by intensity, w lane unused.
     pub color: [f32; 4],
+    /// Shape discriminant, one of the `AREA_SHAPE_*` constants.
     pub shape: u32,
+    /// Falloff range in world units.
     pub range: f32,
+    /// Emitter radius or tube radius in world units.
     pub radius: f32,
+    /// Non-zero when the emitter radiates from both faces.
     pub two_sided: u32,
+    /// Shadow atlas slot index, or -1 when the light casts no shadow.
     pub shadow_index: i32,
+    /// Packed emissive texture layer, or [`AREA_EMISSIVE_LAYER_NONE`] when absent.
     pub emissive_layer: u32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _pad0: f32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _pad1: f32,
 }
 
@@ -289,17 +338,25 @@ pub struct AreaLightData {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct AreaUniforms {
+    /// Number of live area lights in the storage buffer.
     pub count: u32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _pad0: u32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _pad1: u32,
+    /// Padding to keep the struct 16-byte aligned.
     pub _pad2: u32,
 }
 
+/// Output of an area-light collection pass over the scene.
 pub struct AreaLightCollectionResult {
+    /// GPU area-light records in buffer order.
     pub area_lights_data: Vec<AreaLightData>,
+    /// Map from source entity to its index in `area_lights_data`.
     pub entity_to_index: std::collections::HashMap<freecs::Entity, usize>,
 }
 
+/// Writes each area light's resolved shadow slot into its GPU record.
 pub fn apply_area_light_shadow_indices(
     area_lights_data: &mut [AreaLightData],
     entity_to_shadow_index: &std::collections::HashMap<freecs::Entity, i32>,
@@ -314,21 +371,35 @@ pub fn apply_area_light_shadow_indices(
     }
 }
 
+/// The sun's cascaded-shadow matrices and parameters resolved for one frame.
 pub struct CascadeShadowResult {
+    /// World-to-light-clip matrix per cascade.
     pub cascade_view_projections: [[[f32; 4]; 4]; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// Each cascade's frustum diameter in world units.
     pub cascade_diameters: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// View-space distance to each cascade's far split.
     pub cascade_split_distances: [f32; crate::wgpu::passes::NUM_SHADOW_CASCADES],
+    /// World-to-light-clip matrix for the whole light, used where a single
+    /// projection is needed.
     pub light_view_projection: [[f32; 4]; 4],
+    /// Constant depth bias along the light direction.
     pub shadow_bias: f32,
+    /// Depth bias scaled by the shadow-map texel size in world units.
     pub shadow_normal_bias: f32,
+    /// The light's world-space radius, driving soft-shadow penumbra width.
     pub light_size: f32,
+    /// `1.0` when the sun casts shadows this frame, `0.0` otherwise.
     pub shadows_enabled: f32,
 }
 
+/// The default shadow normal bias, in shadow-map texels.
 pub fn default_shadow_normal_bias_value() -> f32 {
     1.8
 }
 
+/// Resolves each spotlight's cookie texture path to a bindless material layer,
+/// writing the packed layer into its GPU record. Lights without a registered
+/// cookie keep the [`COOKIE_LAYER_NONE`] sentinel.
 pub fn resolve_cookie_layers(
     configs: &crate::wgpu::render_configs::RenderInputs,
     lights_data: &mut [LightData],
@@ -411,8 +482,11 @@ pub fn resolve_area_emissive_layers(
     }
 }
 
+/// Output of [`collect_spotlight_shadows`].
 pub struct SpotlightShadowResult {
+    /// Per-slot shadow sampling data for the spotlight and area-light atlas.
     pub shadow_data: Vec<crate::wgpu::passes::SpotlightShadowData>,
+    /// Map from source entity to its atlas slot index.
     pub entity_to_shadow_index: std::collections::HashMap<freecs::Entity, i32>,
 }
 
@@ -454,6 +528,7 @@ pub fn collect_spotlight_shadows(
     }
 }
 
+/// Writes each spotlight's resolved shadow slot into its GPU light record.
 pub fn apply_spotlight_shadow_indices(
     lights_data: &mut [LightData],
     entity_to_shadow_index: &std::collections::HashMap<freecs::Entity, i32>,
@@ -468,8 +543,11 @@ pub fn apply_spotlight_shadow_indices(
     }
 }
 
+/// Maximum number of point-light cube shadows rendered per frame.
 pub const MAX_POINT_LIGHT_SHADOWS: usize = 16;
 
+/// Selects the closest shadow-casting point lights, writes their slot index
+/// into each GPU light record, and returns the per-slot cube shadow data.
 pub fn collect_point_light_shadows(
     configs: &crate::wgpu::render_configs::RenderInputs,
     camera_position: nalgebra_glm::Vec3,

@@ -6,6 +6,7 @@ use super::super::types::*;
 use super::SkinnedMeshPass;
 
 impl SkinnedMeshPass {
+    /// Registers a named texture view and sampler for material binding.
     pub fn register_texture(
         &mut self,
         name: String,
@@ -15,10 +16,12 @@ impl SkinnedMeshPass {
         self.registered_textures.insert(name, (view, sampler));
     }
 
+    /// Removes a previously registered texture by name.
     pub fn unregister_texture(&mut self, name: &str) {
         self.registered_textures.remove(name);
     }
 
+    /// Maps a texture id to its layer in the material texture arrays.
     pub fn add_material_layer_mapping(
         &mut self,
         texture: crate::asset_id::TextureId,
@@ -27,6 +30,7 @@ impl SkinnedMeshPass {
         self.material_layer_map.insert(texture, layer);
     }
 
+    /// Drops registered textures no longer present in `texture_cache`.
     pub fn sync_textures(&mut self, texture_cache: &crate::wgpu::texture_cache::TextureCache) {
         if texture_cache.registry.name_to_index.is_empty() {
             return;

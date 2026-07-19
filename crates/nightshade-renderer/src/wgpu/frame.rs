@@ -45,7 +45,8 @@ pub fn render_frame(
     result
 }
 
-/// Renders one single-view frame straight from a [`SingleViewHost`]: composes
+/// Renders one single-view frame straight from a
+/// [`SingleViewHost`](crate::wgpu::render_configs::SingleViewHost): composes
 /// the inputs, runs the frame, and moves the host's state back so the loop can
 /// call this and nothing else. A frame that fails to execute (surface lost,
 /// occluded, or timed out) leaves [`FrameOutputs::frame_executed`] false and the

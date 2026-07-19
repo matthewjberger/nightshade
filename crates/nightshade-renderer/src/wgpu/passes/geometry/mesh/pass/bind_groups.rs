@@ -1,7 +1,12 @@
+//! Per-world instance bind group construction and world state cleanup for the
+//! mesh pass.
+
 use super::super::world_state::WorldGpuBuffers;
 use super::MeshPass;
 
 impl MeshPass {
+    /// Rebuilds the current world's instance and cluster bounds bind groups from
+    /// its GPU buffers.
     pub(in super::super) fn rebuild_instance_bind_group(&mut self, device: &wgpu::Device) {
         let world_state = self.world_states[self.current_world_id as usize]
             .as_mut()
@@ -83,6 +88,8 @@ impl MeshPass {
         });
     }
 
+    /// Rebuilds the instance bind groups for every world that has GPU buffers,
+    /// restoring the active world afterward.
     pub(in super::super) fn invalidate_all_instance_bind_groups(&mut self, device: &wgpu::Device) {
         let world_ids = self.world_state_ids();
         let saved_world_id = self.current_world_id;
@@ -99,6 +106,7 @@ impl MeshPass {
         self.current_world_id = saved_world_id;
     }
 
+    /// Rebuilds the current world's instanced transform compute bind group.
     pub(in super::super) fn rebuild_instanced_compute_bind_group(&mut self, device: &wgpu::Device) {
         let world_state = self.world_states[self.current_world_id as usize]
             .as_mut()
@@ -136,6 +144,8 @@ impl MeshPass {
         );
     }
 
+    /// Ensures `world_id` has a state slot with GPU buffers allocated, creating
+    /// them on first use.
     pub(in super::super) fn ensure_world_gpu_buffers(
         &mut self,
         device: &wgpu::Device,
@@ -155,6 +165,7 @@ impl MeshPass {
         }
     }
 
+    /// Removes the state for `world_id`, clearing it as the last prepared world.
     pub fn cleanup_world_state(&mut self, world_id: u64) {
         if self.last_prepared_world_id == Some(world_id) {
             self.last_prepared_world_id = None;
@@ -162,6 +173,8 @@ impl MeshPass {
         self.world_state_remove(world_id);
     }
 
+    /// Removes world states untouched for more than `max_age_frames`, keeping
+    /// the last prepared world.
     pub fn cleanup_stale_world_states(&mut self, max_age_frames: u64) {
         let current_frame = self.frame_counter;
         let kept_world_id = self.last_prepared_world_id.unwrap_or(u64::MAX);

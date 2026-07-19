@@ -1,3 +1,5 @@
+//! Shelf-packed glyph atlas backing text rendering.
+
 use cosmic_text::{CacheKey, FontSystem, SwashCache, SwashContent};
 use nalgebra_glm::{Vec2, vec2};
 use std::collections::HashMap;
@@ -6,13 +8,20 @@ const ATLAS_INITIAL_SIZE: u32 = 1024;
 const ATLAS_MAX_SIZE: u32 = 8192;
 const SHELF_PADDING: u32 = 1;
 
+/// Placement of a single rasterized glyph within the atlas texture.
 #[derive(Clone, Copy, Debug)]
 pub struct GlyphAlloc {
+    /// Top-left UV coordinate of the glyph in the atlas.
     pub uv_min: Vec2,
+    /// Bottom-right UV coordinate of the glyph in the atlas.
     pub uv_max: Vec2,
+    /// Glyph size in pixels.
     pub size: Vec2,
+    /// Horizontal bearing from the pen position in pixels.
     pub placement_left: f32,
+    /// Vertical bearing from the pen baseline in pixels.
     pub placement_top: f32,
+    /// Whether the glyph is a color bitmap rather than a coverage mask.
     pub is_color: bool,
 }
 
@@ -22,17 +31,24 @@ struct Shelf {
     cursor_x: u32,
 }
 
+/// Shelf-packed texture atlas caching rasterized glyphs, growing on demand.
 pub struct GlyphAtlas {
+    /// The atlas texture.
     pub texture: wgpu::Texture,
+    /// View over the atlas texture.
     pub texture_view: wgpu::TextureView,
+    /// Atlas width in pixels.
     pub width: u32,
+    /// Atlas height in pixels.
     pub height: u32,
+    /// Counter bumped whenever the atlas texture is reallocated.
     pub revision: u32,
     glyphs: HashMap<CacheKey, Option<GlyphAlloc>>,
     shelves: Vec<Shelf>,
 }
 
 impl GlyphAtlas {
+    /// Creates an atlas at the initial size with a fresh texture.
     pub fn new(device: &wgpu::Device) -> Self {
         let (texture, texture_view) = create_atlas_texture(device, ATLAS_INITIAL_SIZE);
         Self {
@@ -46,6 +62,9 @@ impl GlyphAtlas {
         }
     }
 
+    /// Returns the cached allocation for `cache_key`, rasterizing and uploading it on first use.
+    ///
+    /// Returns `None` when the glyph has no pixels or the atlas cannot grow to fit it.
     pub fn ensure_glyph(
         &mut self,
         device: &wgpu::Device,

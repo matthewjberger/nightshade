@@ -1,11 +1,20 @@
+//! Name-keyed generational registry with reference counting.
+
 use std::collections::HashMap;
 
+/// Slot-based store of `T` values keyed by name, tracking generations and reference counts.
 pub struct GenerationalRegistry<T> {
+    /// Value slots, `None` when the slot is empty or reserved.
     pub entries: Vec<Option<T>>,
+    /// Generation counter per slot, bumped when a freed slot is reused.
     pub generations: Vec<u32>,
+    /// Live reference count per slot.
     pub reference_counts: Vec<usize>,
+    /// Slots available for reuse.
     pub free_indices: Vec<u32>,
+    /// Maps each registered name to its slot index.
     pub name_to_index: HashMap<String, u32>,
+    /// Name held by each slot, `None` when unnamed.
     pub index_to_name: Vec<Option<String>>,
 }
 
@@ -35,6 +44,7 @@ impl<T> Default for GenerationalRegistry<T> {
     }
 }
 
+/// Inserts `value` under `name`, reusing the existing slot when the name is already registered, and returns its index and generation.
 pub fn registry_insert<T>(
     registry: &mut GenerationalRegistry<T>,
     name: String,
@@ -65,6 +75,7 @@ pub fn registry_insert<T>(
     (index, registry.generations[index as usize])
 }
 
+/// Reserves a slot for `name` without a value, returning its index and generation.
 pub fn registry_reserve_name<T>(
     registry: &mut GenerationalRegistry<T>,
     name: String,
@@ -93,6 +104,7 @@ pub fn registry_reserve_name<T>(
     (index, registry.generations[index as usize])
 }
 
+/// Returns `true` when the slot at `index` holds a value.
 pub fn registry_is_filled<T>(registry: &GenerationalRegistry<T>, index: u32) -> bool {
     registry
         .entries
@@ -101,6 +113,7 @@ pub fn registry_is_filled<T>(registry: &GenerationalRegistry<T>, index: u32) -> 
         .unwrap_or(false)
 }
 
+/// Returns the name registered for `index`, if any.
 pub fn registry_name_for<T>(registry: &GenerationalRegistry<T>, index: u32) -> Option<&str> {
     registry
         .index_to_name
@@ -108,6 +121,7 @@ pub fn registry_name_for<T>(registry: &GenerationalRegistry<T>, index: u32) -> O
         .and_then(|slot| slot.as_deref())
 }
 
+/// Removes and returns the value at `index` when `generation` matches, freeing the slot.
 pub fn registry_remove<T>(
     registry: &mut GenerationalRegistry<T>,
     index: u32,
@@ -130,6 +144,7 @@ pub fn registry_remove<T>(
     value
 }
 
+/// Returns `true` when `index` and `generation` name a slot that currently holds a value.
 pub fn registry_is_valid<T>(
     registry: &GenerationalRegistry<T>,
     index: u32,
@@ -141,6 +156,7 @@ pub fn registry_is_valid<T>(
         && registry.entries[slot].is_some()
 }
 
+/// Returns the index and generation registered for `name`, if any.
 pub fn registry_lookup_index<T>(
     registry: &GenerationalRegistry<T>,
     name: &str,
@@ -151,18 +167,21 @@ pub fn registry_lookup_index<T>(
     })
 }
 
+/// Increments the reference count for `index`.
 pub fn registry_add_reference<T>(registry: &mut GenerationalRegistry<T>, index: u32) {
     if let Some(count) = registry.reference_counts.get_mut(index as usize) {
         *count += 1;
     }
 }
 
+/// Decrements the reference count for `index`, saturating at zero.
 pub fn registry_remove_reference<T>(registry: &mut GenerationalRegistry<T>, index: u32) {
     if let Some(count) = registry.reference_counts.get_mut(index as usize) {
         *count = count.saturating_sub(1);
     }
 }
 
+/// Returns the reference count for `index`, or zero when out of range.
 pub fn registry_reference_count<T>(registry: &GenerationalRegistry<T>, index: u32) -> usize {
     registry
         .reference_counts
@@ -171,6 +190,7 @@ pub fn registry_reference_count<T>(registry: &GenerationalRegistry<T>, index: u3
         .unwrap_or(0)
 }
 
+/// Clears every filled slot with a zero reference count and returns the removed names.
 pub fn registry_remove_unused<T>(registry: &mut GenerationalRegistry<T>) -> Vec<String> {
     let mut removed = Vec::new();
 
@@ -188,6 +208,7 @@ pub fn registry_remove_unused<T>(registry: &mut GenerationalRegistry<T>) -> Vec<
     removed
 }
 
+/// Returns the number of filled slots.
 pub fn registry_len<T>(registry: &GenerationalRegistry<T>) -> usize {
     registry
         .entries
@@ -196,10 +217,12 @@ pub fn registry_len<T>(registry: &GenerationalRegistry<T>) -> usize {
         .count()
 }
 
+/// Returns `true` when no slot holds a value.
 pub fn registry_is_empty<T>(registry: &GenerationalRegistry<T>) -> bool {
     registry_len(registry) == 0
 }
 
+/// Empties the registry, dropping all slots, names, and free-list state.
 pub fn registry_clear<T>(registry: &mut GenerationalRegistry<T>) {
     registry.entries.clear();
     registry.generations.clear();
@@ -209,6 +232,7 @@ pub fn registry_clear<T>(registry: &mut GenerationalRegistry<T>) {
     registry.index_to_name.clear();
 }
 
+/// Returns the value at `index` when `index` and `generation` are valid.
 pub fn registry_entry<T>(
     registry: &GenerationalRegistry<T>,
     index: u32,
@@ -221,6 +245,7 @@ pub fn registry_entry<T>(
     }
 }
 
+/// Returns the value registered under `name`, if any.
 pub fn registry_entry_by_name<'a, T>(
     registry: &'a GenerationalRegistry<T>,
     name: &str,
@@ -231,6 +256,7 @@ pub fn registry_entry_by_name<'a, T>(
         .and_then(|&index| registry.entries[index as usize].as_ref())
 }
 
+/// Returns a mutable reference to the value registered under `name`, if any.
 pub fn registry_entry_by_name_mut<'a, T>(
     registry: &'a mut GenerationalRegistry<T>,
     name: &str,

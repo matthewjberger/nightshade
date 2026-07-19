@@ -157,17 +157,26 @@ use wgpu::{
     Buffer, BufferUsages, CommandEncoder, Device, TextureFormat, TextureUsages, TextureView,
 };
 
+/// Deferred request to run a named sub-graph with a set of input slot values, produced by a pass's `execute`.
 pub struct SubGraphRunCommand<'a> {
+    /// Name of the sub-graph to run.
     pub sub_graph_name: String,
+    /// Slot values bound as the sub-graph's inputs.
     pub inputs: Vec<SlotValue<'a>>,
 }
 
+/// Runtime context handed to [`PassNode::execute`] for accessing graph resources and recording commands.
 pub struct PassExecutionContext<'r, 'e, C = ()> {
+    /// Command encoder the pass records into.
     pub encoder: &'e mut CommandEncoder,
+    /// Resolved graph resources for the current frame.
     pub resources: &'r RenderGraphResources,
+    /// The `wgpu` device.
     pub device: &'r Device,
+    /// The `wgpu` queue.
     pub queue: &'r wgpu::Queue,
     pub(super) slot_mappings: &'r HashMap<String, ResourceId>,
+    /// Per-frame configuration threaded through the graph.
     pub configs: &'r C,
     pub(crate) sub_graph_commands: Vec<SubGraphRunCommand<'r>>,
     pub(super) node_index: petgraph::graph::NodeIndex,
@@ -177,10 +186,12 @@ pub struct PassExecutionContext<'r, 'e, C = ()> {
 }
 
 impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
+    /// Returns whether this pass is enabled for the current frame.
     pub fn is_pass_enabled(&self) -> bool {
         self.pass_enabled
     }
 
+    /// Resolves a slot name to its bound [`ResourceId`].
     pub fn get_slot(&self, slot: &str) -> Result<ResourceId> {
         self.slot_mappings
             .get(slot)
@@ -191,6 +202,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
             })
     }
 
+    /// Returns the texture view bound to `slot`.
     pub fn get_texture_view(&self, slot: &str) -> Result<&'r wgpu::TextureView> {
         let resource_id = self.get_slot(slot)?;
         self.resources.get_texture_view(resource_id).ok_or_else(|| {
@@ -201,6 +213,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         })
     }
 
+    /// Returns the texture bound to `slot`.
     pub fn get_texture(&self, slot: &str) -> Result<&'r wgpu::Texture> {
         let resource_id = self.get_slot(slot)?;
         self.resources
@@ -211,6 +224,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
             })
     }
 
+    /// Returns the color attachment view for `slot` with its resolved load and store ops.
     pub fn get_color_attachment(
         &self,
         slot: &str,
@@ -228,6 +242,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         )
     }
 
+    /// Returns the depth attachment view for `slot` with its resolved load and store ops.
     pub fn get_depth_attachment(
         &self,
         slot: &str,
@@ -241,6 +256,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         )
     }
 
+    /// Returns the buffer bound to `slot`.
     pub fn get_buffer(&self, slot: &str) -> Result<&'r wgpu::Buffer> {
         let resource_id = self.get_slot(slot)?;
         let handle = self.resources.get_handle(resource_id).ok_or_else(|| {
@@ -261,6 +277,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         }
     }
 
+    /// Returns the `(width, height)` in pixels of the texture bound to `slot`.
     pub fn get_texture_size(&self, slot: &str) -> Result<(u32, u32)> {
         let resource_id = self.get_slot(slot)?;
         let descriptor = self.resources.get_descriptor(resource_id).ok_or_else(|| {
@@ -304,6 +321,7 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         }
     }
 
+    /// Queues a sub-graph to run after this pass with the given input slot values.
     pub fn run_sub_graph(&mut self, sub_graph_name: String, inputs: Vec<SlotValue<'r>>) {
         self.sub_graph_commands.push(SubGraphRunCommand {
             sub_graph_name,
@@ -311,12 +329,13 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
         });
     }
 
+    /// Consumes the context and returns the queued sub-graph run commands.
     pub fn into_sub_graph_commands(self) -> Vec<SubGraphRunCommand<'r>> {
         self.sub_graph_commands
     }
 }
 
-/// Phase for [`render_graph_execute_with_phase`]. `Full` runs every
+/// Phase for `render_graph_execute_with_phase`. `Full` runs every
 /// enabled pass; `ComposeOnly` runs only passes that override
 /// [`PassNode::runs_in_compose_only_phase`] to return `true`. The
 /// renderer uses `ComposeOnly` for camera tiles whose update mode says
@@ -324,24 +343,35 @@ impl<'r, 'e, C> PassExecutionContext<'r, 'e, C> {
 /// re-render this frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ExecutePhase {
+    /// Runs every enabled pass.
     #[default]
     Full,
+    /// Runs only passes that opt into [`PassNode::runs_in_compose_only_phase`].
     ComposeOnly,
 }
 
+/// A node in the render graph that declares its resource dependencies and records GPU commands.
 #[cfg(not(target_arch = "wasm32"))]
 pub trait PassNode<C = ()>: Send + Sync + std::any::Any {
+    /// Unique name of the pass within the graph.
     fn name(&self) -> &str;
+    /// Slot names this pass reads from.
     fn reads(&self) -> Vec<&str>;
+    /// Slot names this pass writes to.
     fn writes(&self) -> Vec<&str>;
+    /// Slot names this pass both reads and writes.
     fn reads_writes(&self) -> Vec<&str> {
         Vec::new()
     }
+    /// Slot names this pass reads when present, tolerating absence.
     fn optional_reads(&self) -> Vec<&str> {
         Vec::new()
     }
+    /// Prepares GPU state each frame before [`PassNode::execute`].
     fn prepare(&mut self, _device: &Device, _queue: &wgpu::Queue, _configs: &C) {}
+    /// Drops cached bind groups so they rebuild when bound resources change.
     fn invalidate_bind_groups(&mut self) {}
+    /// Records the pass's GPU commands and returns any sub-graph run requests.
     fn execute<'r, 'e>(
         &mut self,
         context: PassExecutionContext<'r, 'e, C>,
@@ -363,56 +393,85 @@ pub trait PassNode<C = ()>: Send + Sync + std::any::Any {
     }
 }
 
+/// A node in the render graph that declares its resource dependencies and records GPU commands.
 #[cfg(target_arch = "wasm32")]
 pub trait PassNode<C = ()>: std::any::Any {
+    /// Unique name of the pass within the graph.
     fn name(&self) -> &str;
+    /// Slot names this pass reads from.
     fn reads(&self) -> Vec<&str>;
+    /// Slot names this pass writes to.
     fn writes(&self) -> Vec<&str>;
+    /// Slot names this pass both reads and writes.
     fn reads_writes(&self) -> Vec<&str> {
         Vec::new()
     }
+    /// Slot names this pass reads when present, tolerating absence.
     fn optional_reads(&self) -> Vec<&str> {
         Vec::new()
     }
+    /// Prepares GPU state each frame before [`PassNode::execute`].
     fn prepare(&mut self, _device: &Device, _queue: &wgpu::Queue, _configs: &C) {}
+    /// Drops cached bind groups so they rebuild when bound resources change.
     fn invalidate_bind_groups(&mut self) {}
+    /// Records the pass's GPU commands and returns any sub-graph run requests.
     fn execute<'r, 'e>(
         &mut self,
         context: PassExecutionContext<'r, 'e, C>,
     ) -> Result<Vec<SubGraphRunCommand<'r>>>;
+    /// Whether this pass runs during the full per-camera render phase.
     fn runs_in_full_phase(&self) -> bool {
         true
     }
+    /// Whether this pass runs during [`ExecutePhase::ComposeOnly`].
     fn runs_in_compose_only_phase(&self) -> bool {
         false
     }
 }
 
+/// Graph node holding a pass together with its resolved resource bindings and enabled state.
 pub struct GraphNode<C> {
+    /// Pass name.
     pub name: String,
+    /// Resource ids the pass reads.
     pub reads: Vec<ResourceId>,
+    /// Resource ids the pass writes.
     pub writes: Vec<ResourceId>,
+    /// Resource ids the pass both reads and writes.
     pub reads_writes: Vec<ResourceId>,
+    /// Resource ids the pass reads when present.
     pub optional_reads: Vec<ResourceId>,
+    /// The boxed pass implementation.
     pub pass: Box<dyn PassNode<C> + 'static>,
+    /// Whether the pass runs this frame.
     pub enabled: bool,
 }
 
+/// A resource value bound to a sub-graph input slot.
 pub enum SlotValue<'a> {
+    /// A texture view with its dimensions and optional source texture.
     TextureView {
+        /// Source texture, when available.
         texture: Option<&'a wgpu::Texture>,
+        /// The bound texture view.
         view: &'a TextureView,
+        /// Width in pixels.
         width: u32,
+        /// Height in pixels.
         height: u32,
     },
+    /// A bound buffer.
     Buffer(&'a Buffer),
 }
 
+/// Named input slot declared by a sub-graph.
 #[derive(Clone)]
 pub struct SubGraphInputSlot {
+    /// Slot name.
     pub name: String,
 }
 
+/// Fluent builder for a graph color texture resource.
 pub struct ColorTextureBuilder<'a, C = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) name: String,
@@ -423,52 +482,62 @@ pub struct ColorTextureBuilder<'a, C = ()> {
 }
 
 impl<'a, C> ColorTextureBuilder<'a, C> {
+    /// Sets the texture format.
     pub fn format(mut self, format: TextureFormat) -> Self {
         self.descriptor.format = format;
         self
     }
 
+    /// Sets the texture dimensions in pixels.
     pub fn size(mut self, width: u32, height: u32) -> Self {
         self.descriptor.width = width;
         self.descriptor.height = height;
         self
     }
 
+    /// Sets the texture usage flags.
     pub fn usage(mut self, usage: TextureUsages) -> Self {
         self.descriptor.usage = usage;
         self
     }
 
+    /// Sets the MSAA sample count.
     pub fn sample_count(mut self, count: u32) -> Self {
         self.descriptor.sample_count = count;
         self
     }
 
+    /// Sets the mip level count.
     pub fn mip_levels(mut self, levels: u32) -> Self {
         self.descriptor.mip_level_count = levels;
         self
     }
 
+    /// Sets the clear color applied on load.
     pub fn clear_color(mut self, color: wgpu::Color) -> Self {
         self.clear_color = Some(color);
         self
     }
 
+    /// Marks the texture's contents as not requiring store after the pass.
     pub fn no_store(mut self) -> Self {
         self.force_store = false;
         self
     }
 
+    /// Forces the texture's contents to be stored after the pass.
     pub fn force_store(mut self) -> Self {
         self.force_store = true;
         self
     }
 
+    /// Keeps the texture at its declared size instead of tracking the render target.
     pub fn fixed_size(mut self) -> Self {
         self.fixed_size = true;
         self
     }
 
+    /// Registers the resource as external, supplied each frame by the caller, and returns its id.
     pub fn external(self) -> ResourceId {
         self.graph.resources.register_external_resource(
             self.name,
@@ -478,6 +547,7 @@ impl<'a, C> ColorTextureBuilder<'a, C> {
         )
     }
 
+    /// Registers the resource as transient, owned by the graph, and returns its id.
     pub fn transient(self) -> ResourceId {
         self.graph.resources.register_transient_resource_opts(
             self.name,
@@ -491,6 +561,7 @@ impl<'a, C> ColorTextureBuilder<'a, C> {
     }
 }
 
+/// Fluent builder for a graph depth texture resource.
 pub struct DepthTextureBuilder<'a, C = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) name: String,
@@ -501,57 +572,68 @@ pub struct DepthTextureBuilder<'a, C = ()> {
 }
 
 impl<'a, C> DepthTextureBuilder<'a, C> {
+    /// Sets the texture format.
     pub fn format(mut self, format: TextureFormat) -> Self {
         self.descriptor.format = format;
         self
     }
 
+    /// Sets the texture dimensions in pixels.
     pub fn size(mut self, width: u32, height: u32) -> Self {
         self.descriptor.width = width;
         self.descriptor.height = height;
         self
     }
 
+    /// Sets the texture usage flags.
     pub fn usage(mut self, usage: TextureUsages) -> Self {
         self.descriptor.usage = usage;
         self
     }
 
+    /// Sets the MSAA sample count.
     pub fn sample_count(mut self, count: u32) -> Self {
         self.descriptor.sample_count = count;
         self
     }
 
+    /// Sets the mip level count.
     pub fn mip_levels(mut self, levels: u32) -> Self {
         self.descriptor.mip_level_count = levels;
         self
     }
 
+    /// Sets the number of array layers.
     pub fn array_layers(mut self, layers: u32) -> Self {
         self.descriptor.depth_or_array_layers = layers;
         self
     }
 
+    /// Sets the depth clear value applied on load.
     pub fn clear_depth(mut self, depth: f32) -> Self {
         self.clear_depth = Some(depth);
         self
     }
 
+    /// Marks the texture's contents as not requiring store after the pass.
     pub fn no_store(mut self) -> Self {
         self.force_store = false;
         self
     }
 
+    /// Forces the texture's contents to be stored after the pass.
     pub fn force_store(mut self) -> Self {
         self.force_store = true;
         self
     }
 
+    /// Keeps the texture at its declared size instead of tracking the render target.
     pub fn fixed_size(mut self) -> Self {
         self.fixed_size = true;
         self
     }
 
+    /// Registers the resource as external, supplied each frame by the caller, and returns its id.
     pub fn external(self) -> ResourceId {
         self.graph.resources.register_external_resource(
             self.name,
@@ -561,6 +643,7 @@ impl<'a, C> DepthTextureBuilder<'a, C> {
         )
     }
 
+    /// Registers the resource as transient, owned by the graph, and returns its id.
     pub fn transient(self) -> ResourceId {
         self.graph.resources.register_transient_resource_opts(
             self.name,
@@ -574,6 +657,7 @@ impl<'a, C> DepthTextureBuilder<'a, C> {
     }
 }
 
+/// Fluent builder for a graph buffer resource.
 pub struct BufferBuilder<'a, C = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) name: String,
@@ -581,27 +665,32 @@ pub struct BufferBuilder<'a, C = ()> {
 }
 
 impl<'a, C> BufferBuilder<'a, C> {
+    /// Sets the buffer size in bytes.
     pub fn size(mut self, size: u64) -> Self {
         self.descriptor.size = size;
         self
     }
 
+    /// Sets the buffer usage flags.
     pub fn usage(mut self, usage: BufferUsages) -> Self {
         self.descriptor.usage = usage;
         self
     }
 
+    /// Sets whether the buffer is mapped at creation.
     pub fn mapped_at_creation(mut self, mapped: bool) -> Self {
         self.descriptor.mapped_at_creation = mapped;
         self
     }
 
+    /// Registers the buffer as external and returns its id.
     pub fn external(self) -> ResourceId {
         self.graph
             .resources
             .register_external_resource(self.name, ResourceType::ExternalBuffer)
     }
 
+    /// Registers the buffer as transient and returns its id.
     pub fn transient(self) -> ResourceId {
         self.graph.resources.register_transient_resource(
             self.name,
@@ -612,6 +701,7 @@ impl<'a, C> BufferBuilder<'a, C> {
     }
 }
 
+/// Reusable texture description for creating pooled graph resources.
 #[derive(Clone)]
 pub struct ResourceTemplate {
     pub(super) format: TextureFormat,
@@ -625,6 +715,7 @@ pub struct ResourceTemplate {
 }
 
 impl ResourceTemplate {
+    /// Creates a template for a 2D texture with the given format and dimensions.
     pub fn new(format: TextureFormat, width: u32, height: u32) -> Self {
         Self {
             format,
@@ -638,32 +729,38 @@ impl ResourceTemplate {
         }
     }
 
+    /// Sets the texture usage flags.
     pub fn usage(mut self, usage: TextureUsages) -> Self {
         self.usage = usage;
         self
     }
 
+    /// Sets the MSAA sample count.
     pub fn sample_count(mut self, count: u32) -> Self {
         self.sample_count = count;
         self
     }
 
+    /// Sets the mip level count.
     pub fn mip_levels(mut self, levels: u32) -> Self {
         self.mip_level_count = levels;
         self
     }
 
+    /// Configures the template as a six-layer cube map.
     pub fn cube_map(mut self) -> Self {
         self.dimension = wgpu::TextureDimension::D2;
         self.depth_or_array_layers = 6;
         self
     }
 
+    /// Sets the number of array layers.
     pub fn array_layers(mut self, layers: u32) -> Self {
         self.depth_or_array_layers = layers;
         self
     }
 
+    /// Configures the template as a 3D texture with the given depth.
     pub fn dimension_3d(mut self, depth: u32) -> Self {
         self.dimension = wgpu::TextureDimension::D3;
         self.depth_or_array_layers = depth;
@@ -671,6 +768,7 @@ impl ResourceTemplate {
     }
 }
 
+/// Fluent builder for adding a pass and its slot bindings to the graph.
 pub struct PassBuilder<'a, C: 'static = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) pass: Option<Box<dyn PassNode<C>>>,
@@ -678,21 +776,25 @@ pub struct PassBuilder<'a, C: 'static = ()> {
 }
 
 impl<'a, C: 'static> PassBuilder<'a, C> {
+    /// Binds a read slot to a resource.
     pub fn read(mut self, slot: &'static str, resource: ResourceId) -> Self {
         self.slots.push((slot, resource));
         self
     }
 
+    /// Binds a write slot to a resource.
     pub fn write(mut self, slot: &'static str, resource: ResourceId) -> Self {
         self.slots.push((slot, resource));
         self
     }
 
+    /// Binds a slot to a resource.
     pub fn slot(mut self, slot: &'static str, resource: ResourceId) -> Self {
         self.slots.push((slot, resource));
         self
     }
 
+    /// Adds the configured pass to the graph and returns its node index.
     pub fn add(mut self) -> super::error::Result<petgraph::graph::NodeIndex> {
         let pass = self.pass.take().expect("PassBuilder consumed twice");
         let slots: Vec<(&str, ResourceId)> = self
@@ -704,20 +806,24 @@ impl<'a, C: 'static> PassBuilder<'a, C> {
     }
 }
 
+/// Creates graph resources from a shared [`ResourceTemplate`].
 pub struct ResourcePool<'a, C = ()> {
     pub(super) graph: &'a mut super::graph::RenderGraph<C>,
     pub(super) template: ResourceTemplate,
 }
 
 impl<'a, C: 'static> ResourcePool<'a, C> {
+    /// Creates a transient color resource named `name` from the template.
     pub fn transient(&mut self, name: &str) -> ResourceId {
         render_graph_transient_color_from_template(self.graph, name, &self.template)
     }
 
+    /// Creates one transient color resource per name from the template.
     pub fn transient_many(&mut self, names: &[&str]) -> Vec<ResourceId> {
         names.iter().map(|name| self.transient(name)).collect()
     }
 
+    /// Registers an external color resource named `name`.
     pub fn external(&mut self, name: &str) -> ResourceId {
         render_graph_external_color(self.graph, name)
     }

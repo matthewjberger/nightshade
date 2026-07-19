@@ -41,10 +41,12 @@ pub use crate::rendergraph;
 pub mod shader_compose;
 mod stagger;
 pub mod texture_array_pool;
+/// GPU texture registry, upload, and lifecycle tracking.
 pub mod texture_cache;
 
 pub use ::wgpu::*;
 
+/// Per-window render-graph dispatch state carried between frames.
 #[derive(Default, Clone)]
 pub struct WindowRenderState {
     /// Every distinct buffer size this window has dispatched at this
@@ -53,52 +55,80 @@ pub struct WindowRenderState {
     /// requested size for *any* of this window's cameras, instead of
     /// always falling through to the per-pass texture pool.
     pub recent_buffer_sizes: Vec<(u32, u32)>,
+    /// Settings version last applied to this window's graph, if any.
     pub last_settings_version: Option<u64>,
 }
 
 const RECENT_BUFFER_SIZE_CAPACITY: usize = 8;
 
+/// Off-screen render target for one camera's output.
 pub struct CameraViewport {
+    /// Color texture the camera renders into.
     pub texture: wgpu::Texture,
+    /// View over [`texture`](Self::texture).
     pub view: wgpu::TextureView,
+    /// Viewport size in pixels.
     pub size: (u32, u32),
+    /// Whether this viewport has produced at least one frame.
     pub has_rendered_at_least_once: bool,
+    /// Effective shading mode used on the last render, for change detection.
     pub last_active_view: Option<crate::config::EffectiveShading>,
+    /// Settings version applied on the last render.
     pub last_settings_version: u64,
+    /// Frame index of the last render into this viewport.
     pub last_render_frame: u64,
+    /// Camera world transform captured on the last render, for reuse detection.
     pub last_camera_world_transform: Option<nalgebra_glm::Mat4>,
 }
 
+/// Side length in texels of the square depth-pick sample window.
 pub const DEPTH_PICK_SAMPLE_SIZE: u32 = 5;
 
+/// wgpu-backed renderer owning the GPU device, surface, and render graph.
 pub struct WgpuRenderer {
+    /// Swapchain surface the final image is presented to.
     pub surface: wgpu::Surface<'static>,
+    /// GPU device that creates all resources.
     pub device: wgpu::Device,
+    /// Command queue submitting work and buffer writes to the GPU.
     pub queue: wgpu::Queue,
+    /// Current swapchain configuration covering size, format, and present mode.
     pub surface_config: wgpu::SurfaceConfiguration,
+    /// Texture format the surface presents in.
     pub surface_format: wgpu::TextureFormat,
+    /// Present modes the surface reports as available.
     pub supported_present_modes: Vec<wgpu::PresentMode>,
+    /// Render graph driving the built-in and custom passes each frame.
     pub graph: rendergraph::RenderGraph<crate::wgpu::render_configs::RenderInputs>,
     /// Render-graph resource handles for the built-in pipeline targets.
     pub targets: RenderTargets,
     /// Persistent spotlight shadow atlas, kept across frames so cached shadow
     /// slots survive. Fed to the render graph as an external resource each frame.
     pub spotlight_shadow_atlas_texture: wgpu::Texture,
+    /// View over [`spotlight_shadow_atlas_texture`](Self::spotlight_shadow_atlas_texture).
     pub spotlight_shadow_atlas_view: wgpu::TextureView,
+    /// UI image pass, present when retained-UI images are drawn.
     pub ui_image_pass: Option<Box<passes::UiImagePass>>,
+    /// Dynamic glyph atlas backing text rendering.
     pub glyph_atlas: glyph_atlas::GlyphAtlas,
     /// Per-camera viewport texture pool.
     pub camera_viewports: std::collections::HashMap<freecs::Entity, CameraViewport>,
+    /// BRDF integration lookup texture, retained to keep [`brdf_lut_view`](Self::brdf_lut_view) alive.
     pub _brdf_lut_texture: wgpu::Texture,
+    /// View over the BRDF integration lookup texture sampled during shading.
     pub brdf_lut_view: wgpu::TextureView,
+    /// Bindless material texture arrays shared across mesh passes.
     pub material_texture_arrays: material_texture_arrays::MaterialTextureArrays,
+    /// Texture array pool backing UI image draws.
     pub ui_texture_array: texture_array_pool::TextureArrayPool,
+    /// Compute helper that generates mip chains for uploaded textures.
     pub mip_generator: mip_generator::MipGenerator,
     /// GPU depth-pick readback state.
     pub depth_pick: DepthPickState,
     /// Screenshot readback state.
     #[cfg(not(target_arch = "wasm32"))]
     pub screenshot: ScreenshotState,
+    /// Current internal render buffer size in pixels.
     pub render_buffer_size: (u32, u32),
     /// Render-graph state. Tracks the last buffer size used by the
     /// renderer's dispatch so consecutive dispatches don't
@@ -121,62 +151,104 @@ pub struct WgpuRenderer {
 
 /// Render-graph resource handles for the built-in pipeline targets.
 pub struct RenderTargets {
+    /// Depth buffer target, reverse-Z.
     pub depth: rendergraph::ResourceId,
+    /// HDR scene color target.
     pub scene_color: rendergraph::ResourceId,
+    /// Compute pass output target.
     pub compute_output: rendergraph::ResourceId,
+    /// Antialiasing resolve output target.
     pub aa_output: rendergraph::ResourceId,
+    /// Final swapchain output target.
     pub swapchain: rendergraph::ResourceId,
+    /// External viewport texture the frame renders into.
     pub viewport_resource: rendergraph::ResourceId,
+    /// Depth target for UI passes.
     pub ui_depth: rendergraph::ResourceId,
+    /// Per-pixel entity id target used for picking.
     pub entity_id: rendergraph::ResourceId,
+    /// View-space normals target consumed by SSAO and SSGI.
     pub view_normals: rendergraph::ResourceId,
+    /// Screen-space velocity target for motion-based effects.
     pub velocity: rendergraph::ResourceId,
+    /// Unblurred SSAO output.
     pub ssao_raw: rendergraph::ResourceId,
+    /// Blurred SSAO ready for compositing.
     pub ssao: rendergraph::ResourceId,
+    /// Unblurred SSGI output.
     pub ssgi_raw: rendergraph::ResourceId,
+    /// Blurred SSGI ready for compositing.
     pub ssgi: rendergraph::ResourceId,
+    /// Unblurred screen-space reflection output.
     pub ssr_raw: rendergraph::ResourceId,
+    /// Resolved screen-space reflection output.
     pub ssr: rendergraph::ResourceId,
+    /// External spotlight shadow atlas fed into the graph each frame.
     pub spotlight_shadow_atlas: rendergraph::ResourceId,
 }
 
 /// GPU depth-pick compute and readback resources.
 pub struct DepthPickState {
+    /// Compute pipeline that samples depth around the pick center.
     pub compute_pipeline: wgpu::ComputePipeline,
+    /// Layout for the depth-pick bind group.
     pub bind_group_layout: wgpu::BindGroupLayout,
+    /// Storage buffer the compute shader writes sampled depths into.
     pub storage_buffer: wgpu::Buffer,
+    /// Uniform buffer holding the pick parameters.
     pub uniform_buffer: wgpu::Buffer,
+    /// Mappable buffer that receives the depth readback.
     pub staging_buffer: wgpu::Buffer,
+    /// Cached bind group, rebuilt when the depth texture changes.
     pub bind_group: Option<wgpu::BindGroup>,
+    /// Whether a readback is in flight.
     pub pending: bool,
+    /// Set from the map callback when the staging buffer is ready to read.
     pub map_complete: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Pixel center of the pick sample window.
     pub center: (u32, u32),
+    /// Size of the depth texture the pick sampled.
     pub texture_size: (u32, u32),
+    /// Camera the pending pick belongs to, if any.
     pub camera: Option<freecs::Entity>,
 }
 
 /// Screenshot capture and readback resources.
 #[cfg(not(target_arch = "wasm32"))]
 pub struct ScreenshotState {
+    /// Mappable buffer that receives the captured frame.
     pub staging_buffer: wgpu::Buffer,
+    /// Whether a capture is in flight.
     pub pending: bool,
+    /// Set from the map callback when the staging buffer is ready to read.
     pub map_complete: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Destination path the capture is written to, if any.
     pub path: Option<std::path::PathBuf>,
+    /// Captured image width in pixels.
     pub width: u32,
+    /// Captured image height in pixels.
     pub height: u32,
+    /// Optional cap on the larger output dimension, downscaling above it.
     pub max_dimension: Option<u32>,
 }
 
 /// Per-frame and dedup bookkeeping that the renderer carries between frames.
 pub struct FrameState {
+    /// Monotonic frame counter.
     pub index: u64,
+    /// Settings signature applied on the previous frame, for change detection.
     pub last_settings_signature: Option<u64>,
+    /// Per-entity text mesh signatures, used to skip unchanged rebuilds.
     pub text_mesh_signatures: std::collections::HashMap<freecs::Entity, u64>,
+    /// Atmosphere captured for the current IBL bake, if any.
     pub captured_ibl_atmosphere: Option<crate::config::Atmosphere>,
+    /// Time of day captured for the current IBL bake.
     pub captured_ibl_hour: f32,
+    /// Whether day-night IBL snapshots have been captured.
     pub captured_day_night_snapshots: bool,
 }
 
+/// Creates a [`WgpuRenderer`] for `window_handle` at the given initial size.
 pub async fn create_wgpu_renderer<W>(
     window_handle: W,
     initial_width: u32,

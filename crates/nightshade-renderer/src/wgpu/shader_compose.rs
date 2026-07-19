@@ -1,9 +1,13 @@
+//! The `naga_oil` shader composer: registers the shared WGSL modules once and
+//! compiles pass shaders that import them.
+
 use naga_oil::compose::{
     ComposableModuleDescriptor, Composer, NagaModuleDescriptor, ShaderDefValue, ShaderLanguage,
 };
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
+/// Owns a `naga_oil` composer preloaded with the shared WGSL modules.
 pub struct ShaderComposer {
     inner: Mutex<Composer>,
 }
@@ -15,6 +19,8 @@ impl Default for ShaderComposer {
 }
 
 impl ShaderComposer {
+    /// Builds a composer with every shared module and the union of shader
+    /// capabilities any pass may use registered.
     pub fn new() -> Self {
         // These say what the composer will validate, not what any device can do.
         // A capability granted here only permits a construct to be written; the
@@ -109,6 +115,9 @@ impl ShaderComposer {
         }
     }
 
+    /// Composes `source` against the shared modules with `shader_defs` and
+    /// creates a shader module. Panics with the composer's diagnostics on a
+    /// composition error.
     pub fn compile_wgsl(
         &self,
         device: &wgpu::Device,
@@ -146,14 +155,17 @@ impl ShaderComposer {
 
 static GLOBAL_COMPOSER: OnceLock<ShaderComposer> = OnceLock::new();
 
+/// Returns the process-wide composer, building it on first use.
 pub fn global() -> &'static ShaderComposer {
     GLOBAL_COMPOSER.get_or_init(ShaderComposer::new)
 }
 
+/// Compiles `source` through the global composer with no shader defs.
 pub fn compile_wgsl(device: &wgpu::Device, label: &str, source: &str) -> wgpu::ShaderModule {
     global().compile_wgsl(device, label, source, &[])
 }
 
+/// Compiles `source` through the global composer with `shader_defs`.
 pub fn compile_wgsl_with_defs(
     device: &wgpu::Device,
     label: &str,

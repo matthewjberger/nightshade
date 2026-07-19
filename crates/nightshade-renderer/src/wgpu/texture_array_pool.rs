@@ -3,18 +3,23 @@
 //! it is O(1) up to `max_layers`, and every layer shares a single view and
 //! sampler. Layer assignment is the caller's; the pool is just the GPU resource.
 //!
-//! Suitable for pools of small, same-size images — UI thumbnails, icons, and
-//! asset previews are the engine's use. WebGPU guarantees at least 256 array
+//! Suitable for pools of small, same-size images such as UI thumbnails, icons,
+//! and asset previews, which is the engine's use. WebGPU guarantees at least 256 array
 //! layers and `D2Array` views are core, so it works on every backend the engine
 //! targets, including wasm.
 
 /// A pool of same-size RGBA8 texture-array layers behind one shared view and
 /// sampler.
 pub struct TextureArrayPool {
+    /// The backing `D2Array` texture.
     pub texture: wgpu::Texture,
+    /// Shared array view spanning every layer.
     pub view: wgpu::TextureView,
+    /// Shared clamped linear sampler.
     pub sampler: wgpu::Sampler,
+    /// Square edge length of every layer in pixels.
     pub layer_size: u32,
+    /// Number of layers in the pool.
     pub max_layers: u32,
 }
 

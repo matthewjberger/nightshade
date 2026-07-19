@@ -1,5 +1,10 @@
+//! Precomputes the split-sum BRDF integration lookup texture for image-based
+//! lighting.
+
 const LUT_SIZE: u32 = 256;
 
+/// Runs the compute shader that fills the BRDF integration lookup texture and
+/// returns it with its view.
 pub fn generate_brdf_lut(
     device: &wgpu::Device,
     queue: &wgpu::Queue,

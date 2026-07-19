@@ -7,14 +7,19 @@ const LTC_MAT_1: &[u8] = include_bytes!("ltc/ltc_mat_1.bin");
 const LTC_MAT_2: &[u8] = include_bytes!("ltc/ltc_mat_2.bin");
 const LTC_LUT_SIZE: u32 = 64;
 
+/// The two LTC lookup textures and their shared sampler.
 pub struct LtcTextures {
+    /// View of the inverse-transform-matrix table.
     pub view_matrix: wgpu::TextureView,
+    /// View of the BRDF magnitude and Fresnel table.
     pub view_terms: wgpu::TextureView,
+    /// Sampler for both tables.
     pub sampler: wgpu::Sampler,
     _matrix: wgpu::Texture,
     _terms: wgpu::Texture,
 }
 
+/// Uploads both LTC tables and returns their views and sampler.
 pub fn create(device: &wgpu::Device, queue: &wgpu::Queue) -> LtcTextures {
     let matrix = create_lut(device, queue, "LTC Matrix LUT", LTC_MAT_1);
     let terms = create_lut(device, queue, "LTC Terms LUT", LTC_MAT_2);

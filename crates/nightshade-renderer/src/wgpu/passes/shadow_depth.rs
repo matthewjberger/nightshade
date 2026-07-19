@@ -1,8 +1,12 @@
+//! Cascaded directional shadows plus a spotlight and area-light shadow atlas.
+
 pub mod atlas;
+/// Cascade split math and reverse-Z orthographic light projections.
 pub mod cascade;
 mod culling;
 mod node;
 mod pass;
+/// Shadow constants and the GPU cascade, spotlight, and point-light data types.
 pub mod types;
 
 pub use pass::ShadowDepthPass;

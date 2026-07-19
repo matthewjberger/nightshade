@@ -76,11 +76,13 @@ pub fn rebind_glyph_atlas(renderer: &mut WgpuRenderer) {
     }
 }
 
+/// Mutable access to the debug lines pass nested in the scene overlay pass.
 pub fn lines_pass_mut(graph: &mut RenderGraph<RenderInputs>) -> Option<&mut LinesPass> {
     let overlay_pass = crate::wgpu::pass_access::scene_overlay_pass_mut(graph)?;
     Some(&mut overlay_pass.lines)
 }
 
+/// Uploads a color grading lookup table to the postprocess pass.
 pub fn set_color_lut(renderer: &mut WgpuRenderer, data: Vec<u8>) {
     if let Some(pass) = crate::wgpu::pass_access::postprocess_pass_mut(&mut renderer.graph) {
         pass.set_color_lut(data);
@@ -108,8 +110,11 @@ pub fn sync_point_shadow_cubemap(renderer: &mut WgpuRenderer) {
 /// One cloth's mesh name and the widened cull bounds covering its full
 /// deformation range.
 pub struct ClothWriteBounds {
+    /// Registered mesh name the cloth writes its deformed vertices into.
     pub mesh_name: String,
+    /// World-space center of the widened cull bounds.
     pub center: [f32; 3],
+    /// Radius of the widened cull sphere in world units.
     pub sphere_radius: f32,
 }
 

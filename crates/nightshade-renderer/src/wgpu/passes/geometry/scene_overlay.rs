@@ -19,10 +19,17 @@ use super::particles::ParticlePass;
 use super::text::TextPass;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 
+/// Merged overlay pass that draws the grid, debug lines, GPU particles, and 3D
+/// text through one render pass over the shared `scene_color` and `depth`
+/// attachments.
 pub struct SceneOverlayPass {
+    /// Infinite ground grid sub-pass.
     pub grid: GridPass,
+    /// Debug line sub-pass, including its compute generation and culling.
     pub lines: LinesPass,
+    /// GPU particle sub-pass, including its simulation compute.
     pub particles: ParticlePass,
+    /// 3D text sub-pass.
     pub text: TextPass,
 }
 

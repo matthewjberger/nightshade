@@ -1,3 +1,6 @@
+//! Viewport compose pass that blits a camera's rendered texture into its screen
+//! rectangle with aspect-correct letterboxing.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
 use wgpu::{
@@ -51,6 +54,8 @@ struct UvTransform {
     offset: [f32; 2],
 }
 
+/// Pass that samples a source texture and draws it into the output at the active
+/// camera's viewport rectangle, scaling UVs to preserve aspect.
 pub struct ViewportComposePass {
     pipeline: RenderPipeline,
     bind_group_layout: BindGroupLayout,
@@ -60,6 +65,7 @@ pub struct ViewportComposePass {
 }
 
 impl ViewportComposePass {
+    /// Builds the viewport compose pass for the given surface format.
     pub fn new(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         let shader_source = format!("{VERTEX_SHADER}\n{FRAGMENT_SHADER}");
         let shader_module = crate::wgpu::shader_compose::compile_wgsl(

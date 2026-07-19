@@ -1,3 +1,5 @@
+//! GPU prefiltering of environment cubemaps for image-based lighting.
+
 const IRRADIANCE_SIZE: u32 = 64;
 const PREFILTERED_SIZE: u32 = 512;
 const PREFILTERED_MIP_LEVELS: u32 = 5;
@@ -7,6 +9,7 @@ const PREFILTERED_SAMPLES: u32 = 512;
 const DISTRIBUTION_LAMBERTIAN: u32 = 0;
 const DISTRIBUTION_GGX: u32 = 1;
 
+/// When `true`, filtered cubemaps are written to disk for inspection.
 pub const DEBUG_DUMP_CUBEMAPS: bool = false;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -156,13 +159,19 @@ struct FilterParams {
     source_mip_count: u32,
 }
 
+/// Diffuse irradiance and specular prefiltered environment cubemaps produced by filtering.
 pub struct FilteredEnvironmentMaps {
+    /// Diffuse irradiance cubemap.
     pub irradiance_texture: wgpu::Texture,
+    /// Cube view over [`irradiance_texture`](Self::irradiance_texture).
     pub irradiance_view: wgpu::TextureView,
+    /// Specular prefiltered cubemap with roughness increasing across mip levels.
     pub prefiltered_texture: wgpu::Texture,
+    /// Cube view over [`prefiltered_texture`](Self::prefiltered_texture).
     pub prefiltered_view: wgpu::TextureView,
 }
 
+/// Filters `source_cubemap` into diffuse irradiance and specular prefiltered cubemaps.
 pub fn filter_environment_map(
     device: &wgpu::Device,
     queue: &wgpu::Queue,

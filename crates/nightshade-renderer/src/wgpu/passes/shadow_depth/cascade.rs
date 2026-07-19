@@ -1,3 +1,5 @@
+/// Orthographic projection with a reverse-Z depth range for a directional
+/// light, mapping `near` to 1.0 and `far` to 0.0.
 pub fn reverse_z_ortho_light(
     left: f32,
     right: f32,
@@ -30,6 +32,8 @@ pub fn reverse_z_ortho_light(
     )
 }
 
+/// Perspective projection with a reverse-Z depth range, mapping `near` to 1.0
+/// and `far` to 0.0 for better depth precision.
 pub fn reverse_z_perspective(fov: f32, aspect: f32, near: f32, far: f32) -> nalgebra_glm::Mat4 {
     let f = 1.0 / (fov / 2.0).tan();
     let depth = far - near;
@@ -54,6 +58,8 @@ pub fn reverse_z_perspective(fov: f32, aspect: f32, near: f32, far: f32) -> nalg
     )
 }
 
+/// The eight world-space corner positions of a perspective view frustum,
+/// near plane first then far plane.
 pub fn get_frustum_corners_world_space(
     view: &nalgebra_glm::Mat4,
     fov: f32,

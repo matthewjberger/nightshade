@@ -1,3 +1,7 @@
+//! The final postprocess pass: tonemapping, color grading, bloom, ambient
+//! occlusion, auto exposure, and the color-grading LUT composited to the
+//! output.
+
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::util::DeviceExt;
 
@@ -34,6 +38,7 @@ struct PostProcessParams {
     color_lut_weight: f32,
 }
 
+/// The fullscreen postprocess pass compositing the HDR scene to the output.
 pub struct PostProcessPass {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -96,6 +101,8 @@ fn upload_color_lut(queue: &wgpu::Queue, texture: &wgpu::Texture, data: &[u8]) {
 }
 
 impl PostProcessPass {
+    /// Builds the pass targeting `surface_format` with the given starting
+    /// bloom intensity, seeding an identity color-grading LUT.
     pub fn new(
         device: &wgpu::Device,
         surface_format: wgpu::TextureFormat,
@@ -438,10 +445,12 @@ impl PostProcessPass {
         }
     }
 
+    /// Queues raw RGBA8 LUT pixels to upload on the next frame.
     pub fn set_color_lut(&mut self, data: Vec<u8>) {
         self.pending_color_lut = Some(data);
     }
 
+    /// Sets the bloom intensity applied by the pass.
     pub fn set_bloom_intensity(&mut self, intensity: f32) {
         self.bloom_intensity = intensity;
     }

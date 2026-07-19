@@ -1,3 +1,5 @@
+//! Construction of the skinned mesh pass and its GPU resources.
+
 use crate::geometry::SkinnedVertex;
 use crate::skinning::SkinningCache;
 use std::collections::{HashMap, HashSet};
@@ -7,6 +9,7 @@ use super::super::types::*;
 use super::{SkinnedMeshPass, skinned_texture_bind_group_layout_entries};
 
 impl SkinnedMeshPass {
+    /// Builds the skinned mesh pass, creating its pipelines, buffers, and bind group layouts.
     pub async fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,

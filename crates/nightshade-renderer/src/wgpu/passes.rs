@@ -40,8 +40,8 @@
 //! | [`SsgiPass`] | Screen-space global illumination |
 //! | [`SsgiBlurPass`] | SSGI bilateral blur |
 //! | [`DepthOfFieldPass`] | Bokeh depth of field |
-//! | [`OutlinePass`] | Selection outline rendering |
-//! | [`SelectionMaskPass`] | Selection mask generation |
+//! | `OutlinePass` | Selection outline rendering |
+//! | `SelectionMaskPass` | Selection mask generation |
 //! | [`BlitPass`] | Simple texture copy |
 //!
 //! # Using Built-in Passes
@@ -99,6 +99,7 @@
 //! let postprocess = PostProcessPass::new(device, format, 0.3);  // 30% bloom
 //! ```
 
+/// Passes that run before the scene draws, such as pick keepalive.
 pub mod setup;
 pub use setup::PickKeepalivePass;
 
@@ -120,6 +121,8 @@ pub use shadow_depth::{
     SpotlightShadowData, SpotlightShadowSlot,
 };
 
+/// Screen-space post-processing passes: bloom, SSAO, SSGI, SSR, depth of
+/// field, TAA, color grading, blit, and viewport compose.
 pub mod postprocess;
 pub use postprocess::{
     BlitPass, BloomPass, DepthOfFieldPass, EffectsPass, PostProcessPass, SsaoBlurPass, SsaoPass,

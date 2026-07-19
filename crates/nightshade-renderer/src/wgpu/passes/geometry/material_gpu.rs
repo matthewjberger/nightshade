@@ -63,6 +63,9 @@ pub fn material_texture_bind_group_layout_entries(
     ]
 }
 
+/// Builds the bindless material bind group (a texture-view array at binding 0 and
+/// the three wrap-mode samplers at bindings 1 through 3). Shared by the mesh and
+/// skinned mesh passes, which differ only in the debug label.
 pub fn bindless_material_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -160,16 +163,20 @@ pub fn rebuild_array_material_bind_group(
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuTextureTransform {
+    /// First affine row `(m00, m01, m02, uv_set)`, where `uv_set` selects the UV channel.
     pub row0: [f32; 4],
+    /// Second affine row `(m10, m11, m12, _pad)`.
     pub row1: [f32; 4],
 }
 
 impl GpuTextureTransform {
+    /// Identity UV transform on UV set 0.
     pub const IDENTITY: Self = Self {
         row0: [1.0, 0.0, 0.0, 0.0],
         row1: [0.0, 1.0, 0.0, 0.0],
     };
 
+    /// Packs a material [`crate::material::TextureTransform`] into the GPU layout.
     pub fn from_material(t: &crate::material::TextureTransform) -> Self {
         let (r0, r1) = t.to_packed();
         Self {
@@ -179,103 +186,200 @@ impl GpuTextureTransform {
     }
 }
 
+/// GPU-side material parameters uploaded per material, matching the shader's
+/// `MaterialData` struct for PBR shading and the glTF PBR extensions. Texture
+/// slots are array-layer indices, or [`NO_TEXTURE_LAYER`] when absent.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct MaterialData {
+    /// Base color factor, linear RGBA.
     pub base_color: [f32; 4],
+    /// Emissive color factor, linear RGB.
     pub emissive_factor: [f32; 3],
+    /// Alpha mode: 0 opaque, 1 mask, 2 blend, 3 dither.
     pub alpha_mode: u32,
+    /// Alpha threshold below which mask-mode fragments are discarded.
     pub alpha_cutoff: f32,
+    /// Array-layer index of the base color texture.
     pub base_layer: u32,
+    /// Array-layer index of the emissive texture.
     pub emissive_layer: u32,
+    /// Array-layer index of the normal map.
     pub normal_layer: u32,
+    /// Array-layer index of the metallic-roughness texture.
     pub metallic_roughness_layer: u32,
+    /// Array-layer index of the occlusion texture.
     pub occlusion_layer: u32,
+    /// Normal map strength.
     pub normal_scale: f32,
+    /// Occlusion map strength.
     pub occlusion_strength: f32,
+    /// Roughness factor.
     pub roughness: f32,
+    /// Metallic factor.
     pub metallic: f32,
+    /// Nonzero disables lighting and outputs the base color directly.
     pub unlit: u32,
+    /// Bitmask of [`NORMAL_MAP_FLIP_Y`] and [`NORMAL_MAP_TWO_COMPONENT`].
     pub normal_map_flags: u32,
+    /// `KHR_materials_transmission` transmission factor.
     pub transmission_factor: f32,
+    /// Array-layer index of the transmission texture.
     pub transmission_layer: u32,
+    /// `KHR_materials_volume` thickness, in world units.
     pub thickness: f32,
+    /// Array-layer index of the thickness texture.
     pub thickness_layer: u32,
+    /// Volume attenuation color, linear RGB.
     pub attenuation_color: [f32; 3],
+    /// Distance over which light is attenuated inside the volume, in world units.
     pub attenuation_distance: f32,
+    /// Index of refraction.
     pub ior: f32,
+    /// `KHR_materials_specular` specular strength factor.
     pub specular_factor: f32,
+    /// Padding for 16-byte alignment.
     pub _align_specular: [u32; 2],
+    /// Specular color factor, linear RGB.
     pub specular_color_factor: [f32; 3],
+    /// Array-layer index of the specular texture.
     pub specular_layer: u32,
+    /// Array-layer index of the specular color texture.
     pub specular_color_layer: u32,
+    /// `KHR_materials_emissive_strength` multiplier on the emissive factor.
     pub emissive_strength: f32,
+    /// Padding before the UV-transform block.
     pub _pad_before_transforms: [u32; 2],
+    /// UV transform for the base color texture.
     pub base_transform: GpuTextureTransform,
+    /// UV transform for the emissive texture.
     pub emissive_transform: GpuTextureTransform,
+    /// UV transform for the normal map.
     pub normal_transform: GpuTextureTransform,
+    /// UV transform for the metallic-roughness texture.
     pub metallic_roughness_transform: GpuTextureTransform,
+    /// UV transform for the occlusion texture.
     pub occlusion_transform: GpuTextureTransform,
+    /// UV transform for the transmission texture.
     pub transmission_transform: GpuTextureTransform,
+    /// UV transform for the thickness texture.
     pub thickness_transform: GpuTextureTransform,
+    /// UV transform for the specular texture.
     pub specular_transform: GpuTextureTransform,
+    /// UV transform for the specular color texture.
     pub specular_color_transform: GpuTextureTransform,
+    /// `KHR_materials_clearcoat` clearcoat strength factor.
     pub clearcoat_factor: f32,
+    /// Clearcoat roughness factor.
     pub clearcoat_roughness_factor: f32,
+    /// Clearcoat normal map strength.
     pub clearcoat_normal_scale: f32,
+    /// Array-layer index of the clearcoat texture.
     pub clearcoat_layer: u32,
+    /// Array-layer index of the clearcoat roughness texture.
     pub clearcoat_roughness_layer: u32,
+    /// Array-layer index of the clearcoat normal map.
     pub clearcoat_normal_layer: u32,
+    /// Padding for 16-byte alignment.
     pub _pad_clearcoat: [u32; 2],
+    /// UV transform for the clearcoat texture.
     pub clearcoat_transform: GpuTextureTransform,
+    /// UV transform for the clearcoat roughness texture.
     pub clearcoat_roughness_transform: GpuTextureTransform,
+    /// UV transform for the clearcoat normal map.
     pub clearcoat_normal_transform: GpuTextureTransform,
+    /// `KHR_materials_sheen` sheen color factor, linear RGB.
     pub sheen_color_factor: [f32; 3],
+    /// Sheen roughness factor.
     pub sheen_roughness_factor: f32,
+    /// Array-layer index of the sheen color texture.
     pub sheen_color_layer: u32,
+    /// Padding for 16-byte alignment.
     pub _pad_sheen0: u32,
+    /// Padding for 16-byte alignment.
     pub _pad_sheen: [u32; 2],
+    /// UV transform for the sheen color texture.
     pub sheen_color_transform: GpuTextureTransform,
+    /// UV transform for the sheen roughness texture.
     pub sheen_roughness_transform: GpuTextureTransform,
+    /// `KHR_materials_iridescence` iridescence strength factor.
     pub iridescence_factor: f32,
+    /// Iridescence thin-film index of refraction.
     pub iridescence_ior: f32,
+    /// Minimum thin-film thickness, in nanometers.
     pub iridescence_thickness_minimum: f32,
+    /// Maximum thin-film thickness, in nanometers.
     pub iridescence_thickness_maximum: f32,
+    /// Array-layer index of the iridescence texture.
     pub iridescence_layer: u32,
+    /// Padding for 16-byte alignment.
     pub _pad_iridescence0: u32,
+    /// Padding for 16-byte alignment.
     pub _pad_iridescence: [u32; 2],
+    /// UV transform for the iridescence texture.
     pub iridescence_transform: GpuTextureTransform,
+    /// UV transform for the iridescence thickness texture.
     pub iridescence_thickness_transform: GpuTextureTransform,
+    /// `KHR_materials_anisotropy` anisotropy strength.
     pub anisotropy_strength: f32,
+    /// Cosine of the anisotropy rotation angle.
     pub anisotropy_rotation_cos: f32,
+    /// Sine of the anisotropy rotation angle.
     pub anisotropy_rotation_sin: f32,
+    /// Array-layer index of the anisotropy texture.
     pub anisotropy_layer: u32,
+    /// UV transform for the anisotropy texture.
     pub anisotropy_transform: GpuTextureTransform,
+    /// `KHR_materials_dispersion` dispersion strength.
     pub dispersion: f32,
+    /// `KHR_materials_diffuse_transmission` diffuse transmission factor.
     pub diffuse_transmission_factor: f32,
+    /// Padding for 16-byte alignment.
     pub _pad_diffuse_transmission0: u32,
+    /// Array-layer index of the diffuse transmission color texture.
     pub diffuse_transmission_color_layer: u32,
+    /// Diffuse transmission color factor, linear RGB.
     pub diffuse_transmission_color_factor: [f32; 3],
+    /// Alpha above which a blend-mode fragment is treated as opaque.
     pub blend_opaque_alpha_threshold: f32,
+    /// UV transform for the diffuse transmission texture.
     pub diffuse_transmission_transform: GpuTextureTransform,
+    /// UV transform for the diffuse transmission color texture.
     pub diffuse_transmission_color_transform: GpuTextureTransform,
+    /// Array-layer index of the detail base color texture.
     pub detail_base_layer: u32,
+    /// Array-layer index of the detail normal map.
     pub detail_normal_layer: u32,
+    /// Array-layer index of the height map used for parallax.
     pub height_layer: u32,
+    /// UV tiling scale applied to the detail textures.
     pub detail_uv_scale: f32,
+    /// Parallax occlusion displacement scale.
     pub parallax_scale: f32,
+    /// Padding for 16-byte alignment.
     pub _pad_detail: [u32; 3],
+    /// Minimum corner of the box-projection reflection bounds, world space.
     pub reflection_box_min: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad_box_min: f32,
+    /// Maximum corner of the box-projection reflection bounds, world space.
     pub reflection_box_max: [f32; 3],
+    /// Padding for 16-byte alignment.
     pub _pad_box_max: f32,
 }
 
+/// Sentinel layer index marking a material texture slot as absent.
 pub const NO_TEXTURE_LAYER: u32 = 0xFFFFFFFFu32;
 
+/// [`MaterialData::normal_map_flags`] bit: reconstruct the normal with the green
+/// channel flipped.
 pub const NORMAL_MAP_FLIP_Y: u32 = 1;
+/// [`MaterialData::normal_map_flags`] bit: the normal map stores two channels and
+/// the shader reconstructs Z.
 pub const NORMAL_MAP_TWO_COMPONENT: u32 = 2;
 
+/// Resolves a texture id to its packed array-layer index, or [`NO_TEXTURE_LAYER`]
+/// when the id is `None` or unmapped.
 pub fn material_layer_for(
     layer_map: &HashMap<
         crate::asset_id::TextureId,
@@ -288,6 +392,8 @@ pub fn material_layer_for(
         .unwrap_or(NO_TEXTURE_LAYER)
 }
 
+/// Converts a CPU [`crate::material::Material`] and its texture ids into the
+/// packed [`MaterialData`], resolving each texture slot through `layer_map`.
 pub fn convert_material_to_gpu_data(
     material: &crate::material::Material,
     texture_ids: &crate::material::MaterialTextureIds,
@@ -439,6 +545,8 @@ pub fn convert_material_to_gpu_data(
     }
 }
 
+/// Builds the built-in default [`MaterialData`] with the given base color and no
+/// textures, matching material id 0.
 pub fn default_material_data(base_color: [f32; 4]) -> MaterialData {
     MaterialData {
         base_color,

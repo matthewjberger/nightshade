@@ -9,11 +9,17 @@ use std::collections::HashMap;
 
 /// The retained-UI content for the current frame.
 pub struct UiFrameInputs {
+    /// Solid-color rectangles to draw this frame.
     pub rects: Vec<crate::ui_data::UiRect>,
+    /// The source entity for each rectangle, index-aligned with `rects`.
     pub rect_entities: Vec<Option<Entity>>,
+    /// Textured image quads to draw this frame.
     pub images: Vec<crate::ui_data::UiImage>,
+    /// Glyph-mesh instances to draw this frame.
     pub text_meshes: Vec<crate::ui_data::UiTextInstance>,
+    /// Allocator assigning render-target slots to UI content this frame.
     pub render_slots: crate::ui_data::RenderSlotAllocator,
+    /// Clear color for the UI layer, or `None` to leave it transparent.
     pub background_color: Option<nalgebra_glm::Vec4>,
 }
 
@@ -21,20 +27,31 @@ pub struct UiFrameInputs {
 /// timing, and the viewport layout the compose pass targets. The renderer
 /// updates this between camera dispatches within a frame.
 pub struct ViewInputs {
+    /// The camera driving this view, or `None` for the fallback path.
     pub active_camera: Option<Entity>,
+    /// Milliseconds elapsed since startup, for time-driven effects.
     pub uptime_milliseconds: u64,
+    /// Seconds elapsed since the previous frame.
     pub delta_time: f32,
+    /// The view's target size in pixels, or `None` when unset.
     pub viewport_size: Option<(u32, u32)>,
+    /// Per-camera sub-rectangle within the viewport for tiled multi-camera
+    /// layouts.
     pub camera_tile_rects: HashMap<Entity, crate::config::ViewportRect>,
+    /// Which tile this render iteration targets in a multi-camera layout.
     pub camera_tile_render_iteration: u32,
+    /// The rectangle the compose pass writes to this frame.
     pub active_viewport_rect: Option<crate::config::ViewportRect>,
 }
 
 /// One camera's unjittered matrices, captured before the frame.
 #[derive(Clone, Copy)]
 pub struct CameraMatricesInputs {
+    /// World-to-view matrix.
     pub view: nalgebra_glm::Mat4,
+    /// View-to-clip matrix, reverse-Z as the passes expect.
     pub projection: nalgebra_glm::Mat4,
+    /// The camera's world-space position.
     pub camera_position: nalgebra_glm::Vec3,
 }
 
@@ -42,10 +59,15 @@ pub struct CameraMatricesInputs {
 /// `aspect` already reflects the camera's override or the window fallback.
 #[derive(Clone, Copy)]
 pub struct CameraProjectionParams {
+    /// Near clip distance in world units.
     pub z_near: f32,
+    /// Far clip distance in world units.
     pub z_far: f32,
+    /// Vertical field of view in radians.
     pub y_fov_rad: f32,
+    /// Width-over-height ratio, already resolved from override or window.
     pub aspect: f32,
+    /// Orthographic half-width and half-height, or `None` for perspective.
     pub orthographic: Option<(f32, f32)>,
 }
 
@@ -67,12 +89,19 @@ impl Default for CameraProjectionParams {
 /// transform for dirtiness checks.
 #[derive(Clone)]
 pub struct CameraFrameInputs {
+    /// The camera entity this dispatch renders.
     pub entity: Entity,
+    /// The camera's unjittered matrices, or `None` when not yet resolved.
     pub matrices: Option<CameraMatricesInputs>,
+    /// The camera's resolved projection parameters.
     pub projection: CameraProjectionParams,
+    /// Aspect the viewport is constrained to, or `None` to fill.
     pub constrained_aspect: Option<f32>,
+    /// The per-camera shading resolved from settings.
     pub effective_shading: crate::config::EffectiveShading,
+    /// When this camera's viewport re-renders.
     pub update_mode: crate::config::ViewportUpdateMode,
+    /// The camera's world transform, for dirtiness checks.
     pub world_transform: Option<nalgebra_glm::Mat4>,
 }
 
@@ -80,26 +109,43 @@ pub struct CameraFrameInputs {
 /// frame. Path-based commands are resolved to bytes before they reach the
 /// renderer.
 pub enum RendererCommand {
+    /// Upload RGBA pixels into one layer of the UI image array.
     UploadUiImageLayer {
+        /// Destination array layer.
         layer: u32,
+        /// Tightly packed RGBA8 pixels.
         rgba_data: Vec<u8>,
+        /// Image width in pixels.
         width: u32,
+        /// Image height in pixels.
         height: u32,
     },
+    /// Replace the skybox from an equirectangular HDR image.
     LoadHdrSkybox {
+        /// Encoded HDR image bytes.
         hdr_data: Vec<u8>,
     },
+    /// Replace a named texture's pixels in the cache.
     ReloadTexture {
+        /// The cache key of the texture to replace.
         name: String,
+        /// Tightly packed RGBA8 pixels.
         rgba_data: Vec<u8>,
+        /// Image width in pixels.
         width: u32,
+        /// Image height in pixels.
         height: u32,
     },
+    /// Set the color-grading lookup table used by post-processing.
     SetColorLut {
+        /// Encoded LUT image bytes.
         data: Vec<u8>,
     },
+    /// Capture the next frame to disk or memory.
     CaptureScreenshot {
+        /// Output file path, or `None` to keep the capture in memory.
         path: Option<std::path::PathBuf>,
+        /// Longest-edge pixel cap, or `None` for full resolution.
         max_dimension: Option<u32>,
     },
 }
@@ -109,8 +155,11 @@ pub enum RendererCommand {
 /// pass buffers are cleared.
 #[derive(Default)]
 pub struct LinesFrameInputs {
+    /// Explicit debug line segments to draw.
     pub lines: Vec<crate::wgpu::passes::geometry::lines::GpuLineData>,
+    /// Bounding-volume wireframes, or `None` when that overlay is off.
     pub bounding_volumes: Option<Vec<crate::wgpu::passes::geometry::lines::GpuBoundingVolumeData>>,
+    /// Vertex-normal lines, or `None` when that overlay is off.
     pub normals: Option<Vec<crate::wgpu::passes::geometry::lines::GpuNormalData>>,
 }
 
@@ -155,7 +204,9 @@ pub struct FrameInputs {
 /// sees the world.
 #[derive(Default)]
 pub struct FrameOutputs {
+    /// The pixel size of each viewport texture the frame produced.
     pub viewport_texture_sizes: Vec<(u32, u32)>,
+    /// Cameras whose forced-render flag the frame consumed.
     pub force_render_cleared: Vec<Entity>,
     /// Whether the frame actually rendered. False when the surface was
     /// occluded, timed out, or lost, so callers keep their previous
@@ -200,10 +251,13 @@ pub struct RenderInputs {
     pub world_id: u64,
     /// The frame's orchestration snapshot: cameras, commands, and dirt.
     pub frame: FrameInputs,
+    /// Grass rendering settings.
     #[cfg(feature = "grass")]
     pub grass: crate::grass_config::GrassSettings,
+    /// Terrain rendering settings.
     #[cfg(feature = "terrain")]
     pub terrain: crate::terrain_config::TerrainSettings,
+    /// Per-frame terrain render state.
     #[cfg(feature = "terrain")]
     pub terrain_render: crate::terrain_config::TerrainRenderState,
 }
@@ -242,9 +296,13 @@ impl CameraFrameInputs {
 
 /// The camera, viewport, and timing for one single-view frame.
 pub struct ViewFrame {
+    /// The camera to render.
     pub camera: CameraFrameInputs,
+    /// The target size in pixels.
     pub viewport: (u32, u32),
+    /// Milliseconds elapsed since startup.
     pub uptime_milliseconds: u64,
+    /// Seconds elapsed since the previous frame.
     pub delta_time: f32,
 }
 
@@ -345,11 +403,17 @@ impl RenderInputs {
 /// [`restore_single_view`]; one left out silently resets to its default each
 /// frame.
 pub struct SingleViewHost {
+    /// The scene as the renderer's ECS world.
     pub scene_world: freecs::dynamic::DynWorld,
+    /// The persistent per-frame scene snapshot.
     pub state: crate::config::RendererState,
+    /// Named mesh geometry with dirty tracking.
     pub mesh_cache: crate::mesh_cache::MeshCache,
+    /// GPU texture registry and lifecycle state.
     pub texture_cache: crate::wgpu::texture_cache::TextureCache,
+    /// User-facing render settings.
     pub settings: crate::config::RenderSettings,
+    /// Debug visualization toggles.
     pub debug_draw: crate::config::DebugDraw,
 }
 
