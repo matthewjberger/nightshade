@@ -192,7 +192,11 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for OutlinePass {
         configs: &crate::wgpu::render_configs::RenderInputs,
     ) {
         self.enabled = configs.scene.active_view.selection_outline_enabled
-            && !configs.scene.render_selection_outline_ids.is_empty();
+            && configs
+                .scene_world
+                .query_tag_type::<crate::render_world::SelectionOutline>()
+                .next()
+                .is_some();
 
         if !self.enabled {
             return;

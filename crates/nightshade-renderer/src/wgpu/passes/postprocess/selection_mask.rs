@@ -184,7 +184,12 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for SelectionMaskPass {
     ) {
         self.enabled = false;
 
-        let ids = &configs.scene.render_selection_outline_ids;
+        let ids: Vec<u32> = configs
+            .scene_world
+            .query_tag_type::<crate::render_world::SelectionOutline>()
+            .map(|entity| entity.id)
+            .collect();
+        let ids = &ids;
 
         if ids.is_empty() {
             self.cached_signature = 0;

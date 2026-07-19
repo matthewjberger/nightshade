@@ -243,10 +243,15 @@ pub fn sync_taa_jitter(renderer: &WgpuRenderer, inputs: &mut RenderInputs) {
 /// Bumps the scene's settings version when the settings signature changed
 /// since the last frame, so viewport caching invalidates on settings edits.
 pub fn sync_settings_version(renderer: &mut WgpuRenderer, inputs: &mut RenderInputs) {
+    let outline_ids: Vec<u32> = inputs
+        .scene_world
+        .query_tag_type::<crate::render_world::SelectionOutline>()
+        .map(|entity| entity.id)
+        .collect();
     let current_settings_signature = render_settings_signature(
         &inputs.settings,
         &inputs.debug_draw,
-        &inputs.scene.render_selection_outline_ids,
+        &outline_ids,
         inputs.scene.render_selection_outline_color,
     );
     if renderer.frame_state.last_settings_signature != Some(current_settings_signature) {

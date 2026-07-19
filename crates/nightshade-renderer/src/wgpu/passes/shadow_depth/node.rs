@@ -614,9 +614,8 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for ShadowDepthPass {
                     joint_offset,
                 });
                 let margin = configs
-                    .scene
-                    .render_bounds
-                    .get(&entity)
+                    .scene_world
+                    .get::<crate::config::RenderBounds>(entity)
                     .map(|volume| volume.sphere_radius)
                     .unwrap_or(2.0);
                 let bound = skinning_cache

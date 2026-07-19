@@ -320,9 +320,8 @@ impl SkinnedMeshPass {
                 });
 
                 let mesh_rest_radius = configs
-                    .scene
-                    .render_bounds
-                    .get(&entity)
+                    .scene_world
+                    .get::<crate::config::RenderBounds>(entity)
                     .map(|bv| bv.sphere_radius)
                     .unwrap_or(2.0);
                 let base_bone = self.skinning_cache.get_base_bone_index(skin_index) as usize;

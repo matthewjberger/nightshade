@@ -62,6 +62,19 @@ fn clear_render_domain(world: &mut World, component: u64) {
     }
 }
 
+/// Strips only `component` from every [`RENDER`] member-world row carrying it,
+/// leaving the rest of each row intact, so a full-rebuild domain that rides
+/// alongside other components on the same entity (bounds and cloth on a mesh
+/// row, text on its own row) can drop the previous frame's set before writing
+/// the current one without disturbing the entity's other render state.
+fn clear_render_component(world: &mut World, component: u64) {
+    let render = &mut world.ecs.worlds[RENDER];
+    let entities: Vec<crate::ecs::world::Entity> = render.query_entities(component).collect();
+    for entity in entities {
+        render.remove_components(entity, component);
+    }
+}
+
 /// Cursors and gates for the persistent scene sync.
 #[derive(Default)]
 pub struct RenderSceneSync {
@@ -607,11 +620,10 @@ fn sync_objects_full(world: &mut World) {
             }
         }
     }
-    let render_bounds = &mut world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_bounds;
-    render_bounds.clear();
-    render_bounds.extend(bounds);
+    clear_render_component(world, render_world::BOUNDS);
+    for (entity, bound) in bounds {
+        world.set(entity, bound);
+    }
 }
 
 fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
@@ -683,16 +695,10 @@ fn sync_objects_delta(world: &mut World, dirt: &SceneDirt) {
                     center: volume.obb.center,
                     sphere_radius: volume.sphere_radius,
                 };
-                world
-                    .res_mut::<crate::render::config::RendererState>()
-                    .render_bounds
-                    .insert(entity, bounds);
+                world.set(entity, bounds);
             }
             None => {
-                world
-                    .res_mut::<crate::render::config::RendererState>()
-                    .render_bounds
-                    .remove(&entity);
+                world.ecs.worlds[RENDER].remove::<crate::render::config::RenderBounds>(entity);
             }
         }
     }
@@ -1001,19 +1007,20 @@ fn sync_meshlets(world: &mut World) {
 }
 
 fn sync_cloth(world: &mut World) {
-    let mut cloth_bodies: Vec<crate::render::config::RenderCloth> = Vec::new();
-    for (entity, (cloth, global_transform, render_mesh)) in world
+    let cloth_bodies: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::RenderClothData,
+    )> = world
         .query_ref::<(
             &crate::ecs::cloth::components::Cloth,
             &crate::ecs::transform::components::GlobalTransform,
             &crate::ecs::mesh::components::RenderMesh,
         )>()
         .iter()
-    {
-        {
-            cloth_bodies.push(crate::render::config::RenderCloth {
+        .map(|(entity, (cloth, _, _))| {
+            (
                 entity,
-                cloth: crate::render::config::RenderClothData {
+                crate::render::config::RenderClothData {
                     columns: cloth.columns,
                     rows: cloth.rows,
                     width: cloth.width,
@@ -1039,14 +1046,13 @@ fn sync_cloth(world: &mut World) {
                     texture_tiling: cloth.texture_tiling,
                     reset_epoch: cloth.reset_epoch,
                 },
-                transform: global_transform.0,
-                mesh_name: render_mesh.name.clone(),
-            });
-        }
+            )
+        })
+        .collect();
+    clear_render_component(world, render_world::CLOTH);
+    for (entity, cloth) in cloth_bodies {
+        world.set(entity, cloth);
     }
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_cloth = cloth_bodies;
 }
 
 fn sync_texts(world: &mut World) {
@@ -1057,7 +1063,7 @@ fn sync_texts(world: &mut World) {
                 | crate::ecs::world::GLOBAL_TRANSFORM,
         )
         .collect();
-    let texts: Vec<crate::render::config::RenderText> = text_entities
+    let texts: Vec<(crate::ecs::world::Entity, crate::render::config::RenderText)> = text_entities
         .into_iter()
         .filter_map(|entity| {
             if !world
@@ -1086,26 +1092,30 @@ fn sync_texts(world: &mut World) {
             let character_colors = world
                 .get::<crate::ecs::text::components::TextCharacterColors>(entity)
                 .map(|colors| colors.colors.clone());
-            Some(crate::render::config::RenderText {
-                mesh: text.cached_mesh.clone()?,
-                color: text.properties.color,
-                outline_color: text.properties.outline_color,
-                outline_width: text.properties.outline_width,
-                smoothing: text.properties.smoothing,
-                billboard: text.billboard,
-                transform,
-                char_count,
-                character_colors,
-            })
+            Some((
+                entity,
+                crate::render::config::RenderText {
+                    mesh: text.cached_mesh.clone()?,
+                    color: text.properties.color,
+                    outline_color: text.properties.outline_color,
+                    outline_width: text.properties.outline_width,
+                    smoothing: text.properties.smoothing,
+                    billboard: text.billboard,
+                    transform,
+                    char_count,
+                    character_colors,
+                },
+            ))
         })
         .collect();
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_texts = texts;
+    clear_render_component(world, render_world::TEXT);
+    for (entity, text) in texts {
+        world.set(entity, text);
+    }
 }
 
 fn sync_selection_outline(world: &mut World) {
-    let selection_ids: Vec<u32> = if world
+    let outline_entities: Vec<crate::ecs::world::Entity> = if world
         .res::<crate::render::config::RendererState>()
         .active_view
         .selection_outline_enabled
@@ -1125,20 +1135,27 @@ fn sync_selection_outline(world: &mut World) {
                 seeds.push(*entity);
             }
         }
-        let mut ids: Vec<u32> = Vec::with_capacity(seeds.len() * 4);
+        let mut entities: Vec<crate::ecs::world::Entity> = Vec::with_capacity(seeds.len() * 4);
         for seed in &seeds {
-            ids.push(seed.id);
+            entities.push(*seed);
             for descendant in crate::ecs::transform::queries::query_descendants(world, *seed) {
-                ids.push(descendant.id);
+                entities.push(descendant);
             }
         }
-        ids
+        entities
     } else {
         Vec::new()
     };
-    world
-        .res_mut::<crate::render::config::RendererState>()
-        .render_selection_outline_ids = selection_ids;
+    let render = &mut world.ecs.worlds[RENDER];
+    let previous: Vec<crate::ecs::world::Entity> = render
+        .query_tag_type::<render_world::SelectionOutline>()
+        .collect();
+    for entity in previous {
+        render.remove_tag_type::<render_world::SelectionOutline>(entity);
+    }
+    for entity in outline_entities {
+        render.add_tag_type::<render_world::SelectionOutline>(entity);
+    }
     world
         .res_mut::<crate::render::config::RendererState>()
         .render_selection_outline_color = world

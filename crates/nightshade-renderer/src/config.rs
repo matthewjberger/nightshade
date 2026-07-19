@@ -1601,11 +1601,12 @@ pub enum RenderClothPinning {
     None,
 }
 
-/// A cloth body's simulation parameters snapshotted once per frame from the
-/// `Cloth` component, so the cloth pass reads them here instead of that
-/// component. Carries every field so the pass's config-change comparison still
-/// detects rebuilds and resets.
-#[derive(Clone, Debug, PartialEq)]
+/// A cloth body's simulation parameters, held as a scene-world component on
+/// the cloth entity so the cloth pass queries them alongside the entity's
+/// [`crate::render_world::Transform`] and [`crate::render_world::MeshName`].
+/// Carries every field so the pass's config-change comparison still detects
+/// rebuilds and resets.
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct RenderClothData {
     pub columns: u32,
     pub rows: u32,
@@ -1623,16 +1624,6 @@ pub struct RenderClothData {
     pub reset_epoch: u32,
 }
 
-/// One cloth body with its anchor transform and mesh name, snapshotted once per
-/// frame so the cloth pass reads it here instead of walking the ECS.
-#[derive(Clone)]
-pub struct RenderCloth {
-    pub entity: freecs::Entity,
-    pub cloth: RenderClothData,
-    pub transform: nalgebra_glm::Mat4,
-    pub mesh_name: String,
-}
-
 /// The skinned shadow-casting entities collected once per frame, so the shadow
 /// pass enumerates skinned occluders from here. Static and instanced casters
 /// carry the [`crate::render_world::ShadowCaster`] tag in the scene world.
@@ -1641,12 +1632,12 @@ pub struct RenderShadowCasters {
     pub skinned: Vec<freecs::Entity>,
 }
 
-/// One visible 3D text entity snapshotted once per frame, with its world
+/// One visible 3D text entity, held as a scene-world component with its world
 /// transform, resolved character count, and per-character colors, so the text
-/// pass reads it here instead of the `Text`, `GlobalTransform`, and
-/// `TextCharacterColors` components. Only visible text with a cached mesh is
-/// captured.
-#[derive(Clone)]
+/// pass queries it instead of reading the `Text`, `GlobalTransform`, and
+/// `TextCharacterColors` components. Only visible text with a cached mesh
+/// carries this component.
+#[derive(Clone, Default)]
 pub struct RenderText {
     pub mesh: crate::text_data::TextMesh,
     pub color: nalgebra_glm::Vec4,
@@ -1766,35 +1757,21 @@ pub struct RendererState {
     /// skinned pass resolves geometry from its own registry without reading the
     /// `RenderMesh` component. Static meshes live in the scene world instead.
     pub render_object_meshes: std::collections::HashMap<freecs::Entity, String>,
-    /// The scene's cloth bodies collected once per frame in query order, so the
-    /// cloth pass reads them here instead of walking the ECS.
-    pub render_cloth: Vec<RenderCloth>,
     /// Every meshlet placement in the scene plus the assets they reference,
     /// collected once per frame so the meshlet pass reads them here instead of
     /// the ECS.
     #[cfg(feature = "meshlet")]
     pub meshlets: MeshletInstances,
-    /// The entity ids the selection-outline mask covers (selected seeds plus
-    /// their descendants), resolved once per frame so the selection-mask pass
-    /// reads them here instead of walking the transform hierarchy. Empty when the
-    /// outline is disabled or nothing is selected.
-    pub render_selection_outline_ids: Vec<u32>,
     /// The color the outline pass draws the selection outline with, resolved
-    /// once per frame alongside `render_selection_outline_ids`.
+    /// once per frame. The covered entities carry the
+    /// [`crate::render_world::SelectionOutline`] tag in the scene world.
     pub render_selection_outline_color: [f32; 4],
-    /// Per-entity bounding volumes collected once per frame, so culling, the
-    /// wireframe pass, and shadow bounds read them here instead of the ECS.
-    pub render_bounds: std::collections::HashMap<freecs::Entity, RenderBounds>,
     /// Shadow-casting entities collected once per frame, split by draw kind, so
     /// the shadow pass enumerates occluders here instead of walking the ECS.
     pub render_shadow_casters: RenderShadowCasters,
     /// Skinned-mesh entities collected once per frame in query order, so the
     /// skinned-mesh pass enumerates draws here instead of walking the ECS.
     pub render_skinned_meshes: Vec<freecs::Entity>,
-    /// Regular (non-skinned) render-mesh entities collected once per frame in
-    /// query order, so the mesh pass builds its scene from this list instead of
-    /// querying `RENDER_MESH` and filtering `SKIN` against the ECS.
-    pub render_regular_mesh_entities: Vec<freecs::Entity>,
     /// When set, the mesh pass derives its cull frustum planes from this
     /// view-projection instead of the active camera's, pinning culling to a
     /// fixed viewpoint.
@@ -1802,9 +1779,6 @@ pub struct RendererState {
     /// Skinning palette resolved once per frame, so the skinned-mesh and shadow
     /// passes read bone data here instead of walking Skin and bone transforms.
     pub render_skinning: RenderSkinning,
-    /// Visible 3D text entities collected once per frame in query order, so the
-    /// text pass reads them here instead of the ECS.
-    pub render_texts: Vec<RenderText>,
     /// Skinned-animation state resolved once per frame by the engine, so the
     /// skinned-mesh compute driver builds its GPU buffers without reading ECS
     /// animation, skin, parent, or transform components.
@@ -2129,18 +2103,13 @@ impl Default for RendererState {
             render_dynamic_objects: std::collections::HashMap::new(),
             render_materials: RenderMaterials::default(),
             render_object_meshes: std::collections::HashMap::new(),
-            render_cloth: Vec::new(),
             #[cfg(feature = "meshlet")]
             meshlets: MeshletInstances::default(),
-            render_selection_outline_ids: Vec::new(),
             render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
-            render_bounds: std::collections::HashMap::new(),
             render_shadow_casters: RenderShadowCasters::default(),
             render_skinned_meshes: Vec::new(),
-            render_regular_mesh_entities: Vec::new(),
             culling_camera_view_projection: None,
             render_skinning: RenderSkinning::default(),
-            render_texts: Vec::new(),
             render_animation: SkinnedAnimationSnapshot::default(),
             #[cfg(feature = "wgpu")]
             render_lighting: None,

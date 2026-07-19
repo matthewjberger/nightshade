@@ -508,7 +508,11 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TextPass {
             None
         };
 
-        for render_text in &configs.scene.render_texts {
+        for (_, render_text) in configs
+            .scene_world
+            .query_ref::<&crate::config::RenderText>()
+            .iter()
+        {
             let global_transform = render_text.transform;
             let character_colors = render_text.character_colors.as_ref();
 

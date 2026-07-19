@@ -67,6 +67,11 @@ pub struct RenderEmitter(pub crate::particles::ParticleEmitter);
 /// migrates the entity's archetype.
 pub struct ShadowCaster;
 
+/// Marker: this entity is covered by the selection-outline mask (a selected
+/// seed or one of its descendants). A sparse-set tag, so adding it never
+/// migrates the entity's archetype.
+pub struct SelectionOutline;
+
 freecs::dynamic_schema! {
     pub fn register_render_components {
         transform: Transform => TRANSFORM,
@@ -81,5 +86,8 @@ freecs::dynamic_schema! {
         water: crate::config::RenderWaterData => WATER,
         emitter: RenderEmitter => EMITTER,
         instanced: crate::config::InstancedObjectData => INSTANCED,
+        bounds: crate::config::RenderBounds => BOUNDS,
+        text: crate::config::RenderText => TEXT,
+        cloth: crate::config::RenderClothData => CLOTH,
     }
 }

@@ -212,10 +212,8 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             else {
                 continue;
             };
-            let Some(bounding_volume) = world
-                .res::<crate::render::config::RendererState>()
-                .render_bounds
-                .get(&entity)
+            let Some(bounding_volume) = world.ecs.worlds[RENDER]
+                .get::<crate::render::config::RenderBounds>(entity)
                 .copied()
             else {
                 continue;
