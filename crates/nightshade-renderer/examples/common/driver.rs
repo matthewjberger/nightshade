@@ -285,7 +285,20 @@ impl<E: Example> Host<E> {
                     poll_screenshot_readback(renderer);
                     guard += 1;
                 }
-                println!("wrote {}", path.display());
+                let mut written = 0;
+                let mut waited = 0;
+                while written == 0 && waited < 5000 {
+                    written = std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+                    if written == 0 {
+                        std::thread::sleep(std::time::Duration::from_millis(2));
+                        waited += 1;
+                    }
+                }
+                if written > 0 {
+                    println!("wrote {}", path.display());
+                } else {
+                    eprintln!("screenshot was not written");
+                }
             }
         }
         #[cfg(not(feature = "screenshot"))]
