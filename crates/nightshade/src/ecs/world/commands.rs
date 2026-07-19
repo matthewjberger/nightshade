@@ -420,23 +420,26 @@ pub(crate) fn setup_entity_transforms(
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
+    use crate::ecs::bundles::{LightBundle, SpatialBundle};
     use crate::ecs::world::components;
 
-    world.ecs.spawn_with((
-        components::Name("Sun".to_string()),
-        components::LocalTransform {
-            translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
-            rotation: nalgebra_glm::quat_angle_axis(
-                std::f32::consts::FRAC_PI_4,
-                &nalgebra_glm::Vec3::new(0.0, 1.0, 0.0),
-            ) * nalgebra_glm::quat_angle_axis(
-                -std::f32::consts::FRAC_PI_6,
-                &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
-            ),
-            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+    world.ecs.spawn_with(LightBundle {
+        spatial: SpatialBundle {
+            name: components::Name("Sun".to_string()),
+            local_transform: components::LocalTransform {
+                translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
+                rotation: nalgebra_glm::quat_angle_axis(
+                    std::f32::consts::FRAC_PI_4,
+                    &nalgebra_glm::Vec3::new(0.0, 1.0, 0.0),
+                ) * nalgebra_glm::quat_angle_axis(
+                    -std::f32::consts::FRAC_PI_6,
+                    &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
+                ),
+                scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+            },
+            ..Default::default()
         },
-        components::GlobalTransform::default(),
-        components::Light {
+        light: components::Light {
             light_type: components::LightType::Directional,
             color: nalgebra_glm::Vec3::new(1.0, 0.95, 0.8),
             intensity: 5.0,
@@ -450,25 +453,28 @@ pub fn spawn_sun(world: &mut World) -> Entity {
             cookie_texture: None,
             ..Default::default()
         },
-    ))
+    })
 }
 
 /// Spawn a directional light positioned above the origin without shadow casting.
 pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
+    use crate::ecs::bundles::{LightBundle, SpatialBundle};
     use crate::ecs::world::components;
 
-    world.ecs.spawn_with((
-        components::Name("Sun".to_string()),
-        components::LocalTransform {
-            translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
-            rotation: nalgebra_glm::quat_angle_axis(
-                -std::f32::consts::FRAC_PI_4,
-                &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
-            ),
-            scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+    world.ecs.spawn_with(LightBundle {
+        spatial: SpatialBundle {
+            name: components::Name("Sun".to_string()),
+            local_transform: components::LocalTransform {
+                translation: nalgebra_glm::Vec3::new(5.0, 10.0, 5.0),
+                rotation: nalgebra_glm::quat_angle_axis(
+                    -std::f32::consts::FRAC_PI_4,
+                    &nalgebra_glm::Vec3::new(1.0, 0.0, 0.0),
+                ),
+                scale: nalgebra_glm::Vec3::new(1.0, 1.0, 1.0),
+            },
+            ..Default::default()
         },
-        components::GlobalTransform::default(),
-        components::Light {
+        light: components::Light {
             light_type: components::LightType::Directional,
             color: nalgebra_glm::Vec3::new(1.0, 0.95, 0.8),
             intensity: 5.0,
@@ -482,7 +488,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
             cookie_texture: None,
             ..Default::default()
         },
-    ))
+    })
 }
 
 /// Spawn a positioned light entity carrying a default [`components::Light`] for the caller to configure.
@@ -575,20 +581,24 @@ pub fn spawn_mesh_at(
         );
     }
 
-    let entity = world.ecs.spawn_with((
-        components::Name(mesh_name.to_string()),
-        components::LocalTransform {
-            translation: position,
-            scale,
-            rotation: nalgebra_glm::Quat::identity(),
+    use crate::ecs::bundles::{MeshBundle, SpatialBundle};
+
+    let entity = world.ecs.spawn_with(MeshBundle {
+        spatial: SpatialBundle {
+            name: components::Name(mesh_name.to_string()),
+            local_transform: components::LocalTransform {
+                translation: position,
+                scale,
+                rotation: nalgebra_glm::Quat::identity(),
+            },
+            ..Default::default()
         },
-        components::GlobalTransform::default(),
-        render_mesh,
-        components::MaterialRef::new("Default"),
-        components::BoundingVolume::from_mesh_type(mesh_name),
-        components::CastsShadow,
-        crate::ecs::primitives::Visibility { visible: true },
-    ));
+        mesh: render_mesh,
+        material: components::MaterialRef::new("Default"),
+        bounds: components::BoundingVolume::from_mesh_type(mesh_name),
+        casts_shadow: components::CastsShadow,
+        visibility: crate::ecs::primitives::Visibility { visible: true },
+    });
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(entity);

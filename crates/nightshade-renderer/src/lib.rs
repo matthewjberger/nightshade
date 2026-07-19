@@ -319,6 +319,7 @@
 
 pub mod asset_id;
 pub mod bounding_volume;
+pub mod bundles;
 pub mod config;
 pub mod core;
 pub mod entity;

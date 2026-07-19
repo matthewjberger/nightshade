@@ -22,6 +22,7 @@ pub mod asset_state;
 ))]
 pub mod asset_watcher;
 pub mod bounding_volume;
+pub mod bundles;
 pub mod camera;
 pub mod cloth;
 pub mod cutscene;
