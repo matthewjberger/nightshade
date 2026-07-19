@@ -104,7 +104,8 @@ fn run_frame(
                 width,
                 height,
             } => {
-                renderer.ui_texture_array.upload_layer(
+                crate::wgpu::texture_array_pool::upload_layer(
+                    &renderer.ui_texture_array,
                     &renderer.queue,
                     layer,
                     &rgba_data,

@@ -41,7 +41,7 @@ pub use crate::rendergraph;
 pub mod shader_compose;
 mod stagger;
 pub mod texture_cache;
-pub mod ui_texture_array;
+pub mod texture_array_pool;
 
 pub use ::wgpu::*;
 
@@ -92,7 +92,7 @@ pub struct WgpuRenderer {
     pub _brdf_lut_texture: wgpu::Texture,
     pub brdf_lut_view: wgpu::TextureView,
     pub material_texture_arrays: material_texture_arrays::MaterialTextureArrays,
-    pub ui_texture_array: ui_texture_array::UiTextureArray,
+    pub ui_texture_array: texture_array_pool::TextureArrayPool,
     pub mip_generator: mip_generator::MipGenerator,
     /// GPU depth-pick readback state.
     pub depth_pick: DepthPickState,

@@ -240,7 +240,11 @@ impl super::WgpuRenderer {
         let grass_pass = passes::GrassPass::new(&device, hdr_format);
 
         crate::wgpu::stagger::yield_to_event_loop(&queue).await;
-        let ui_texture_array = crate::wgpu::ui_texture_array::UiTextureArray::new(&device);
+        let ui_texture_array = crate::wgpu::texture_array_pool::create_texture_array_pool(
+            &device,
+            crate::ui_data::UI_TEXTURE_LAYER_SIZE,
+            crate::ui_data::UI_TEXTURE_MAX_LAYERS,
+        );
         let mut ui_image_pass = passes::UiImagePass::new(&device, surface_format);
         ui_image_pass.set_texture_bind_group(
             &device,
