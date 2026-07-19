@@ -18,11 +18,12 @@ use nightshade_renderer::render_layer::RenderLayer;
 use nightshade_renderer::render_world::{
     CullingMask, Layer, MaterialId, MeshName, MorphWeights, Transform, Visible,
 };
+use nightshade_renderer::wgpu::render_configs::SingleViewHost;
 
 #[path = "common/driver.rs"]
 mod driver;
 
-use driver::{Example, Scene, directional_light};
+use driver::{Camera, Example, directional_light};
 
 const GRID: i32 = 6;
 const MESHES: [&str; 4] = ["cube", "sphere", "cone", "cylinder"];
@@ -39,34 +40,30 @@ struct Spinning;
 impl Example for Spinning {
     type State = Vec<Spinner>;
 
-    fn setup(scene: &mut Scene) -> Vec<Spinner> {
-        scene.settings.atmosphere = Atmosphere::Sky;
-        scene.settings.show_sky = true;
-        scene.settings.ambient_light = [0.4, 0.45, 0.55, 1.0];
+    fn setup(host: &mut SingleViewHost, camera: &mut Camera) -> Vec<Spinner> {
+        host.settings.atmosphere = Atmosphere::Sky;
+        host.settings.show_sky = true;
+        host.settings.ambient_light = [0.4, 0.45, 0.55, 1.0];
 
-        scene.world.spawn(directional_light(
+        host.scene_world.spawn(directional_light(
             glm::vec3(-0.4, -1.0, -0.5),
             glm::vec3(1.0, 0.97, 0.9),
             2.5,
         ));
 
+        mesh_cache_insert(&mut host.mesh_cache, "cube".to_string(), create_cube_mesh());
         mesh_cache_insert(
-            &mut scene.mesh_cache,
-            "cube".to_string(),
-            create_cube_mesh(),
-        );
-        mesh_cache_insert(
-            &mut scene.mesh_cache,
+            &mut host.mesh_cache,
             "sphere".to_string(),
             create_sphere_mesh(0.4, 24),
         );
         mesh_cache_insert(
-            &mut scene.mesh_cache,
+            &mut host.mesh_cache,
             "cone".to_string(),
             create_cone_mesh(0.4, 0.8, 24),
         );
         mesh_cache_insert(
-            &mut scene.mesh_cache,
+            &mut host.mesh_cache,
             "cylinder".to_string(),
             create_cylinder_mesh(0.32, 0.8, 24),
         );
@@ -78,7 +75,7 @@ impl Example for Spinning {
                 let index = (row * GRID + col) as usize;
                 let mesh = MESHES[index % MESHES.len()];
                 let phase = index as f32 / (GRID * GRID) as f32 * std::f32::consts::TAU;
-                let material = scene.state.render_materials.add(Material {
+                let material = host.state.render_materials.add(Material {
                     base_color: [
                         0.5 + 0.45 * phase.sin(),
                         0.5 + 0.45 * (phase + 2.1).sin(),
@@ -98,7 +95,7 @@ impl Example for Spinning {
                     1.0,
                     0.2 + (index % 2) as f32,
                 ));
-                let entity = scene.world.spawn((
+                let entity = host.scene_world.spawn((
                     Transform(glm::translation(&base)),
                     MeshName(mesh.to_string()),
                     MaterialId(material),
@@ -116,16 +113,16 @@ impl Example for Spinning {
             }
         }
 
-        scene.camera.position = glm::vec3(0.0, 3.0, 12.0);
-        scene.camera.pitch = 0.0;
+        camera.position = glm::vec3(0.0, 3.0, 12.0);
+        camera.pitch = 0.0;
         spinners
     }
 
-    fn update(scene: &mut Scene, spinners: &mut Vec<Spinner>, time: f32) {
+    fn update(host: &mut SingleViewHost, _: &mut Camera, spinners: &mut Vec<Spinner>, time: f32) {
         for spinner in spinners.iter() {
             let transform = glm::translation(&spinner.base)
                 * glm::rotation(time * spinner.speed, &spinner.axis);
-            scene.world.set(spinner.entity, Transform(transform));
+            host.scene_world.set(spinner.entity, Transform(transform));
         }
     }
 }

@@ -335,14 +335,18 @@ impl RenderInputs {
 }
 
 /// The renderer-facing state a single-view host owns across frames: the scene
-/// world, the renderer state, the geometry and texture caches, the frame's
-/// settings, and the debug-draw toggles. Build one, spawn into `scene_world`,
-/// then drive each frame with [`crate::wgpu::frame::render_single_view`]. The
-/// fields move into the frame's [`RenderInputs`] and back, so the host loop
-/// never writes the swap by hand and nothing is cloned per frame.
+/// world of entities, the renderer state, the geometry and texture caches, the
+/// frame's settings, and the debug-draw toggles. Build one, spawn into
+/// `scene_world`, then drive each frame with
+/// [`crate::wgpu::frame::render_single_view`]. The host's state moves into the
+/// frame's [`RenderInputs`] and back out, never copied.
+///
+/// A field added here must also be threaded through [`compose_single_view`] and
+/// [`restore_single_view`]; one left out silently resets to its default each
+/// frame.
 pub struct SingleViewHost {
     pub scene_world: freecs::dynamic::DynWorld,
-    pub scene: crate::config::RendererState,
+    pub state: crate::config::RendererState,
     pub mesh_cache: crate::mesh_cache::MeshCache,
     pub texture_cache: crate::wgpu::texture_cache::TextureCache,
     pub settings: crate::config::RenderSettings,
@@ -356,7 +360,7 @@ pub struct SingleViewHost {
 pub fn compose_single_view(host: &mut SingleViewHost, frame: ViewFrame) -> RenderInputs {
     RenderInputs::single_view(
         std::mem::replace(&mut host.scene_world, freecs::dynamic::DynWorld::new()),
-        std::mem::take(&mut host.scene),
+        std::mem::take(&mut host.state),
         std::mem::take(&mut host.mesh_cache),
         std::mem::take(&mut host.texture_cache),
         std::mem::take(&mut host.settings),
@@ -369,7 +373,7 @@ pub fn compose_single_view(host: &mut SingleViewHost, frame: ViewFrame) -> Rende
 /// has finished with it.
 pub fn restore_single_view(host: &mut SingleViewHost, inputs: RenderInputs) {
     host.scene_world = inputs.scene_world;
-    host.scene = inputs.scene;
+    host.state = inputs.scene;
     host.mesh_cache = inputs.mesh_cache;
     host.texture_cache = inputs.texture_cache;
     host.settings = inputs.settings;

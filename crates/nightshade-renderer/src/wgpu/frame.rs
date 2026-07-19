@@ -50,6 +50,10 @@ pub fn render_frame(
 /// call this and nothing else. A frame that fails to execute (surface lost,
 /// occluded, or timed out) leaves [`FrameOutputs::frame_executed`] false and the
 /// host state intact for the next attempt.
+///
+/// The returned outputs are safe to drop when the host does not track per-frame
+/// results; read [`FrameOutputs::frame_executed`] to react to a frame that did
+/// not render, such as a lost surface.
 pub fn render_single_view(
     renderer: &mut crate::wgpu::WgpuRenderer,
     host: &mut crate::wgpu::render_configs::SingleViewHost,

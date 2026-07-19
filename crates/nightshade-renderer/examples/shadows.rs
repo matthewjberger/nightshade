@@ -17,39 +17,40 @@ use nightshade_renderer::render_layer::RenderLayer;
 use nightshade_renderer::render_world::{
     CullingMask, Layer, MaterialId, MeshName, MorphWeights, ShadowCaster, Transform, Visible,
 };
+use nightshade_renderer::wgpu::render_configs::SingleViewHost;
 
 #[path = "common/driver.rs"]
 mod driver;
 
-use driver::{Example, Scene, directional_light};
+use driver::{Camera, Example, directional_light};
 
 struct Shadows;
 
 impl Example for Shadows {
     type State = ();
 
-    fn setup(scene: &mut Scene) {
-        scene.settings.atmosphere = Atmosphere::Sky;
-        scene.settings.show_sky = true;
-        scene.settings.ambient_light = [0.3, 0.35, 0.45, 0.3];
+    fn setup(host: &mut SingleViewHost, camera: &mut Camera) {
+        host.settings.atmosphere = Atmosphere::Sky;
+        host.settings.show_sky = true;
+        host.settings.ambient_light = [0.3, 0.35, 0.45, 0.3];
 
-        scene.world.spawn(directional_light(
+        host.scene_world.spawn(directional_light(
             glm::vec3(-0.6, -1.0, -0.4),
             glm::vec3(1.0, 0.96, 0.88),
             4.0,
         ));
 
         mesh_cache_insert(
-            &mut scene.mesh_cache,
+            &mut host.mesh_cache,
             "floor".to_string(),
             create_plane_mesh(50.0),
         );
-        let floor = scene.state.render_materials.add(Material {
+        let floor = host.state.render_materials.add(Material {
             base_color: [0.72, 0.72, 0.74, 1.0],
             roughness: 0.9,
             ..Material::default()
         });
-        scene.world.spawn((
+        host.scene_world.spawn((
             Transform(glm::translation(&glm::vec3(0.0, 0.0, 0.0))),
             MeshName("floor".to_string()),
             MaterialId(floor),
@@ -59,17 +60,13 @@ impl Example for Shadows {
             Layer(RenderLayer::WORLD),
         ));
 
+        mesh_cache_insert(&mut host.mesh_cache, "cube".to_string(), create_cube_mesh());
         mesh_cache_insert(
-            &mut scene.mesh_cache,
-            "cube".to_string(),
-            create_cube_mesh(),
-        );
-        mesh_cache_insert(
-            &mut scene.mesh_cache,
+            &mut host.mesh_cache,
             "sphere".to_string(),
             create_sphere_mesh(0.6, 24),
         );
-        let material = scene.state.render_materials.add(Material {
+        let material = host.state.render_materials.add(Material {
             base_color: [0.85, 0.3, 0.25, 1.0],
             roughness: 0.45,
             ..Material::default()
@@ -85,7 +82,7 @@ impl Example for Shadows {
             } else {
                 ("sphere", glm::translation(&glm::vec3(x, 0.7, 0.0)))
             };
-            let entity = scene.world.spawn((
+            let entity = host.scene_world.spawn((
                 Transform(transform),
                 MeshName(mesh.to_string()),
                 MaterialId(material),
@@ -94,11 +91,11 @@ impl Example for Shadows {
                 CullingMask(u32::MAX),
                 Layer(RenderLayer::WORLD),
             ));
-            scene.world.add_tag_type::<ShadowCaster>(entity);
+            host.scene_world.add_tag_type::<ShadowCaster>(entity);
         }
 
-        scene.camera.position = glm::vec3(0.0, 4.5, 12.0);
-        scene.camera.pitch = -0.3;
+        camera.position = glm::vec3(0.0, 4.5, 12.0);
+        camera.pitch = -0.3;
     }
 }
 

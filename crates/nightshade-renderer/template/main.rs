@@ -209,7 +209,7 @@ impl ApplicationHandler for App {
 fn main() {
     let mut host = SingleViewHost {
         scene_world: DynWorld::from_registry(register_render_components()),
-        scene: RendererState::default(),
+        state: RendererState::default(),
         mesh_cache: MeshCache::default(),
         texture_cache: TextureCache::default(),
         settings: RenderSettings {
@@ -233,7 +233,7 @@ fn main() {
     mesh_cache_insert(&mut host.mesh_cache, "cube".to_string(), create_cube_mesh());
     mesh_cache_insert(&mut host.mesh_cache, "sphere".to_string(), create_sphere_mesh(0.6, 24));
 
-    let floor = host.scene.render_materials.add(Material {
+    let floor = host.state.render_materials.add(Material {
         base_color: [0.72, 0.72, 0.74, 1.0],
         roughness: 0.9,
         ..Material::default()
@@ -255,7 +255,7 @@ fn main() {
     let mut spinners = Vec::new();
     for (index, (mesh, color)) in shapes.into_iter().enumerate() {
         let base = glm::vec3((index as f32 - 0.5) * 2.4, 0.9, 0.0);
-        let material = host.scene.render_materials.add(Material {
+        let material = host.state.render_materials.add(Material {
             base_color: color,
             roughness: 0.4,
             ..Material::default()

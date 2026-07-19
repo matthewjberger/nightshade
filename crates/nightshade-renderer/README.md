@@ -15,12 +15,12 @@ nightshade-renderer = "0.56.0"
 ## The seam: one input per frame
 
 The renderer owns the scene as its own freecs ECS world. Every frame the host
-composes a single [`RenderInputs`] value — that scene world plus settings, the
-mesh and texture caches, and the cameras to dispatch — calls `render_frame`, and
+composes a single [`RenderInputs`] value (that scene world plus settings, the
+mesh and texture caches, and the cameras to dispatch), calls `render_frame`, and
 reads back a [`FrameOutputs`] with the writes that belong to the host. A host
 that runs its own freecs group composes the renderer's schema in as a member
-world, so a render entity is the host entity and no scene data is copied across
-the boundary; a standalone host stands the world up from the registry and spawns
+world, so a render entity is the host entity and no scene data copies across the
+boundary. A standalone host stands the world up from the registry and spawns
 into it. Either way the passes and the frame graph are monomorphized on one
 concrete `RenderInputs` type, and the large scene state moves in and out by
 value rather than being cloned.
@@ -41,17 +41,16 @@ value rather than being cloned.
 ## Getting started
 
 Runnable examples drive the renderer directly through a small windowing harness
-in `examples/common/driver.rs` — a fly camera and a frame loop built from free
-functions and plain data, with no engine layer. Each example fills a plain
-`Scene` of renderer data using the raw renderer and freecs API (`world.spawn`,
-`RenderMaterials::add`, `mesh_cache_insert`, `world.set`), which is the fastest
-way to see the whole contract in one place.
+in `examples/common/driver.rs`, a fly camera and a frame loop built from free
+functions and plain data, with no engine layer. Each example fills a
+[`SingleViewHost`] of renderer data using the raw renderer and freecs API
+(`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`, `world.set`).
 
-- **`pbr`** — a grid of spheres from dielectric to metal and rough to smooth
+- **`pbr`**: a grid of spheres from dielectric to metal and rough to smooth
   under a directional sun and a procedural sky.
-- **`spinning`** — a field of primitives, each spun every frame by writing its
+- **`spinning`**: a field of primitives, each spun every frame by writing its
   `Transform` straight into the scene world.
-- **`shadows`** — mixed shapes on a floor, tagged as shadow casters so the sun
+- **`shadows`**: mixed shapes on a floor, tagged as shadow casters so the sun
   casts shadows across it.
 
 Run one with `cargo run --example pbr --features wgpu,hdr`. Setting
@@ -63,23 +62,24 @@ The three steps every host repeats:
 1. **Bring the renderer up once** over anything with window handles.
    `WgpuRenderer::new_async(window, width, height)` builds the device, surface,
    and the built-in scene passes. The graph is left open so a host can add its
-   own passes; `presentation::install_presentation_passes(&mut renderer)`
+   own passes. `presentation::install_presentation_passes(&mut renderer)`
    appends the presentation tail (viewport blit, swapchain compose, UI) and
    compiles the graph. Call it once, after creation.
 2. **Compose a `RenderInputs` and call `render_frame`.** Persistent state
    (`scene_world`, `scene: RendererState`, `mesh_cache`, `texture_cache`) lives
-   on the host and moves in by value each frame; `frame: FrameInputs` carries the
-   cameras to dispatch, drained commands, and this frame's dirty state. The renderer-owned
-   fields `ibl_views` and `shadow_atlas` are composed as `Default::default()`,
-   and the frame driver fills them itself.
+   on the host and moves in by value each frame. `frame: FrameInputs` carries the
+   cameras to dispatch, drained commands, and this frame's dirty state. The
+   renderer-owned fields `ibl_views` and `shadow_atlas` are composed as
+   `Default::default()`, and the frame driver fills them itself.
 3. **Apply `FrameOutputs` and take the persistent state back out** of the inputs
    for the next frame. On a skipped frame (occluded or lost surface) the
    unconsumed state stays in the inputs so nothing is lost.
 
-`RenderInputs` deliberately has no `Default`: every field is load-bearing and
-the move-in / move-out cycle is the contract. Build one compose function against
-the struct and the compiler walks you through the fields; the examples' harness
-does exactly that in `examples/common/driver.rs`.
+`RenderInputs` has no `Default`: every field is required and the move-in and
+move-out cycle is the contract. Write one compose function against the struct
+and the compiler names any field left out. The examples' harness does this in
+`examples/common/driver.rs`, and [`SingleViewHost`] with `render_single_view`
+wraps the move-in and move-out cycle for a single-view host.
 
 For the full design (the frame flow, every `RenderInputs` sub-struct, the
 module map, the feature gating, and how the nightshade engine layer drives the
@@ -110,7 +110,7 @@ are used where the device supports them.
 
 Because the draw arguments are populated on the GPU across the culling and batch
 passes, a scene needs a couple of frames of warmup before its first draws land.
-A continuously-rendering host never notices, but a one-shot capture should
+A host that renders continuously is unaffected, but a one-shot capture should
 render a few frames before reading back.
 
 ## Using the frame graph alone
@@ -124,7 +124,7 @@ nightshade-renderer = { version = "0.56.0", default-features = false, features =
 ```
 
 Declare passes and the resources they read and write, compile once, execute
-every frame. The graph is generic over an inputs type `C` you define; passes
+every frame. The graph is generic over an inputs type `C` you define. Passes
 implement `PassNode<C>` and receive `&C` during prepare and execute. The graph
 handles pass ordering from declared dependencies, transient resource allocation
 and aliasing, load and store op optimization, dead pass culling, per-pass enable

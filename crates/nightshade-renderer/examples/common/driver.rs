@@ -1,9 +1,9 @@
 //! A thin windowing and frame-loop harness for the nightshade-renderer
 //! examples. It owns only the window, a fly camera, and the render loop; each
-//! example fills a plain [`Scene`] of renderer data using the raw renderer and
-//! freecs API (`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`,
-//! `world.set`) and the loop composes one [`RenderInputs`] per frame and draws
-//! it. Everything here is a free function or a plain data struct.
+//! example fills a [`SingleViewHost`] of renderer data using the raw renderer
+//! and freecs API (`world.spawn`, `RenderMaterials::add`, `mesh_cache_insert`,
+//! `world.set`) and the loop draws it with `render_frame`. Everything here is a
+//! free function or a plain data struct.
 //!
 //! Controls: W/A/S/D to move, Q/E down/up, arrow keys to look.
 
@@ -26,7 +26,8 @@ use nightshade_renderer::wgpu::presentation::install_presentation_passes;
 #[cfg(feature = "screenshot")]
 use nightshade_renderer::wgpu::presentation::{poll_screenshot_readback, request_screenshot_copy};
 use nightshade_renderer::wgpu::render_configs::{
-    CameraFrameInputs, CameraProjectionParams, RenderInputs, ViewFrame,
+    CameraFrameInputs, CameraProjectionParams, SingleViewHost, ViewFrame, compose_single_view,
+    restore_single_view,
 };
 use nightshade_renderer::wgpu::texture_cache::TextureCache;
 
@@ -146,22 +147,9 @@ pub fn directional_light(
     (light.light, Transform(light.transform))
 }
 
-/// Plain data: the renderer-side scene an example builds and the loop feeds the
-/// renderer each frame. Every field is public; fill it with the raw renderer and
-/// freecs API. The persistent pieces move into the frame's [`RenderInputs`] and
-/// back out, so nothing is cloned per frame.
-pub struct Scene {
-    pub world: DynWorld,
-    pub state: RendererState,
-    pub mesh_cache: MeshCache,
-    pub texture_cache: TextureCache,
-    pub settings: RenderSettings,
-    pub camera: Camera,
-}
-
-fn new_scene() -> Scene {
-    Scene {
-        world: DynWorld::from_registry(register_render_components()),
+fn new_host() -> SingleViewHost {
+    SingleViewHost {
+        scene_world: DynWorld::from_registry(register_render_components()),
         state: RendererState {
             occlusion_culling_enabled: false,
             ..RendererState::default()
@@ -169,7 +157,7 @@ fn new_scene() -> Scene {
         mesh_cache: MeshCache::default(),
         texture_cache: TextureCache::default(),
         settings: RenderSettings::default(),
-        camera: Camera::default(),
+        debug_draw: Default::default(),
     }
 }
 
@@ -179,60 +167,16 @@ fn new_scene() -> Scene {
 /// `setup` and inherits the no-op `update`.
 pub trait Example {
     type State;
-    fn setup(scene: &mut Scene) -> Self::State;
-    fn update(_: &mut Scene, _: &mut Self::State, _: f32) {}
+    fn setup(host: &mut SingleViewHost, camera: &mut Camera) -> Self::State;
+    fn update(_: &mut SingleViewHost, _: &mut Camera, _: &mut Self::State, _: f32) {}
 }
 
-fn compose(
-    scene: &mut Scene,
-    width: u32,
-    height: u32,
-    delta_time: f32,
-    uptime_ms: u64,
-) -> RenderInputs {
-    let aspect = width as f32 / height.max(1) as f32;
-    let camera = CameraFrameInputs::perspective(
-        CAMERA_ENTITY,
-        camera_view(&scene.camera),
-        scene.camera.position,
-        CameraProjectionParams {
-            z_near: scene.camera.z_near,
-            z_far: scene.camera.z_far,
-            y_fov_rad: scene.camera.y_fov_rad,
-            aspect,
-            orthographic: None,
-        },
-        EffectiveShading::from_settings(&scene.settings, &Default::default()),
-    );
-    RenderInputs::single_view(
-        std::mem::replace(&mut scene.world, DynWorld::new()),
-        std::mem::take(&mut scene.state),
-        std::mem::take(&mut scene.mesh_cache),
-        std::mem::take(&mut scene.texture_cache),
-        std::mem::take(&mut scene.settings),
-        Default::default(),
-        ViewFrame {
-            camera,
-            viewport: (width.max(1), height.max(1)),
-            uptime_milliseconds: uptime_ms,
-            delta_time,
-        },
-    )
-}
-
-fn restore(scene: &mut Scene, inputs: RenderInputs) {
-    scene.world = inputs.scene_world;
-    scene.state = inputs.scene;
-    scene.mesh_cache = inputs.mesh_cache;
-    scene.texture_cache = inputs.texture_cache;
-    scene.settings = inputs.settings;
-}
-
-struct Host<E: Example> {
+struct Harness<E: Example> {
     title: String,
     window: Option<Arc<Window>>,
     renderer: Option<WgpuRenderer>,
-    scene: Scene,
+    host: SingleViewHost,
+    camera: Camera,
     state: Option<E::State>,
     keys: HashSet<KeyCode>,
     last_frame: std::time::Instant,
@@ -241,22 +185,41 @@ struct Host<E: Example> {
     shot_frames: u32,
 }
 
-impl<E: Example> Host<E> {
+impl<E: Example> Harness<E> {
     fn frame(&mut self, width: u32, height: u32, delta_time: f32) {
         self.time += delta_time;
-        camera_advance(&mut self.scene.camera, delta_time, &self.keys);
+        camera_advance(&mut self.camera, delta_time, &self.keys);
         if let Some(state) = self.state.as_mut() {
-            E::update(&mut self.scene, state, self.time);
+            E::update(&mut self.host, &mut self.camera, state, self.time);
         }
-        let uptime = (self.time * 1000.0) as u64;
-        let mut inputs = compose(&mut self.scene, width, height, delta_time, uptime);
+        let aspect = width as f32 / height.max(1) as f32;
+        let camera = CameraFrameInputs::perspective(
+            CAMERA_ENTITY,
+            camera_view(&self.camera),
+            self.camera.position,
+            CameraProjectionParams {
+                z_near: self.camera.z_near,
+                z_far: self.camera.z_far,
+                y_fov_rad: self.camera.y_fov_rad,
+                aspect,
+                orthographic: None,
+            },
+            EffectiveShading::from_settings(&self.host.settings, &Default::default()),
+        );
+        let view = ViewFrame {
+            camera,
+            viewport: (width.max(1), height.max(1)),
+            uptime_milliseconds: (self.time * 1000.0) as u64,
+            delta_time,
+        };
+        let mut inputs = compose_single_view(&mut self.host, view);
         let mut outputs = Default::default();
         if let Some(renderer) = self.renderer.as_mut()
             && let Err(error) = render_frame(renderer, &mut inputs, &mut outputs)
         {
             eprintln!("render_frame failed: {error}");
         }
-        restore(&mut self.scene, inputs);
+        restore_single_view(&mut self.host, inputs);
     }
 
     fn render(&mut self) {
@@ -319,7 +282,7 @@ impl<E: Example> Host<E> {
     }
 }
 
-impl<E: Example> ApplicationHandler for Host<E> {
+impl<E: Example> ApplicationHandler for Harness<E> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
@@ -343,7 +306,7 @@ impl<E: Example> ApplicationHandler for Host<E> {
         install_presentation_passes(&mut renderer).expect("failed to install presentation passes");
 
         self.renderer = Some(renderer);
-        self.state = Some(E::setup(&mut self.scene));
+        self.state = Some(E::setup(&mut self.host, &mut self.camera));
 
         if let Some(path) = self.shot.clone() {
             self.capture(size.width.max(1), size.height.max(1), &path);
@@ -405,11 +368,12 @@ where
         .unwrap_or(120);
     let event_loop = EventLoop::new().expect("failed to create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
-    let mut host: Host<E> = Host {
+    let mut harness: Harness<E> = Harness {
         title: title.to_string(),
         window: None,
         renderer: None,
-        scene: new_scene(),
+        host: new_host(),
+        camera: Camera::default(),
         state: None,
         keys: HashSet::new(),
         last_frame: std::time::Instant::now(),
@@ -417,5 +381,5 @@ where
         shot,
         shot_frames,
     };
-    event_loop.run_app(&mut host).expect("event loop failed");
+    event_loop.run_app(&mut harness).expect("event loop failed");
 }

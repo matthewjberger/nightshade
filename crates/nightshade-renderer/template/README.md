@@ -2,7 +2,7 @@
 
 A single-file starter that drives [`nightshade-renderer`](../README.md)
 directly. The window, fly camera, scene, and render loop all live in `main.rs`
-with no engine layer and no shared harness — copy that one file plus the
+with no engine layer and no shared harness. Copy that one file plus the
 dependencies in `Cargo.toml` into a new binary crate and it runs.
 
 ## Run
