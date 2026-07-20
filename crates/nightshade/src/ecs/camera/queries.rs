@@ -61,7 +61,7 @@ pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f
 
 pub fn query_window_aspect_ratio(world: &World) -> Option<f32> {
     let (width, height) = world
-        .res::<crate::ecs::window::resources::Window>()
+        .res::<crate::platform::window::Window>()
         .cached_viewport_size?;
     let aspect_ratio = width as f32 / height.max(1) as f32;
     Some(aspect_ratio)

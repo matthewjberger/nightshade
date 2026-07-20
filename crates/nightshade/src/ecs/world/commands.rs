@@ -97,7 +97,7 @@ pub fn queue_render_command(world: &mut World, command: RenderCommand) {
 
 /// Lock the OS cursor to the window (relative mouse mode). Used for first-person controls.
 pub fn set_cursor_locked(world: &mut World, locked: bool) {
-    if let Some(window_handle) = &world.res::<crate::ecs::window::resources::Window>().handle {
+    if let Some(window_handle) = &world.res::<crate::platform::window::Window>().handle {
         if locked {
             if window_handle
                 .set_cursor_grab(winit::window::CursorGrabMode::Locked)
@@ -112,7 +112,7 @@ pub fn set_cursor_locked(world: &mut World, locked: bool) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::platform::window::Window>()
             .cursor_locked = locked;
     }
 }
@@ -129,13 +129,13 @@ pub fn sync_cursor_lock_state(world: &mut World) {
         .and_then(|document| document.pointer_lock_element())
         .is_some();
     world
-        .res_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::platform::window::Window>()
         .cursor_locked = locked;
 }
 
 /// Show or hide the OS cursor.
 pub fn set_cursor_visible(world: &mut World, visible: bool) {
-    if let Some(window_handle) = &world.res::<crate::ecs::window::resources::Window>().handle {
+    if let Some(window_handle) = &world.res::<crate::platform::window::Window>().handle {
         window_handle.set_cursor_visible(visible);
     }
 }

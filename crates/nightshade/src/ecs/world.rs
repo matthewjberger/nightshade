@@ -10,7 +10,7 @@
 //! Key resource paths:
 //!
 //! - `world.res::<crate::ecs::time::Time>()` â€” frame timing ([`Time`](crate::ecs::time::Time))
-//! - `world.res::<crate::ecs::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
+//! - `world.res::<crate::platform::input::resources::Input>()` â€” keyboard/mouse/touch state ([`Input`](resources::Input))
 //! - `world.res::<crate::render::config::RenderSettings>()` â€” shading and post-process settings ([`RenderSettings`](crate::render::config::RenderSettings))
 //! - `world.res::<crate::ecs::camera::resources::ActiveCamera>().0` â€” current camera entity
 //! - `world.res::<crate::ecs::entity_registry::EntityRegistry>().names` â€” name-to-entity mapping
@@ -80,7 +80,7 @@ pub mod resources {
     pub use crate::ecs::event::Events;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::selection::Selection;
-    pub use crate::ecs::input::resources::{Input, MouseState};
+    pub use crate::platform::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "meshlet")]
@@ -93,7 +93,7 @@ pub mod resources {
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::ui::resources::RetainedUiState;
-    pub use crate::ecs::window::resources::Window;
+    pub use crate::platform::window::Window;
     pub use crate::ecs::world::WorldId;
     pub use crate::ecs::world::cleanup::CleanupState;
     #[cfg(feature = "audio")]
@@ -115,10 +115,10 @@ pub mod resources {
 
 pub mod events {
     pub use crate::ecs::event_bus::resources::{InputEvent, KeyState, Message};
-    pub use crate::ecs::input::events::AppEvent;
+    pub use crate::platform::input::events::AppEvent;
 }
 
-pub use crate::ecs::input::events::AppEvent;
+pub use crate::platform::input::events::AppEvent;
 
 pub mod cleanup;
 pub mod commands;
@@ -366,7 +366,7 @@ impl Default for World {
         #[cfg(feature = "meshlet")]
         ecs.insert_resource(crate::ecs::meshlet::resources::MeshletAssets::default());
         ecs.insert_resource(crate::ecs::gpu_picking::GpuPicking::default());
-        ecs.insert_resource(crate::ecs::window::resources::Monitors::default());
+        ecs.insert_resource(crate::platform::window::Monitors::default());
         ecs.insert_resource(crate::ecs::tween::Tweens::default());
         ecs.insert_resource(crate::ecs::script::components::GlobalScripts::default());
         ecs.insert_resource(crate::ecs::graphics::selection::Selection::default());
@@ -377,10 +377,10 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::world::scratch::Scratch::default());
         ecs.insert_resource(crate::ecs::ui::resources::UiImageLayerAllocator::default());
         ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
-        ecs.insert_resource(crate::ecs::input::resources::Input::default());
-        ecs.insert_resource(crate::ecs::input::resources::Gamepad::default());
+        ecs.insert_resource(crate::platform::input::resources::Input::default());
+        ecs.insert_resource(crate::platform::input::resources::Gamepad::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
-        ecs.insert_resource(crate::ecs::window::resources::Window::default());
+        ecs.insert_resource(crate::platform::window::Window::default());
         ecs.insert_resource(crate::render_driver::Viewport::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
         ecs.insert_resource(crate::ecs::loading::LoadingState::default());
@@ -473,4 +473,4 @@ impl nightshade_ecs::system_param::EventHost for World {
     }
 }
 
-pub use crate::ecs::input::resources::DroppedFile;
+pub use crate::platform::input::resources::DroppedFile;

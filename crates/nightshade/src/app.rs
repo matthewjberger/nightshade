@@ -804,7 +804,7 @@ impl App {
         register_default_frame_systems(&mut stages);
         let mut world = World::default();
         world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::platform::window::Window>()
             .start_hidden = true;
         world
             .res_mut::<crate::render_driver::Viewport>()
@@ -974,7 +974,7 @@ impl App {
 
         if self
             .world
-            .res::<crate::ecs::window::resources::Window>()
+            .res::<crate::platform::window::Window>()
             .start_hidden
             && !self
                 .world
@@ -1116,15 +1116,15 @@ impl Default for WindowPlugin {
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
         app.world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::platform::window::Window>()
             .title = self.title.clone();
         if self.size.is_some() {
             app.world
-                .res_mut::<crate::ecs::window::resources::Window>()
+                .res_mut::<crate::platform::window::Window>()
                 .initial_size = self.size;
         }
         app.world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::platform::window::Window>()
             .start_hidden = false;
     }
 }

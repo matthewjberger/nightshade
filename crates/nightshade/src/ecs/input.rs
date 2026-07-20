@@ -14,7 +14,7 @@
 //! Check if keys are currently held:
 //!
 //! ```ignore
-//! let keyboard = &world.res::<crate::ecs::input::resources::Input>().keyboard;
+//! let keyboard = &world.res::<crate::platform::input::resources::Input>().keyboard;
 //!
 //! if keyboard.is_key_pressed(KeyCode::KeyW) {
 //!     // W is held down
@@ -40,7 +40,7 @@
 //! # Mouse Input
 //!
 //! ```ignore
-//! let mouse = &world.res::<crate::ecs::input::resources::Input>().mouse;
+//! let mouse = &world.res::<crate::platform::input::resources::Input>().mouse;
 //!
 //! // Current cursor position in screen coordinates
 //! let position = mouse.position;
@@ -102,15 +102,8 @@
 //! [`State::on_keyboard_input`]: crate::run::State::on_keyboard_input
 //! [`State::on_dropped_file_data`]: crate::run::State::on_dropped_file_data
 
-pub mod access;
 pub mod components;
-pub mod events;
-pub mod resources;
 pub mod systems;
 
-pub use access::*;
 pub use components::*;
-pub use events::*;
-#[cfg(feature = "gamepad")]
-pub use resources::*;
 pub use systems::*;

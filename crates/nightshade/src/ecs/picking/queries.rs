@@ -12,7 +12,7 @@ pub struct PickingRay {
 
 impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
-        let window = &world.res::<crate::ecs::window::resources::Window>();
+        let window = &world.res::<crate::platform::window::Window>();
         let active_viewport_rect = world
             .res::<crate::render_driver::Viewport>()
             .active_viewport_rect;
@@ -214,7 +214,7 @@ pub fn pick_entities_in_frustum(world: &World, entities: &[Entity]) -> Vec<Entit
         None => return Vec::new(),
     };
 
-    let window = &world.res::<crate::ecs::window::resources::Window>();
+    let window = &world.res::<crate::platform::window::Window>();
     let (viewport_width, viewport_height) = match window.cached_viewport_size {
         Some(size) => size,
         None => return Vec::new(),

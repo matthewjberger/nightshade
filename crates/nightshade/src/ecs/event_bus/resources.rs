@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::collections::VecDeque;
 
-pub use crate::ecs::input::events::{InputEvent, KeyState};
+pub use crate::platform::input::events::{InputEvent, KeyState};
 
 pub enum Message {
     Input {

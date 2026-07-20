@@ -77,7 +77,7 @@ pub(crate) fn sync_macos_auto_frame_rate_limit(world: &mut World) {
         return;
     }
     let Some(window_handle) = world
-        .res::<crate::ecs::window::resources::Window>()
+        .res::<crate::platform::window::Window>()
         .handle
         .clone()
     else {

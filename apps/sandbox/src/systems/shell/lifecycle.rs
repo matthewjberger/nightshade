@@ -39,11 +39,11 @@ fn handle_pick_click(shell: &mut ShellState<SandboxShellContext>, world: &mut Wo
     let mouse = &world.res::<Input>().mouse;
     if !mouse
         .state
-        .contains(nightshade::ecs::input::resources::MouseState::LEFT_JUST_PRESSED)
+        .contains(nightshade::platform::input::resources::MouseState::LEFT_JUST_PRESSED)
     {
         return;
     }
-    let screen_position = nightshade::ecs::input::access::mouse_for_active(world).position;
+    let screen_position = nightshade::platform::input::access::mouse_for_active(world).position;
     let Some(result) =
         nightshade::ecs::picking::queries::pick_closest_entity(world, screen_position)
     else {

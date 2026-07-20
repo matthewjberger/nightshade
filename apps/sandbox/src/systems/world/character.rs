@@ -1,7 +1,7 @@
 use crate::ecs::{CharacterState, RagdollMode, SandboxResources};
 use crate::systems::world::level::{default_spawn_position, find_player_spawn};
 use nightshade::ecs::lines::components::{Line, Lines};
-use nightshade::plugins::gamepad::with_active_gamepad;
+use nightshade::platform::input::gamepad::with_active_gamepad;
 use nightshade::prelude::*;
 
 const BUMPER_RADIUS: f32 = 0.55;
@@ -523,11 +523,11 @@ fn read_inputs(world: &mut World, camera: Entity) -> CharacterInputs {
     }
 
     let gamepad_jump = world
-        .res::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::platform::input::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::South);
     let gamepad_flip = world
-        .res::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::platform::input::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::West);
     let flip_key_pressed = world.res::<Input>().keyboard.just_pressed(KeyCode::KeyF);

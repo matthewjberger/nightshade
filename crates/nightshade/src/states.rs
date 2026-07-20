@@ -14,7 +14,7 @@
 //! }
 //!
 //! fn tick(world: &mut World) {
-//!     if world.res::<crate::ecs::input::resources::Input>().keyboard.just_pressed(KeyCode::Space) {
+//!     if world.res::<crate::platform::input::resources::Input>().keyboard.just_pressed(KeyCode::Space) {
 //!         next_state(world, Screen::Title);
 //!     }
 //! }

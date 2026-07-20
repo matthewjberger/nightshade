@@ -177,7 +177,7 @@ impl Plugin for LogPlugin {
     fn build(&self, app: &mut App) {
         let title = self.title.clone().unwrap_or_else(|| {
             app.world
-                .res::<crate::ecs::window::resources::Window>()
+                .res::<crate::platform::window::Window>()
                 .title
                 .clone()
         });

@@ -34,7 +34,7 @@
 //! `input_inject_*` functions, which write the same input state the winit loop
 //! produces.
 
-use crate::ecs::input::resources::{TouchPhase, TouchPoint};
+use crate::platform::input::resources::{TouchPhase, TouchPoint};
 use crate::ecs::world::Vec2;
 use crate::ecs::world::World;
 use crate::ecs::world::resources::MouseState;
@@ -56,10 +56,10 @@ pub fn initialize_offscreen(
     scale_factor: f32,
 ) {
     world
-        .res_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::platform::window::Window>()
         .cached_viewport_size = Some(viewport);
     world
-        .res_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::platform::window::Window>()
         .cached_scale_factor = scale_factor;
 
     if let Err(error) = crate::render_driver::configure_with_state(renderer, state) {
@@ -76,7 +76,7 @@ pub fn resize_offscreen(world: &mut World, renderer: &mut WgpuRenderer, width: u
         tracing::error!("Failed to resize surface: {error}");
     }
     world
-        .res_mut::<crate::ecs::window::resources::Window>()
+        .res_mut::<crate::platform::window::Window>()
         .cached_viewport_size = Some((width, height));
 }
 
@@ -99,7 +99,7 @@ pub fn tick_offscreen(
 /// Injects an absolute cursor position (in physical pixels), updating the
 /// per-frame position delta the same way the winit loop does.
 pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
-    let mouse = &mut world.res_mut::<crate::ecs::input::resources::Input>().mouse;
+    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
     if mouse.position_initialized {
         mouse.position_delta += position - mouse.position;
     } else {
@@ -113,7 +113,7 @@ pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
 /// device-event path.
 pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
     world
-        .res_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::platform::input::resources::Input>()
         .mouse
         .raw_mouse_delta += delta;
 }
@@ -123,7 +123,7 @@ pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
 pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: ElementState) {
     let pressed = state == ElementState::Pressed;
     let released = state == ElementState::Released;
-    let mouse = &mut world.res_mut::<crate::ecs::input::resources::Input>().mouse;
+    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
     match button {
         MouseButton::Left => {
             let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
@@ -161,7 +161,7 @@ pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: 
 
 /// Injects a mouse wheel delta in lines.
 pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
-    let mouse = &mut world.res_mut::<crate::ecs::input::resources::Input>().mouse;
+    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
     mouse.wheel_delta = delta;
     mouse.state.set(MouseState::SCROLLED, true);
 }
@@ -172,7 +172,7 @@ pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
 /// orbit, two-finger pan, pinch zoom). Mouse emulation, if a caller also wants
 /// pointer-style picking from touch, is left to the caller.
 pub fn input_inject_touch(world: &mut World, id: u64, phase: TouchPhase, position: Vec2) {
-    let touch = &mut world.res_mut::<crate::ecs::input::resources::Input>().touch;
+    let touch = &mut world.res_mut::<crate::platform::input::resources::Input>().touch;
     match phase {
         TouchPhase::Started => {
             touch.touches.insert(
@@ -227,14 +227,14 @@ pub fn input_inject_keyboard(
     use crate::ecs::world::events::{InputEvent, KeyState, Message};
 
     let was_pressed = world
-        .res::<crate::ecs::input::resources::Input>()
+        .res::<crate::platform::input::resources::Input>()
         .keyboard
         .keystates
         .get(&key_code)
         .is_some_and(|previous| *previous == ElementState::Pressed);
 
     *world
-        .res_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::platform::input::resources::Input>()
         .keyboard
         .keystates
         .entry(key_code)
@@ -242,20 +242,20 @@ pub fn input_inject_keyboard(
 
     let pressed = state == ElementState::Pressed;
     world
-        .res_mut::<crate::ecs::input::resources::Input>()
+        .res_mut::<crate::platform::input::resources::Input>()
         .keyboard
         .frame_keys
         .push((key_code, pressed));
 
     if pressed && !was_pressed {
         world
-            .res_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::platform::input::resources::Input>()
             .keyboard
             .just_pressed_keys
             .insert(key_code);
     } else if !pressed && was_pressed {
         world
-            .res_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::platform::input::resources::Input>()
             .keyboard
             .just_released_keys
             .insert(key_code);
@@ -264,7 +264,7 @@ pub fn input_inject_keyboard(
     if pressed && let Some(text) = text {
         for character in text.chars() {
             world
-                .res_mut::<crate::ecs::input::resources::Input>()
+                .res_mut::<crate::platform::input::resources::Input>()
                 .keyboard
                 .frame_chars
                 .push(character);

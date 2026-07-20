@@ -259,7 +259,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
             .take_frame_state(),
     );
     let mouse_position = world
-        .res::<crate::ecs::input::resources::Input>()
+        .res::<crate::platform::input::resources::Input>()
         .mouse
         .position;
     let force_render_cameras = world
@@ -283,7 +283,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let window_uptime_milliseconds = world.res::<crate::ecs::time::Time>().uptime_milliseconds;
     let window_delta_time = world.res::<crate::ecs::time::Time>().delta_time;
     let window_cached_viewport_size = world
-        .res::<crate::ecs::window::resources::Window>()
+        .res::<crate::platform::window::Window>()
         .cached_viewport_size;
     let window_camera_tile_rects: std::collections::HashMap<_, _> = world
         .res::<crate::render_driver::Viewport>()

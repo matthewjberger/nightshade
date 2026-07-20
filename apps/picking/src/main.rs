@@ -1,7 +1,7 @@
 use nightshade::ecs::camera::commands::spawn_pan_orbit_camera_at;
 use nightshade::ecs::camera::systems::pan_orbit_camera_system;
 use nightshade::ecs::gpu_picking::GpuPickResult;
-use nightshade::ecs::input::resources::MouseState;
+use nightshade::platform::input::resources::MouseState;
 use nightshade::ecs::lines::components::{Line, Lines};
 use nightshade::prelude::*;
 

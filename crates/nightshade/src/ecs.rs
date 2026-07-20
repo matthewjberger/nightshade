@@ -62,7 +62,6 @@ pub mod tween;
 pub use nightshade_ui as ui;
 pub mod vfx;
 pub mod water;
-pub mod window;
 pub mod world;
 
 pub use crate::ecs::world::*;

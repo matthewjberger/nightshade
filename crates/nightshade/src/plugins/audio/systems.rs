@@ -44,14 +44,14 @@ pub fn lazy_initialize_audio_system(world: &mut World) {
         return;
     }
     let gestured = world
-        .res::<crate::ecs::input::resources::Input>()
+        .res::<crate::platform::input::resources::Input>()
         .events
         .iter()
         .any(|event| {
             matches!(
                 event,
-                crate::ecs::input::events::AppEvent::Keyboard { .. }
-                    | crate::ecs::input::events::AppEvent::Mouse { .. }
+                crate::platform::input::events::AppEvent::Keyboard { .. }
+                    | crate::platform::input::events::AppEvent::Mouse { .. }
             )
         });
     if !gestured {

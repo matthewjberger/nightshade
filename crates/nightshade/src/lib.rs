@@ -28,7 +28,7 @@
 //!
 //! impl Plugin for MyGamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.res_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.res_mut::<nightshade::platform::window::Window>().title = "My Game".to_string();
 //!         app.insert_resource(MyGame::default());
 //!         app.add_system(Stage::Startup, initialize);
 //!         app.add_systems(Stage::Update, (tick, spawn_on_space));
@@ -303,7 +303,7 @@
 //!
 //! ```ignore
 //! // Bounding-box picking under the cursor
-//! let mouse_pos = world.res::<crate::ecs::input::resources::Input>().mouse.position;
+//! let mouse_pos = world.res::<crate::platform::input::resources::Input>().mouse.position;
 //! if let Some(hit) = pick_closest_entity(world, mouse_pos) {
 //!     println!("Hit {:?} at distance {}", hit.entity, hit.distance);
 //! }
@@ -503,7 +503,7 @@
 //!
 //! impl Plugin for GamePlugin {
 //!     fn build(&self, app: &mut App) {
-//!         app.world.res_mut::<nightshade::ecs::window::resources::Window>().title = "My Game".to_string();
+//!         app.world.res_mut::<nightshade::platform::window::Window>().title = "My Game".to_string();
 //!     }
 //! }
 //!
@@ -600,7 +600,7 @@ pub use systems::*;
 /// queue free functions ([`queue_ecs_command`], [`queue_render_command`]),
 /// spawn helpers ([`spawn_cube_at`], [`spawn_sphere_at`], [`spawn_sun`],
 /// [`spawn_camera`], etc.), the `Res`/`ResMut`/`Query` system parameters with
-/// the [`Input`](crate::ecs::input::resources::Input) resource, input types,
+/// the [`Input`](crate::platform::input::resources::Input) resource, input types,
 /// transform helpers, material and mesh registry helpers, and retained UI
 /// builders.
 ///
@@ -615,10 +615,10 @@ pub mod prelude {
     pub use crate::ecs::bundles::*;
     pub use crate::ecs::events::{EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
-    pub use crate::ecs::input::resources::Input;
+    pub use crate::platform::input::resources::Input;
     pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
-    pub use crate::ecs::window::resources::{
+    pub use crate::platform::window::{
         Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
@@ -701,9 +701,9 @@ pub mod prelude {
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
-    pub use crate::ecs::input::resources::input_mode::InputMode;
-    pub use crate::ecs::input::resources::mouse::MouseState;
-    pub use crate::ecs::input::resources::touch::{TouchGesture, TouchPhase};
+    pub use crate::platform::input::resources::input_mode::InputMode;
+    pub use crate::platform::input::resources::mouse::MouseState;
+    pub use crate::platform::input::resources::touch::{TouchGesture, TouchPhase};
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
@@ -846,11 +846,11 @@ pub mod prelude {
     #[cfg(feature = "egui")]
     pub use crate::plugins::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
-    pub use crate::plugins::gamepad::Gamepad;
+    pub use crate::platform::input::gamepad::Gamepad;
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     #[cfg(feature = "gamepad")]
-    pub use crate::plugins::gamepad::with_active_gamepad;
+    pub use crate::platform::input::gamepad::with_active_gamepad;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
     #[cfg(feature = "navmesh")]
     pub use crate::plugins::navmesh::{

@@ -16,7 +16,7 @@ pub fn handle_global(
     }
     let escape = input.keyboard.just_pressed(KeyCode::Escape);
     let start = world
-        .res::<nightshade::plugins::gamepad::Gamepad>()
+        .res::<nightshade::platform::input::gamepad::Gamepad>()
         .just_pressed_buttons
         .contains(&gilrs::Button::Start);
     let r = input.keyboard.just_pressed(KeyCode::KeyR);

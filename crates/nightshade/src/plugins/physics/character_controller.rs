@@ -60,7 +60,7 @@ pub fn character_controller_input_system(world: &mut World) {
             crouch_key_pressed,
             sprint_key_pressed,
         ) = {
-            let keyboard = &world.res::<crate::ecs::input::resources::Input>().keyboard;
+            let keyboard = &world.res::<crate::platform::input::resources::Input>().keyboard;
             (
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyA),
                 keyboard.is_key_pressed(winit::keyboard::KeyCode::KeyD),
@@ -75,7 +75,7 @@ pub fn character_controller_input_system(world: &mut World) {
 
         #[cfg(feature = "gamepad")]
         let (gamepad_movement, gamepad_jump, gamepad_crouch, gamepad_sprint) =
-            crate::plugins::gamepad::with_active_gamepad(world, |gamepad| {
+            crate::platform::input::gamepad::with_active_gamepad(world, |gamepad| {
                 let left_stick_x = gamepad.value(gilrs::Axis::LeftStickX);
                 let left_stick_y = gamepad.value(gilrs::Axis::LeftStickY);
                 let jump_button = gamepad.is_pressed(gilrs::Button::South);

@@ -7,7 +7,7 @@ use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::World;
 use crate::ecs::world::events::*;
 
-pub use nightshade_platform::input::gamepad::{Gamepad, with_active_gamepad};
+use nightshade_platform::input::gamepad::{Gamepad, with_active_gamepad};
 
 pub fn gamepad_input_system(world: &mut World) {
     let _span = tracing::info_span!("gamepad_input").entered();
@@ -33,10 +33,10 @@ pub fn gamepad_input_system(world: &mut World) {
 }
 
 pub fn detect_input_mode_system(world: &mut World) {
-    use crate::ecs::input::resources::{InputMode, MouseState};
+    use crate::platform::input::resources::{InputMode, MouseState};
 
-    let keyboard = crate::ecs::input::access::keyboard_for_active(world);
-    let mouse = crate::ecs::input::access::mouse_for_active(world);
+    let keyboard = crate::platform::input::access::keyboard_for_active(world);
+    let mouse = crate::platform::input::access::mouse_for_active(world);
 
     let has_keyboard_input = keyboard
         .keystates
@@ -78,27 +78,27 @@ pub fn detect_input_mode_system(world: &mut World) {
 
     if has_gamepad_input
         && world
-            .res::<crate::ecs::input::resources::Input>()
+            .res::<crate::platform::input::resources::Input>()
             .input_mode
             != InputMode::Gamepad
     {
         world
-            .res_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::platform::input::resources::Input>()
             .input_mode = InputMode::Gamepad;
     } else if (has_keyboard_input || has_mouse_input)
         && world
-            .res::<crate::ecs::input::resources::Input>()
+            .res::<crate::platform::input::resources::Input>()
             .input_mode
             != InputMode::MouseKeyboard
     {
         world
-            .res_mut::<crate::ecs::input::resources::Input>()
+            .res_mut::<crate::platform::input::resources::Input>()
             .input_mode = InputMode::MouseKeyboard;
     }
 }
 
 /// Installs gamepad input: polls devices at the top of every frame and
-/// forwards connection and button events onto `world.res::<crate::ecs::input::resources::Input>().events`.
+/// forwards connection and button events onto `world.res::<crate::platform::input::resources::Input>().events`.
 /// Without this plugin the engine never opens the gilrs context.
 pub struct GamepadPlugin;
 
@@ -110,7 +110,7 @@ impl Plugin for GamepadPlugin {
             for event in gamepad_events {
                 crate::ecs::events::emit_app_event(
                     world,
-                    crate::ecs::input::events::AppEvent::Gamepad(event),
+                    crate::platform::input::events::AppEvent::Gamepad(event),
                 );
             }
         });

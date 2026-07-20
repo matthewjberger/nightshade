@@ -19,7 +19,7 @@ pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) 
 }
 
 pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
-    use crate::ecs::input::events::AppEvent;
+    use crate::platform::input::events::AppEvent;
 
     match event {
         WindowEvent::DroppedFile(path) => {

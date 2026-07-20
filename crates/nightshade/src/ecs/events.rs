@@ -11,7 +11,7 @@
 
 pub use nightshade_ecs::system_param::{EventReader, EventWriter};
 
-use crate::ecs::input::resources::Input;
+use crate::platform::input::resources::Input;
 use crate::ecs::world::World;
 use nightshade_ecs::system_param::EventHost;
 
@@ -19,7 +19,7 @@ use nightshade_ecs::system_param::EventHost;
 /// [`EventReader<AppEvent>`](nightshade_ecs::system_param::EventReader), and mirrors it
 /// into the legacy `Input::events` list drained by hand. Both hold the same
 /// events, so a system reading either sees identical input.
-pub(crate) fn emit_app_event(world: &mut World, event: crate::ecs::input::events::AppEvent) {
+pub(crate) fn emit_app_event(world: &mut World, event: crate::platform::input::events::AppEvent) {
     world.event_bus_mut().send(event.clone());
     world.res_mut::<Input>().events.push(event);
 }

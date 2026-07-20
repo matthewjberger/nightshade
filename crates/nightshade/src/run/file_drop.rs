@@ -2,7 +2,7 @@ use crate::ecs::world::World;
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
-    static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::ecs::input::resources::DroppedFile>> =
+    static WASM_DROPPED_FILES: std::cell::RefCell<Vec<crate::platform::input::resources::DroppedFile>> =
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
@@ -10,7 +10,7 @@ thread_local! {
 pub(crate) fn collect_directory_files(
     root: &std::path::Path,
     current: &std::path::Path,
-    files: &mut Vec<crate::ecs::input::resources::DroppedFile>,
+    files: &mut Vec<crate::platform::input::resources::DroppedFile>,
 ) {
     let entries = match std::fs::read_dir(current) {
         Ok(entries) => entries,
@@ -35,7 +35,7 @@ pub(crate) fn collect_directory_files(
                 .map(|name| format!("{}/", name))
                 .unwrap_or_default();
             let name = format!("{}{}", prefix, relative);
-            files.push(crate::ecs::input::resources::DroppedFile { name, data });
+            files.push(crate::platform::input::resources::DroppedFile { name, data });
         }
     }
 }
@@ -59,7 +59,7 @@ pub(crate) fn process_dropped_files(world: &mut World) {
     for file in dropped_files {
         crate::ecs::events::emit_app_event(
             world,
-            crate::ecs::input::events::AppEvent::FileDropped(file),
+            crate::platform::input::events::AppEvent::FileDropped(file),
         );
     }
 }
@@ -117,7 +117,7 @@ pub(crate) fn setup_wasm_file_drop() {
                 .into_iter()
                 .map(|(file_entry, path)| async move { read_file_entry(file_entry, path).await });
             let results = futures::future::join_all(read_futures).await;
-            let batch: Vec<crate::ecs::input::resources::DroppedFile> =
+            let batch: Vec<crate::platform::input::resources::DroppedFile> =
                 results.into_iter().flatten().collect();
             if !batch.is_empty() {
                 WASM_DROPPED_FILES.with(|files| files.borrow_mut().extend(batch));
@@ -184,7 +184,7 @@ async fn collect_file_entries(
 async fn read_file_entry(
     file_entry: web_sys::FileSystemFileEntry,
     path: String,
-) -> Option<crate::ecs::input::resources::DroppedFile> {
+) -> Option<crate::platform::input::resources::DroppedFile> {
     use wasm_bindgen::JsCast;
 
     let file_promise = js_sys::Promise::new(&mut |resolve, reject| {
@@ -199,7 +199,7 @@ async fn read_file_entry(
         .ok()?;
     let array_buffer: js_sys::ArrayBuffer = buffer_value.unchecked_into();
     let bytes = js_sys::Uint8Array::new(&array_buffer).to_vec();
-    Some(crate::ecs::input::resources::DroppedFile {
+    Some(crate::platform::input::resources::DroppedFile {
         name: path,
         data: bytes,
     })

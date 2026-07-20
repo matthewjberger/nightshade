@@ -499,17 +499,17 @@ pub fn look_camera_system(world: &mut World) {
 
     let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
     let right_clicked = world
-        .res::<crate::ecs::input::resources::Input>()
+        .res::<crate::platform::input::resources::Input>()
         .mouse
         .state
-        .contains(crate::ecs::input::resources::MouseState::RIGHT_CLICKED);
+        .contains(crate::platform::input::resources::MouseState::RIGHT_CLICKED);
     let raw_mouse_delta = world
-        .res::<crate::ecs::input::resources::Input>()
+        .res::<crate::platform::input::resources::Input>()
         .mouse
         .raw_mouse_delta;
 
     #[cfg(feature = "gamepad")]
-    let gamepad_input = crate::plugins::gamepad::with_active_gamepad(world, |gamepad| {
+    let gamepad_input = crate::platform::input::gamepad::with_active_gamepad(world, |gamepad| {
         let right_stick_x = gamepad.value(gilrs::Axis::RightStickX);
         let right_stick_y = gamepad.value(gilrs::Axis::RightStickY);
         (right_stick_x, right_stick_y)
