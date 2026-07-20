@@ -556,9 +556,9 @@ pub mod ecs;
 #[cfg(feature = "runtime")]
 pub mod plugins;
 #[cfg(feature = "runtime")]
-pub use nightshade_renderer as render;
-#[cfg(feature = "runtime")]
 pub use nightshade_platform as platform;
+#[cfg(feature = "runtime")]
+pub use nightshade_renderer as render;
 #[cfg(feature = "runtime")]
 pub mod app;
 pub mod render_driver;
@@ -613,17 +613,16 @@ pub mod prelude {
     pub use crate::ecs::bundles::*;
     pub use crate::ecs::events::{EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
-    pub use crate::platform::input::resources::Input;
     pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
+    pub use crate::ecs::world::components::*;
+    pub use crate::ecs::world::resources::*;
+    pub use crate::ecs::world::*;
+    pub use crate::platform::input::resources::Input;
     pub use crate::platform::window::{
         Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
-    pub use crate::render_driver::Viewport;
-    pub use crate::ecs::world::components::*;
-    pub use crate::ecs::world::resources::*;
-    pub use crate::ecs::world::*;
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::AudioPlugin;
     pub use crate::plugins::camera_controller::CameraControllerPlugin;
@@ -653,6 +652,7 @@ pub mod prelude {
     };
     pub use crate::render::config::{DebugDraw, RenderSettings};
     pub use crate::render::wind::Wind;
+    pub use crate::render_driver::Viewport;
     pub use crate::run::*;
     pub use crate::schedule::{RetainedUiSchedule, SystemFn};
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
@@ -699,9 +699,6 @@ pub mod prelude {
     pub use crate::ecs::gpu_picking::{
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
-    pub use crate::platform::input::resources::input_mode::InputMode;
-    pub use crate::platform::input::resources::mouse::MouseState;
-    pub use crate::platform::input::resources::touch::{TouchGesture, TouchPhase};
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
@@ -783,6 +780,7 @@ pub mod prelude {
     pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
     pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
+    pub use crate::ecs::ui::layer::UiLayer;
     pub use crate::ecs::ui::layout_types::GridLayout;
     pub use crate::ecs::ui::layout_types::{
         BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
@@ -830,6 +828,13 @@ pub mod prelude {
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
         spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
     };
+    #[cfg(feature = "gamepad")]
+    pub use crate::platform::input::gamepad::Gamepad;
+    #[cfg(feature = "gamepad")]
+    pub use crate::platform::input::gamepad::with_active_gamepad;
+    pub use crate::platform::input::resources::input_mode::InputMode;
+    pub use crate::platform::input::resources::mouse::MouseState;
+    pub use crate::platform::input::resources::touch::{TouchGesture, TouchPhase};
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::resources::{
         AudioEngine, audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
@@ -844,11 +849,7 @@ pub mod prelude {
     #[cfg(feature = "egui")]
     pub use crate::plugins::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
-    pub use crate::platform::input::gamepad::Gamepad;
-    #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
-    #[cfg(feature = "gamepad")]
-    pub use crate::platform::input::gamepad::with_active_gamepad;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
     #[cfg(feature = "navmesh")]
     pub use crate::plugins::navmesh::{
@@ -916,7 +917,6 @@ pub mod prelude {
     pub use crate::render::text_data::FontKind;
     pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
     pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiRect, UiTextInstance};
-    pub use crate::ecs::ui::layer::UiLayer;
     pub use crate::render::wgpu::texture_cache::{
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
         texture_cache_release_entity,

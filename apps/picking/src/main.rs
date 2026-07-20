@@ -1,8 +1,8 @@
 use nightshade::ecs::camera::commands::spawn_pan_orbit_camera_at;
 use nightshade::ecs::camera::systems::pan_orbit_camera_system;
 use nightshade::ecs::gpu_picking::GpuPickResult;
-use nightshade::platform::input::resources::MouseState;
 use nightshade::ecs::lines::components::{Line, Lines};
+use nightshade::platform::input::resources::MouseState;
 use nightshade::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

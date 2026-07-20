@@ -80,7 +80,6 @@ pub mod resources {
     pub use crate::ecs::event::Events;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::selection::Selection;
-    pub use crate::platform::input::resources::{Input, MouseState};
     pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "meshlet")]
@@ -93,9 +92,10 @@ pub mod resources {
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::ui::UserInterface;
     pub use crate::ecs::ui::resources::RetainedUiState;
-    pub use crate::platform::window::Window;
     pub use crate::ecs::world::WorldId;
     pub use crate::ecs::world::cleanup::CleanupState;
+    pub use crate::platform::input::resources::{Input, MouseState};
+    pub use crate::platform::window::Window;
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::resources::AudioEngine;
     #[cfg(feature = "physics")]

@@ -34,10 +34,10 @@
 //! `input_inject_*` functions, which write the same input state the winit loop
 //! produces.
 
-use crate::platform::input::resources::{TouchPhase, TouchPoint};
 use crate::ecs::world::Vec2;
 use crate::ecs::world::World;
 use crate::ecs::world::resources::MouseState;
+use crate::platform::input::resources::{TouchPhase, TouchPoint};
 use crate::render::wgpu::WgpuRenderer;
 use crate::state::State;
 use winit::event::{ElementState, MouseButton};
@@ -99,7 +99,9 @@ pub fn tick_offscreen(
 /// Injects an absolute cursor position (in physical pixels), updating the
 /// per-frame position delta the same way the winit loop does.
 pub fn input_inject_cursor_moved(world: &mut World, position: Vec2) {
-    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
+    let mouse = &mut world
+        .res_mut::<crate::platform::input::resources::Input>()
+        .mouse;
     if mouse.position_initialized {
         mouse.position_delta += position - mouse.position;
     } else {
@@ -123,7 +125,9 @@ pub fn input_inject_mouse_motion(world: &mut World, delta: Vec2) {
 pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: ElementState) {
     let pressed = state == ElementState::Pressed;
     let released = state == ElementState::Released;
-    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
+    let mouse = &mut world
+        .res_mut::<crate::platform::input::resources::Input>()
+        .mouse;
     match button {
         MouseButton::Left => {
             let was_clicked = mouse.state.contains(MouseState::LEFT_CLICKED);
@@ -161,7 +165,9 @@ pub fn input_inject_mouse_button(world: &mut World, button: MouseButton, state: 
 
 /// Injects a mouse wheel delta in lines.
 pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
-    let mouse = &mut world.res_mut::<crate::platform::input::resources::Input>().mouse;
+    let mouse = &mut world
+        .res_mut::<crate::platform::input::resources::Input>()
+        .mouse;
     mouse.wheel_delta = delta;
     mouse.state.set(MouseState::SCROLLED, true);
 }
@@ -172,7 +178,9 @@ pub fn input_inject_mouse_wheel(world: &mut World, delta: Vec2) {
 /// orbit, two-finger pan, pinch zoom). Mouse emulation, if a caller also wants
 /// pointer-style picking from touch, is left to the caller.
 pub fn input_inject_touch(world: &mut World, id: u64, phase: TouchPhase, position: Vec2) {
-    let touch = &mut world.res_mut::<crate::platform::input::resources::Input>().touch;
+    let touch = &mut world
+        .res_mut::<crate::platform::input::resources::Input>()
+        .touch;
     match phase {
         TouchPhase::Started => {
             touch.touches.insert(

@@ -11,8 +11,8 @@
 
 pub use nightshade_ecs::system_param::{EventReader, EventWriter};
 
-use crate::platform::input::resources::Input;
 use crate::ecs::world::World;
+use crate::platform::input::resources::Input;
 use nightshade_ecs::system_param::EventHost;
 
 /// Records an application event on the nightshade_ecs event bus, read through

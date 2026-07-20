@@ -246,9 +246,7 @@ fn sync_window_title(_world: &mut World) {}
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "assets"))]
 fn sync_window_icon(world: &mut World) {
-    let current = world
-        .res::<crate::platform::window::Window>()
-        .icon_bytes;
+    let current = world.res::<crate::platform::window::Window>().icon_bytes;
     let applied = world
         .res::<crate::platform::window::Window>()
         .applied_icon_bytes;
@@ -570,12 +568,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         {
             attributes = attributes
-                .with_title(
-                    &self
-                        .world
-                        .res::<crate::platform::window::Window>()
-                        .title,
-                )
+                .with_title(&self.world.res::<crate::platform::window::Window>().title)
                 .with_resizable(true)
                 .with_decorations(true)
                 .with_visible(false)
@@ -687,8 +680,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         }
 
         crate::platform::window::refresh_monitors_from_event_loop(
-            self.world
-                .res_mut::<crate::platform::window::Monitors>(),
+            self.world.res_mut::<crate::platform::window::Monitors>(),
             event_loop,
         );
 
@@ -850,10 +842,8 @@ impl winit::application::ApplicationHandler for WindowContext {
                     .world
                     .res::<crate::platform::window::Window>()
                     .show_cursor;
-                if let Some(window_handle) = &self
-                    .world
-                    .res::<crate::platform::window::Window>()
-                    .handle
+                if let Some(window_handle) =
+                    &self.world.res::<crate::platform::window::Window>().handle
                 {
                     window_handle.set_cursor_visible(show_cursor);
                 }
@@ -924,8 +914,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                         .cached_scale_factor = handle.scale_factor() as f32;
                 }
                 crate::platform::window::refresh_monitors_from_event_loop(
-                    self.world
-                        .res_mut::<crate::platform::window::Monitors>(),
+                    self.world.res_mut::<crate::platform::window::Monitors>(),
                     event_loop,
                 );
                 if let Some(handle) = self
@@ -951,8 +940,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                         .cached_scale_factor = handle.scale_factor() as f32;
                 }
                 crate::platform::window::refresh_monitors_from_event_loop(
-                    self.world
-                        .res_mut::<crate::platform::window::Monitors>(),
+                    self.world.res_mut::<crate::platform::window::Monitors>(),
                     event_loop,
                 );
 

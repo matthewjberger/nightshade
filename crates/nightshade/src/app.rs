@@ -1115,9 +1115,7 @@ impl Default for WindowPlugin {
 
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
-        app.world
-            .res_mut::<crate::platform::window::Window>()
-            .title = self.title.clone();
+        app.world.res_mut::<crate::platform::window::Window>().title = self.title.clone();
         if self.size.is_some() {
             app.world
                 .res_mut::<crate::platform::window::Window>()
