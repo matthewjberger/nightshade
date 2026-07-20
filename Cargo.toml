@@ -43,7 +43,7 @@ gltf = { version = "1.4.1", features = [
     "import",
     "allow_empty_texture",
 ] }
-cosmic-text = "0.16"
+cosmic-text = "0.19"
 half = "2.7.1"
 image = { version = "0.25", default-features = false, features = [
     "png",
