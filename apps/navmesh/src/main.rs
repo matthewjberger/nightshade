@@ -458,18 +458,17 @@ impl NavMeshDemo {
             self.ui.trees_label,
             &format!("Trees: {}", self.tree_count),
         );
+        let triangle_count = world.plugin_resource::<NavMeshWorld>().triangles.len();
         ui_set_text(
             world,
             self.ui.triangles_label,
-            &format!(
-                "NavMesh Triangles: {}",
-                world.plugin_resource::<NavMeshWorld>().triangles.len()
-            ),
+            &format!("NavMesh Triangles: {triangle_count}"),
         );
+        let fps = world.res::<Time>().frames_per_second;
         ui_set_text(
             world,
             self.ui.fps_label,
-            &format!("FPS: {:.1}", world.res::<Time>().frames_per_second),
+            &format!("FPS: {fps:.1}"),
         );
 
         if self.followed_fox_index != self.last_following_index {
@@ -1141,7 +1140,7 @@ impl NavMeshDemo {
     }
 }
 
-fn panel_content(world: &mut World, panel: Entity) -> Entity {
+fn panel_content(world: &mut DynEcs, panel: Entity) -> Entity {
     widget::<UiPanelData>(world, panel)
         .map(|data| data.content_entity)
         .expect("panel content missing")

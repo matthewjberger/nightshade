@@ -13,24 +13,7 @@ use crate::schedule::SystemFn;
 /// gamepad's South-press flag survive into widget interaction and click
 /// event emission.
 pub fn build_default_retained_ui_schedule() -> Vec<SystemFn> {
-    vec![
-        crate::ecs::ui::widget_systems::ui_retained_input_sync_system,
-        crate::ecs::ui::picking::ui_layout_picking_system,
-        #[cfg(feature = "gamepad")]
-        crate::ecs::ui::gamepad_navigation::ui_gamepad_navigation_system,
-        crate::ecs::ui::widget_systems::ui_widget_interaction_system,
-        crate::ecs::ui::widget_systems::ui_event_bubble_system,
-        crate::ecs::ui::widget_systems::ui_emit_click_events_system,
-        crate::ecs::ui::systems::ui_layout_state_update_system,
-        crate::ecs::ui::systems::ui_docked_panel_layout_system,
-        crate::ecs::ui::systems::ui_responsive_apply_system,
-        crate::ecs::ui::systems::ui_layout_compute_system,
-        crate::ecs::ui::systems::ui_theme_transition_tick_system,
-        crate::ecs::ui::systems::ui_theme_apply_system,
-        crate::ecs::ui::systems::ui_layout_color_blend_system,
-        crate::ecs::ui::systems::ui_layout_transform_blend_system,
-        crate::ecs::ui::render_sync::ui_layout_render_sync_system,
-    ]
+    nightshade_ui::default_ui_systems()
 }
 
 pub fn run_retained_ui_schedule(world: &mut World) {
@@ -40,7 +23,7 @@ pub fn run_retained_ui_schedule(world: &mut World) {
             .systems,
     );
     for system in &systems {
-        system(world);
+        system(&mut world.ecs);
     }
     world
         .res_mut::<crate::schedule::RetainedUiSchedule>()

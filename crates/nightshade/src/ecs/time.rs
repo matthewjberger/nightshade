@@ -1,30 +1,4 @@
-#[derive(Clone)]
-pub struct Time {
-    pub frames_per_second: f32,
-    pub delta_time: f32,
-    pub raw_delta_time: f32,
-    pub time_speed: f32,
-    pub paused: bool,
-    pub last_frame_start_instant: Option<web_time::Instant>,
-    pub current_frame_start_instant: Option<web_time::Instant>,
-    pub initial_frame_start_instant: Option<web_time::Instant>,
-    pub frame_counter: u32,
-    pub uptime_milliseconds: u64,
-}
+//! The frame clock. The [`Time`] type lives in `nightshade-ecs`; this module
+//! re-exports it so `crate::ecs::time::Time` keeps resolving across the engine.
 
-impl Default for Time {
-    fn default() -> Self {
-        Self {
-            frames_per_second: 0.0,
-            delta_time: 0.0,
-            raw_delta_time: 0.0,
-            time_speed: 1.0,
-            paused: false,
-            last_frame_start_instant: None,
-            current_frame_start_instant: None,
-            initial_frame_start_instant: None,
-            frame_counter: 0,
-            uptime_milliseconds: 0,
-        }
-    }
-}
+pub use nightshade_ecs::time::Time;

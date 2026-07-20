@@ -634,6 +634,9 @@ pub mod prelude {
     pub use crate::plugins::gamepad::GamepadPlugin;
     #[cfg(feature = "gizmos")]
     pub use crate::plugins::gizmos::GizmosPlugin;
+    #[cfg(feature = "gizmos")]
+    pub use crate::plugins::gizmos::Gizmos;
+    pub use nightshade_ecs::dynamic::DynEcs;
     pub use crate::plugins::log::LogPlugin;
     pub use crate::plugins::log::{LogConfig, LogRotation};
     #[cfg(feature = "navmesh")]

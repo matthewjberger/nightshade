@@ -2265,7 +2265,7 @@ impl FireworksDemo {
     }
 }
 
-fn panel_content(world: &mut World, panel: Entity) -> Entity {
+fn panel_content(world: &mut DynEcs, panel: Entity) -> Entity {
     widget::<UiPanelData>(world, panel)
         .map(|data| data.content_entity)
         .expect("panel content missing")

@@ -148,6 +148,22 @@ fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
 /// `shadow_atlas` fields are renderer-owned and composed empty; the frame
 /// driver fills them itself.
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
+    let image_uploads = std::mem::take(
+        &mut world
+            .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .pending_image_uploads,
+    );
+    for upload in image_uploads {
+        world
+            .res_mut::<crate::ecs::world::commands::CommandQueues>()
+            .render
+            .push(crate::ecs::world::RenderCommand::UploadUiImageLayer {
+                layer: upload.layer,
+                rgba_data: upload.rgba_data,
+                width: upload.width,
+                height: upload.height,
+            });
+    }
     let commands = map_render_commands(world);
 
     let cameras: Vec<CameraFrameInputs> = world

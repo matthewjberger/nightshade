@@ -261,113 +261,6 @@ nightshade_ecs::impl_component!(
     crate::ecs::meshlet::components::MeshletMesh,
 );
 
-nightshade_ecs::dynamic_schema! {
-    fn register_ui_components {
-            ui_breadcrumb: crate::ecs::ui::components::UiBreadcrumbData => UI_BREADCRUMB,
-            ui_button: crate::ecs::ui::components::UiButtonData => UI_BUTTON,
-            ui_canvas: crate::ecs::ui::components::UiCanvasData => UI_CANVAS,
-            ui_checkbox: crate::ecs::ui::components::UiCheckboxData => UI_CHECKBOX,
-            ui_collapsing_header: crate::ecs::ui::components::UiCollapsingHeaderData => UI_COLLAPSING_HEADER,
-            ui_color_picker: crate::ecs::ui::components::UiColorPickerData => UI_COLOR_PICKER,
-            ui_color_wheel: crate::ecs::ui::components::UiColorWheelData => UI_COLOR_WHEEL,
-            ui_command_palette: crate::ecs::ui::components::UiCommandPaletteData => UI_COMMAND_PALETTE,
-            ui_context_menu: crate::ecs::ui::components::UiContextMenuData => UI_CONTEXT_MENU,
-            ui_data_grid: crate::ecs::ui::components::UiDataGridData => UI_DATA_GRID,
-            ui_date_picker: crate::ecs::ui::components::UiDatePickerData => UI_DATE_PICKER,
-            ui_drag_source: crate::ecs::ui::components::UiDragSource => UI_DRAG_SOURCE,
-            ui_drag_value: crate::ecs::ui::components::UiDragValueData => UI_DRAG_VALUE,
-            ui_drop_target: crate::ecs::ui::components::UiDropTarget => UI_DROP_TARGET,
-            ui_dropdown: crate::ecs::ui::components::UiDropdownData => UI_DROPDOWN,
-            ui_layout_node: crate::ecs::ui::components::UiLayoutNode => UI_LAYOUT_NODE,
-            ui_layout_root: crate::ecs::ui::components::UiLayoutRoot => UI_LAYOUT_ROOT,
-            ui_menu: crate::ecs::ui::components::UiMenuData => UI_MENU,
-            ui_modal_dialog: crate::ecs::ui::components::UiModalDialogData => UI_MODAL_DIALOG,
-            ui_multi_select: crate::ecs::ui::components::UiMultiSelectData => UI_MULTI_SELECT,
-            ui_node_blended_transform: crate::ecs::ui::components::UiNodeBlendedTransform => UI_NODE_BLENDED_TRANSFORM,
-            ui_node_color: crate::ecs::ui::components::UiNodeColor => UI_NODE_COLOR,
-            ui_node_content: crate::ecs::ui::components::UiNodeContent => UI_NODE_CONTENT,
-            ui_node_effect: crate::ecs::ui::components::UiNodeEffect => UI_NODE_EFFECT,
-            ui_node_interaction: crate::ecs::ui::components::UiNodeInteraction => UI_NODE_INTERACTION,
-            ui_node_shadow_states: crate::ecs::ui::components::UiNodeShadowStates => UI_NODE_SHADOW_STATES,
-            ui_node_shadow: crate::ecs::ui::components::UiNodeShadow => UI_NODE_SHADOW,
-            ui_node_transform_states: crate::ecs::ui::components::UiNodeTransformStates => UI_NODE_TRANSFORM_STATES,
-            ui_panel: crate::ecs::ui::components::UiPanelData => UI_PANEL,
-            ui_progress_bar: crate::ecs::ui::components::UiProgressBarData => UI_PROGRESS_BAR,
-            ui_property_grid: crate::ecs::ui::components::UiPropertyGridData => UI_PROPERTY_GRID,
-            ui_radio: crate::ecs::ui::components::UiRadioData => UI_RADIO,
-            ui_range_slider: crate::ecs::ui::components::UiRangeSliderData => UI_RANGE_SLIDER,
-            ui_rich_text_editor: crate::ecs::ui::components::UiRichTextEditorData => UI_RICH_TEXT_EDITOR,
-            ui_rich_text: crate::ecs::ui::components::UiRichTextData => UI_RICH_TEXT,
-            ui_scroll_area: crate::ecs::ui::components::UiScrollAreaData => UI_SCROLL_AREA,
-            ui_selectable_label: crate::ecs::ui::components::UiSelectableLabelData => UI_SELECTABLE_LABEL,
-            ui_slider: crate::ecs::ui::components::UiSliderData => UI_SLIDER,
-            ui_spinner: crate::ecs::ui::components::UiSpinnerData => UI_SPINNER,
-            ui_splitter: crate::ecs::ui::components::UiSplitterData => UI_SPLITTER,
-            ui_state_weights: crate::ecs::ui::components::UiStateWeights => UI_STATE_WEIGHTS,
-            ui_tab_bar: crate::ecs::ui::components::UiTabBarData => UI_TAB_BAR,
-            ui_text_area: crate::ecs::ui::components::UiTextAreaData => UI_TEXT_AREA,
-            ui_text_input: crate::ecs::ui::components::UiTextInputData => UI_TEXT_INPUT,
-            ui_theme_binding: crate::ecs::ui::components::UiThemeBinding => UI_THEME_BINDING,
-            ui_tile_container: crate::ecs::ui::components::UiTileContainerData => UI_TILE_CONTAINER,
-            ui_toggle: crate::ecs::ui::components::UiToggleData => UI_TOGGLE,
-            ui_tree_node: crate::ecs::ui::components::UiTreeNodeData => UI_TREE_NODE,
-            ui_tree_view: crate::ecs::ui::components::UiTreeViewData => UI_TREE_VIEW,
-            ui_virtual_list: crate::ecs::ui::components::UiVirtualListData => UI_VIRTUAL_LIST,
-    }
-}
-
-nightshade_ecs::impl_component!(
-    crate::ecs::ui::components::UiBreadcrumbData,
-    crate::ecs::ui::components::UiButtonData,
-    crate::ecs::ui::components::UiCanvasData,
-    crate::ecs::ui::components::UiCheckboxData,
-    crate::ecs::ui::components::UiCollapsingHeaderData,
-    crate::ecs::ui::components::UiColorPickerData,
-    crate::ecs::ui::components::UiColorWheelData,
-    crate::ecs::ui::components::UiCommandPaletteData,
-    crate::ecs::ui::components::UiContextMenuData,
-    crate::ecs::ui::components::UiDataGridData,
-    crate::ecs::ui::components::UiDatePickerData,
-    crate::ecs::ui::components::UiDragSource,
-    crate::ecs::ui::components::UiDragValueData,
-    crate::ecs::ui::components::UiDropTarget,
-    crate::ecs::ui::components::UiDropdownData,
-    crate::ecs::ui::components::UiLayoutNode,
-    crate::ecs::ui::components::UiLayoutRoot,
-    crate::ecs::ui::components::UiMenuData,
-    crate::ecs::ui::components::UiModalDialogData,
-    crate::ecs::ui::components::UiMultiSelectData,
-    crate::ecs::ui::components::UiNodeBlendedTransform,
-    crate::ecs::ui::components::UiNodeColor,
-    crate::ecs::ui::components::UiNodeContent,
-    crate::ecs::ui::components::UiNodeEffect,
-    crate::ecs::ui::components::UiNodeInteraction,
-    crate::ecs::ui::components::UiNodeShadowStates,
-    crate::ecs::ui::components::UiNodeShadow,
-    crate::ecs::ui::components::UiNodeTransformStates,
-    crate::ecs::ui::components::UiPanelData,
-    crate::ecs::ui::components::UiProgressBarData,
-    crate::ecs::ui::components::UiPropertyGridData,
-    crate::ecs::ui::components::UiRadioData,
-    crate::ecs::ui::components::UiRangeSliderData,
-    crate::ecs::ui::components::UiRichTextEditorData,
-    crate::ecs::ui::components::UiRichTextData,
-    crate::ecs::ui::components::UiScrollAreaData,
-    crate::ecs::ui::components::UiSelectableLabelData,
-    crate::ecs::ui::components::UiSliderData,
-    crate::ecs::ui::components::UiSpinnerData,
-    crate::ecs::ui::components::UiSplitterData,
-    crate::ecs::ui::components::UiStateWeights,
-    crate::ecs::ui::components::UiTabBarData,
-    crate::ecs::ui::components::UiTextAreaData,
-    crate::ecs::ui::components::UiTextInputData,
-    crate::ecs::ui::components::UiThemeBinding,
-    crate::ecs::ui::components::UiTileContainerData,
-    crate::ecs::ui::components::UiToggleData,
-    crate::ecs::ui::components::UiTreeNodeData,
-    crate::ecs::ui::components::UiTreeViewData,
-    crate::ecs::ui::components::UiVirtualListData,
-);
 
 /// The renderer-facing identifier of the world whose scene is being composed,
 /// handed to each frame's `RenderInputs`.
@@ -375,6 +268,8 @@ nightshade_ecs::impl_component!(
 pub struct WorldId(pub u64);
 
 use crate::render::render_world::register_render_components;
+
+pub use nightshade_ui::schema::*;
 
 nightshade_ecs::dynamic_worlds! {
     pub fn build_engine_ecs {
@@ -447,6 +342,8 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::ui::resources::RetainedUiState::default());
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
         ecs.insert_resource(crate::ecs::ui::UserInterface::default());
+        #[cfg(feature = "gizmos")]
+        ecs.insert_resource(crate::plugins::gizmos::Gizmos::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
         ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
         ecs.insert_resource(crate::ecs::mesh::components::InstancedMeshMatrices::default());

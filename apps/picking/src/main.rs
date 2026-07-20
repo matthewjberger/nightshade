@@ -215,7 +215,8 @@ fn drain_keyboard(
                 KeyCode::Escape => world.res_mut::<Window>().should_exit = true,
                 KeyCode::F1 => {
                     let panel = picking_demo.handles.panel;
-                    ui_set_visible(world, panel, !ui_node_visible(world, panel));
+                    let visible = ui_node_visible(world, panel);
+                    ui_set_visible(world, panel, !visible);
                 }
                 _ => {}
             }

@@ -353,6 +353,7 @@ pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
 pub mod text_data;
+#[cfg(feature = "text")]
 pub mod text_state;
 /// Generation of textured glyph meshes from shaped text runs.
 #[cfg(feature = "wgpu")]

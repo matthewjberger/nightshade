@@ -59,7 +59,7 @@ pub mod time;
 pub mod timer;
 pub mod transform;
 pub mod tween;
-pub mod ui;
+pub use nightshade_ui as ui;
 pub mod vfx;
 pub mod water;
 pub mod window;

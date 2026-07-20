@@ -54,6 +54,7 @@ pub mod system_param;
 
 #[cfg(feature = "state")]
 pub mod state;
+pub mod time;
 
 /// Declares a dynamic world's schema in one place: the mask constants (bits
 /// assigned in declaration order, which is the registration order and
