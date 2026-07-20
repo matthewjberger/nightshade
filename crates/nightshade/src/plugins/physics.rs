@@ -143,6 +143,8 @@ pub struct PhysicsPlugin;
 #[cfg(feature = "physics")]
 impl crate::app::Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::app::App) {
+        app.world
+            .insert_resource(crate::plugins::physics::resources::PhysicsWorld::default());
         install(&mut app.world);
         register_frame_systems(&mut app.stages);
     }

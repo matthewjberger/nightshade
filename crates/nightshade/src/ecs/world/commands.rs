@@ -211,6 +211,9 @@ pub fn register_material(
 
 #[cfg(feature = "physics")]
 pub fn spawn_physics_body(world: &mut World, entity: Entity) {
+    if world.ecs.resource::<PhysicsWorld>().is_none() {
+        return;
+    }
     let rigid_body_comp = world
         .get::<crate::plugins::physics::components::RigidBodyComponent>(entity)
         .cloned();

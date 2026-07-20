@@ -90,6 +90,8 @@ pub struct FileWatcherPlugin;
 impl crate::app::Plugin for FileWatcherPlugin {
     fn build(&self, app: &mut crate::app::App) {
         use crate::app::Stage;
+        app.world
+            .insert_resource(crate::plugins::file_watcher::FileWatcher::default());
         app.add_system(Stage::Last, poll_file_watcher_system);
         #[cfg(feature = "assets")]
         app.add_system(

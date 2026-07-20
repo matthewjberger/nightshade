@@ -173,6 +173,9 @@ pub fn advance_event_frame_system(world: &mut World) {
 pub fn emit_collision_events_system(world: &mut World) {
     use crate::plugins::physics::events::CollisionEventKind;
     use crate::plugins::physics::resources::PhysicsWorld;
+    if world.ecs.resource::<PhysicsWorld>().is_none() {
+        return;
+    }
     let collisions = crate::plugins::physics::resources::physics_world_collision_events(
         world.plugin_resource::<PhysicsWorld>(),
     )

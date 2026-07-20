@@ -296,39 +296,33 @@ pub struct World {
 
 impl Default for World {
     fn default() -> Self {
+        // The capability resources (physics, audio, navmesh, terrain, egui, file
+        // watcher) are inserted by their plugins' `build`, so composing the plugin
+        // is what enables the capability; engine-core readers skip their work when
+        // the resource is absent. PickingWorld (engine-core physics-picking state)
+        // and AssetWatcher (asset-file watching) have no owning plugin, so they
+        // stay feature-scoped here.
         #[cfg(not(any(
             feature = "physics",
-            feature = "audio",
-            feature = "navmesh",
-            feature = "terrain",
-            feature = "egui",
-            all(feature = "file_watcher", not(target_arch = "wasm32")),
+            all(
+                feature = "assets",
+                feature = "file_watcher",
+                not(target_arch = "wasm32")
+            ),
         )))]
         let ecs = build_engine_ecs();
         #[cfg(any(
             feature = "physics",
-            feature = "audio",
-            feature = "navmesh",
-            feature = "terrain",
-            feature = "egui",
-            all(feature = "file_watcher", not(target_arch = "wasm32")),
+            all(
+                feature = "assets",
+                feature = "file_watcher",
+                not(target_arch = "wasm32")
+            ),
         ))]
         let ecs = {
             let mut ecs = build_engine_ecs();
             #[cfg(feature = "physics")]
             ecs.insert_resource(crate::ecs::picking::resources::PickingWorld::default());
-            #[cfg(feature = "physics")]
-            ecs.insert_resource(crate::plugins::physics::resources::PhysicsWorld::default());
-            #[cfg(feature = "navmesh")]
-            ecs.insert_resource(crate::plugins::navmesh::resources::NavMeshWorld::default());
-            #[cfg(feature = "terrain")]
-            ecs.insert_resource(crate::render::terrain_config::TerrainSettings::default());
-            #[cfg(feature = "egui")]
-            ecs.insert_resource(crate::plugins::egui::EguiState::default());
-            #[cfg(feature = "audio")]
-            ecs.insert_resource(crate::plugins::audio::resources::AudioEngine::default());
-            #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
-            ecs.insert_resource(crate::plugins::file_watcher::FileWatcher::default());
             #[cfg(all(
                 feature = "assets",
                 feature = "file_watcher",

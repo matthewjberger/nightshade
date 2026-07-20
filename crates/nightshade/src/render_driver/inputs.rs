@@ -272,7 +272,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     #[cfg(feature = "grass")]
     let grass = std::mem::take(world.res_mut::<crate::render::grass_config::GrassSettings>());
     #[cfg(feature = "terrain")]
-    let terrain = std::mem::take(world.plugin_resource_mut::<TerrainSettings>());
+    let terrain = world
+        .ecs
+        .resource_mut::<TerrainSettings>()
+        .map(|terrain| std::mem::take(terrain))
+        .unwrap_or_default();
     #[cfg(feature = "terrain")]
     let terrain_render =
         std::mem::take(world.res_mut::<crate::render::terrain_config::TerrainRenderState>());
@@ -385,7 +389,9 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
 pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: FrameOutputs) {
     #[cfg(feature = "terrain")]
     {
-        *world.plugin_resource_mut::<TerrainSettings>() = inputs.terrain;
+        if let Some(terrain) = world.ecs.resource_mut::<TerrainSettings>() {
+            *terrain = inputs.terrain;
+        }
         *world.res_mut::<crate::render::terrain_config::TerrainRenderState>() =
             inputs.terrain_render;
     }

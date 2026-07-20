@@ -92,6 +92,8 @@ pub struct AudioPlugin;
 #[cfg(feature = "audio")]
 impl crate::app::Plugin for AudioPlugin {
     fn build(&self, app: &mut crate::app::App) {
+        app.world
+            .insert_resource(crate::plugins::audio::resources::AudioEngine::default());
         #[cfg(not(target_arch = "wasm32"))]
         app.add_system(crate::app::Stage::Startup, systems::initialize_audio_system);
         #[cfg(target_arch = "wasm32")]
