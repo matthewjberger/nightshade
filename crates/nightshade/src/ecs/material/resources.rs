@@ -406,11 +406,9 @@ pub fn material_registry_iter(
         .iter()
         .enumerate()
         .filter_map(|(index, name_opt)| {
-            name_opt.as_ref().and_then(|name| {
-                registry.registry.entries[index]
-                    .as_ref()
-                    .map(|material| (name, material))
-            })
+            name_opt
+                .as_ref()
+                .zip(registry.registry.entries[index].as_ref())
         })
 }
 

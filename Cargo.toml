@@ -10,7 +10,7 @@ homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
 license = "MIT OR Apache-2.0"
 edition = "2024"
-rust-version = "1.92"
+rust-version = "1.97"
 
 [workspace.dependencies]
 bincode = "1.3"

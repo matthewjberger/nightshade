@@ -275,7 +275,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let terrain = world
         .ecs
         .resource_mut::<TerrainSettings>()
-        .map(|terrain| std::mem::take(terrain))
+        .map(std::mem::take)
         .unwrap_or_default();
     #[cfg(feature = "terrain")]
     let terrain_render =
