@@ -615,7 +615,7 @@ pub mod prelude {
     pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
     pub use crate::ecs::window::resources::{
-        Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
+        Monitor, Monitors, Viewport, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
     pub use crate::ecs::world::components::*;

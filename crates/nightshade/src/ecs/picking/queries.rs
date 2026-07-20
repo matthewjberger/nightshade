@@ -13,9 +13,12 @@ pub struct PickingRay {
 impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
         let window = &world.res::<crate::ecs::window::resources::Window>();
+        let active_viewport_rect = world
+            .res::<crate::ecs::window::resources::Viewport>()
+            .active_viewport_rect;
 
         let (local_pos, viewport_width, viewport_height) =
-            if let Some(viewport_rect) = &window.active_viewport_rect {
+            if let Some(viewport_rect) = &active_viewport_rect {
                 let (window_width, window_height) = window.cached_viewport_size?;
                 let local = viewport_rect.to_local(screen_pos);
                 let scale_x = window_width as f32 / viewport_rect.width;
