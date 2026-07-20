@@ -7,47 +7,11 @@ use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::World;
 use crate::ecs::world::events::*;
 
-pub use nightshade_platform::input::gamepad::Gamepad;
-
-pub fn with_active_gamepad<R>(world: &World, f: impl FnOnce(gilrs::Gamepad<'_>) -> R) -> Option<R> {
-    let gamepad = world.res::<Gamepad>();
-    let guard = gamepad.gilrs.lock().unwrap();
-    let gilrs = guard.as_ref()?;
-    let id = gamepad.gamepad?;
-    Some(f(gilrs.gamepad(id)))
-}
+pub use nightshade_platform::input::gamepad::{Gamepad, with_active_gamepad};
 
 pub fn gamepad_input_system(world: &mut World) {
     let _span = tracing::info_span!("gamepad_input").entered();
-    let mut connection_events = Vec::new();
-    {
-        let gamepad = world.res_mut::<Gamepad>();
-        gamepad.events.clear();
-        gamepad.just_pressed_buttons.clear();
-
-        let mut guard = gamepad.gilrs.lock().unwrap();
-        if guard.is_none() {
-            match gilrs::Gilrs::new() {
-                Ok(new_gilrs) => *guard = Some(new_gilrs),
-                Err(_) => return,
-            }
-        }
-        let gilrs = guard.as_mut().unwrap();
-
-        while let Some(event) = gilrs.next_event() {
-            if matches!(event.event, gilrs::EventType::Connected) {
-                connection_events.push((event.id.into(), true));
-            } else if matches!(event.event, gilrs::EventType::Disconnected) {
-                connection_events.push((event.id.into(), false));
-            }
-            if let gilrs::EventType::ButtonPressed(button, _) = event.event {
-                gamepad.just_pressed_buttons.insert(button);
-            }
-
-            gamepad.gamepad = Some(event.id);
-            gamepad.events.push(event);
-        }
-    }
+    let connection_events = nightshade_platform::input::gamepad::poll_gamepad(&mut world.ecs);
 
     for (gamepad_id, connected) in connection_events {
         if connected {
