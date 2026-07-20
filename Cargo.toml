@@ -52,7 +52,7 @@ image = { version = "0.25", default-features = false, features = [
     "gif",
     "webp",
 ] }
-kira = "0.11.0"
+kira = "0.12.0"
 mint = "0.5"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
