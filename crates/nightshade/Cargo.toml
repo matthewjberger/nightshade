@@ -21,6 +21,12 @@ exclude = [
     "images/logo2.svg",
 ]
 
+# steam links the Steamworks SDK and meshlet_processor links METIS and meshopt,
+# none of which docs.rs can build, so document the full capability surface
+# without them.
+[package.metadata.docs.rs]
+features = ["full", "egui", "screenshot", "debug_render"]
+
 [features]
 default = ["engine", "wgpu"]
 

@@ -12,6 +12,11 @@ description = "GPU-driven wgpu renderer with a built-in frame graph."
 keywords = ["graphics", "rendering", "wgpu", "gamedev"]
 categories = ["graphics", "rendering", "game-engines"]
 
+# meshlet_processor links METIS and meshopt (C libraries), which docs.rs cannot
+# build, so document everything except that baker.
+[package.metadata.docs.rs]
+features = ["wgpu", "hdr", "egui", "grass", "terrain", "screenshot", "meshlet", "debug_render"]
+
 [dependencies]
 bytemuck = { workspace = true }
 enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
