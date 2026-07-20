@@ -560,8 +560,6 @@ pub use nightshade_renderer as render;
 #[cfg(feature = "runtime")]
 pub use nightshade_platform as platform;
 #[cfg(feature = "runtime")]
-pub use nightshade_ecs;
-#[cfg(feature = "runtime")]
 pub mod app;
 pub mod render_driver;
 pub mod run;
