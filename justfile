@@ -109,6 +109,12 @@ check-feature-forwarding:
             status=1
         fi
     done
+    for target in nightshade-platform nightshade-ui; do
+        if ! grep -q "${target}/gamepad" crates/nightshade/Cargo.toml; then
+            echo "missing forwarding: nightshade 'gamepad' does not forward to ${target}/gamepad"
+            status=1
+        fi
+    done
     exit ${status}
 
 # Pushes template changes to nightshade-template repo
