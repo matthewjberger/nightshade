@@ -103,9 +103,8 @@ struct VertexOutput {
     @location(9) @interpolate(flat) world_scale_factor: f32,
     @location(10) view_depth: f32,
     @location(11) world_tangent: vec4<f32>,
-    @location(12) @interpolate(flat) flip_winding: u32,
-    @location(13) @interpolate(flat) entity_id: u32,
-    @location(14) prev_world_pos: vec3<f32>,
+    @location(12) @interpolate(flat) entity_id: u32,
+    @location(13) prev_world_pos: vec3<f32>,
 };
 
 struct FragmentOutput {
@@ -278,7 +277,6 @@ struct SkinnedObjectData {
     morph_displacement_offset: u32,
     mesh_vertex_offset: u32,
     mesh_vertex_count: u32,
-    flip_winding: u32,
     entity_id: u32,
     _pad0: u32,
     _pad1: u32,
@@ -599,7 +597,6 @@ fn vs_main(
     out.normal = skinned_normal;
     out.world_tangent = vec4<f32>(skinned_tangent, in.tangent.w);
     out.material_id = object.material_id;
-    out.flip_winding = object.flip_winding;
     out.tex_coords = in.tex_coords;
     out.tex_coords_1 = in.tex_coords_1;
     let mat = materials[object.material_id];
@@ -902,14 +899,11 @@ fn get_normal(
 
 
 @fragment
-fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> FragmentOutput {
+fn fs_main(in: VertexOutput) -> FragmentOutput {
     material_uv0_ddx = dpdx(in.tex_coords);
     material_uv0_ddy = dpdy(in.tex_coords);
     material_uv1_ddx = dpdx(in.tex_coords_1);
     material_uv1_ddy = dpdy(in.tex_coords_1);
-    if in.flip_winding != 0u && is_front_face {
-        discard;
-    }
     if uniforms.flat_color.a >= 2.0 {
         discard;
     }

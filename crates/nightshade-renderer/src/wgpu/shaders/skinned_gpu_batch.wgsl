@@ -22,7 +22,6 @@ struct SkinnedObjectData {
     morph_displacement_offset: u32,
     mesh_vertex_offset: u32,
     mesh_vertex_count: u32,
-    flip_winding: u32,
     entity_id: u32,
     is_transparent: u32,
     _padding: u32,

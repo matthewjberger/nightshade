@@ -136,8 +136,6 @@ pub(super) struct SkinnedObjectData {
     pub(super) mesh_vertex_offset: u32,
     /// Vertex count for this object.
     pub(super) mesh_vertex_count: u32,
-    /// Nonzero flips triangle winding.
-    pub(super) flip_winding: u32,
     /// Source entity id, for picking.
     pub(super) entity_id: u32,
     /// Nonzero marks the object transparent.

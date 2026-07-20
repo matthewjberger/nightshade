@@ -297,15 +297,6 @@ impl SkinnedMeshPass {
                     .copied();
                 let morph_weights = dynamic.map(|d| d.morph_weights).unwrap_or([0.0; 8]);
 
-                let flip_winding = dynamic
-                    .map(|d| {
-                        u32::from(
-                            nalgebra_glm::determinant(&nalgebra_glm::mat4_to_mat3(&d.transform))
-                                < 0.0,
-                        )
-                    })
-                    .unwrap_or(0);
-
                 objects.push(SkinnedObjectData {
                     transform_index: 0,
                     mesh_id,
@@ -316,7 +307,6 @@ impl SkinnedMeshPass {
                     morph_displacement_offset: mesh_data.morph_displacement_offset,
                     mesh_vertex_offset: mesh_data.vertex_offset,
                     mesh_vertex_count: mesh_data.vertex_count,
-                    flip_winding,
                     entity_id: entity.id,
                     is_transparent: u32::from(is_transparent),
                     _padding: 0,
