@@ -126,6 +126,14 @@ member boundaries, marker tags that spend no member's mask bits
 | `state` | A state-machine layer over the scheduler, gating systems by a current-and-next value |
 | `raw_storage` | A contiguous-byte column backend behind an identical public API, for the tightest per-table loops |
 
+## Examples
+
+```sh
+cargo run --example basic     # queries, mutation, and marker tags
+cargo run --example systems   # Res / ResMut / Query systems on a Schedule
+cargo run --example group     # a DynEcs group with a cross-world join
+```
+
 ## License
 
 Dual-licensed under MIT or Apache-2.0, at your option.

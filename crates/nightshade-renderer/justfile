@@ -33,14 +33,22 @@ list:
 list:
     @ls examples/*.rs | xargs -n1 basename | sed 's/\.rs$//'
 
-# Builds every example (compile gate)
+# Builds the crate and every example (compile gate)
 build:
     cargo build --examples --features wgpu,hdr,screenshot
 
-# Clippy every example with warnings denied
+# Runs the test suite
+test:
+    cargo test -p nightshade-renderer --features wgpu,hdr,screenshot
+
+# Clippy the crate and examples with warnings denied
 lint:
     cargo clippy --examples --features wgpu,hdr,screenshot -- -D warnings
 
 # Formats the examples
 format:
     cargo fmt -p nightshade-renderer
+
+# Builds the API documentation
+doc:
+    cargo doc -p nightshade-renderer --no-deps --features wgpu,hdr,screenshot

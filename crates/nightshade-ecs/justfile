@@ -1,0 +1,40 @@
+set windows-shell := ["powershell.exe"]
+export RUST_BACKTRACE := "1"
+
+# Lists the available commands
+@just:
+    just --list
+
+# Builds the crate and every example (compile gate)
+build:
+    cargo build -p nightshade-ecs --all-features --examples
+
+# Runs the test suite
+test:
+    cargo test -p nightshade-ecs --all-features
+
+# Clippy the crate and examples with warnings denied
+lint:
+    cargo clippy -p nightshade-ecs --all-targets --all-features -- -D warnings
+
+# Formats the crate
+format:
+    cargo fmt -p nightshade-ecs
+
+# Builds the API documentation
+doc:
+    cargo doc -p nightshade-ecs --no-deps --all-features
+
+# Lists the examples
+[windows]
+list:
+    @Get-ChildItem examples -Filter *.rs | ForEach-Object { $_.BaseName }
+
+# Lists the examples
+[unix]
+list:
+    @ls examples/*.rs | xargs -n1 basename | sed 's/\.rs$//'
+
+# Runs an example by name: `just run basic`
+run name:
+    cargo run -p nightshade-ecs --example {{ name }}
