@@ -355,8 +355,6 @@ pub mod text_data;
 /// Generation of textured glyph meshes from shaped text runs.
 #[cfg(feature = "wgpu")]
 pub mod text_mesh;
-#[cfg(feature = "text")]
-pub mod text_state;
 pub mod texture_data;
 pub mod ui_data;
 pub mod wind;
