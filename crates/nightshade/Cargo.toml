@@ -106,7 +106,7 @@ picking = []
 screenshot = ["dep:image", "nightshade-renderer/screenshot"]
 navmesh = []
 navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
-gamepad = ["dep:gilrs"]
+gamepad = ["dep:gilrs", "nightshade-platform/gamepad"]
 networking = ["dep:hearsay"]
 
 full = [
@@ -171,6 +171,7 @@ ehttp = { workspace = true, optional = true }
 taffy = { workspace = true }
 
 nightshade-renderer = { workspace = true }
+nightshade-platform = { workspace = true }
 
 egui = { workspace = true, optional = true }
 egui_extras = { workspace = true, optional = true }

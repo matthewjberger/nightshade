@@ -7,21 +7,7 @@ use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::World;
 use crate::ecs::world::events::*;
 
-/// Live pad state: the gilrs context, the active pad, this frame's raw
-/// events, and the buttons that went down this frame.
-#[derive(Default)]
-pub struct Gamepad {
-    pub gilrs: std::sync::Mutex<Option<gilrs::Gilrs>>,
-    pub gamepad: Option<gilrs::GamepadId>,
-    pub events: Vec<gilrs::Event>,
-    pub just_pressed_buttons: std::collections::HashSet<gilrs::Button>,
-}
-
-impl Gamepad {
-    pub fn just_pressed(&self, button: gilrs::Button) -> bool {
-        self.just_pressed_buttons.contains(&button)
-    }
-}
+pub use nightshade_platform::input::gamepad::Gamepad;
 
 pub fn with_active_gamepad<R>(world: &World, f: impl FnOnce(gilrs::Gamepad<'_>) -> R) -> Option<R> {
     let gamepad = world.res::<Gamepad>();
