@@ -112,7 +112,7 @@ picking = []
 screenshot = ["dep:image", "nightshade-renderer/screenshot"]
 navmesh = []
 navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
-gamepad = ["dep:gilrs", "nightshade-platform/gamepad"]
+gamepad = ["dep:gilrs", "nightshade-platform/gamepad", "nightshade-ui/gamepad"]
 networking = ["dep:hearsay"]
 
 full = [
