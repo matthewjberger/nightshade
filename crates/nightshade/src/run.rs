@@ -95,10 +95,7 @@ use crate::prelude::*;
 use crate::ecs::world::World;
 #[cfg(target_arch = "wasm32")]
 use crate::render::wgpu;
-use winit::{
-    event::{DeviceEvent, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-};
+use winit::event::{DeviceEvent, WindowEvent};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
 pub use crate::plugins::log::log_file_name;
@@ -150,38 +147,30 @@ pub fn launch_with_world(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let state = Box::new(state);
 
-    let event_loop = EventLoop::builder().build()?;
-    event_loop.set_control_flow(ControlFlow::Poll);
-
     #[cfg(not(target_arch = "wasm32"))]
-    {
-        let mut context = WindowContext {
-            state,
-            world,
-            renderer: None,
-            #[cfg(all(
-                not(target_arch = "wasm32"),
-                not(target_os = "android"),
-                feature = "core"
-            ))]
-            accesskit: None,
-            initialized: false,
-        };
-        event_loop.run_app(&mut context)?;
-    }
+    let context = WindowContext {
+        state,
+        world,
+        renderer: None,
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            not(target_os = "android"),
+            feature = "core"
+        ))]
+        accesskit: None,
+        initialized: false,
+    };
 
     #[cfg(target_arch = "wasm32")]
-    {
-        use winit::platform::web::EventLoopExtWebSys;
-        let context = WindowContext {
-            state,
-            world,
-            renderer: None,
-            renderer_receiver: None,
-            initialized: false,
-        };
-        event_loop.spawn_app(context);
-    }
+    let context = WindowContext {
+        state,
+        world,
+        renderer: None,
+        renderer_receiver: None,
+        initialized: false,
+    };
+
+    nightshade_platform::run::run_event_loop(context)?;
 
     Ok(())
 }
