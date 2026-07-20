@@ -633,10 +633,9 @@ pub mod prelude {
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::GamepadPlugin;
     #[cfg(feature = "gizmos")]
-    pub use crate::plugins::gizmos::GizmosPlugin;
-    #[cfg(feature = "gizmos")]
     pub use crate::plugins::gizmos::Gizmos;
-    pub use nightshade_ecs::dynamic::DynEcs;
+    #[cfg(feature = "gizmos")]
+    pub use crate::plugins::gizmos::GizmosPlugin;
     pub use crate::plugins::log::LogPlugin;
     pub use crate::plugins::log::{LogConfig, LogRotation};
     #[cfg(feature = "navmesh")]
@@ -656,6 +655,7 @@ pub mod prelude {
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::current_state;
     pub use crate::systems::*;
+    pub use nightshade_ecs::dynamic::DynEcs;
     pub use nightshade_ecs::state::{
         in_state, next_state, on_enter, on_exit, run_if, while_in, while_in_any,
     };

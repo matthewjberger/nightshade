@@ -465,11 +465,7 @@ impl NavMeshDemo {
             &format!("NavMesh Triangles: {triangle_count}"),
         );
         let fps = world.res::<Time>().frames_per_second;
-        ui_set_text(
-            world,
-            self.ui.fps_label,
-            &format!("FPS: {fps:.1}"),
-        );
+        ui_set_text(world, self.ui.fps_label, &format!("FPS: {fps:.1}"));
 
         if self.followed_fox_index != self.last_following_index {
             self.last_following_index = self.followed_fox_index;

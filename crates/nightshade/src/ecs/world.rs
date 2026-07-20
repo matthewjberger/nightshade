@@ -261,7 +261,6 @@ nightshade_ecs::impl_component!(
     crate::ecs::meshlet::components::MeshletMesh,
 );
 
-
 /// The renderer-facing identifier of the world whose scene is being composed,
 /// handed to each frame's `RenderInputs`.
 #[derive(Default)]
