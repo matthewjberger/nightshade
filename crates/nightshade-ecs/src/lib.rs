@@ -1,9 +1,9 @@
-//! A high-performance, archetype-based Entity Component System (ECS) for Rust.
+//! An archetype-based Entity Component System with runtime component registration.
 //!
-//! nightshade_ecs provides a table-based storage system where entities with identical component
-//! sets are stored together in contiguous memory (Structure of Arrays layout), optimizing for
-//! cache coherency and SIMD operations. Components are registered at runtime through the dynamic
-//! world API.
+//! Entities that share a component set are stored together in contiguous,
+//! struct-of-arrays storage, so iteration stays cache-coherent and parallelizes
+//! across cores on native targets. Components register at runtime through the
+//! dynamic world API rather than through generic parameters.
 //!
 //! # Key Features
 //!

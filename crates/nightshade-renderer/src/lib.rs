@@ -1,6 +1,7 @@
-//! Rendering system using WebGPU (wgpu).
+//! A wgpu renderer with a dependency-driven frame graph, built on
+//! [`nightshade_ecs`].
 //!
-//! The render module provides:
+//! It provides:
 //!
 //! - **Render Graph**: Declarative pass-based rendering with automatic resource management
 //! - **PBR Materials**: Physically-based rendering with metallic-roughness workflow
