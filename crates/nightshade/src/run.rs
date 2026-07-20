@@ -127,7 +127,7 @@ use pacing::{
 #[cfg(target_arch = "wasm32")]
 use file_drop::setup_wasm_file_drop;
 #[cfg(not(target_arch = "wasm32"))]
-use input_translation::recenter_locked_cursor;
+use nightshade_platform::input::translation::recenter_locked_cursor;
 #[cfg(target_arch = "wasm32")]
 use pacing::wasm_capped_dpr;
 
@@ -390,7 +390,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     crate::ecs::world::commands::sync_cursor_lock_state(world);
 
     #[cfg(not(target_arch = "wasm32"))]
-    recenter_locked_cursor(world);
+    recenter_locked_cursor(&mut world.ecs);
     #[cfg(feature = "egui")]
     egui_support::begin_frame(world);
     state.run_systems(world);
