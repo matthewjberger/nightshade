@@ -69,12 +69,13 @@ fn spin(game: &mut SpinCube, world: &mut World) {
 
 ## Architecture
 
-The engine sits on top of a standalone renderer:
+The engine sits on top of standalone renderer and platform crates:
 
-- `nightshade` owns the ECS, the frame schedule, physics, animation, audio, input, UI, asset loading, and the render driver that snapshots the scene into the renderer's per-frame inputs.
-- [`nightshade-renderer`](https://crates.io/crates/nightshade-renderer) is a standalone GPU-driven wgpu renderer. It consumes one owned `RenderInputs` value per frame and never sees the ECS world. Its frame graph (pass scheduling, transient resource aliasing, store-op optimization) is usable on its own through the `rendergraph` feature.
+- `nightshade` owns the ECS, the frame schedule, the gameplay subsystems, and the render driver that snapshots the scene into the renderer's per-frame inputs.
+- [`nightshade-renderer`](https://crates.io/crates/nightshade-renderer) is a GPU-driven wgpu renderer. It takes one owned `RenderInputs` value per frame, and its frame graph is usable on its own through the `rendergraph` feature.
+- [`nightshade-platform`](https://crates.io/crates/nightshade-platform) is the winit windowing and input layer. It holds window and input state as ECS resources and hands out a window handle the renderer builds its surface from.
 
-Each layer only knows the one below it.
+The renderer and platform sit beside each other under the engine, and each is usable on its own.
 
 ## Features
 
