@@ -116,4 +116,4 @@ impl enum2schema::Schema for CameraCullingMask {
     }
 }
 
-pub use nightshade_renderer::easing::EasingFunction;
+pub use nightshade_ecs::easing::EasingFunction;

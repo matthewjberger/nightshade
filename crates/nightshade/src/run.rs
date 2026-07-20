@@ -178,7 +178,7 @@ pub fn launch_with_world(
 #[cfg(not(target_arch = "wasm32"))]
 fn sync_min_window_size(world: &mut World) {
     let desired = world
-        .res::<crate::render::config::RendererState>()
+        .res::<crate::ecs::window::resources::Window>()
         .min_window_size;
     if world
         .res::<crate::ecs::window::resources::Window>()
@@ -304,7 +304,7 @@ pub(crate) fn step(
         WindowEvent::RedrawRequested => match renderer.as_mut() {
             Some(renderer) => run_frame_body(world, state.as_mut(), renderer),
             None if !world
-                .res::<crate::ecs::window::resources::Window>()
+                .res::<crate::render_driver::Viewport>()
                 .create_renderer =>
             {
                 run_frame_logic(world, state.as_mut())
@@ -710,7 +710,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         if self
             .world
-            .res::<crate::ecs::window::resources::Window>()
+            .res::<crate::render_driver::Viewport>()
             .create_renderer
         {
             match pollster::block_on(crate::render::core::create_renderer(
@@ -736,7 +736,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if self
             .world
-            .res::<crate::ecs::window::resources::Window>()
+            .res::<crate::render_driver::Viewport>()
             .create_renderer
         {
             let (sender, receiver) = futures::channel::oneshot::channel();
@@ -767,7 +767,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if !self
             .world
-            .res::<crate::ecs::window::resources::Window>()
+            .res::<crate::render_driver::Viewport>()
             .create_renderer
             && !self.initialized
         {
@@ -799,7 +799,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                 .clone();
             if self
                 .world
-                .res::<crate::render::config::RendererState>()
+                .res::<crate::ecs::window::resources::Window>()
                 .use_fullscreen
                 && let Some(window_handle) = &window_handle
             {
@@ -809,7 +809,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             if let Some(window_handle) = &window_handle {
                 let show_cursor = self
                     .world
-                    .res::<crate::render::config::RendererState>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .show_cursor;
                 window_handle.set_cursor_visible(show_cursor);
                 if !self
@@ -848,7 +848,7 @@ impl winit::application::ApplicationHandler for WindowContext {
 
                 let show_cursor = self
                     .world
-                    .res::<crate::render::config::RendererState>()
+                    .res::<crate::ecs::window::resources::Window>()
                     .show_cursor;
                 if let Some(window_handle) = &self
                     .world

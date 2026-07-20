@@ -330,7 +330,6 @@ pub mod bounding_volume;
 pub mod bundles;
 pub mod config;
 pub mod core;
-pub mod easing;
 pub mod entity;
 #[cfg(feature = "text")]
 pub mod font_engine;

@@ -50,7 +50,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
 
 pub fn query_camera_tile_aspect_ratio(world: &World, entity: Entity) -> Option<f32> {
     let rect = world
-        .res::<crate::ecs::window::resources::Viewport>()
+        .res::<crate::render_driver::Viewport>()
         .camera_tile_rects
         .get(&entity)?;
     if rect.height <= 0.0 {

@@ -2026,12 +2026,6 @@ pub struct RendererState {
     pub gpu_batching_enabled: bool,
     /// On-screen size in pixels below which an entity is culled.
     pub min_screen_pixel_size: f32,
-    /// Minimum window size in logical pixels. `None` disables the floor.
-    pub min_window_size: Option<(u32, u32)>,
-    /// Use fullscreen mode.
-    pub use_fullscreen: bool,
-    /// Show the mouse cursor.
-    pub show_cursor: bool,
     /// Current letterbox amount (0-1).
     pub letterbox_amount: f32,
     /// Target letterbox amount for animation.
@@ -2416,9 +2410,6 @@ impl Default for RendererState {
             occlusion_culling_enabled: true,
             gpu_batching_enabled: true,
             min_screen_pixel_size: 0.0,
-            min_window_size: None,
-            use_fullscreen: false,
-            show_cursor: true,
             letterbox_amount: 0.0,
             letterbox_target: 0.0,
             day_night: DayNightState::default(),

@@ -807,7 +807,7 @@ impl App {
             .res_mut::<crate::ecs::window::resources::Window>()
             .start_hidden = true;
         world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::render_driver::Viewport>()
             .create_renderer = false;
         Self {
             world,
@@ -978,7 +978,7 @@ impl App {
             .start_hidden
             && !self
                 .world
-                .res::<crate::ecs::window::resources::Window>()
+                .res::<crate::render_driver::Viewport>()
                 .create_renderer
         {
             let mut world = self.world;

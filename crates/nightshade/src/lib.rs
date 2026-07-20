@@ -558,6 +558,10 @@ pub mod plugins;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
 #[cfg(feature = "runtime")]
+pub use nightshade_platform as platform;
+#[cfg(feature = "runtime")]
+pub use nightshade_ecs;
+#[cfg(feature = "runtime")]
 pub mod app;
 pub mod render_driver;
 pub mod run;
@@ -615,9 +619,10 @@ pub mod prelude {
     pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
     pub use crate::ecs::window::resources::{
-        Monitor, Monitors, Viewport, Window, refresh_monitors_from_event_loop, window_scale_factor,
+        Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
+    pub use crate::render_driver::Viewport;
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
@@ -912,7 +917,8 @@ pub mod prelude {
     pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
     pub use crate::render::text_data::FontKind;
     pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
-    pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiLayer, UiRect, UiTextInstance};
+    pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiRect, UiTextInstance};
+    pub use crate::ecs::ui::layer::UiLayer;
     pub use crate::render::wgpu::texture_cache::{
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
         texture_cache_release_entity,

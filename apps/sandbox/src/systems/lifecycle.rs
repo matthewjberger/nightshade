@@ -10,7 +10,7 @@ pub fn initialize(sandbox_world: &mut SandboxResources, world: &mut World) {
 
     world.res_mut::<RenderSettings>().atmosphere = Atmosphere::DayNight;
     world.res_mut::<DebugDraw>().show_grid = false;
-    world.res_mut::<RendererState>().use_fullscreen = true;
+    world.res_mut::<Window>().use_fullscreen = true;
     world.res_mut::<RendererState>().day_night.hour = 9.5;
     world.res_mut::<RendererState>().day_night.auto_cycle = false;
 

@@ -46,7 +46,7 @@ pub struct RenderPlugin {
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         app.world
-            .res_mut::<crate::ecs::window::resources::Window>()
+            .res_mut::<crate::render_driver::Viewport>()
             .create_renderer = true;
         if let Some(vsync) = self.vsync {
             app.world

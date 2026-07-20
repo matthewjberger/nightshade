@@ -52,6 +52,7 @@ pub mod dynamic;
 #[cfg(feature = "dynamic")]
 pub mod system_param;
 
+pub mod easing;
 #[cfg(feature = "state")]
 pub mod state;
 pub mod time;

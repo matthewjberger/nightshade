@@ -381,7 +381,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::input::resources::Gamepad::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::ecs::window::resources::Window::default());
-        ecs.insert_resource(crate::ecs::window::resources::Viewport::default());
+        ecs.insert_resource(crate::render_driver::Viewport::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
         ecs.insert_resource(crate::ecs::loading::LoadingState::default());
         ecs.insert_resource(crate::state::PendingState::default());

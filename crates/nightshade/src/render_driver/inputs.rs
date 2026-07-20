@@ -263,7 +263,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .mouse
         .position;
     let force_render_cameras = world
-        .res::<crate::ecs::window::resources::Viewport>()
+        .res::<crate::render_driver::Viewport>()
         .force_render_cameras
         .iter()
         .copied()
@@ -286,16 +286,16 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .res::<crate::ecs::window::resources::Window>()
         .cached_viewport_size;
     let window_camera_tile_rects: std::collections::HashMap<_, _> = world
-        .res::<crate::ecs::window::resources::Viewport>()
+        .res::<crate::render_driver::Viewport>()
         .camera_tile_rects
         .iter()
         .map(|(entity, rect)| (*entity, *rect))
         .collect();
     let window_camera_tile_render_iteration = world
-        .res::<crate::ecs::window::resources::Viewport>()
+        .res::<crate::render_driver::Viewport>()
         .camera_tile_render_iteration;
     let window_active_viewport_rect = world
-        .res::<crate::ecs::window::resources::Viewport>()
+        .res::<crate::render_driver::Viewport>()
         .active_viewport_rect;
     let loading_particle_textures = std::mem::take(
         &mut world
@@ -393,7 +393,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     *world.res_mut::<crate::render::config::RenderSettings>() = inputs.settings;
     for entity in outputs.force_render_cleared {
         world
-            .res_mut::<crate::ecs::window::resources::Viewport>()
+            .res_mut::<crate::render_driver::Viewport>()
             .force_render_cameras
             .remove(&entity);
     }
