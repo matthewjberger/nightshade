@@ -572,6 +572,9 @@ pub mod states;
 #[cfg(feature = "runtime")]
 mod systems;
 
+#[cfg(feature = "egui")]
+mod egui;
+
 #[cfg(feature = "networking")]
 pub use hearsay as networking;
 
@@ -628,7 +631,7 @@ pub mod prelude {
     pub use crate::plugins::camera_controller::CameraControllerPlugin;
     pub use crate::plugins::cutscene::CutscenePlugin;
     #[cfg(feature = "egui")]
-    pub use crate::plugins::egui::EguiPlugin;
+    pub use crate::egui::EguiPlugin;
     pub use crate::plugins::exit_on_escape::ExitOnEscapePlugin;
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::plugins::file_watcher::FileWatcherPlugin;
@@ -847,7 +850,7 @@ pub mod prelude {
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
     };
     #[cfg(feature = "egui")]
-    pub use crate::plugins::egui::{EguiState, egui_context};
+    pub use crate::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};

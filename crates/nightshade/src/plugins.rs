@@ -7,8 +7,6 @@
 pub mod audio;
 pub mod camera_controller;
 pub mod cutscene;
-#[cfg(feature = "egui")]
-pub mod egui;
 pub mod exit_on_escape;
 #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
 pub mod file_watcher;

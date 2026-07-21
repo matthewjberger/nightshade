@@ -320,7 +320,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let texture_cache =
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
     #[cfg(feature = "egui")]
-    let egui_frame_inputs = super::egui::take_egui_frame_inputs(world);
+    let egui_frame_inputs = crate::egui::take_egui_frame_inputs(world);
     let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
     RenderInputs {
         scene_world,

@@ -6,8 +6,6 @@
 //! are composed, rendering runs against them alone, so a mid-frame read of a
 //! taken resource is unrepresentable rather than a latent bug.
 
-#[cfg(feature = "egui")]
-mod egui;
 mod extract;
 mod frame;
 mod inputs;

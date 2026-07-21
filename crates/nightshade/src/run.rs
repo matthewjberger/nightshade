@@ -102,8 +102,6 @@ pub use crate::plugins::log::log_file_name;
 pub use crate::plugins::log::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
-#[cfg(feature = "egui")]
-mod egui_support;
 
 mod file_drop;
 mod input_translation;
@@ -379,7 +377,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     #[cfg(not(target_arch = "wasm32"))]
     recenter_locked_cursor(&mut world.ecs);
     #[cfg(feature = "egui")]
-    egui_support::begin_frame(world);
+    crate::egui::begin_frame(world);
     state.run_systems(world);
     world
         .res_mut::<crate::platform::input::resources::Input>()
@@ -387,7 +385,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .clear();
 
     #[cfg(feature = "egui")]
-    egui_support::finish_frame(world);
+    crate::egui::finish_frame(world);
 
     if let Some(builder) = world.res_mut::<crate::state::PendingState>().0.take() {
         return Some(builder(world));
@@ -436,7 +434,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
 fn handle_event_systems(world: &mut World, event: &WindowEvent) {
     let _span = tracing::info_span!("event_handling").entered();
     #[cfg(feature = "egui")]
-    egui_support::handle_window_event(world, event);
+    crate::egui::handle_window_event(world, event);
     input_event_system(world, event);
     timing_system(world, event);
 }
@@ -665,7 +663,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             .handle = Some(window_handle.clone());
 
         #[cfg(feature = "egui")]
-        egui_support::initialize(&mut self.world);
+        crate::egui::initialize(&mut self.world);
 
         #[cfg(all(
             not(target_arch = "wasm32"),
