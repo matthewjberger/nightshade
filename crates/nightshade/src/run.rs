@@ -102,7 +102,6 @@ pub use crate::plugins::log::log_file_name;
 pub use crate::plugins::log::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
-
 mod file_drop;
 mod input_translation;
 mod pacing;

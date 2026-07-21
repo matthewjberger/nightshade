@@ -621,6 +621,8 @@ pub mod prelude {
     pub use crate::ecs::world::components::*;
     pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
+    #[cfg(feature = "egui")]
+    pub use crate::egui::EguiPlugin;
     pub use crate::platform::input::resources::Input;
     pub use crate::platform::window::{
         Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
@@ -630,8 +632,6 @@ pub mod prelude {
     pub use crate::plugins::audio::AudioPlugin;
     pub use crate::plugins::camera_controller::CameraControllerPlugin;
     pub use crate::plugins::cutscene::CutscenePlugin;
-    #[cfg(feature = "egui")]
-    pub use crate::egui::EguiPlugin;
     pub use crate::plugins::exit_on_escape::ExitOnEscapePlugin;
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
     pub use crate::plugins::file_watcher::FileWatcherPlugin;
@@ -831,6 +831,8 @@ pub mod prelude {
         spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
         spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
     };
+    #[cfg(feature = "egui")]
+    pub use crate::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
     pub use crate::platform::input::gamepad::Gamepad;
     #[cfg(feature = "gamepad")]
@@ -849,8 +851,6 @@ pub mod prelude {
     pub use crate::plugins::audio::systems::{
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
     };
-    #[cfg(feature = "egui")]
-    pub use crate::egui::{EguiState, egui_context};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
