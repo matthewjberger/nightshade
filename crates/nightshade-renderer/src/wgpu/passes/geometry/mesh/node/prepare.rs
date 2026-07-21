@@ -7,6 +7,7 @@ use super::super::types::{
     CullingUniforms, MAX_INSTANCES, MAX_LIGHTS, MaterialData, MeshUniforms, ModelMatrix,
     ObjectData,
 };
+use crate::bounding_volume::extract_frustum_planes;
 use crate::wgpu::passes::geometry::material_gpu::{
     convert_material_to_gpu_data, default_material_data,
 };

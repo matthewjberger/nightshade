@@ -12,6 +12,7 @@ impl MeshPass {
         configs: &crate::wgpu::render_configs::RenderInputs,
     ) {
         use super::super::super::projection::*;
+        use crate::bounding_volume::extract_frustum_planes;
 
         let Some(lighting) = configs.scene.render_lighting.as_ref() else {
             return;

@@ -6,9 +6,8 @@
 /// View and projection matrix construction plus the frustum-culling and
 /// light-collection helpers the geometry passes share.
 pub mod projection;
-pub use projection::{
-    atlas_shadow_fov, extract_frustum_planes, light_casts_atlas_shadow, sphere_in_frustum,
-};
+pub use crate::bounding_volume::extract_frustum_planes;
+pub use projection::{atlas_shadow_fov, light_casts_atlas_shadow, sphere_in_frustum};
 
 pub mod cluster;
 pub mod ltc;

@@ -4,6 +4,7 @@ use super::super::super::projection::*;
 use super::super::pass::SkinnedMeshPass;
 use super::super::types::*;
 use super::super::world_state::SkinnedDrawGroup;
+use crate::bounding_volume::extract_frustum_planes;
 use crate::wgpu::passes::geometry::material_gpu::{
     convert_material_to_gpu_data, default_material_data,
 };

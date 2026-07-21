@@ -1,6 +1,6 @@
 use crate::ecs::world::CORE;
 use crate::ecs::world::World;
-use crate::render::wgpu::passes::geometry::lines::extract_frustum_planes;
+use crate::render::bounding_volume::extract_frustum_planes;
 use crate::render::wgpu::render_configs::{RenderBoundingVolume, RenderLine, RenderNormal};
 
 pub fn gather_lines_data(world: &World, wireframe_enabled: bool) -> Vec<RenderLine> {

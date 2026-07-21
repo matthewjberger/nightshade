@@ -1,3 +1,4 @@
+use crate::bounding_volume::extract_frustum_planes;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use wgpu::{BindGroup, BindGroupLayout, ComputePipeline, RenderPipeline};
 
@@ -1274,50 +1275,4 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for LinesPass {
 
         Ok(context.into_sub_graph_commands())
     }
-}
-
-/// Extracts the six normalized frustum planes from a view-projection matrix.
-pub fn extract_frustum_planes(view_proj: &nalgebra_glm::Mat4) -> [nalgebra_glm::Vec4; 6] {
-    let mut planes = [nalgebra_glm::Vec4::zeros(); 6];
-
-    let row0 = nalgebra_glm::Vec4::new(
-        view_proj[(0, 0)],
-        view_proj[(0, 1)],
-        view_proj[(0, 2)],
-        view_proj[(0, 3)],
-    );
-    let row1 = nalgebra_glm::Vec4::new(
-        view_proj[(1, 0)],
-        view_proj[(1, 1)],
-        view_proj[(1, 2)],
-        view_proj[(1, 3)],
-    );
-    let row2 = nalgebra_glm::Vec4::new(
-        view_proj[(2, 0)],
-        view_proj[(2, 1)],
-        view_proj[(2, 2)],
-        view_proj[(2, 3)],
-    );
-    let row3 = nalgebra_glm::Vec4::new(
-        view_proj[(3, 0)],
-        view_proj[(3, 1)],
-        view_proj[(3, 2)],
-        view_proj[(3, 3)],
-    );
-
-    planes[0] = row3 + row0;
-    planes[1] = row3 - row0;
-    planes[2] = row3 + row1;
-    planes[3] = row3 - row1;
-    planes[4] = row3 + row2;
-    planes[5] = row3 - row2;
-
-    for plane in &mut planes {
-        let normal_length = (plane.x * plane.x + plane.y * plane.y + plane.z * plane.z).sqrt();
-        if normal_length > 1e-6 {
-            *plane /= normal_length;
-        }
-    }
-
-    planes
 }
