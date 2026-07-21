@@ -128,7 +128,7 @@ pub struct WgpuRenderer {
     pub(crate) depth_pick: DepthPickState,
     /// Screenshot readback state.
     #[cfg(not(target_arch = "wasm32"))]
-    pub screenshot: ScreenshotState,
+    pub(crate) screenshot: ScreenshotState,
     /// Current internal render buffer size in pixels.
     pub render_buffer_size: (u32, u32),
     /// Render-graph state. Tracks the last buffer size used by the
@@ -222,7 +222,7 @@ pub(crate) struct DepthPickState {
 
 /// Screenshot capture and readback resources.
 #[cfg(not(target_arch = "wasm32"))]
-pub struct ScreenshotState {
+pub(crate) struct ScreenshotState {
     /// Mappable buffer that receives the captured frame.
     pub staging_buffer: wgpu::Buffer,
     /// Whether a capture is in flight.

@@ -163,6 +163,16 @@ pub fn install_presentation_passes(
 /// mapped, unpads the rows, converts BGRA surfaces to RGBA, and saves the
 /// image on a background thread.
 #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
+impl WgpuRenderer {
+    /// Whether a screenshot capture requested via [`request_screenshot_copy`]
+    /// is still in flight. Poll [`poll_screenshot_readback`] until it returns
+    /// false.
+    pub fn screenshot_pending(&self) -> bool {
+        self.screenshot.pending
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
 pub fn poll_screenshot_readback(renderer: &mut WgpuRenderer) {
     if !renderer.screenshot.pending {
         return;

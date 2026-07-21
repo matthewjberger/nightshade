@@ -251,7 +251,7 @@ impl<E: Example> Harness<E> {
                 }
                 request_screenshot_copy(renderer, Some(path.to_path_buf()), None);
                 let mut guard = 0;
-                while renderer.screenshot.pending && guard < 600 {
+                while renderer.screenshot_pending() && guard < 600 {
                     let _ = renderer
                         .device
                         .poll(nightshade_renderer::wgpu::PollType::wait_indefinitely());

@@ -651,7 +651,7 @@ impl EntityAllocator {
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct EntityLocation {
+pub(crate) struct EntityLocation {
     pub generation: u32,
     pub table_index: u32,
     pub array_index: u32,
@@ -659,7 +659,7 @@ pub struct EntityLocation {
 }
 
 #[derive(Default)]
-pub struct EntityLocations {
+pub(crate) struct EntityLocations {
     pub locations: Vec<EntityLocation>,
 }
 
