@@ -811,7 +811,7 @@ impl SparseTagSet {
 /// multi-bit changes. Shared by the macro-generated worlds and the dynamic
 /// world, since none of it depends on component types.
 #[derive(Clone, Default)]
-pub struct ArchetypeEdges {
+pub(crate) struct ArchetypeEdges {
     pub add_edges: Vec<Option<usize>>,
     pub remove_edges: Vec<Option<usize>>,
     pub multi_add_cache: std::collections::HashMap<u64, usize>,
@@ -834,13 +834,13 @@ impl ArchetypeEdges {
 /// query-cache entry the new table satisfies, and wires single-component
 /// edges from existing tables toward the new one. `table_masks` must iterate
 /// every table including the new one, in index order.
-pub struct ArchetypeRouting<'world, S = std::collections::hash_map::RandomState> {
+pub(crate) struct ArchetypeRouting<'world, S = std::collections::hash_map::RandomState> {
     pub table_lookup: &'world mut std::collections::HashMap<u64, usize>,
     pub table_edges: &'world mut Vec<ArchetypeEdges>,
     pub query_cache: &'world mut std::collections::HashMap<u64, Vec<usize>, S>,
 }
 
-pub fn archetype_register_table<M, S>(
+pub(crate) fn archetype_register_table<M, S>(
     routing: ArchetypeRouting<'_, S>,
     component_count: usize,
     mask: u64,
@@ -878,7 +878,7 @@ pub fn archetype_register_table<M, S>(
 /// computing and caching it on first use. Taking the cache and the table
 /// masks as separate parameters keeps the borrows disjoint, so callers can
 /// mutate tables while holding the returned slice.
-pub fn archetype_cached_tables<M, S>(
+pub(crate) fn archetype_cached_tables<M, S>(
     query_cache: &mut std::collections::HashMap<u64, Vec<usize>, S>,
     table_masks: M,
     mask: u64,

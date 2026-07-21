@@ -46,17 +46,16 @@ pub mod texture_cache;
 
 pub use ::wgpu::*;
 
-/// Per-window render-graph dispatch state carried between frames.
+/// Render-graph dispatch state carried between frames.
 #[derive(Default, Clone)]
-pub struct WindowRenderState {
-    /// Every distinct buffer size this window has dispatched at this
-    /// frame (or recently). The cache lets multi-camera-per-window
-    /// dispatches early-return when the shared graph is already at the
-    /// requested size for *any* of this window's cameras, instead of
-    /// always falling through to the per-pass texture pool.
-    pub recent_buffer_sizes: Vec<(u32, u32)>,
-    /// Settings version last applied to this window's graph, if any.
-    pub last_settings_version: Option<u64>,
+pub(crate) struct WindowRenderState {
+    /// Every distinct buffer size dispatched this frame (or recently). The
+    /// cache lets multi-camera dispatches early-return when the shared graph
+    /// is already at the requested size for *any* camera, instead of always
+    /// falling through to the per-pass texture pool.
+    pub(crate) recent_buffer_sizes: Vec<(u32, u32)>,
+    /// Settings version last applied to the graph, if any.
+    pub(crate) last_settings_version: Option<u64>,
 }
 
 const RECENT_BUFFER_SIZE_CAPACITY: usize = 8;
@@ -135,7 +134,7 @@ pub struct WgpuRenderer {
     /// Render-graph state. Tracks the last buffer size used by the
     /// renderer's dispatch so consecutive dispatches don't
     /// pessimistically resize when the size is already current.
-    pub window_render_state: WindowRenderState,
+    pub(crate) window_render_state: WindowRenderState,
     /// Per-frame and dedup bookkeeping. Renderer-internal.
     pub(crate) frame_state: FrameState,
     /// The renderer-owned store of live GPU textures, keyed by name. The host's
@@ -196,7 +195,7 @@ pub struct RenderTargets {
 }
 
 /// GPU depth-pick compute and readback resources.
-pub struct DepthPickState {
+pub(crate) struct DepthPickState {
     /// Compute pipeline that samples depth around the pick center.
     pub compute_pipeline: wgpu::ComputePipeline,
     /// Layout for the depth-pick bind group.
@@ -241,7 +240,7 @@ pub struct ScreenshotState {
 }
 
 /// Per-frame and dedup bookkeeping that the renderer carries between frames.
-pub struct FrameState {
+pub(crate) struct FrameState {
     /// Monotonic frame counter.
     pub index: u64,
     /// Settings signature applied on the previous frame, for change detection.

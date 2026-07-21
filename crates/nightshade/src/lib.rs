@@ -902,7 +902,6 @@ pub mod prelude {
     #[cfg(all(feature = "terrain", feature = "physics"))]
     pub use crate::plugins::terrain::TerrainPlugin;
     pub use crate::render::bounding_volume::BoundingVolume;
-    pub use crate::render::entity::Entity as RenderEntity;
     pub use crate::render::generational_registry::{
         GenerationalRegistry, registry_add_reference, registry_clear, registry_entry,
         registry_entry_by_name, registry_entry_by_name_mut, registry_insert, registry_is_empty,
