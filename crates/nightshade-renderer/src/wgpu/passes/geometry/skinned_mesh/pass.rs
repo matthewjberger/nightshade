@@ -43,6 +43,10 @@ pub struct SkinnedMeshPass {
     /// world matrices straight into `bone_transforms_buffer` for animated
     /// skeletons, replacing the CPU sampling and hierarchy walk.
     pub(super) animation: super::animation::SkinnedAnimationGpu,
+    pub(super) ik: super::ik::SkinnedIkGpu,
+    pub(super) multi_ik: super::multi_ik::SkinnedMultiIkGpu,
+    pub(super) aim: super::aim::SkinnedAimGpu,
+    pub(super) spring: super::spring::SkinnedSpringGpu,
     /// Bumped whenever `bone_transforms_buffer` is reallocated so the
     /// animation bind group knows to rebind the new buffer.
     pub(super) bone_transforms_generation: u64,

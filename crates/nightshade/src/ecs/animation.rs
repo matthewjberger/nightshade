@@ -60,12 +60,20 @@
 
 pub mod blend_tree;
 pub mod components;
+pub mod compression;
 pub mod graph;
 pub mod ik;
+pub mod ragdoll;
+pub mod retarget;
 pub mod systems;
 
 pub use blend_tree::*;
 pub use components::*;
+pub use compression::{clip_keyframe_count, compress_clip};
 pub use graph::*;
-pub use ik::{IkChain, look_at_bone, solve_two_bone_ik};
+pub use ik::{
+    AimConstraint, FootDefinition, IkChain, IkChainMulti, look_at_bone, solve_two_bone_ik,
+};
+pub use ragdoll::Ragdoll;
+pub use retarget::{RetargetMap, retarget_clip, retarget_map_by_suffix};
 pub use systems::*;

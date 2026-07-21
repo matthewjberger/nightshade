@@ -16,7 +16,11 @@ struct AnimClip {
     channel_start: u32,
     channel_count: u32,
     runtime_index: u32,
+    mode: u32,
+    reference_start: u32,
+    reference_count: u32,
     pad0: u32,
+    pad1: u32,
 }
 
 struct AnimChannel {
@@ -316,13 +320,24 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             if (runtime.y <= 0.0) {
                 continue;
             }
+            let layer_weight = clamp(runtime.y, 0.0, 1.0);
             let layer_matrix = sample_bone_local(
                 bone,
                 layer.channel_start,
                 layer.channel_count,
                 runtime.x,
             );
-            local_matrix = blend_local(local_matrix, layer_matrix, clamp(runtime.y, 0.0, 1.0));
+            if (layer.mode == 1u) {
+                let reference_matrix = sample_bone_local(
+                    bone,
+                    layer.reference_start,
+                    layer.reference_count,
+                    0.0,
+                );
+                local_matrix = apply_additive(local_matrix, layer_matrix, reference_matrix, layer_weight);
+            } else {
+                local_matrix = blend_local(local_matrix, layer_matrix, layer_weight);
+            }
         }
 
         var parent_world = skeleton.armature_root;
@@ -355,6 +370,50 @@ fn blend_local(from_matrix: mat4x4<f32>, to_matrix: mat4x4<f32>, factor: f32) ->
     let rotation = quat_slerp(from_q, to_q, factor);
 
     return compose_matrix(translation, rotation, scale);
+}
+
+fn quat_mul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(
+        a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+        a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+        a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+    );
+}
+
+fn quat_conjugate(q: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(-q.x, -q.y, -q.z, q.w);
+}
+
+fn matrix_scale(m: mat4x4<f32>) -> vec3<f32> {
+    return vec3<f32>(length(m[0].xyz), length(m[1].xyz), length(m[2].xyz));
+}
+
+fn apply_additive(
+    base: mat4x4<f32>,
+    layer: mat4x4<f32>,
+    reference: mat4x4<f32>,
+    weight: f32,
+) -> mat4x4<f32> {
+    let base_translation = base[3].xyz;
+    let base_scale = matrix_scale(base);
+    let layer_scale = matrix_scale(layer);
+    let reference_scale = matrix_scale(reference);
+    let base_rotation = matrix_to_quat(base, base_scale);
+    let layer_rotation = matrix_to_quat(layer, layer_scale);
+    let reference_rotation = matrix_to_quat(reference, reference_scale);
+
+    let delta_translation = (layer[3].xyz - reference[3].xyz) * weight;
+    let new_translation = base_translation + delta_translation;
+
+    let delta_rotation = quat_mul(layer_rotation, quat_conjugate(reference_rotation));
+    let weighted_delta = quat_slerp(vec4<f32>(0.0, 0.0, 0.0, 1.0), delta_rotation, weight);
+    let new_rotation = quat_normalize(quat_mul(weighted_delta, base_rotation));
+
+    let delta_scale = layer_scale / max(reference_scale, vec3<f32>(0.0001, 0.0001, 0.0001));
+    let new_scale = base_scale * mix(vec3<f32>(1.0, 1.0, 1.0), delta_scale, weight);
+
+    return compose_matrix(new_translation, new_rotation, new_scale);
 }
 
 fn matrix_to_quat(m: mat4x4<f32>, scale: vec3<f32>) -> vec4<f32> {

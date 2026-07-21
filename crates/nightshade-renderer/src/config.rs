@@ -1465,6 +1465,65 @@ pub struct SkinnedJointData {
     pub pose_channels: Vec<Vec<SkinnedChannelData>>,
     /// Animation channels for each additional animation layer.
     pub layer_channels: Vec<Vec<SkinnedChannelData>>,
+    /// Reference-pose channels per layer for additive blending, empty for
+    /// override layers.
+    pub reference_channels: Vec<Vec<SkinnedChannelData>>,
+}
+
+/// A two-bone IK chain resolved to local joint indices. The world-space target,
+/// pole, and weight live in the per-frame `ik_runtime` map so moving the target
+/// does not rebuild the static payload.
+#[derive(Clone)]
+pub struct SkinnedIkChainData {
+    /// Index of this chain in the player's chain list, for the runtime lookup.
+    pub chain_index: u32,
+    /// Local joint index of the chain root.
+    pub root_local: u32,
+    /// Local joint index of the middle joint.
+    pub mid_local: u32,
+    /// Local joint index of the tip joint.
+    pub tip_local: u32,
+    /// Whether the chain uses a pole target to bias the bend.
+    pub has_pole: bool,
+}
+
+/// An N-bone IK chain resolved to local joint indices, ordered root to tip, for
+/// the GPU cyclic-coordinate-descent solver. Target, weight, and limits live in
+/// the per-frame `ik_multi_runtime` map.
+#[derive(Clone)]
+pub struct SkinnedMultiIkChainData {
+    /// Index of this chain in the player's multi-chain list, for the runtime lookup.
+    pub chain_index: u32,
+    /// Local joint indices ordered from root to tip.
+    pub joint_locals: Vec<u32>,
+}
+
+/// A look-at constraint resolved to local joint indices, ordered base to tip.
+/// The local forward axis is static; the target, weight, and cone limit live in
+/// the per-frame `aim_runtime` map.
+#[derive(Clone)]
+pub struct SkinnedAimConstraintData {
+    /// Index of this constraint in the player's aim list, for the runtime lookup.
+    pub chain_index: u32,
+    /// Local joint indices ordered from the base of the chain to the tip.
+    pub joint_locals: Vec<u32>,
+    /// The bones' local forward axis.
+    pub forward: [f32; 3],
+}
+
+/// A spring-bone chain resolved to local joint indices, ordered root to tip,
+/// with each joint's rest direction and bone length. The dynamics parameters
+/// live in the per-frame `spring_runtime` map.
+#[derive(Clone)]
+pub struct SkinnedSpringChainData {
+    /// Index of this chain in the player's spring list, for the runtime lookup.
+    pub chain_index: u32,
+    /// Local joint indices ordered root to tip.
+    pub joint_locals: Vec<u32>,
+    /// Per joint local rest direction from its parent; the first entry is unused.
+    pub rest_axes: Vec<[f32; 3]>,
+    /// Per joint length from its parent; the first entry is unused.
+    pub bone_lengths: Vec<f32>,
 }
 
 /// One animated skeleton resolved by the engine: its skin and player entities,
@@ -1485,6 +1544,19 @@ pub struct SkinnedSkeletonData {
     pub active_count: u32,
     /// Number of animation layers the player exposes.
     pub layer_count: u32,
+    /// Blend mode per layer: `0` override, `1` additive.
+    pub layer_modes: Vec<u32>,
+    /// Local joint index whose translation is locked to rest so root motion
+    /// drives the entity instead of the rendered pose, `None` when disabled.
+    pub root_motion_local_index: Option<u32>,
+    /// Two-bone IK chains solved on the GPU pose after blending.
+    pub ik_chains: Vec<SkinnedIkChainData>,
+    /// Multi-bone IK chains solved on the GPU with cyclic coordinate descent.
+    pub ik_multi_chains: Vec<SkinnedMultiIkChainData>,
+    /// Look-at constraints solved on the GPU.
+    pub aim_constraints: Vec<SkinnedAimConstraintData>,
+    /// Spring-bone chains simulated on the GPU.
+    pub spring_chains: Vec<SkinnedSpringChainData>,
     /// Joints in the renderer's depth-first dispatch order.
     pub joints_ordered: Vec<SkinnedJointData>,
 }
@@ -1524,6 +1596,17 @@ pub struct SkinnedAnimationSnapshot {
     pub pose_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 2]>,
     /// Per-layer runtime state (time and weight), keyed by player and layer.
     pub layer_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 2]>,
+    /// Per IK chain runtime, keyed by player and chain index: target xyz, pole
+    /// xyz, weight, and enabled flag (`1.0` when the chain solves this frame).
+    pub ik_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 8]>,
+    /// Per multi-bone IK chain runtime: target xyz, weight, enabled, max angle,
+    /// iterations, pad.
+    pub ik_multi_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 8]>,
+    /// Per aim constraint runtime: target xyz, weight, enabled, cone angle, pad.
+    pub aim_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 8]>,
+    /// Per spring chain runtime: gravity xyz, stiffness, damping, enabled, delta
+    /// time, pad.
+    pub spring_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 8]>,
     /// Current armature-root world transform for each player.
     pub armature_roots: std::collections::HashMap<nightshade_ecs::Entity, nalgebra_glm::Mat4>,
 }

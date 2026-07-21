@@ -668,6 +668,23 @@ pub(crate) fn register_default_frame_systems(stages: &mut nightshade_ecs::Stages
     push_frame_system(
         stages,
         Stage::FrameUpdate,
+        crate::ecs::animation::systems::apply_root_motion,
+    );
+    #[cfg(feature = "physics")]
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::animation::systems::foot_ik_system,
+    );
+    #[cfg(feature = "physics")]
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::animation::ragdoll::ragdoll_sync_system,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
         crate::ecs::tween::update_tweens_system,
     );
     push_frame_system(

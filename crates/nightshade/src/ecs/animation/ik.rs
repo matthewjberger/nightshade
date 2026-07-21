@@ -31,6 +31,60 @@ pub struct IkChain {
     pub enabled: bool,
 }
 
+/// An N-bone IK chain solved on the GPU with cyclic coordinate descent, for
+/// spines, tails, tentacles, and chains longer than two bones. `bones` is
+/// ordered root to tip. `max_angle` clamps each per-iteration joint rotation,
+/// acting as a stiffness and a soft joint limit.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IkChainMulti {
+    /// Bone names ordered from the chain root to the tip.
+    pub bones: Vec<String>,
+    /// World-space goal for the tip.
+    pub target: Vec3,
+    /// Blend of the solved pose against the animated pose, 0.0 to 1.0.
+    pub weight: f32,
+    /// Whether the chain solves this frame.
+    pub enabled: bool,
+    /// Solver iterations; more iterations reach further and settle tighter.
+    pub iterations: u32,
+    /// Maximum per-iteration rotation for any joint, in radians.
+    pub max_angle: f32,
+}
+
+/// One foot in a foot-placement rig. The system raycasts down from the foot's
+/// animated position and steers the two-bone IK chain at `ik_chain_index` so the
+/// foot plants on the ground, never below the animated pose.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FootDefinition {
+    /// Name of the foot (tip) bone, used to find the animated foot position.
+    pub tip_bone: String,
+    /// Index of the leg's two-bone IK chain in the player's `ik_chains`.
+    pub ik_chain_index: usize,
+    /// How far above and below the foot to probe for ground.
+    pub ray_length: f32,
+    /// Height to keep the foot above the ground hit.
+    pub foot_height: f32,
+}
+
+/// A look-at constraint that aims a chain of bones' forward axis at a world
+/// target, distributing the rotation from root to tip so a spine, neck, and head
+/// track together. `cone_angle` clamps each bone's deviation. Solved on the GPU.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AimConstraint {
+    /// Bone names ordered from the base of the aim chain to the tip that looks.
+    pub bones: Vec<String>,
+    /// World-space point to look at.
+    pub target: Vec3,
+    /// The bones' local forward axis that should point at the target.
+    pub forward: Vec3,
+    /// Blend of the aimed pose against the animated pose, 0.0 to 1.0.
+    pub weight: f32,
+    /// Whether the constraint solves this frame.
+    pub enabled: bool,
+    /// Maximum rotation any single bone may take, in radians.
+    pub cone_angle: f32,
+}
+
 fn world_position(world: &World, entity: Entity) -> Option<Vec3> {
     world
         .get::<crate::ecs::transform::components::GlobalTransform>(entity)

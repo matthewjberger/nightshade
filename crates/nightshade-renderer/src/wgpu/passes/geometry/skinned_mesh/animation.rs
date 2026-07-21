@@ -25,7 +25,11 @@ struct GpuAnimClip {
     channel_start: u32,
     channel_count: u32,
     runtime_index: u32,
+    mode: u32,
+    reference_start: u32,
+    reference_count: u32,
     pad0: u32,
+    pad1: u32,
 }
 
 #[repr(C)]
@@ -266,7 +270,11 @@ impl SkinnedAnimationGpu {
                         channel_start: start,
                         channel_count: count,
                         runtime_index: pose_slot_base + active_index as u32,
+                        mode: 0,
+                        reference_start: 0,
+                        reference_count: 0,
                         pad0: 0,
+                        pad1: 0,
                     });
                 }
                 let pose_count = joint.pose_channels.len() as u32;
@@ -278,11 +286,26 @@ impl SkinnedAnimationGpu {
                     if count == 0 {
                         continue;
                     }
+                    let mode = skeleton.layer_modes.get(layer_index).copied().unwrap_or(0);
+                    let (reference_start, reference_count) = if mode == 1 {
+                        let reference = joint
+                            .reference_channels
+                            .get(layer_index)
+                            .map(|channels| channels.as_slice())
+                            .unwrap_or(&[]);
+                        append_joint_channels(&mut flat, reference)
+                    } else {
+                        (0, 0)
+                    };
                     bone_clips.push(GpuAnimClip {
                         channel_start: start,
                         channel_count: count,
                         runtime_index: layer_slot_base + layer_index as u32,
+                        mode,
+                        reference_start,
+                        reference_count,
                         pad0: 0,
+                        pad1: 0,
                     });
                     layer_count += 1;
                 }
@@ -294,7 +317,7 @@ impl SkinnedAnimationGpu {
                     pose_count,
                     layer_start,
                     layer_count,
-                    flags: 0,
+                    flags: u32::from(skeleton.root_motion_local_index == Some(joint.local_index)),
                     pad0: 0,
                     rest_translation: [
                         joint.rest_translation[0],

@@ -2,7 +2,8 @@
 
 use crate::ecs::animation::blend_tree::BlendTree;
 use crate::ecs::animation::graph::AnimationGraph;
-use crate::ecs::animation::ik::IkChain;
+use crate::ecs::animation::ik::{AimConstraint, FootDefinition, IkChain, IkChainMulti};
+use crate::ecs::animation::ragdoll::Ragdoll;
 use nalgebra_glm::{Quat, Vec3};
 use nightshade_ecs::Entity;
 use serde::{Deserialize, Serialize};
@@ -25,8 +26,8 @@ pub struct ActiveClip {
     pub fade_rate: f32,
     /// Playback speed multiplier.
     pub speed: f32,
-    /// Whether this clip wraps at its end.
-    pub looping: bool,
+    /// How this clip behaves at its end.
+    pub loop_mode: LoopMode,
     /// The clip that mirrors `AnimationPlayer::current_clip`/`time` for the legacy
     /// playback API and seeks.
     pub dominant: bool,
@@ -56,6 +57,16 @@ pub struct AnimationEvent {
     pub name: String,
 }
 
+/// How a layer combines with the base pose.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum LayerBlendMode {
+    /// Blends toward the layer pose, overriding the bones it touches.
+    #[default]
+    Override,
+    /// Adds the layer's difference from a reference pose on top of the base.
+    Additive,
+}
+
 /// An additional clip blended on top of the base animation, optionally limited
 /// to a subset of bones. Layers drive composites like a wave played on the upper
 /// body while the legs keep walking.
@@ -77,6 +88,13 @@ pub struct AnimationLayer {
     /// Bone names this layer affects. Empty means every bone the clip targets.
     #[serde(default)]
     pub mask: Vec<String>,
+    /// How the layer combines with the base pose.
+    #[serde(default)]
+    pub blend_mode: LayerBlendMode,
+    /// Reference clip an additive layer is measured against, sampled at its
+    /// first frame; ignored for override layers.
+    #[serde(default)]
+    pub reference_clip: Option<usize>,
 }
 
 impl AnimationLayer {
@@ -90,6 +108,8 @@ impl AnimationLayer {
             playing: true,
             looping: true,
             mask: Vec::new(),
+            blend_mode: LayerBlendMode::Override,
+            reference_clip: None,
         }
     }
 
@@ -183,6 +203,70 @@ pub enum AnimationInterpolation {
     CubicSpline,
 }
 
+/// A chain of bones that dangles with spring dynamics for secondary motion like
+/// hair, cloth, tails, and antennae. `bones` is ordered root to tip; the root
+/// follows the animation and the rest lag with inertia, pulled back toward the
+/// animated pose by `stiffness` and slowed by `damping`. Solved on the GPU.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpringChain {
+    /// Bone names ordered from the fixed root to the dangling tip.
+    pub bones: Vec<String>,
+    /// Pull back toward the animated pose per frame, 0.0 loose to 1.0 rigid.
+    pub stiffness: f32,
+    /// Velocity damping per frame, 0.0 free to 1.0 dead.
+    pub damping: f32,
+    /// Constant world-space acceleration, e.g. gravity.
+    pub gravity: Vec3,
+    /// Whether the chain simulates this frame.
+    pub enabled: bool,
+}
+
+/// How playback behaves at the end of a clip.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum LoopMode {
+    /// Wraps back to the start and keeps playing.
+    #[default]
+    Loop,
+    /// Stops at the last frame and marks playback finished.
+    Once,
+    /// Holds the last frame indefinitely without finishing.
+    Clamp,
+    /// Reflects at each end, playing forward then backward.
+    PingPong,
+}
+
+/// Wraps `time` into a clip of `duration` under a loop mode, returning the new
+/// time and whether playback continues.
+pub fn wrap_time(time: f32, duration: f32, mode: LoopMode) -> (f32, bool) {
+    if duration <= 0.0 || time < duration {
+        return (time.max(0.0), true);
+    }
+    match mode {
+        LoopMode::Loop => (time.rem_euclid(duration), true),
+        LoopMode::Once => (duration, false),
+        LoopMode::Clamp => (duration, true),
+        LoopMode::PingPong => {
+            let cycle = duration * 2.0;
+            let wrapped = time.rem_euclid(cycle);
+            let reflected = if wrapped > duration {
+                cycle - wrapped
+            } else {
+                wrapped
+            };
+            (reflected, true)
+        }
+    }
+}
+
+/// Resolves the effective loop mode from the mode plus the legacy `looping`
+/// flag, so `looping = false` still means play once.
+pub fn effective_loop_mode(mode: LoopMode, looping: bool) -> LoopMode {
+    match mode {
+        LoopMode::Loop if !looping => LoopMode::Once,
+        other => other,
+    }
+}
+
 /// Component controlling animation playback on an entity hierarchy.
 ///
 /// Manages one or more animation clips, playback state, and cross-fading.
@@ -199,6 +283,9 @@ pub struct AnimationPlayer {
     pub speed: f32,
     /// Whether to loop when reaching the end.
     pub looping: bool,
+    /// How the current clip behaves at its end.
+    #[serde(default)]
+    pub loop_mode: LoopMode,
     /// Whether the animation is currently advancing.
     pub playing: bool,
     /// Whether to play all clips sequentially.
@@ -235,12 +322,34 @@ pub struct AnimationPlayer {
     /// Two-bone IK chains solved on the GPU pose after blending.
     #[serde(default)]
     pub ik_chains: Vec<IkChain>,
+    /// Multi-bone IK chains solved on the GPU with cyclic coordinate descent.
+    #[serde(default)]
+    pub ik_chains_multi: Vec<IkChainMulti>,
+    /// Look-at constraints aiming bone chains at world targets, solved on the GPU.
+    #[serde(default)]
+    pub aim_constraints: Vec<AimConstraint>,
+    /// Spring-bone chains for secondary motion, simulated on the GPU.
+    #[serde(default)]
+    pub spring_chains: Vec<SpringChain>,
+    /// Foot-placement rig steering leg IK chains onto the ground.
+    #[serde(default)]
+    pub foot_ik: Vec<FootDefinition>,
+    /// Whether foot placement runs this frame.
+    #[serde(default)]
+    pub foot_ik_enabled: bool,
+    /// Optional physics ragdoll driving the skeleton from proxy bodies.
+    #[serde(default)]
+    pub ragdoll: Option<Ragdoll>,
     /// Whether root motion drives the entity transform from the root bone.
     #[serde(default)]
     pub root_motion: bool,
     /// Name of the bone whose translation feeds root motion.
     #[serde(default)]
     pub root_motion_bone: Option<String>,
+    /// Whether root motion is confined to the ground plane, leaving vertical
+    /// travel to terrain following and foot placement.
+    #[serde(default)]
+    pub root_motion_planar: bool,
     /// Previous-frame root translation, for per-frame delta extraction.
     #[serde(default, skip)]
     pub root_motion_previous: Option<Vec3>,
@@ -257,6 +366,7 @@ impl Default for AnimationPlayer {
             time: 0.0,
             speed: 1.0,
             looping: true,
+            loop_mode: LoopMode::Loop,
             playing: false,
             play_all: false,
             node_index_to_entity: HashMap::new(),
@@ -271,8 +381,15 @@ impl Default for AnimationPlayer {
             blend_tree: None,
             graph: None,
             ik_chains: Vec::new(),
+            ik_chains_multi: Vec::new(),
+            aim_constraints: Vec::new(),
+            spring_chains: Vec::new(),
+            foot_ik: Vec::new(),
+            foot_ik_enabled: false,
+            ragdoll: None,
             root_motion: false,
             root_motion_bone: None,
+            root_motion_planar: false,
             root_motion_previous: None,
             root_motion_previous_time: 0.0,
         }
@@ -379,13 +496,11 @@ impl AnimationPlayer {
 
         self.time += delta_time * self.speed;
 
-        if self.time >= clip_duration {
-            if self.looping {
-                self.time %= clip_duration;
-            } else {
-                self.time = clip_duration;
-                self.playing = false;
-            }
+        let mode = effective_loop_mode(self.loop_mode, self.looping);
+        let (wrapped, still_playing) = wrap_time(self.time, clip_duration, mode);
+        self.time = wrapped;
+        if !still_playing {
+            self.playing = false;
         }
 
         if self.blend_from_clip.is_some() {

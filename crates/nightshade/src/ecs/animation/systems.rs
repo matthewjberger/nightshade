@@ -1,7 +1,7 @@
 use crate::ecs::animation::blend_tree::{collect_blend_tree_clips, evaluate_blend_tree};
 use crate::ecs::animation::components::{
     ActiveClip, AnimationClip, AnimationPlayer, AnimationProperty, AnimationValue,
-    sample_animation_channel,
+    effective_loop_mode, sample_animation_channel, wrap_time,
 };
 use crate::ecs::animation::graph::evaluate_animation_graph;
 use crate::ecs::world::{ANIMATION_PLAYER, MORPH_WEIGHTS, World};
@@ -68,11 +68,13 @@ pub fn update_animation_players(world: &mut World) {
 }
 
 pub fn apply_animations(world: &mut World) {
-    // Joint transforms are applied on the CPU so that joint global transforms
-    // reflect the current pose. Consumers that read those transforms on the CPU
-    // (skinned shadow casting, attachment sockets, picking) then match the
-    // rendered pose instead of the bind pose. Morph weights and non-joint node
-    // targets are applied here as well.
+    // Joint transforms are applied on the CPU so joint global transforms reflect
+    // the current pose. Consumers that read those globals on the CPU (the
+    // skinned shadow pass, which builds its own palette from
+    // `render_skinning.bone_transforms`, plus attachment sockets and picking)
+    // then match the animated pose. The GPU pose pipeline recomputes the same
+    // pose and overwrites the main pass's palette, so the render stays GPU driven
+    // while these CPU consumers keep working.
     let mut per_player_values: Vec<HashMap<Entity, AnimationAccumulator>> = Vec::new();
     for (_, player) in world
         .query_ref::<&crate::ecs::animation::components::AnimationPlayer>()
@@ -333,7 +335,317 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
     }
 }
 
+fn compose_trs(translation: Vec3, rotation: Quat, scale: Vec3) -> nalgebra_glm::Mat4 {
+    let mut matrix = nalgebra_glm::quat_to_mat4(&rotation.normalize());
+    for row in 0..3 {
+        matrix[(row, 0)] *= scale.x;
+        matrix[(row, 1)] *= scale.y;
+        matrix[(row, 2)] *= scale.z;
+    }
+    matrix[(0, 3)] = translation.x;
+    matrix[(1, 3)] = translation.y;
+    matrix[(2, 3)] = translation.z;
+    matrix
+}
+
+fn animated_local_matrix(
+    world: &World,
+    player: &AnimationPlayer,
+    entity: Entity,
+) -> nalgebra_glm::Mat4 {
+    let rest = world
+        .get::<crate::ecs::transform::components::LocalTransform>(entity)
+        .copied()
+        .unwrap_or_default();
+    let mut translation = rest.translation;
+    let mut rotation = rest.rotation;
+    let mut scale = rest.scale;
+    let mut running_weight = 0.0_f32;
+    for active in &player.active_clips {
+        if active.weight <= 0.0 {
+            continue;
+        }
+        let Some(clip) = player.clips.get(active.clip_index) else {
+            continue;
+        };
+        let mut sampled_translation = rest.translation;
+        let mut sampled_rotation = rest.rotation;
+        let mut sampled_scale = rest.scale;
+        for channel in &clip.channels {
+            if player.resolve_target_entity(channel) != Some(entity) {
+                continue;
+            }
+            if let Some(value) = sample_animation_channel(channel, active.time) {
+                match (channel.target_property, value) {
+                    (AnimationProperty::Translation, AnimationValue::Vec3(vector)) => {
+                        sampled_translation = vector;
+                    }
+                    (AnimationProperty::Rotation, AnimationValue::Quat(quaternion)) => {
+                        sampled_rotation = quaternion;
+                    }
+                    (AnimationProperty::Scale, AnimationValue::Vec3(vector)) => {
+                        sampled_scale = vector;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let factor = active.weight / (running_weight + active.weight);
+        translation = translation.lerp(&sampled_translation, factor);
+        let dot = rotation.dot(&sampled_rotation);
+        let adjusted = if dot < 0.0 {
+            -sampled_rotation
+        } else {
+            sampled_rotation
+        };
+        rotation = nalgebra_glm::quat_slerp(&rotation.normalize(), &adjusted.normalize(), factor);
+        scale = scale.lerp(&sampled_scale, factor);
+        running_weight += active.weight;
+    }
+    compose_trs(translation, rotation, scale)
+}
+
+fn resolve_joint_world(
+    world: &World,
+    player: &AnimationPlayer,
+    entity: Entity,
+) -> nalgebra_glm::Mat4 {
+    let local = animated_local_matrix(world, player, entity);
+    if let Some(parent) = world
+        .get::<nightshade_ecs::dynamic::ChildOf>(entity)
+        .map(|child_of| child_of.0)
+    {
+        if world.has::<crate::ecs::skin::components::Joint>(parent) {
+            return resolve_joint_world(world, player, parent) * local;
+        }
+        if let Some(parent_world) =
+            world.get::<crate::ecs::transform::components::GlobalTransform>(parent)
+        {
+            return parent_world.0 * local;
+        }
+    }
+    local
+}
+
+/// Resolves a single bone's current animated world transform on the CPU by
+/// blending the player's active clips down that bone's chain, for attachment
+/// sockets and foot placement without a GPU readback.
+pub fn resolve_bone_world_transform(
+    world: &World,
+    player_entity: Entity,
+    bone_name: &str,
+) -> Option<nalgebra_glm::Mat4> {
+    let player = world.get::<crate::ecs::animation::components::AnimationPlayer>(player_entity)?;
+    let bone = *player.bone_name_to_entity.get(bone_name)?;
+    Some(resolve_joint_world(world, player, bone))
+}
+
+/// Steers each leg's two-bone IK chain so the foot plants on the ground it stands
+/// over, never below the animated pose. Raycasts the physics world from each
+/// foot's animated position.
+#[cfg(feature = "physics")]
+type FootProbe = (usize, String, String, String, f32, f32);
+
+#[cfg(feature = "physics")]
+fn entity_forward(world: &World, entity: Entity) -> Vec3 {
+    world
+        .get::<crate::ecs::transform::components::GlobalTransform>(entity)
+        .map(|transform| {
+            let forward = Vec3::new(transform.0[(0, 2)], 0.0, transform.0[(2, 2)]);
+            if forward.magnitude() > 1.0e-4 {
+                forward.normalize()
+            } else {
+                Vec3::z()
+            }
+        })
+        .unwrap_or_else(Vec3::z)
+}
+
+/// Places a pole so the two-bone solve bends in the leg's sagittal plane. The
+/// bend axis stays horizontal (`cross(down_the_leg, forward)`), so the knee can
+/// never splay sideways the way the animated-plane fallback does when the leg
+/// passes through straight; the sign comes from which side the animated knee sits
+/// on, preserving the natural fore/aft bend of each limb.
+#[cfg(feature = "physics")]
+fn sagittal_pole(hip: Vec3, knee: Vec3, foot: Vec3, forward: Vec3) -> Vec3 {
+    let chord_mid = (hip + foot) * 0.5;
+    let sign = if (knee - chord_mid).dot(&forward) >= 0.0 {
+        1.0
+    } else {
+        -1.0
+    };
+    let span = (foot - hip).magnitude().max(0.01);
+    knee + forward * (sign * span)
+}
+
+#[cfg(feature = "physics")]
+pub fn foot_ik_system(world: &mut World) {
+    let mut player_feet: Vec<(Entity, Vec<FootProbe>)> = Vec::new();
+    for (entity, player) in world
+        .query_ref::<&crate::ecs::animation::components::AnimationPlayer>()
+        .iter()
+    {
+        if !player.foot_ik_enabled || player.foot_ik.is_empty() {
+            continue;
+        }
+        let feet = player
+            .foot_ik
+            .iter()
+            .filter_map(|foot| {
+                let chain = player.ik_chains.get(foot.ik_chain_index)?;
+                Some((
+                    foot.ik_chain_index,
+                    chain.root_bone.clone(),
+                    chain.mid_bone.clone(),
+                    foot.tip_bone.clone(),
+                    foot.ray_length,
+                    foot.foot_height,
+                ))
+            })
+            .collect();
+        player_feet.push((entity, feet));
+    }
+
+    let mut updates: Vec<(Entity, usize, Vec3, Option<Vec3>, bool)> = Vec::new();
+    for (entity, feet) in player_feet {
+        let forward = entity_forward(world, entity);
+        for (chain_index, root_bone, mid_bone, tip_bone, ray_length, foot_height) in feet {
+            let Some(foot_world) = resolve_bone_world_transform(world, entity, &tip_bone) else {
+                continue;
+            };
+            let foot_position =
+                Vec3::new(foot_world[(0, 3)], foot_world[(1, 3)], foot_world[(2, 3)]);
+            let bone_position = |bone: &str| {
+                resolve_bone_world_transform(world, entity, bone)
+                    .map(|matrix| Vec3::new(matrix[(0, 3)], matrix[(1, 3)], matrix[(2, 3)]))
+            };
+            let pole = match (bone_position(&root_bone), bone_position(&mid_bone)) {
+                (Some(hip), Some(knee)) => Some(sagittal_pole(hip, knee, foot_position, forward)),
+                _ => None,
+            };
+            let origin = foot_position + Vec3::new(0.0, ray_length, 0.0);
+            let physics =
+                world.plugin_resource::<crate::plugins::physics::resources::PhysicsWorld>();
+            let hit = crate::plugins::physics::resources::physics_world_cast_ray(
+                physics,
+                origin,
+                Vec3::new(0.0, -1.0, 0.0),
+                ray_length * 2.0,
+                Some(entity),
+            );
+            let (target, enabled) = match hit {
+                Some(hit) => {
+                    let desired_y = (hit.point.y + foot_height).max(foot_position.y);
+                    (Vec3::new(foot_position.x, desired_y, foot_position.z), true)
+                }
+                None => (foot_position, false),
+            };
+            updates.push((entity, chain_index, target, pole, enabled));
+        }
+    }
+
+    for (entity, chain_index, target, pole, enabled) in updates {
+        if let Some(player) =
+            world.get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity)
+            && let Some(chain) = player.ik_chains.get_mut(chain_index)
+        {
+            chain.target = target;
+            chain.pole = pole;
+            chain.enabled = enabled;
+        }
+    }
+}
+
+fn extract_root_translation(player: &AnimationPlayer, bone_name: &str) -> Option<Vec3> {
+    let bone_entity = *player.bone_name_to_entity.get(bone_name)?;
+    let mut accumulated = Vec3::zeros();
+    let mut total_weight = 0.0_f32;
+    for active in &player.active_clips {
+        if active.weight <= 0.0 {
+            continue;
+        }
+        let Some(clip) = player.clips.get(active.clip_index) else {
+            continue;
+        };
+        for channel in &clip.channels {
+            if channel.target_property != AnimationProperty::Translation {
+                continue;
+            }
+            if player.resolve_target_entity(channel) != Some(bone_entity) {
+                continue;
+            }
+            if let Some(AnimationValue::Vec3(translation)) =
+                sample_animation_channel(channel, active.time)
+            {
+                accumulated += translation * active.weight;
+                total_weight += active.weight;
+            }
+        }
+    }
+    if total_weight > 0.0 {
+        Some(accumulated / total_weight)
+    } else {
+        None
+    }
+}
+
+/// Drives the entity transform from the root bone's weighted translation, the
+/// travel the GPU pose locks out of the rendered hips. Runs after the pose is
+/// resolved; loop wraps zero the delta so the character does not snap backward.
+pub fn apply_root_motion(world: &mut World) {
+    let mut updates: Vec<(Entity, Vec3, Vec3, f32)> = Vec::new();
+    for (entity, player) in world
+        .query_ref::<&crate::ecs::animation::components::AnimationPlayer>()
+        .iter()
+    {
+        if !player.root_motion {
+            continue;
+        }
+        let Some(bone_name) = player.root_motion_bone.clone() else {
+            continue;
+        };
+        let Some(current) = extract_root_translation(player, &bone_name) else {
+            continue;
+        };
+        let delta = match player.root_motion_previous {
+            Some(previous) if player.time >= player.root_motion_previous_time => current - previous,
+            _ => Vec3::zeros(),
+        };
+        let basis = player
+            .bone_name_to_entity
+            .get(&bone_name)
+            .copied()
+            .and_then(|hip| {
+                world
+                    .get::<nightshade_ecs::dynamic::ChildOf>(hip)
+                    .map(|child_of| child_of.0)
+            })
+            .map(|parent| nalgebra_glm::mat4_to_mat3(&resolve_joint_world(world, player, parent)))
+            .unwrap_or_else(nalgebra_glm::Mat3::identity);
+        let mut world_delta = basis * delta;
+        if player.root_motion_planar {
+            world_delta.y = 0.0;
+        }
+        updates.push((entity, world_delta, current, player.time));
+    }
+    for (entity, world_delta, previous, previous_time) in updates {
+        if let Some(player) =
+            world.get_mut::<crate::ecs::animation::components::AnimationPlayer>(entity)
+        {
+            player.root_motion_previous = Some(previous);
+            player.root_motion_previous_time = previous_time;
+        }
+        if world_delta != Vec3::zeros()
+            && let Some(transform) =
+                world.get_mut::<crate::ecs::transform::components::LocalTransform>(entity)
+        {
+            transform.translation += world_delta;
+        }
+    }
+}
+
 fn sync_legacy_active_clips(player: &mut AnimationPlayer) {
+    let loop_mode = effective_loop_mode(player.loop_mode, player.looping);
     let mut active: Vec<ActiveClip> = Vec::new();
     if let Some(current) = player.current_clip {
         let blending = player.blend_from_clip.is_some();
@@ -345,7 +657,7 @@ fn sync_legacy_active_clips(player: &mut AnimationPlayer) {
             target_weight: weight,
             fade_rate: 0.0,
             speed: player.speed,
-            looping: player.looping,
+            loop_mode,
             dominant: true,
         });
         if let Some(from) = player.blend_from_clip {
@@ -357,7 +669,7 @@ fn sync_legacy_active_clips(player: &mut AnimationPlayer) {
                 target_weight: from_weight,
                 fade_rate: 0.0,
                 speed: player.speed,
-                looping: player.looping,
+                loop_mode,
                 dominant: false,
             });
         }
@@ -384,11 +696,8 @@ fn advance_active_clips(player: &mut AnimationPlayer, delta_time: f32) {
             continue;
         };
         active.time += delta_time * active.speed;
-        if active.looping {
-            active.time = active.time.rem_euclid(duration);
-        } else if active.time > duration {
-            active.time = duration;
-        }
+        let (wrapped, _) = wrap_time(active.time, duration, active.loop_mode);
+        active.time = wrapped;
     }
 }
 
@@ -396,6 +705,7 @@ fn advance_active_clips(player: &mut AnimationPlayer, delta_time: f32) {
 /// of any clip already active so motion stays continuous as weights shift, and
 /// marking the highest-weight clip dominant for the legacy playback API.
 pub fn set_blend_pose(player: &mut AnimationPlayer, all_clips: &[usize], weights: &[(usize, f32)]) {
+    let loop_mode = player.loop_mode;
     let mut weight_map: HashMap<usize, f32> = HashMap::new();
     for (clip_index, weight) in weights {
         *weight_map.entry(*clip_index).or_insert(0.0) += *weight;
@@ -415,7 +725,7 @@ pub fn set_blend_pose(player: &mut AnimationPlayer, all_clips: &[usize], weights
             target_weight: weight,
             fade_rate: 0.0,
             speed: 1.0,
-            looping: true,
+            loop_mode,
             dominant: false,
         });
     }

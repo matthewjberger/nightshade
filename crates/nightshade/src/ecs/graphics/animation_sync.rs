@@ -45,6 +45,35 @@ pub fn render_sync_animation_system(world: &mut World) {
             .pose_runtime,
     );
     pose_runtime.clear();
+    let mut ik_runtime = std::mem::take(
+        &mut world
+            .res_mut::<crate::render::config::RendererState>()
+            .render_animation
+            .ik_runtime,
+    );
+    ik_runtime.clear();
+    let mut ik_multi_runtime = std::mem::take(
+        &mut world
+            .res_mut::<crate::render::config::RendererState>()
+            .render_animation
+            .ik_multi_runtime,
+    );
+    ik_multi_runtime.clear();
+    let mut aim_runtime = std::mem::take(
+        &mut world
+            .res_mut::<crate::render::config::RendererState>()
+            .render_animation
+            .aim_runtime,
+    );
+    aim_runtime.clear();
+    let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
+    let mut spring_runtime = std::mem::take(
+        &mut world
+            .res_mut::<crate::render::config::RendererState>()
+            .render_animation
+            .spring_runtime,
+    );
+    spring_runtime.clear();
     let mut player_clips = std::mem::take(
         &mut world
             .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
@@ -60,6 +89,67 @@ pub fn render_sync_animation_system(world: &mut World) {
         for (active_index, active) in player.active_clips.iter().enumerate() {
             pose_runtime.insert((player_entity, active_index), [active.time, active.weight]);
             active.clip_index.hash(&mut clip_hasher);
+        }
+        for (chain_index, chain) in player.ik_chains.iter().enumerate() {
+            let pole = chain.pole.unwrap_or_else(nalgebra_glm::Vec3::zeros);
+            ik_runtime.insert(
+                (player_entity, chain_index),
+                [
+                    chain.target.x,
+                    chain.target.y,
+                    chain.target.z,
+                    pole.x,
+                    pole.y,
+                    pole.z,
+                    chain.weight,
+                    if chain.enabled { 1.0 } else { 0.0 },
+                ],
+            );
+        }
+        for (chain_index, chain) in player.ik_chains_multi.iter().enumerate() {
+            ik_multi_runtime.insert(
+                (player_entity, chain_index),
+                [
+                    chain.target.x,
+                    chain.target.y,
+                    chain.target.z,
+                    chain.weight,
+                    if chain.enabled { 1.0 } else { 0.0 },
+                    chain.max_angle,
+                    chain.iterations as f32,
+                    0.0,
+                ],
+            );
+        }
+        for (constraint_index, constraint) in player.aim_constraints.iter().enumerate() {
+            aim_runtime.insert(
+                (player_entity, constraint_index),
+                [
+                    constraint.target.x,
+                    constraint.target.y,
+                    constraint.target.z,
+                    constraint.weight,
+                    if constraint.enabled { 1.0 } else { 0.0 },
+                    constraint.cone_angle,
+                    0.0,
+                    0.0,
+                ],
+            );
+        }
+        for (chain_index, chain) in player.spring_chains.iter().enumerate() {
+            spring_runtime.insert(
+                (player_entity, chain_index),
+                [
+                    chain.gravity.x,
+                    chain.gravity.y,
+                    chain.gravity.z,
+                    chain.stiffness,
+                    chain.damping,
+                    if chain.enabled { 1.0 } else { 0.0 },
+                    delta_time,
+                    0.0,
+                ],
+            );
         }
         player_clips.insert(
             player_entity,
@@ -162,6 +252,10 @@ pub fn render_sync_animation_system(world: &mut World) {
     snapshot.skeletons = skeletons;
     snapshot.pose_runtime = pose_runtime;
     snapshot.layer_runtime = layer_runtime;
+    snapshot.ik_runtime = ik_runtime;
+    snapshot.ik_multi_runtime = ik_multi_runtime;
+    snapshot.aim_runtime = aim_runtime;
+    snapshot.spring_runtime = spring_runtime;
     snapshot.armature_roots = armature_roots;
 }
 
@@ -185,6 +279,32 @@ fn collect_joint_to_player(world: &World) -> HashMap<Entity, Entity> {
         }
     }
     joint_to_player
+}
+
+fn resolve_ik_chains(
+    player: &AnimationPlayer,
+    local_index_of: &HashMap<Entity, usize>,
+) -> Vec<crate::render::config::SkinnedIkChainData> {
+    player
+        .ik_chains
+        .iter()
+        .enumerate()
+        .filter_map(|(chain_index, chain)| {
+            let resolve = |name: &str| {
+                player
+                    .bone_name_to_entity
+                    .get(name)
+                    .and_then(|joint| local_index_of.get(joint).copied())
+            };
+            Some(crate::render::config::SkinnedIkChainData {
+                chain_index: chain_index as u32,
+                root_local: resolve(&chain.root_bone)? as u32,
+                mid_local: resolve(&chain.mid_bone)? as u32,
+                tip_local: resolve(&chain.tip_bone)? as u32,
+                has_pole: chain.pole.is_some(),
+            })
+        })
+        .collect()
 }
 
 fn build_active_clip_channels(
@@ -251,7 +371,50 @@ fn build_skeletons(
                     .collect()
             })
             .unwrap_or_default();
+        let reference_joint_channels: Vec<HashMap<Entity, Vec<SkinnedChannelData>>> = player
+            .map(|player| {
+                player
+                    .layers
+                    .iter()
+                    .map(|layer| build_reference_joint_channels(player, layer))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let layer_modes: Vec<u32> = player
+            .map(|player| {
+                player
+                    .layers
+                    .iter()
+                    .map(|layer| match layer.blend_mode {
+                        crate::ecs::animation::components::LayerBlendMode::Additive => 1,
+                        crate::ecs::animation::components::LayerBlendMode::Override => 0,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         let layer_count = layer_joint_channels.len() as u32;
+
+        let root_motion_local_index = player.and_then(|player| {
+            if !player.root_motion {
+                return None;
+            }
+            let bone_name = player.root_motion_bone.as_ref()?;
+            let joint = player.bone_name_to_entity.get(bone_name)?;
+            local_index_of.get(joint).map(|index| *index as u32)
+        });
+
+        let ik_chains: Vec<crate::render::config::SkinnedIkChainData> = player
+            .map(|player| resolve_ik_chains(player, &local_index_of))
+            .unwrap_or_default();
+        let ik_multi_chains: Vec<crate::render::config::SkinnedMultiIkChainData> = player
+            .map(|player| resolve_multi_ik_chains(player, &local_index_of))
+            .unwrap_or_default();
+        let aim_constraints: Vec<crate::render::config::SkinnedAimConstraintData> = player
+            .map(|player| resolve_aim_constraints(player, &local_index_of))
+            .unwrap_or_default();
+        let spring_chains: Vec<crate::render::config::SkinnedSpringChainData> = player
+            .map(|player| resolve_spring_chains(world, player, &local_index_of))
+            .unwrap_or_default();
 
         let mut joints_ordered: Vec<SkinnedJointData> = Vec::with_capacity(order.len());
         for &local in &order {
@@ -272,6 +435,10 @@ fn build_skeletons(
                 .iter()
                 .map(|channels| channels.get(&joint).cloned().unwrap_or_default())
                 .collect();
+            let reference_channels: Vec<Vec<SkinnedChannelData>> = reference_joint_channels
+                .iter()
+                .map(|channels| channels.get(&joint).cloned().unwrap_or_default())
+                .collect();
 
             joints_ordered.push(SkinnedJointData {
                 local_index: local as u32,
@@ -286,6 +453,7 @@ fn build_skeletons(
                 rest_scale: [rest.scale.x, rest.scale.y, rest.scale.z],
                 pose_channels,
                 layer_channels,
+                reference_channels,
             });
         }
 
@@ -296,6 +464,12 @@ fn build_skeletons(
             joint_count: skin.joints.len() as u32,
             active_count,
             layer_count,
+            layer_modes,
+            root_motion_local_index,
+            ik_chains,
+            ik_multi_chains,
+            aim_constraints,
+            spring_chains,
             joints_ordered,
         });
     }
@@ -404,6 +578,136 @@ fn build_layer_joint_channels(
     joint_channels
 }
 
+fn resolve_multi_ik_chains(
+    player: &AnimationPlayer,
+    local_index_of: &HashMap<Entity, usize>,
+) -> Vec<crate::render::config::SkinnedMultiIkChainData> {
+    player
+        .ik_chains_multi
+        .iter()
+        .enumerate()
+        .filter_map(|(chain_index, chain)| {
+            if chain.bones.len() < 2 {
+                return None;
+            }
+            let mut joint_locals = Vec::with_capacity(chain.bones.len());
+            for bone in &chain.bones {
+                let joint = player.bone_name_to_entity.get(bone)?;
+                joint_locals.push(local_index_of.get(joint).copied()? as u32);
+            }
+            Some(crate::render::config::SkinnedMultiIkChainData {
+                chain_index: chain_index as u32,
+                joint_locals,
+            })
+        })
+        .collect()
+}
+
+fn resolve_spring_chains(
+    world: &World,
+    player: &AnimationPlayer,
+    local_index_of: &HashMap<Entity, usize>,
+) -> Vec<crate::render::config::SkinnedSpringChainData> {
+    player
+        .spring_chains
+        .iter()
+        .enumerate()
+        .filter_map(|(chain_index, chain)| {
+            if chain.bones.len() < 2 {
+                return None;
+            }
+            let mut joint_locals = Vec::with_capacity(chain.bones.len());
+            let mut rest_axes = Vec::with_capacity(chain.bones.len());
+            let mut bone_lengths = Vec::with_capacity(chain.bones.len());
+            for bone in &chain.bones {
+                let joint = *player.bone_name_to_entity.get(bone)?;
+                joint_locals.push(local_index_of.get(&joint).copied()? as u32);
+                let local = world
+                    .get::<crate::ecs::transform::components::LocalTransform>(joint)
+                    .map(|transform| transform.translation)
+                    .unwrap_or_else(nalgebra_glm::Vec3::zeros);
+                let length = local.magnitude();
+                let axis = if length > 1.0e-6 {
+                    local / length
+                } else {
+                    nalgebra_glm::Vec3::new(0.0, 1.0, 0.0)
+                };
+                rest_axes.push([axis.x, axis.y, axis.z]);
+                bone_lengths.push(length);
+            }
+            Some(crate::render::config::SkinnedSpringChainData {
+                chain_index: chain_index as u32,
+                joint_locals,
+                rest_axes,
+                bone_lengths,
+            })
+        })
+        .collect()
+}
+
+fn resolve_aim_constraints(
+    player: &AnimationPlayer,
+    local_index_of: &HashMap<Entity, usize>,
+) -> Vec<crate::render::config::SkinnedAimConstraintData> {
+    player
+        .aim_constraints
+        .iter()
+        .enumerate()
+        .filter_map(|(chain_index, constraint)| {
+            if constraint.bones.is_empty() {
+                return None;
+            }
+            let mut joint_locals = Vec::with_capacity(constraint.bones.len());
+            for bone in &constraint.bones {
+                let joint = player.bone_name_to_entity.get(bone)?;
+                joint_locals.push(local_index_of.get(joint).copied()? as u32);
+            }
+            Some(crate::render::config::SkinnedAimConstraintData {
+                chain_index: chain_index as u32,
+                joint_locals,
+                forward: [
+                    constraint.forward.x,
+                    constraint.forward.y,
+                    constraint.forward.z,
+                ],
+            })
+        })
+        .collect()
+}
+
+fn build_reference_joint_channels(
+    player: &AnimationPlayer,
+    layer: &AnimationLayer,
+) -> HashMap<Entity, Vec<SkinnedChannelData>> {
+    let mut joint_channels: HashMap<Entity, Vec<SkinnedChannelData>> = HashMap::new();
+    if layer.blend_mode != crate::ecs::animation::components::LayerBlendMode::Additive {
+        return joint_channels;
+    }
+    let Some(reference_index) = layer.reference_clip else {
+        return joint_channels;
+    };
+    let Some(clip) = player.clips.get(reference_index) else {
+        return joint_channels;
+    };
+    for channel in &clip.channels {
+        if !layer.mask.is_empty() {
+            let in_mask = channel
+                .target_bone_name
+                .as_ref()
+                .is_some_and(|name| layer.mask.iter().any(|masked| masked == name));
+            if !in_mask {
+                continue;
+            }
+        }
+        if let Some(owned) = build_channel(channel)
+            && let Some(target) = player.resolve_target_entity(channel)
+        {
+            joint_channels.entry(target).or_default().push(owned);
+        }
+    }
+    joint_channels
+}
+
 fn joint_depth(
     world: &World,
     joints: &[Entity],
@@ -462,7 +766,46 @@ fn static_signature(
                 for bone in &layer.mask {
                     bone.hash(&mut hasher);
                 }
+                matches!(
+                    layer.blend_mode,
+                    crate::ecs::animation::components::LayerBlendMode::Additive
+                )
+                .hash(&mut hasher);
+                layer.reference_clip.hash(&mut hasher);
                 0xffu8.hash(&mut hasher);
+            }
+            player.root_motion.hash(&mut hasher);
+            if let Some(bone) = &player.root_motion_bone {
+                bone.hash(&mut hasher);
+            }
+            player.ik_chains.len().hash(&mut hasher);
+            for chain in &player.ik_chains {
+                chain.root_bone.hash(&mut hasher);
+                chain.mid_bone.hash(&mut hasher);
+                chain.tip_bone.hash(&mut hasher);
+                chain.pole.is_some().hash(&mut hasher);
+            }
+            player.ik_chains_multi.len().hash(&mut hasher);
+            for chain in &player.ik_chains_multi {
+                for bone in &chain.bones {
+                    bone.hash(&mut hasher);
+                }
+                chain.iterations.hash(&mut hasher);
+                0xfeu8.hash(&mut hasher);
+            }
+            player.aim_constraints.len().hash(&mut hasher);
+            for constraint in &player.aim_constraints {
+                for bone in &constraint.bones {
+                    bone.hash(&mut hasher);
+                }
+                0xfdu8.hash(&mut hasher);
+            }
+            player.spring_chains.len().hash(&mut hasher);
+            for chain in &player.spring_chains {
+                for bone in &chain.bones {
+                    bone.hash(&mut hasher);
+                }
+                0xfcu8.hash(&mut hasher);
             }
         }
     }

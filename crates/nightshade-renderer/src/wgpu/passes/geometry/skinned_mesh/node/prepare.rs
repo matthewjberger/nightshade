@@ -185,6 +185,38 @@ impl SkinnedMeshPass {
             &self.bone_transforms_buffer,
             self.bone_transforms_generation,
         );
+        self.spring.update(
+            device,
+            queue,
+            configs,
+            &self.skinning_cache,
+            &self.bone_transforms_buffer,
+            self.bone_transforms_generation,
+        );
+        self.ik.update(
+            device,
+            queue,
+            configs,
+            &self.skinning_cache,
+            &self.bone_transforms_buffer,
+            self.bone_transforms_generation,
+        );
+        self.multi_ik.update(
+            device,
+            queue,
+            configs,
+            &self.skinning_cache,
+            &self.bone_transforms_buffer,
+            self.bone_transforms_generation,
+        );
+        self.aim.update(
+            device,
+            queue,
+            configs,
+            &self.skinning_cache,
+            &self.bone_transforms_buffer,
+            self.bone_transforms_generation,
+        );
 
         // Re-run the skinning compute when the bones moved, a buffer was
         // reallocated, or the GPU animation pass wrote fresh bone world

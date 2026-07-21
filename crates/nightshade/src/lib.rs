@@ -670,7 +670,19 @@ pub mod prelude {
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
-    pub use crate::ecs::animation::ik::{look_at_bone, solve_two_bone_ik};
+    pub use crate::ecs::animation::blend_tree::{Blend1DChild, Blend2DChild, BlendTree};
+    pub use crate::ecs::animation::components::{LayerBlendMode, LoopMode, SpringChain};
+    pub use crate::ecs::animation::compression::{clip_keyframe_count, compress_clip};
+    pub use crate::ecs::animation::graph::{
+        AnimationCondition, AnimationGraph, AnimationState, AnimationTransition,
+        animation_graph_add_state, animation_graph_add_transition,
+        animation_graph_current_state_name, animation_graph_set_entry, animation_graph_state_names,
+    };
+    pub use crate::ecs::animation::ik::{
+        AimConstraint, FootDefinition, IkChain, IkChainMulti, look_at_bone, solve_two_bone_ik,
+    };
+    pub use crate::ecs::animation::ragdoll::Ragdoll;
+    pub use crate::ecs::animation::retarget::{RetargetMap, retarget_clip, retarget_map_by_suffix};
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
     pub use crate::ecs::camera::commands::{

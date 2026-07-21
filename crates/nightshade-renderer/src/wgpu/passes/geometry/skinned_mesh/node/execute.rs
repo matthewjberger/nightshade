@@ -31,6 +31,48 @@ impl SkinnedMeshPass {
             self.animation.dispatch(&mut animation_pass);
         }
 
+        if self.spring.chain_count() > 0 {
+            let mut spring_pass =
+                context
+                    .encoder
+                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Skinned Spring Compute Pass"),
+                        timestamp_writes: None,
+                    });
+            self.spring.dispatch(&mut spring_pass);
+        }
+
+        if self.ik.chain_count() > 0 {
+            let mut ik_pass = context
+                .encoder
+                .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("Skinned IK Compute Pass"),
+                    timestamp_writes: None,
+                });
+            self.ik.dispatch(&mut ik_pass);
+        }
+
+        if self.multi_ik.chain_count() > 0 {
+            let mut multi_ik_pass =
+                context
+                    .encoder
+                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Skinned CCD IK Compute Pass"),
+                        timestamp_writes: None,
+                    });
+            self.multi_ik.dispatch(&mut multi_ik_pass);
+        }
+
+        if self.aim.constraint_count() > 0 {
+            let mut aim_pass = context
+                .encoder
+                .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("Skinned Aim Compute Pass"),
+                    timestamp_writes: None,
+                });
+            self.aim.dispatch(&mut aim_pass);
+        }
+
         if self.total_joints_to_dispatch > 0 {
             let mut compute_pass =
                 context
