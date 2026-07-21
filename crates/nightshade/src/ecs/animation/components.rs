@@ -1,9 +1,36 @@
 //! Animation component definitions.
 
+use crate::ecs::animation::blend_tree::BlendTree;
+use crate::ecs::animation::graph::AnimationGraph;
+use crate::ecs::animation::ik::IkChain;
 use nalgebra_glm::{Quat, Vec3};
 use nightshade_ecs::Entity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// One weighted contribution to the base pose. The graph and blend-tree
+/// interpreters emit these; the pose pipeline blends the whole set into
+/// `bone_transforms`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ActiveClip {
+    /// Index into the player's clip list.
+    pub clip_index: usize,
+    /// Playback time in seconds.
+    pub time: f32,
+    /// Current blend weight before normalization.
+    pub weight: f32,
+    /// Weight this clip ramps toward.
+    pub target_weight: f32,
+    /// Weight change per second; 0.0 snaps to `target_weight`.
+    pub fade_rate: f32,
+    /// Playback speed multiplier.
+    pub speed: f32,
+    /// Whether this clip wraps at its end.
+    pub looping: bool,
+    /// The clip that mirrors `AnimationPlayer::current_clip`/`time` for the legacy
+    /// playback API and seeks.
+    pub dominant: bool,
+}
 
 /// A named animation sequence with duration and channels.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -192,6 +219,34 @@ pub struct AnimationPlayer {
     /// masked to a subset of bones.
     #[serde(default)]
     pub layers: Vec<AnimationLayer>,
+    /// The weighted clip set the pose pipeline blends. Rebuilt each frame by the
+    /// graph/blend-tree interpreters or the legacy playback API.
+    #[serde(default, skip)]
+    pub active_clips: Vec<ActiveClip>,
+    /// Named parameters driving blend trees and graph transitions.
+    #[serde(default)]
+    pub parameters: HashMap<String, f32>,
+    /// Optional blend tree producing the base pose from `parameters`.
+    #[serde(default)]
+    pub blend_tree: Option<BlendTree>,
+    /// Optional state machine; supersedes `blend_tree` when present.
+    #[serde(default)]
+    pub graph: Option<AnimationGraph>,
+    /// Two-bone IK chains solved on the GPU pose after blending.
+    #[serde(default)]
+    pub ik_chains: Vec<IkChain>,
+    /// Whether root motion drives the entity transform from the root bone.
+    #[serde(default)]
+    pub root_motion: bool,
+    /// Name of the bone whose translation feeds root motion.
+    #[serde(default)]
+    pub root_motion_bone: Option<String>,
+    /// Previous-frame root translation, for per-frame delta extraction.
+    #[serde(default, skip)]
+    pub root_motion_previous: Option<Vec3>,
+    /// Previous-frame player time, to detect loop wraps in root motion.
+    #[serde(default, skip)]
+    pub root_motion_previous_time: f32,
 }
 
 impl Default for AnimationPlayer {
@@ -211,6 +266,15 @@ impl Default for AnimationPlayer {
             blend_factor: 1.0,
             blend_duration: 0.0,
             layers: Vec::new(),
+            active_clips: Vec::new(),
+            parameters: HashMap::new(),
+            blend_tree: None,
+            graph: None,
+            ik_chains: Vec::new(),
+            root_motion: false,
+            root_motion_bone: None,
+            root_motion_previous: None,
+            root_motion_previous_time: 0.0,
         }
     }
 }

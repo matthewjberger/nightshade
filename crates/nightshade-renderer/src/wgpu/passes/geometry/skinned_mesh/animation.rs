@@ -8,12 +8,12 @@ use wgpu::util::DeviceExt;
 struct GpuAnimBone {
     output_index: u32,
     parent_output_index: i32,
-    cur_channel_start: u32,
-    cur_channel_count: u32,
-    blend_channel_start: u32,
-    blend_channel_count: u32,
+    pose_start: u32,
+    pose_count: u32,
     layer_start: u32,
     layer_count: u32,
+    flags: u32,
+    pad0: u32,
     rest_translation: [f32; 4],
     rest_rotation: [f32; 4],
     rest_scale: [f32; 4],
@@ -21,7 +21,7 @@ struct GpuAnimBone {
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct GpuAnimBoneLayer {
+struct GpuAnimClip {
     channel_start: u32,
     channel_count: u32,
     runtime_index: u32,
@@ -46,18 +46,21 @@ struct GpuAnimChannel {
 struct GpuAnimSkeleton {
     bone_start: u32,
     bone_count: u32,
-    time: f32,
-    blend_from_time: f32,
-    blend_factor: f32,
     pad0: u32,
     pad1: u32,
-    pad2: u32,
     armature_root: [[f32; 4]; 4],
+}
+
+/// A runtime slot in the shared `clip_runtime` buffer: either an active base-pose
+/// clip or an animation layer, keyed by player and index into the matching
+/// snapshot runtime map.
+enum ClipSlot {
+    Pose { player: Entity, active_index: usize },
+    Layer { player: Entity, layer_index: usize },
 }
 
 struct SkeletonLayout {
     skin_entity: Entity,
-    player_entity: Entity,
     bone_start: u32,
     bone_count: u32,
 }
@@ -97,9 +100,9 @@ pub(super) struct SkinnedAnimationGpu {
     channels_buffer: wgpu::Buffer,
     times_buffer: wgpu::Buffer,
     values_buffer: wgpu::Buffer,
-    bone_layers_buffer: wgpu::Buffer,
-    layer_runtime_buffer: wgpu::Buffer,
-    runtime_slots: Vec<(Entity, usize)>,
+    bone_clips_buffer: wgpu::Buffer,
+    clip_runtime_buffer: wgpu::Buffer,
+    runtime_slots: Vec<ClipSlot>,
     layouts: Vec<SkeletonLayout>,
     cached_static_signature: u64,
     bone_transforms_generation: u64,
@@ -165,8 +168,8 @@ impl SkinnedAnimationGpu {
             channels_buffer: storage_buffer(device, "Anim Channels", &[]),
             times_buffer: storage_buffer(device, "Anim Times", &[]),
             values_buffer: storage_buffer(device, "Anim Values", &[]),
-            bone_layers_buffer: storage_buffer(device, "Anim Bone Layers", &[]),
-            layer_runtime_buffer: storage_buffer(device, "Anim Layer Runtime", &[]),
+            bone_clips_buffer: storage_buffer(device, "Anim Bone Clips", &[]),
+            clip_runtime_buffer: storage_buffer(device, "Anim Clip Runtime", &[]),
             runtime_slots: Vec::new(),
             layouts: Vec::new(),
             cached_static_signature: 0,
@@ -210,7 +213,7 @@ impl SkinnedAnimationGpu {
         }
 
         self.upload_skeletons(queue, snapshot);
-        self.upload_layer_runtime(queue, snapshot);
+        self.upload_clip_runtime(queue, snapshot);
     }
 
     fn rebuild_static(
@@ -220,7 +223,7 @@ impl SkinnedAnimationGpu {
         skinning_cache: &SkinningCache,
     ) {
         let mut bones: Vec<GpuAnimBone> = Vec::new();
-        let mut bone_layers: Vec<GpuAnimBoneLayer> = Vec::new();
+        let mut bone_clips: Vec<GpuAnimClip> = Vec::new();
         let mut flat = FlatChannels::default();
         let mut layouts: Vec<SkeletonLayout> = Vec::new();
         self.runtime_slots.clear();
@@ -234,10 +237,19 @@ impl SkinnedAnimationGpu {
             };
             let base_bone_index = skinning_cache.get_base_bone_index(skin_index);
 
+            let pose_slot_base = self.runtime_slots.len() as u32;
+            for active_index in 0..skeleton.active_count as usize {
+                self.runtime_slots.push(ClipSlot::Pose {
+                    player: skeleton.player_entity,
+                    active_index,
+                });
+            }
             let layer_slot_base = self.runtime_slots.len() as u32;
             for layer_index in 0..skeleton.layer_count as usize {
-                self.runtime_slots
-                    .push((skeleton.player_entity, layer_index));
+                self.runtime_slots.push(ClipSlot::Layer {
+                    player: skeleton.player_entity,
+                    layer_index,
+                });
             }
 
             let bone_start = bones.len() as u32;
@@ -247,18 +259,26 @@ impl SkinnedAnimationGpu {
                     None => -1,
                 };
 
-                let (cur_start, cur_count) = append_joint_channels(&mut flat, &joint.cur_channels);
-                let (blend_start, blend_count) =
-                    append_joint_channels(&mut flat, &joint.blend_channels);
+                let pose_start = bone_clips.len() as u32;
+                for (active_index, channels) in joint.pose_channels.iter().enumerate() {
+                    let (start, count) = append_joint_channels(&mut flat, channels);
+                    bone_clips.push(GpuAnimClip {
+                        channel_start: start,
+                        channel_count: count,
+                        runtime_index: pose_slot_base + active_index as u32,
+                        pad0: 0,
+                    });
+                }
+                let pose_count = joint.pose_channels.len() as u32;
 
-                let layer_start = bone_layers.len() as u32;
+                let layer_start = bone_clips.len() as u32;
                 let mut layer_count = 0u32;
                 for (layer_index, channels) in joint.layer_channels.iter().enumerate() {
                     let (start, count) = append_joint_channels(&mut flat, channels);
                     if count == 0 {
                         continue;
                     }
-                    bone_layers.push(GpuAnimBoneLayer {
+                    bone_clips.push(GpuAnimClip {
                         channel_start: start,
                         channel_count: count,
                         runtime_index: layer_slot_base + layer_index as u32,
@@ -270,12 +290,12 @@ impl SkinnedAnimationGpu {
                 bones.push(GpuAnimBone {
                     output_index: base_bone_index + joint.local_index,
                     parent_output_index,
-                    cur_channel_start: cur_start,
-                    cur_channel_count: cur_count,
-                    blend_channel_start: blend_start,
-                    blend_channel_count: blend_count,
+                    pose_start,
+                    pose_count,
                     layer_start,
                     layer_count,
+                    flags: 0,
+                    pad0: 0,
                     rest_translation: [
                         joint.rest_translation[0],
                         joint.rest_translation[1],
@@ -294,7 +314,6 @@ impl SkinnedAnimationGpu {
 
             layouts.push(SkeletonLayout {
                 skin_entity: skeleton.skin_entity,
-                player_entity: skeleton.player_entity,
                 bone_start,
                 bone_count: skeleton.joint_count,
             });
@@ -310,14 +329,11 @@ impl SkinnedAnimationGpu {
         self.times_buffer = storage_buffer(device, "Anim Times", bytemuck::cast_slice(&flat.times));
         self.values_buffer =
             storage_buffer(device, "Anim Values", bytemuck::cast_slice(&flat.values));
-        self.bone_layers_buffer = storage_buffer(
-            device,
-            "Anim Bone Layers",
-            bytemuck::cast_slice(&bone_layers),
-        );
+        self.bone_clips_buffer =
+            storage_buffer(device, "Anim Bone Clips", bytemuck::cast_slice(&bone_clips));
         let runtime_bytes = self.runtime_slots.len().max(1) * std::mem::size_of::<[f32; 2]>();
-        self.layer_runtime_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Anim Layer Runtime"),
+        self.clip_runtime_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Anim Clip Runtime"),
             size: runtime_bytes as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -337,11 +353,6 @@ impl SkinnedAnimationGpu {
         }
         let mut skeletons: Vec<GpuAnimSkeleton> = Vec::with_capacity(self.layouts.len());
         for layout in &self.layouts {
-            let (bone_count, time, blend_from_time, blend_factor) =
-                match snapshot.player_runtime.get(&layout.player_entity) {
-                    Some(runtime) => (layout.bone_count, runtime[0], runtime[1], runtime[2]),
-                    None => (0, 0.0, 0.0, 1.0),
-                };
             let armature_root = snapshot
                 .armature_roots
                 .get(&layout.skin_entity)
@@ -349,13 +360,9 @@ impl SkinnedAnimationGpu {
                 .unwrap_or_else(nalgebra_glm::Mat4::identity);
             skeletons.push(GpuAnimSkeleton {
                 bone_start: layout.bone_start,
-                bone_count,
-                time,
-                blend_from_time,
-                blend_factor,
+                bone_count: layout.bone_count,
                 pad0: 0,
                 pad1: 0,
-                pad2: 0,
                 armature_root: matrix_to_array(armature_root),
             });
         }
@@ -363,26 +370,33 @@ impl SkinnedAnimationGpu {
         queue.write_buffer(&self.skeletons_buffer, 0, bytemuck::cast_slice(&skeletons));
     }
 
-    fn upload_layer_runtime(&self, queue: &wgpu::Queue, snapshot: &SkinnedAnimationSnapshot) {
+    fn upload_clip_runtime(&self, queue: &wgpu::Queue, snapshot: &SkinnedAnimationSnapshot) {
         if self.runtime_slots.is_empty() {
             return;
         }
         let runtime: Vec<[f32; 2]> = self
             .runtime_slots
             .iter()
-            .map(|(player_entity, layer_index)| {
-                snapshot
-                    .layer_runtime
-                    .get(&(*player_entity, *layer_index))
+            .map(|slot| match slot {
+                ClipSlot::Pose {
+                    player,
+                    active_index,
+                } => snapshot
+                    .pose_runtime
+                    .get(&(*player, *active_index))
                     .copied()
-                    .unwrap_or([0.0, 0.0])
+                    .unwrap_or([0.0, 0.0]),
+                ClipSlot::Layer {
+                    player,
+                    layer_index,
+                } => snapshot
+                    .layer_runtime
+                    .get(&(*player, *layer_index))
+                    .copied()
+                    .unwrap_or([0.0, 0.0]),
             })
             .collect();
-        queue.write_buffer(
-            &self.layer_runtime_buffer,
-            0,
-            bytemuck::cast_slice(&runtime),
-        );
+        queue.write_buffer(&self.clip_runtime_buffer, 0, bytemuck::cast_slice(&runtime));
     }
 
     fn create_bind_group(
@@ -420,11 +434,11 @@ impl SkinnedAnimationGpu {
                 },
                 wgpu::BindGroupEntry {
                     binding: 6,
-                    resource: self.bone_layers_buffer.as_entire_binding(),
+                    resource: self.bone_clips_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 7,
-                    resource: self.layer_runtime_buffer.as_entire_binding(),
+                    resource: self.clip_runtime_buffer.as_entire_binding(),
                 },
             ],
         })

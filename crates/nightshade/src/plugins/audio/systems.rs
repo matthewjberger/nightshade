@@ -27,6 +27,9 @@ const VOICE_DUCKING_DEPTH_DB: f32 = -18.0;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn initialize_audio_system(world: &mut World) {
     let _span = tracing::info_span!("audio_init").entered();
+    if world.ecs.resource::<AudioEngine>().is_none() {
+        world.ecs.insert_resource(AudioEngine::default());
+    }
     let is_initialized = audio_engine_is_initialized(world.plugin_resource::<AudioEngine>());
     if !is_initialized
         && let Err(error) = audio_engine_initialize(world.plugin_resource_mut::<AudioEngine>())

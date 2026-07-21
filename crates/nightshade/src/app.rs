@@ -648,6 +648,16 @@ pub(crate) fn register_default_frame_systems(stages: &mut nightshade_ecs::Stages
     push_frame_system(
         stages,
         Stage::FrameUpdate,
+        crate::ecs::animation::systems::evaluate_animation_graphs,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
+        crate::ecs::animation::systems::evaluate_blend_trees,
+    );
+    push_frame_system(
+        stages,
+        Stage::FrameUpdate,
         crate::ecs::animation::systems::update_animation_players,
     );
     push_frame_system(

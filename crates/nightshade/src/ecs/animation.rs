@@ -58,10 +58,14 @@
 //!
 //! [`spawn_prefab_with_animations`]: crate::ecs::prefab::commands::spawn_prefab_with_animations
 
+pub mod blend_tree;
 pub mod components;
+pub mod graph;
 pub mod ik;
 pub mod systems;
 
+pub use blend_tree::*;
 pub use components::*;
-pub use ik::{look_at_bone, solve_two_bone_ik};
+pub use graph::*;
+pub use ik::{IkChain, look_at_bone, solve_two_bone_ik};
 pub use systems::*;

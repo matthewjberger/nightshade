@@ -1,18 +1,18 @@
 struct AnimBone {
     output_index: u32,
     parent_output_index: i32,
-    cur_channel_start: u32,
-    cur_channel_count: u32,
-    blend_channel_start: u32,
-    blend_channel_count: u32,
+    pose_start: u32,
+    pose_count: u32,
     layer_start: u32,
     layer_count: u32,
+    flags: u32,
+    pad0: u32,
     rest_translation: vec4<f32>,
     rest_rotation: vec4<f32>,
     rest_scale: vec4<f32>,
 }
 
-struct AnimBoneLayer {
+struct AnimClip {
     channel_start: u32,
     channel_count: u32,
     runtime_index: u32,
@@ -33,12 +33,8 @@ struct AnimChannel {
 struct AnimSkeleton {
     bone_start: u32,
     bone_count: u32,
-    time: f32,
-    blend_from_time: f32,
-    blend_factor: f32,
     pad0: u32,
     pad1: u32,
-    pad2: u32,
     armature_root: mat4x4<f32>,
 }
 
@@ -48,9 +44,10 @@ struct AnimSkeleton {
 @group(0) @binding(3) var<storage, read> times: array<f32>;
 @group(0) @binding(4) var<storage, read> values: array<vec4<f32>>;
 @group(0) @binding(5) var<storage, read_write> bone_transforms: array<mat4x4<f32>>;
-@group(0) @binding(6) var<storage, read> bone_layers: array<AnimBoneLayer>;
-// Per (skeleton, layer) runtime state: x is playback time, y is blend weight.
-@group(0) @binding(7) var<storage, read> layer_runtime: array<vec2<f32>>;
+// Pose clips then layer clips per bone, flattened; each references a clip_runtime slot.
+@group(0) @binding(6) var<storage, read> bone_clips: array<AnimClip>;
+// Per clip runtime state: x is playback time, y is blend weight.
+@group(0) @binding(7) var<storage, read> clip_runtime: array<vec2<f32>>;
 
 const PROPERTY_TRANSLATION: u32 = 0u;
 const PROPERTY_ROTATION: u32 = 1u;
@@ -281,29 +278,41 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     for (var local = 0u; local < skeleton.bone_count; local = local + 1u) {
         let bone = bones[skeleton.bone_start + local];
 
-        var local_matrix = sample_bone_local(
-            bone,
-            bone.cur_channel_start,
-            bone.cur_channel_count,
-            skeleton.time,
+        var local_matrix = compose_matrix(
+            bone.rest_translation.xyz,
+            quat_normalize(bone.rest_rotation),
+            bone.rest_scale.xyz,
         );
 
-        if (skeleton.blend_factor < 1.0 && bone.blend_channel_count > 0u) {
-            let from_matrix = sample_bone_local(
+        var running_weight = 0.0;
+        for (var pose_index = 0u; pose_index < bone.pose_count; pose_index = pose_index + 1u) {
+            let clip = bone_clips[bone.pose_start + pose_index];
+            let runtime = clip_runtime[clip.runtime_index];
+            let weight = runtime.y;
+            if (weight <= 0.0) {
+                continue;
+            }
+            let clip_matrix = sample_bone_local(
                 bone,
-                bone.blend_channel_start,
-                bone.blend_channel_count,
-                skeleton.blend_from_time,
+                clip.channel_start,
+                clip.channel_count,
+                runtime.x,
             );
-            local_matrix = blend_local(from_matrix, local_matrix, skeleton.blend_factor);
+            let factor = weight / (running_weight + weight);
+            local_matrix = blend_local(local_matrix, clip_matrix, factor);
+            running_weight = running_weight + weight;
+        }
+
+        if ((bone.flags & 1u) != 0u) {
+            local_matrix[3] = vec4<f32>(bone.rest_translation.xyz, 1.0);
         }
 
         for (var layer_index = 0u; layer_index < bone.layer_count; layer_index = layer_index + 1u) {
-            let layer = bone_layers[bone.layer_start + layer_index];
+            let layer = bone_clips[bone.layer_start + layer_index];
             if (layer.channel_count == 0u) {
                 continue;
             }
-            let runtime = layer_runtime[layer.runtime_index];
+            let runtime = clip_runtime[layer.runtime_index];
             if (runtime.y <= 0.0) {
                 continue;
             }

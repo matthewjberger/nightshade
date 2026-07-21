@@ -117,6 +117,9 @@ pub use systems::*;
 /// `world.plugin_resource_mut::<PhysicsWorld>().enabled`.
 #[cfg(feature = "physics")]
 pub fn install(world: &mut crate::ecs::world::World) {
+    if world.ecs.resource::<PhysicsWorld>().is_none() {
+        world.ecs.insert_resource(PhysicsWorld::default());
+    }
     world.plugin_resource_mut::<PhysicsWorld>().enabled = true;
 }
 

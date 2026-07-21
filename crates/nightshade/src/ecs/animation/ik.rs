@@ -4,8 +4,32 @@
 //! animation has posed the skeleton for the frame so the solve layers on top.
 
 use nalgebra_glm::{Quat, Vec3};
+use serde::{Deserialize, Serialize};
 
 use crate::ecs::world::{Entity, World};
+
+/// A two-bone IK chain authored by bone name and solved on the GPU pose. `target`
+/// and optional `pole` are world-space; `weight` blends the solved pose against
+/// the animated one. Stored on the [`AnimationPlayer`], one per active constraint.
+///
+/// [`AnimationPlayer`]: crate::ecs::animation::components::AnimationPlayer
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IkChain {
+    /// Name of the chain's root bone (e.g. the upper arm).
+    pub root_bone: String,
+    /// Name of the middle bone (e.g. the forearm).
+    pub mid_bone: String,
+    /// Name of the tip bone (e.g. the hand).
+    pub tip_bone: String,
+    /// World-space goal for the tip.
+    pub target: Vec3,
+    /// Optional world-space pole that biases the bend direction.
+    pub pole: Option<Vec3>,
+    /// Blend of the solved pose against the animated pose, 0.0 to 1.0.
+    pub weight: f32,
+    /// Whether the chain solves this frame.
+    pub enabled: bool,
+}
 
 fn world_position(world: &World, entity: Entity) -> Option<Vec3> {
     world

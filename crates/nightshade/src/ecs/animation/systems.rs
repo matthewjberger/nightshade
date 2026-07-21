@@ -1,6 +1,9 @@
+use crate::ecs::animation::blend_tree::{collect_blend_tree_clips, evaluate_blend_tree};
 use crate::ecs::animation::components::{
-    AnimationClip, AnimationProperty, AnimationValue, sample_animation_channel,
+    ActiveClip, AnimationClip, AnimationPlayer, AnimationProperty, AnimationValue,
+    sample_animation_channel,
 };
+use crate::ecs::animation::graph::evaluate_animation_graph;
 use crate::ecs::world::{ANIMATION_PLAYER, MORPH_WEIGHTS, World};
 use nalgebra_glm::{Quat, Vec3};
 use nightshade_ecs::Entity;
@@ -21,6 +24,11 @@ pub fn update_animation_players(world: &mut World) {
         let looping = player.looping;
         let current_clip = player.current_clip;
         player.update(delta_time);
+        if player.blend_tree.is_some() || player.graph.is_some() {
+            advance_active_clips(player, delta_time);
+        } else if !player.play_all {
+            sync_legacy_active_clips(player);
+        }
         if was_playing && !player.playing {
             finished.push(entity);
         }
@@ -323,4 +331,152 @@ fn apply_morph_weights_to_entity_and_children(world: &mut World, entity: Entity,
                 .children(current),
         );
     }
+}
+
+fn sync_legacy_active_clips(player: &mut AnimationPlayer) {
+    let mut active: Vec<ActiveClip> = Vec::new();
+    if let Some(current) = player.current_clip {
+        let blending = player.blend_from_clip.is_some();
+        let weight = if blending { player.blend_factor } else { 1.0 };
+        active.push(ActiveClip {
+            clip_index: current,
+            time: player.time,
+            weight,
+            target_weight: weight,
+            fade_rate: 0.0,
+            speed: player.speed,
+            looping: player.looping,
+            dominant: true,
+        });
+        if let Some(from) = player.blend_from_clip {
+            let from_weight = 1.0 - player.blend_factor;
+            active.push(ActiveClip {
+                clip_index: from,
+                time: player.blend_from_time,
+                weight: from_weight,
+                target_weight: from_weight,
+                fade_rate: 0.0,
+                speed: player.speed,
+                looping: player.looping,
+                dominant: false,
+            });
+        }
+    }
+    player.active_clips = active;
+}
+
+fn advance_active_clips(player: &mut AnimationPlayer, delta_time: f32) {
+    if player.active_clips.is_empty() {
+        return;
+    }
+    let durations: Vec<Option<f32>> = player
+        .active_clips
+        .iter()
+        .map(|active| {
+            player
+                .clips
+                .get(active.clip_index)
+                .map(|clip| clip.duration)
+        })
+        .collect();
+    for (active, duration) in player.active_clips.iter_mut().zip(durations) {
+        let Some(duration) = duration.filter(|value| *value > 0.0) else {
+            continue;
+        };
+        active.time += delta_time * active.speed;
+        if active.looping {
+            active.time = active.time.rem_euclid(duration);
+        } else if active.time > duration {
+            active.time = duration;
+        }
+    }
+}
+
+/// Rebuilds `active_clips` from a weighted clip set, preserving the playback time
+/// of any clip already active so motion stays continuous as weights shift, and
+/// marking the highest-weight clip dominant for the legacy playback API.
+pub fn set_blend_pose(player: &mut AnimationPlayer, all_clips: &[usize], weights: &[(usize, f32)]) {
+    let mut weight_map: HashMap<usize, f32> = HashMap::new();
+    for (clip_index, weight) in weights {
+        *weight_map.entry(*clip_index).or_insert(0.0) += *weight;
+    }
+    let mut previous_times: HashMap<usize, f32> = HashMap::new();
+    for active in &player.active_clips {
+        previous_times.insert(active.clip_index, active.time);
+    }
+    let mut new_active: Vec<ActiveClip> = Vec::with_capacity(all_clips.len());
+    for clip_index in all_clips {
+        let weight = weight_map.get(clip_index).copied().unwrap_or(0.0);
+        let time = previous_times.get(clip_index).copied().unwrap_or(0.0);
+        new_active.push(ActiveClip {
+            clip_index: *clip_index,
+            time,
+            weight,
+            target_weight: weight,
+            fade_rate: 0.0,
+            speed: 1.0,
+            looping: true,
+            dominant: false,
+        });
+    }
+    let dominant = new_active
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| {
+            a.weight
+                .partial_cmp(&b.weight)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(index, _)| index);
+    if let Some(dominant) = dominant {
+        new_active[dominant].dominant = true;
+        player.current_clip = Some(new_active[dominant].clip_index);
+        player.time = new_active[dominant].time;
+    }
+    player.active_clips = new_active;
+    player.playing = true;
+}
+
+/// Interprets each player's state graph into its weighted clip set. Runs before
+/// blend-tree evaluation; a graph supersedes a standalone blend tree.
+pub fn evaluate_animation_graphs(world: &mut World) {
+    let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
+    let player_key = world.ecs.worlds[CORE].register::<AnimationPlayer>();
+    world.ecs.worlds[CORE].for_each_mut(ANIMATION_PLAYER, 0, |_entity, table, idx| {
+        let player = &mut table.column_mut(player_key)[idx];
+        let Some(mut graph) = player.graph.take() else {
+            return;
+        };
+        let mut weights: Vec<(usize, f32)> = Vec::new();
+        let mut all_clips: Vec<usize> = Vec::new();
+        evaluate_animation_graph(
+            &mut graph,
+            &player.parameters,
+            delta_time,
+            &mut weights,
+            &mut all_clips,
+        );
+        player.graph = Some(graph);
+        set_blend_pose(player, &all_clips, &weights);
+    });
+}
+
+/// Interprets each player's blend tree into its weighted clip set, skipping any
+/// player driven by a state graph.
+pub fn evaluate_blend_trees(world: &mut World) {
+    let player_key = world.ecs.worlds[CORE].register::<AnimationPlayer>();
+    world.ecs.worlds[CORE].for_each_mut(ANIMATION_PLAYER, 0, |_entity, table, idx| {
+        let player = &mut table.column_mut(player_key)[idx];
+        if player.graph.is_some() {
+            return;
+        }
+        let Some(tree) = player.blend_tree.clone() else {
+            return;
+        };
+        let mut clips: Vec<usize> = Vec::new();
+        collect_blend_tree_clips(&tree, &mut clips);
+        let mut weights: Vec<(usize, f32)> = Vec::new();
+        evaluate_blend_tree(&tree, &player.parameters, 1.0, &mut weights);
+        set_blend_pose(player, &clips, &weights);
+    });
 }

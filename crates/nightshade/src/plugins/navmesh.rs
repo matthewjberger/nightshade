@@ -135,17 +135,28 @@ pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::wo
     push_frame_system(stages, Stage::FrameUpdate, systems::run_navmesh_systems);
 }
 
-/// Installs navmesh pathfinding through [`register_frame_systems`]. Without
-/// this plugin the frame stages carry no navigation work and agents stand
-/// still.
+/// Ensures the navmesh world resource exists so the pathfinding systems can
+/// run. Idempotent, so composing the plugin and driving the systems directly
+/// (as the API runner does) both work.
+#[cfg(feature = "navmesh")]
+pub fn install(world: &mut crate::ecs::world::World) {
+    if world.ecs.resource::<resources::NavMeshWorld>().is_none() {
+        world
+            .ecs
+            .insert_resource(resources::NavMeshWorld::default());
+    }
+}
+
+/// Installs navmesh pathfinding: [`install`] adds the world resource and
+/// [`register_frame_systems`] adds the pass. Without this plugin the frame
+/// stages carry no navigation work and agents stand still.
 #[cfg(feature = "navmesh")]
 pub struct NavmeshPlugin;
 
 #[cfg(feature = "navmesh")]
 impl crate::app::Plugin for NavmeshPlugin {
     fn build(&self, app: &mut crate::app::App) {
-        app.world
-            .insert_resource(crate::plugins::navmesh::resources::NavMeshWorld::default());
+        install(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

@@ -1461,10 +1461,8 @@ pub struct SkinnedJointData {
     pub rest_rotation: [f32; 4],
     /// Rest-pose scale.
     pub rest_scale: [f32; 3],
-    /// Animation channels for the current clip.
-    pub cur_channels: Vec<SkinnedChannelData>,
-    /// Animation channels for the cross-fade source clip.
-    pub blend_channels: Vec<SkinnedChannelData>,
+    /// Animation channels for each active base-pose clip, in weight-blend order.
+    pub pose_channels: Vec<Vec<SkinnedChannelData>>,
     /// Animation channels for each additional animation layer.
     pub layer_channels: Vec<Vec<SkinnedChannelData>>,
 }
@@ -1483,6 +1481,8 @@ pub struct SkinnedSkeletonData {
     pub armature_parent: Option<nightshade_ecs::Entity>,
     /// Number of joints in the skeleton.
     pub joint_count: u32,
+    /// Number of active base-pose clips the player blends.
+    pub active_count: u32,
     /// Number of animation layers the player exposes.
     pub layer_count: u32,
     /// Joints in the renderer's depth-first dispatch order.
@@ -1519,8 +1519,9 @@ pub struct SkinnedAnimationSnapshot {
     pub signature: u64,
     /// Resolved skeletons, rebuilt only when the animation gate sees a change.
     pub skeletons: Vec<SkinnedSkeletonData>,
-    /// Per-player runtime state (current time, blend time, blend duration).
-    pub player_runtime: std::collections::HashMap<nightshade_ecs::Entity, [f32; 3]>,
+    /// Per active base-pose clip runtime state (time and weight), keyed by player
+    /// and active-clip index.
+    pub pose_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 2]>,
     /// Per-layer runtime state (time and weight), keyed by player and layer.
     pub layer_runtime: std::collections::HashMap<(nightshade_ecs::Entity, usize), [f32; 2]>,
     /// Current armature-root world transform for each player.
