@@ -813,7 +813,6 @@ pub mod prelude {
     pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
     #[cfg(feature = "assets")]
     pub use crate::ecs::ui::widgets::world_layout::UiImageUpload;
-    pub use crate::ecs::ui::widgets::world_layout::open_url_in_browser;
     pub use crate::ecs::ui::{
         Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
         DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, Length, LengthExt,
@@ -846,6 +845,7 @@ pub mod prelude {
     };
     #[cfg(feature = "egui")]
     pub use crate::egui::{EguiState, egui_context};
+    pub use crate::platform::host::open_url;
     #[cfg(feature = "gamepad")]
     pub use crate::platform::input::gamepad::Gamepad;
     #[cfg(feature = "gamepad")]

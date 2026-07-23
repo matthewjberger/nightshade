@@ -59,7 +59,40 @@ pub mod time;
 pub mod timer;
 pub mod transform;
 pub mod tween;
-pub use nightshade_ui as ui;
+/// The retained UI, re-exported module by module. The list is the engine's
+/// supported surface: the widget vocabulary, the state the host drains, and
+/// the entry points a program calls. The UI's internal pipeline modules
+/// (`render_sync`, `systems`, `widget_systems`, `scope`, `taffy_layout`) stay
+/// out of it because `UiPlugin` is what runs them.
+pub mod ui {
+    pub use nightshade_ui::{
+        MAX_POPUP_HEIGHT, builder, color, components, compose_ui, default_ui_systems, icons, layer,
+        layout_types, prelude, register_ui_components, resources, scene, schema, state, testing,
+        theme, ui_world_indices, units, user_interface, widgets,
+    };
+
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        feature = "core"
+    ))]
+    pub use nightshade_ui::accessibility;
+
+    /// The widget vocabulary, mirroring what `nightshade-ui` re-exports at its
+    /// own root: the builders, the components, the layout and unit types, the
+    /// state resources, and the theme.
+    pub use nightshade_ui::builder::*;
+    pub use nightshade_ui::components::*;
+    pub use nightshade_ui::layout_types::*;
+    pub use nightshade_ui::resources::*;
+    pub use nightshade_ui::scope::*;
+    pub use nightshade_ui::state::*;
+    pub use nightshade_ui::theme::*;
+    pub use nightshade_ui::units::*;
+    pub use nightshade_ui::user_interface::*;
+    pub use nightshade_ui::widgets::{ContextMenuBuilder, TileBuilder};
+}
+
 pub mod vfx;
 pub mod water;
 pub mod world;
