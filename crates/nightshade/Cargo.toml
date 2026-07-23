@@ -179,6 +179,7 @@ nightshade-renderer = { workspace = true }
 nightshade-platform = { workspace = true }
 nightshade-text = { workspace = true, features = ["shaping"] }
 nightshade-ui = { workspace = true }
+nightshade-ui-data = { workspace = true }
 
 egui = { workspace = true, optional = true }
 egui_extras = { workspace = true, optional = true }

@@ -353,7 +353,7 @@ pub mod terrain_config;
 #[cfg(feature = "wgpu")]
 pub mod text_mesh;
 pub mod texture_data;
-pub mod ui_data;
+pub use nightshade_ui_data as ui_data;
 pub mod wind;
 
 #[cfg(feature = "wgpu")]
