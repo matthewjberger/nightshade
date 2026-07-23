@@ -804,6 +804,7 @@ impl Atmosphere {
 }
 
 /// Texture views for the image-based lighting inputs the lit passes bind.
+#[cfg(feature = "wgpu")]
 #[derive(Default)]
 pub struct IblViews {
     /// View of the precomputed split-sum `BRDF` lookup texture.
@@ -814,6 +815,7 @@ pub struct IblViews {
     pub prefiltered_view: Option<wgpu::TextureView>,
 }
 
+#[cfg(feature = "wgpu")]
 impl Clone for IblViews {
     fn clone(&self) -> Self {
         Self {
@@ -2022,7 +2024,7 @@ pub struct RenderShadowCasters {
 #[derive(Clone, Default)]
 pub struct RenderText {
     /// Cached glyph mesh for the text.
-    pub mesh: crate::text_data::TextMesh,
+    pub mesh: nightshade_text::text_data::TextMesh,
     /// Base fill color.
     pub color: nalgebra_glm::Vec4,
     /// Outline color.

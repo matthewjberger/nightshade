@@ -1,8 +1,8 @@
 use crate::ecs::text::components::TextProperties;
-use crate::render::text_data::FontKind;
 use crate::render::text_mesh::TextMeshParams;
 use crate::render::wgpu::WgpuRenderer;
 use crate::render::wgpu::pass_sync;
+use nightshade_text::text_data::FontKind;
 
 /// Resolves a text component into the renderer's shaping parameters, collapsing
 /// the monospace request onto the mono font and leaving the icon fonts as chosen.

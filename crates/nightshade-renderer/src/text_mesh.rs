@@ -1,9 +1,11 @@
-use crate::font_engine::FontEngine;
-use crate::text_data::{FontKind, TextAlignment, TextMesh, TextVertex, VerticalAlignment};
 use crate::wgpu;
 use crate::wgpu::glyph_atlas::{GlyphAlloc, GlyphAtlas};
-use cosmic_text::{Buffer, LayoutGlyph};
 use nalgebra_glm::{vec2, vec3};
+use nightshade_text::cosmic_text::{Buffer, LayoutGlyph};
+use nightshade_text::font_engine::FontEngine;
+use nightshade_text::text_data::{
+    FontKind, TextAlignment, TextMesh, TextVertex, VerticalAlignment,
+};
 
 const PIXELS_TO_WORLD: f32 = 0.01;
 

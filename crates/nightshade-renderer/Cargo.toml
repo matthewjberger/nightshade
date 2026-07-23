@@ -21,6 +21,7 @@ features = ["wgpu", "hdr", "egui", "grass", "terrain", "screenshot", "meshlet", 
 bytemuck = { workspace = true }
 enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
 nightshade-ecs = { workspace = true, features = ["dynamic"] }
+nightshade-text = { workspace = true }
 raw-window-handle = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
@@ -34,7 +35,6 @@ thiserror = { workspace = true, optional = true }
 
 image = { workspace = true, optional = true }
 half = { workspace = true, optional = true }
-cosmic-text = { workspace = true, optional = true }
 
 egui = { workspace = true, optional = true }
 egui-wgpu = { workspace = true, optional = true }
@@ -71,7 +71,7 @@ required-features = ["wgpu", "hdr"]
 [features]
 default = ["wgpu"]
 rendergraph = ["dep:wgpu", "dep:petgraph", "dep:thiserror"]
-text = ["dep:cosmic-text"]
+text = ["nightshade-text/shaping"]
 wgpu = ["rendergraph", "text", "dep:wgpu", "dep:naga_oil", "wgpu/wgsl", "wgpu/naga-ir", "wgpu/dx12", "wgpu/metal", "wgpu/vulkan", "wgpu/webgpu"]
 hdr = ["dep:image", "dep:half"]
 screenshot = ["dep:image"]

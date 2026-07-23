@@ -1,7 +1,7 @@
 //! Shelf-packed glyph atlas backing text rendering.
 
-use cosmic_text::{CacheKey, FontSystem, SwashCache, SwashContent};
 use nalgebra_glm::{Vec2, vec2};
+use nightshade_text::cosmic_text::{CacheKey, FontSystem, SwashCache, SwashContent};
 use std::collections::HashMap;
 
 const ATLAS_INITIAL_SIZE: u32 = 1024;

@@ -331,8 +331,6 @@ pub mod bounding_volume;
 pub mod bundles;
 pub mod config;
 pub mod core;
-#[cfg(feature = "text")]
-pub mod font_engine;
 pub mod generational_registry;
 pub mod geometry;
 #[cfg(feature = "grass")]
@@ -351,7 +349,6 @@ pub mod rendergraph;
 pub mod skinning;
 #[cfg(feature = "terrain")]
 pub mod terrain_config;
-pub mod text_data;
 /// Generation of textured glyph meshes from shaped text runs.
 #[cfg(feature = "wgpu")]
 pub mod text_mesh;

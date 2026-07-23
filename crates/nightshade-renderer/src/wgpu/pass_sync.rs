@@ -66,10 +66,10 @@ pub fn apply_frame_dirty_state(
 /// handles, so this is the seam where the two vocabularies meet.
 pub fn generate_world_text_mesh(
     renderer: &mut WgpuRenderer,
-    font_engine: &mut crate::font_engine::FontEngine,
+    font_engine: &mut nightshade_text::font_engine::FontEngine,
     text: &str,
     params: &crate::text_mesh::TextMeshParams,
-) -> crate::text_data::TextMesh {
+) -> nightshade_text::text_data::TextMesh {
     crate::text_mesh::generate_text_mesh_world(
         text,
         &mut crate::text_mesh::TextMeshContext {
@@ -85,11 +85,11 @@ pub fn generate_world_text_mesh(
 /// Rasterizes a retained-UI text mesh, growing the glyph atlas as needed.
 pub fn generate_ui_text_mesh(
     renderer: &mut WgpuRenderer,
-    font_engine: &mut crate::font_engine::FontEngine,
+    font_engine: &mut nightshade_text::font_engine::FontEngine,
     text: &str,
     params: &crate::text_mesh::TextMeshParams,
     wrap_width: Option<f32>,
-) -> crate::text_data::TextMesh {
+) -> nightshade_text::text_data::TextMesh {
     crate::text_mesh::generate_text_mesh_ui(
         text,
         &mut crate::text_mesh::TextMeshContext {

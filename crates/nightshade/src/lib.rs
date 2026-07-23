@@ -559,6 +559,7 @@ pub mod plugins;
 pub use nightshade_platform as platform;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
+pub use nightshade_text as text;
 #[cfg(feature = "runtime")]
 pub mod app;
 pub mod render_driver;
@@ -928,8 +929,6 @@ pub mod prelude {
     pub use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
     #[cfg(feature = "terrain")]
     pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
-    pub use crate::render::text_data::FontKind;
-    pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
     pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiRect, UiTextInstance};
     pub use crate::render::wgpu::texture_cache::{
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
@@ -944,6 +943,8 @@ pub mod prelude {
     #[cfg(feature = "assets")]
     pub use image;
     pub use nightshade_ecs;
+    pub use nightshade_text::text_data::FontKind;
+    pub use nightshade_text::text_data::{TextAlignment, VerticalAlignment};
     #[cfg(feature = "engine")]
     pub use rand::{self, Rng};
     pub use serde;

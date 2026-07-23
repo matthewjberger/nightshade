@@ -178,6 +178,7 @@ taffy = { workspace = true }
 
 nightshade-renderer = { workspace = true }
 nightshade-platform = { workspace = true }
+nightshade-text = { workspace = true, features = ["shaping"] }
 nightshade-ui = { workspace = true }
 
 egui = { workspace = true, optional = true }

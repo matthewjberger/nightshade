@@ -69,7 +69,7 @@ pub mod components {
         ParticleTextureUpload,
     };
     pub use crate::render::render_layer::RenderLayer;
-    pub use crate::render::text_data::{TextAlignment, VerticalAlignment};
+    pub use nightshade_text::text_data::{TextAlignment, VerticalAlignment};
 }
 
 pub mod resources {

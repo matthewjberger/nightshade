@@ -1,6 +1,6 @@
-use crate::text_data::TextVertex;
 use crate::wgpu::rendergraph::{PassExecutionContext, PassNode};
 use nalgebra_glm::{Mat4, Vec4};
+use nightshade_text::text_data::TextVertex;
 
 /// Render pass drawing signed-distance-field text, screen-space or billboarded.
 pub struct TextPass {
