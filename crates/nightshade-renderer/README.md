@@ -139,7 +139,7 @@ cached-viewport frames can run a cheap compose-only subset.
 |---------|--------------|
 | `wgpu` | Default. The renderer itself, on DX12, Metal, Vulkan, and WebGPU. Implies `rendergraph` and `text` |
 | `rendergraph` | The frame graph alone: pass scheduling, transient resource aliasing, store-op optimization |
-| `text` | The cosmic-text font engine and glyph shaping. Implied by `wgpu` |
+| `text` | Glyph meshing, pulling shaping from `nightshade-text`. Implied by `wgpu` |
 | `hdr` | HDR decoding and image loading for skyboxes and IBL captures |
 | `screenshot` | GPU readback capture to PNG (used by NS_SHOT headless capture) |
 | `egui` | An egui overlay pass |

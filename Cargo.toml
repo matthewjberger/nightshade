@@ -62,7 +62,7 @@ nightshade-renderer = { version = "0.56.0", path = "crates/nightshade-renderer",
 nightshade-platform = { version = "0.56.0", path = "crates/nightshade-platform" }
 nightshade-text = { version = "0.56.0", path = "crates/nightshade-text", default-features = false }
 nightshade-ui = { version = "0.56.0", path = "crates/nightshade-ui" }
-nightshade-ui-data = { version = "0.56.0", path = "crates/nightshade-ui-data" }
+nightshade-paint = { version = "0.56.0", path = "crates/nightshade-paint" }
 petgraph = { version = "0.8", features = ["serde-1"] }
 rapier3d = { version = "0.30", features = ["debug-render", "serde-serialize"] }
 raw-window-handle = "0.6.2"

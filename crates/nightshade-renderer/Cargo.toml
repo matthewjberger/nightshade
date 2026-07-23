@@ -22,7 +22,7 @@ bytemuck = { workspace = true }
 enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
 nightshade-ecs = { workspace = true, features = ["dynamic"] }
 nightshade-text = { workspace = true }
-nightshade-ui-data = { workspace = true }
+nightshade-paint = { workspace = true }
 raw-window-handle = { workspace = true }
 nalgebra = { workspace = true }
 nalgebra-glm = { workspace = true }
