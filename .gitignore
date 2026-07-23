@@ -16,9 +16,7 @@ logs/
 *.md
 !CLAUDE.md
 !apps/editor/*.md
-!crates/nightshade/*.md
-!crates/nightshade-api/*.md
-!crates/nightshade-renderer/*.md
+!crates/*/*.md
 !crates/nightshade-renderer/docs/*.md
 !crates/nightshade-renderer/template/*.md
 !template/*.md
