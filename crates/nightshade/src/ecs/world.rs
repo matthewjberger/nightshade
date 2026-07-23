@@ -332,6 +332,7 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
+        ecs.insert_resource(crate::ecs::ui::resources::UiWorldIndices { core: CORE, ui: UI });
         ecs.insert_resource(crate::ecs::ui::resources::RetainedUiState::default());
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
         ecs.insert_resource(crate::ecs::ui::UserInterface::default());
