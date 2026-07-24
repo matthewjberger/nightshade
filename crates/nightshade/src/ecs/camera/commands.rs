@@ -1,7 +1,6 @@
 use crate::ecs::camera::components::{
     ThirdPersonCamera, compute_pan_orbit_transform, compute_third_person_transform,
 };
-use crate::ecs::composition::components::*;
 use crate::ecs::world::{Entity, PAN_ORBIT_CAMERA, THIRD_PERSON_CAMERA, Vec2, Vec3, World};
 
 use crate::prelude::*;

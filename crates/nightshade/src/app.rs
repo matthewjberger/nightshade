@@ -735,12 +735,12 @@ pub(crate) fn register_default_frame_systems(stages: &mut nightshade_ecs::Stages
     push_frame_system(
         stages,
         Stage::Last,
-        crate::ecs::world::process_commands_system,
+        crate::ecs::builtins::process_commands_system,
     );
     push_frame_system(
         stages,
         Stage::Last,
-        crate::ecs::world::cleanup_unused_resources_system,
+        crate::ecs::builtins::cleanup_unused_resources_system,
     );
 }
 
@@ -1151,23 +1151,5 @@ impl Plugin for WindowPlugin {
         app.world
             .res_mut::<crate::platform::window::Window>()
             .start_hidden = false;
-    }
-}
-
-/// The standard composition: a visible window, logging, the renderer, and
-/// the UI systems. The capability plugins in [`crate::plugins`] stay
-/// opt-in: physics because most apps drive it per screen, and audio,
-/// gamepad, and egui so a program only acquires the devices and overlays
-/// it composes. Customize members at the call site with
-/// [`set`](PluginGroup::set) and [`disable`](PluginGroup::disable).
-pub struct DefaultPlugins;
-
-impl PluginGroup for DefaultPlugins {
-    fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::new()
-            .add_plugin(WindowPlugin::default())
-            .add_plugin(crate::plugins::log::LogPlugin::default())
-            .add_plugin(crate::plugins::render::RenderPlugin::default())
-            .add_plugin(crate::plugins::ui::UiPlugin)
     }
 }

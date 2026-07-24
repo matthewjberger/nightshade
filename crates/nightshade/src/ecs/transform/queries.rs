@@ -1,4 +1,4 @@
-use crate::ecs::composition::components::ChildOf;
+use crate::ecs::transform::components::ChildOf;
 use crate::ecs::world::CORE;
 use crate::ecs::world::PREFAB_SOURCE;
 use crate::ecs::world::World;

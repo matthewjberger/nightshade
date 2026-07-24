@@ -1,4 +1,4 @@
-use crate::ecs::composition::components::MaterialRef;
+use crate::ecs::material::components::MaterialRef;
 use crate::ecs::world::World;
 
 /// Switches every entity with [`MaterialVariants`] to the material that

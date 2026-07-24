@@ -25,7 +25,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
     let target = camera_position + forward;
 
     let projection = match &camera.projection {
-        crate::ecs::composition::components::Projection::Perspective(persp) => {
+        crate::ecs::camera::components::Projection::Perspective(persp) => {
             let constrained = world
                 .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
                 .map(|c| c.0);
@@ -36,9 +36,7 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
                 .unwrap_or(16.0 / 9.0);
             persp.matrix_with_aspect(aspect_ratio)
         }
-        crate::ecs::composition::components::Projection::Orthographic(_) => {
-            camera.projection.matrix()
-        }
+        crate::ecs::camera::components::Projection::Orthographic(_) => camera.projection.matrix(),
     };
 
     let view = nalgebra_glm::look_at(&camera_position, &target, &up);

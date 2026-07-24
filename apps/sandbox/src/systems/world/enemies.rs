@@ -1,5 +1,5 @@
 use crate::ecs::{ENEMY, Enemy};
-use nightshade::ecs::world::commands::spawn_material;
+use nightshade::ecs::builtins::spawn_material;
 use nightshade::prelude::*;
 use nightshade::render::material::Material;
 

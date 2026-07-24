@@ -1,11 +1,14 @@
-use crate::ecs::composition::components::{
-    BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
-};
+use crate::ecs::material::components::MaterialRef;
 use crate::ecs::material::resources::material_registry_insert;
+use crate::ecs::mesh::components::RenderMesh;
+use crate::ecs::primitives::{CastsShadow, Name};
+use crate::ecs::transform::components::LocalTransform;
 use crate::ecs::world::{
     BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME, Quat,
     RENDER_MESH, Vec3, World,
 };
+use crate::render::bounding_volume::BoundingVolume;
+use crate::render::material::Material;
 use nightshade_ecs::Entity;
 
 use crate::prelude::*;
@@ -22,7 +25,7 @@ pub fn spawn_mesh(world: &mut World, mesh_name: &str, position: Vec3, scale: Vec
     )[0];
 
     world.set(entity, Name(mesh_name.to_string()));
-    crate::ecs::world::commands::setup_entity_transforms(
+    crate::ecs::transform::systems::setup_entity_transforms(
         world,
         entity,
         LocalTransform {

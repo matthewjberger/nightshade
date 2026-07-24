@@ -1,6 +1,6 @@
 pub use crate::ecs::transform::queries::*;
 
-use crate::ecs::composition::components::{ChildOf, GlobalTransform};
+use crate::ecs::transform::components::{ChildOf, GlobalTransform};
 use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT, World};
 
 use crate::prelude::*;
@@ -254,4 +254,19 @@ fn remove_scale_from_matrix(matrix: nalgebra_glm::Mat4) -> nalgebra_glm::Mat4 {
     result[(2, 2)] = forward_normalized.z;
 
     result
+}
+
+/// Sets an entity's local transform, defaults its global transform, and
+/// propagates the subtree so children inherit it immediately.
+pub fn setup_entity_transforms(
+    world: &mut World,
+    entity: Entity,
+    local_transform: crate::ecs::transform::components::LocalTransform,
+) {
+    world.set(entity, local_transform);
+    world.set(
+        entity,
+        crate::ecs::transform::components::GlobalTransform::default(),
+    );
+    propagate_subtree_global_transforms(world, entity);
 }

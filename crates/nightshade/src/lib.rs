@@ -563,6 +563,7 @@ pub use nightshade_text as text;
 pub use nightshade_ui as ui;
 #[cfg(feature = "runtime")]
 pub mod app;
+pub mod default_plugins;
 pub mod render_driver;
 pub mod run;
 #[cfg(feature = "runtime")]
@@ -612,12 +613,13 @@ pub use systems::*;
 #[cfg(feature = "runtime")]
 pub mod prelude {
     pub use crate::app::{
-        App, DefaultPlugins, GameSystemMarker, ParamSystemMarker, Plugin, PluginGroup,
-        PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
+        App, GameSystemMarker, ParamSystemMarker, Plugin, PluginGroup, PluginGroupBuilder, Stage,
+        SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
     };
+    pub use crate::default_plugins::DefaultPlugins;
+    pub use crate::ecs::bootstrap::components::*;
+    pub use crate::ecs::bootstrap::resources::*;
     pub use crate::ecs::bundles::*;
-    pub use crate::ecs::composition::components::*;
-    pub use crate::ecs::composition::resources::*;
     pub use crate::ecs::events::{EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::script::components::GlobalScripts;
@@ -687,6 +689,13 @@ pub mod prelude {
     pub use crate::ecs::animation::retarget::{RetargetMap, retarget_clip, retarget_map_by_suffix};
     pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
     pub use crate::ecs::bounding_volume::systems::ensure_bounding_volumes;
+    pub use crate::ecs::builtins::{
+        despawn_entities_with_cache_cleanup, despawn_recursive_immediate, load_procedural_textures,
+        set_material_with_textures, spawn_3d_billboard_text_with_properties,
+        spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
+        spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_material, spawn_mesh_at,
+        spawn_plane_at, spawn_sphere_at, spawn_sun, spawn_sun_without_shadows, spawn_torus_at,
+    };
     pub use crate::ecs::camera::commands::{
         spawn_camera, spawn_ortho_camera, spawn_pan_orbit_camera, spawn_pan_orbit_camera_at,
         spawn_third_person_camera,
@@ -717,6 +726,7 @@ pub mod prelude {
         GpuPickRequest, GpuPickResult, GpuPicking, surface_pick_coords,
     };
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
+    pub use crate::ecs::light::commands::spawn_light_entity;
     pub use crate::ecs::loading::{
         LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
         loading_pipeline_allocate_source_image, loading_pipeline_completed,
@@ -801,13 +811,8 @@ pub mod prelude {
     pub use crate::ecs::vfx::systems::update_vfx_system;
     pub use crate::ecs::vfx::textures::{FLARE_SLOT, GLOW_SLOT, SMOKE_SLOT, upload_vfx_textures};
     pub use crate::ecs::world::commands::{
-        EcsCommand, RenderCommand, despawn_entities_with_cache_cleanup,
-        despawn_recursive_immediate, is_paused, load_hdr_skybox, load_hdr_skybox_from_path,
-        load_procedural_textures, pause, set_material_with_textures, set_paused, set_time_scale,
-        spawn_3d_billboard_text_with_properties, spawn_3d_text_with_properties, spawn_cone_at,
-        spawn_cube_at, spawn_cylinder_at, spawn_instanced_mesh, spawn_instanced_mesh_with_material,
-        spawn_light_entity, spawn_material, spawn_mesh_at, spawn_plane_at, spawn_sphere_at,
-        spawn_sun, spawn_sun_without_shadows, spawn_torus_at, time_scale, unpause,
+        EcsCommand, RenderCommand, is_paused, load_hdr_skybox, load_hdr_skybox_from_path, pause,
+        set_paused, set_time_scale, time_scale, unpause,
     };
     #[cfg(feature = "egui")]
     pub use crate::egui::{EguiState, egui_context};
@@ -1018,12 +1023,13 @@ pub mod prelude {
     pub use crate::plugins::file_watcher::FileWatcher;
 
     // === decap re-exports (generated) ===
+    pub use crate::ecs::builtins::register_material;
     pub use crate::ecs::transform::systems::{
         propagate_subtree_global_transforms, sync_hierarchy_index, update_parent,
     };
     pub use crate::ecs::world::commands::{
-        queue_ecs_command, queue_render_command, register_material, set_cursor_locked,
-        set_cursor_visible, spawn_entities, spawn_entities_ui,
+        queue_ecs_command, queue_render_command, set_cursor_locked, set_cursor_visible,
+        spawn_entities, spawn_entities_ui,
     };
     pub use crate::ui::widgets::world_canvas::{
         ui_canvas_arc, ui_canvas_circle, ui_canvas_circle_stroke, ui_canvas_clear,

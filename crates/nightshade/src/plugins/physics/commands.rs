@@ -97,7 +97,7 @@ pub fn spawn_static_physics_cube_with_material(
     );
 
     if let Some(bv) = world.get_mut::<crate::render::bounding_volume::BoundingVolume>(entity) {
-        *bv = crate::ecs::composition::components::BoundingVolume::from_mesh_type("Cube");
+        *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cube");
     }
 
     if let Some(rigid_body) =
@@ -191,7 +191,7 @@ pub fn spawn_dynamic_physics_sphere_with_material(
     );
 
     if let Some(bv) = world.get_mut::<crate::render::bounding_volume::BoundingVolume>(entity) {
-        *bv = crate::ecs::composition::components::BoundingVolume::from_mesh_type("Sphere");
+        *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Sphere");
     }
 
     if let Some(rigid_body) =
@@ -285,7 +285,7 @@ pub fn spawn_dynamic_physics_cube_with_material(
     );
 
     if let Some(bv) = world.get_mut::<crate::render::bounding_volume::BoundingVolume>(entity) {
-        *bv = crate::ecs::composition::components::BoundingVolume::from_mesh_type("Cube");
+        *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cube");
     }
 
     if let Some(rigid_body) =
@@ -380,7 +380,7 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
     );
 
     if let Some(bv) = world.get_mut::<crate::render::bounding_volume::BoundingVolume>(entity) {
-        *bv = crate::ecs::composition::components::BoundingVolume::from_mesh_type("Cylinder");
+        *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cylinder");
     }
 
     if let Some(rigid_body) =

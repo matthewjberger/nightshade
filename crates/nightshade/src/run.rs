@@ -97,9 +97,6 @@ use crate::ecs::world::World;
 use crate::render::wgpu;
 use winit::event::{DeviceEvent, WindowEvent};
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
-pub use crate::plugins::log::log_file_name;
-pub use crate::plugins::log::{LogConfig, LogRotation};
 pub use crate::state::{NextStateBuilder, RenderResources, State};
 
 mod file_drop;

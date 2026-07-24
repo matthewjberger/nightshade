@@ -2,7 +2,7 @@ use crate::systems::world::textures::{
     FLOOR_TEXTURE, OBSTACLE_TEXTURE, PLATFORM_TEXTURE, RAMP_TEXTURE, STAIRS_TEXTURE,
     prototype_material,
 };
-use nightshade::ecs::composition::components;
+use nightshade::ecs::bootstrap::components;
 use nightshade::prelude::*;
 
 pub const PLAYER_SPAWN_TAG: &str = "player_spawn";

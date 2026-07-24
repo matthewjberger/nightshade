@@ -1,5 +1,5 @@
-use crate::ecs::composition::components::Name;
 use crate::ecs::lines::components::Line;
+use crate::ecs::primitives::Name;
 use crate::ecs::world::{GLOBAL_TRANSFORM, LINES, LOCAL_TRANSFORM, NAME, VISIBILITY, World};
 use nalgebra_glm::{Vec3, Vec4, vec3};
 use rapier3d::na::UnitQuaternion;

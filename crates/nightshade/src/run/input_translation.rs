@@ -8,7 +8,7 @@ use winit::event::WindowEvent;
 
 pub(crate) fn input_event_system(world: &mut World, window_event: &WindowEvent) {
     let _span = tracing::info_span!("input_event").entered();
-    use crate::ecs::composition::events::Message;
+    use crate::ecs::bootstrap::events::Message;
     use crate::ecs::event_bus::commands::publish_event;
 
     if let Some(event) =

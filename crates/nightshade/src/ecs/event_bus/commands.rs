@@ -1,4 +1,4 @@
-use crate::ecs::composition::events::Message;
+use crate::ecs::event_bus::resources::Message;
 use crate::ecs::world::World;
 use std::any::Any;
 

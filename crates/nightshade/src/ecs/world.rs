@@ -20,21 +20,10 @@ pub use crate::platform::input::events::AppEvent;
 pub mod cleanup;
 pub mod commands;
 pub mod scratch;
-pub use commands::{
-    CommandQueues, EcsCommand, RenderCommand, cleanup_unused_resources_system,
-    despawn_entities_with_cache_cleanup, load_hdr_skybox, load_procedural_textures,
-    process_commands_system, set_material_with_textures, spawn_3d_billboard_text_with_properties,
-    spawn_3d_text_with_properties, spawn_cone_at, spawn_cube_at, spawn_cylinder_at,
-    spawn_instanced_mesh, spawn_instanced_mesh_with_material, spawn_mesh_at, spawn_plane_at,
-    spawn_sphere_at, spawn_sun, spawn_torus_at,
-};
+pub use commands::{CommandQueues, EcsCommand, RenderCommand, load_hdr_skybox};
 #[cfg(not(target_arch = "wasm32"))]
 pub use commands::{capture_screenshot, capture_screenshot_to_path};
 pub use scratch::Scratch;
-
-pub mod animation_systems {
-    pub use crate::ecs::animation::systems::{apply_animations, update_animation_players};
-}
 
 pub use nalgebra_glm::{Mat4, Quat, Vec2, Vec3, Vec4};
 pub use nightshade_ecs::Entity;

@@ -61,7 +61,8 @@ pub mod timer;
 pub mod transform;
 pub mod tween;
 
-pub mod composition;
+pub mod bootstrap;
+pub mod builtins;
 pub mod vfx;
 pub mod water;
 pub mod world;
