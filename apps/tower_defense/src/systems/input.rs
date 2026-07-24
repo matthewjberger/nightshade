@@ -65,8 +65,7 @@ pub fn input_system(
     }
 
     let pointer_over_ui = world
-        .res::<RetainedUiState>()
-        .interaction
+        .res::<RetainedUiInteraction>()
         .hovered_entity
         .is_some();
     let mouse_state = input.mouse.state;

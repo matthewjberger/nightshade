@@ -362,7 +362,7 @@ pub fn poll_gallery(mut gallery: ResMut<GalleryResources>, input: Res<Input>, wo
     }
 
     if let Some(action) = progress_action {
-        let bar = &mut world.res_mut::<RetainedUiState>().top_progress_bar;
+        let bar = &mut world.res_mut::<TopProgressBar>();
         match action {
             ProgressAction::Set(value) => bar.set(value),
             ProgressAction::Indeterminate => bar.set_indeterminate(),
@@ -460,11 +460,7 @@ enum ProgressAction {
 
 fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool) {
     let Some(label) = label else { return };
-    let theme = world
-        .res::<RetainedUiState>()
-        .theme_state
-        .active_theme()
-        .clone();
+    let theme = world.res::<ThemeState>().active_theme().clone();
     if let Some(color) = world.get_mut::<nightshade::ui::components::UiNodeColor>(label) {
         color.colors[UiBase::INDEX] = Some(if active {
             theme.text_color

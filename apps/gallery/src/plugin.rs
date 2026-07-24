@@ -21,7 +21,7 @@ impl Plugin for GalleryPlugin {
 fn initialize(gallery_world: &mut GalleryResources, world: &mut World) {
     world.res_mut::<RenderSettings>().render_world_to_swapchain = false;
     world.res_mut::<RenderSettings>().clear_color = [0.0, 0.0, 0.0, 1.0];
-    world.res_mut::<RetainedUiState>().background_color = None;
+    world.res_mut::<RetainedUiRuntime>().background_color = None;
 
     let camera = spawn_ortho_camera(world, vec2(0.0, 0.0));
     world.res_mut::<ActiveCamera>().0 = Some(camera);

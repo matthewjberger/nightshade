@@ -89,8 +89,7 @@ pub(crate) fn prepare_text_meshes(
 
     let mut frame_text = std::mem::take(
         &mut world
-            .res_mut::<crate::ui::resources::RetainedUiState>()
-            .frame
+            .res_mut::<crate::ui::resources::RetainedUiFrame>()
             .text_meshes,
     );
     let mut active_entities: std::collections::HashSet<nightshade_ecs::Entity> =
@@ -135,8 +134,7 @@ pub(crate) fn prepare_text_meshes(
     }
     pass_sync::retain_ui_text_signatures(renderer, &active_entities);
     world
-        .res_mut::<crate::ui::resources::RetainedUiState>()
-        .frame
+        .res_mut::<crate::ui::resources::RetainedUiFrame>()
         .text_meshes = frame_text;
 
     pass_sync::rebind_glyph_atlas_if_grown(renderer, pre_revision);

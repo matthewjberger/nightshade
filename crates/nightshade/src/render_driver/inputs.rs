@@ -150,7 +150,7 @@ fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let image_uploads = std::mem::take(
         &mut world
-            .res_mut::<crate::ui::resources::RetainedUiState>()
+            .res_mut::<crate::ui::resources::RetainedUiRuntime>()
             .pending_image_uploads,
     );
     for upload in image_uploads {
@@ -321,7 +321,11 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
     #[cfg(feature = "egui")]
     let egui_frame_inputs = crate::egui::take_egui_frame_inputs(world);
-    let retained = world.res_mut::<crate::ui::resources::RetainedUiState>();
+    let background_color = world
+        .res::<crate::ui::resources::RetainedUiRuntime>()
+        .background_color;
+    let render_slots = std::mem::take(world.res_mut::<crate::ui::resources::RenderSlotAllocator>());
+    let frame = world.res_mut::<crate::ui::resources::RetainedUiFrame>();
     RenderInputs {
         scene_world,
         settings,
@@ -335,14 +339,14 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         texture_store: Default::default(),
         pending_particle_textures: loading_particle_textures,
         ui: UiFrameInputs {
-            rects: std::mem::take(&mut retained.frame.rects),
-            rect_entities: std::mem::take(&mut retained.frame.rect_entities)
+            rects: std::mem::take(&mut frame.rects),
+            rect_entities: std::mem::take(&mut frame.rect_entities)
                 .into_iter()
                 .collect(),
-            images: std::mem::take(&mut retained.frame.ui_images),
-            text_meshes: std::mem::take(&mut retained.frame.text_meshes),
-            render_slots: std::mem::take(&mut retained.render_slots),
-            background_color: retained.background_color,
+            images: std::mem::take(&mut frame.ui_images),
+            text_meshes: std::mem::take(&mut frame.text_meshes),
+            render_slots,
+            background_color,
         },
         view: ViewInputs {
             active_camera,
@@ -422,12 +426,12 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         .res_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache = inputs.mesh_cache;
     *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = inputs.texture_cache;
-    let retained = world.res_mut::<crate::ui::resources::RetainedUiState>();
-    retained.frame.rects = inputs.ui.rects;
-    retained.frame.rect_entities = inputs.ui.rect_entities.into_iter().collect();
-    retained.frame.ui_images = inputs.ui.images;
-    retained.frame.text_meshes = inputs.ui.text_meshes;
-    retained.render_slots = inputs.ui.render_slots;
+    *world.res_mut::<crate::ui::resources::RenderSlotAllocator>() = inputs.ui.render_slots;
+    let frame = world.res_mut::<crate::ui::resources::RetainedUiFrame>();
+    frame.rects = inputs.ui.rects;
+    frame.rect_entities = inputs.ui.rect_entities.into_iter().collect();
+    frame.ui_images = inputs.ui.images;
+    frame.text_meshes = inputs.ui.text_meshes;
     if outputs.frame_executed {
         world
             .res_mut::<crate::ui::UserInterface>()

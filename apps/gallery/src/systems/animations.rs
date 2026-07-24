@@ -25,12 +25,8 @@ pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) 
         ui_progress_bar_set_value(world, progress, gallery.state.progress_value);
     }
 
-    let theme = world
-        .res::<RetainedUiState>()
-        .theme_state
-        .active_theme()
-        .clone();
-    world.res_mut::<RetainedUiState>().background_color = Some(theme.background_color);
+    let theme = world.res::<ThemeState>().active_theme().clone();
+    world.res_mut::<RetainedUiRuntime>().background_color = Some(theme.background_color);
     let accent_dim = vec4(
         theme.accent_color.x,
         theme.accent_color.y,

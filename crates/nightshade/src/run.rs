@@ -394,24 +394,23 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .res::<crate::platform::window::Window>()
         .handle
         .clone();
-    if world.res::<crate::ui::resources::RetainedUiState>().visible
+    if world
+        .res::<crate::ui::resources::RetainedUiRuntime>()
+        .visible
         && let Some(window_handle) = window_handle
     {
         let requested = world
-            .res::<crate::ui::resources::RetainedUiState>()
-            .interaction
+            .res::<crate::ui::resources::RetainedUiInteraction>()
             .requested_cursor;
         let applied = world
-            .res::<crate::ui::resources::RetainedUiState>()
-            .interaction
+            .res::<crate::ui::resources::RetainedUiInteraction>()
             .applied_cursor;
         if requested.is_some() && requested != applied {
             if let Some(cursor) = requested {
                 window_handle.set_cursor(cursor);
             }
             world
-                .res_mut::<crate::ui::resources::RetainedUiState>()
-                .interaction
+                .res_mut::<crate::ui::resources::RetainedUiInteraction>()
                 .applied_cursor = requested;
         } else if requested.is_none()
             && applied.is_some()
@@ -419,8 +418,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         {
             window_handle.set_cursor(winit::window::CursorIcon::Default);
             world
-                .res_mut::<crate::ui::resources::RetainedUiState>()
-                .interaction
+                .res_mut::<crate::ui::resources::RetainedUiInteraction>()
                 .applied_cursor = Some(winit::window::CursorIcon::Default);
         }
     }

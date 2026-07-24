@@ -908,8 +908,9 @@ pub mod prelude {
         SolidLayout, WindowLayout,
     };
     pub use crate::ui::resources::{
-        BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
-        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent,
+        BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas, RetainedUiDirty,
+        RetainedUiFrame, RetainedUiGamepadNav, RetainedUiInteraction, RetainedUiOverlays,
+        RetainedUiRuntime, ToastCorner, ToastSeverity, TopProgressBar, UiBreakpoint, UiEvent,
         UiImageLayerAllocator, UiViewport, WindowChrome, WindowShortcut, blend_color,
     };
     pub use crate::ui::testing::{UiTestDriver, UiTestResult, create_test_root, setup_test_scene};
