@@ -614,7 +614,7 @@ pub use systems::*;
 pub mod prelude {
     pub use crate::app::{
         App, GameSystemMarker, ParamSystemMarker, Plugin, PluginGroup, PluginGroupBuilder, Stage,
-        SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
+        SystemCollection, WorldSystemMarker, game_scope,
     };
     pub use crate::default_plugins::DefaultPlugins;
     pub use crate::ecs::bootstrap::components::*;
@@ -635,6 +635,7 @@ pub mod prelude {
     #[cfg(feature = "audio")]
     pub use crate::plugins::audio::AudioPlugin;
     pub use crate::plugins::camera_controller::CameraControllerPlugin;
+    pub use crate::plugins::core::CorePlugin;
     pub use crate::plugins::cutscene::CutscenePlugin;
     pub use crate::plugins::exit_on_escape::ExitOnEscapePlugin;
     #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
@@ -657,6 +658,7 @@ pub mod prelude {
     pub use crate::plugins::ui::{
         UiPlugin, build_default_retained_ui_schedule, run_retained_ui_schedule,
     };
+    pub use crate::plugins::window::WindowPlugin;
     pub use crate::render::config::{DebugDraw, RenderSettings};
     pub use crate::render::wind::Wind;
     pub use crate::render_driver::Viewport;

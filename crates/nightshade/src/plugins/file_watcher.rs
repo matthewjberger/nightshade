@@ -94,9 +94,112 @@ impl crate::app::Plugin for FileWatcherPlugin {
             .insert_resource(crate::plugins::file_watcher::FileWatcher::default());
         app.add_system(Stage::Last, poll_file_watcher_system);
         #[cfg(feature = "assets")]
-        app.add_system(
-            Stage::Last,
-            crate::ecs::asset_watcher::poll_asset_watcher_system,
-        );
+        app.add_system(Stage::Last, poll_asset_watcher_system);
     }
+}
+
+use crate::ecs::asset_watcher::{AssetKind, AssetWatcher};
+use crate::ecs::world::commands::{EcsCommand, RenderCommand};
+use crate::prelude::{queue_ecs_command, queue_render_command};
+
+/// Applies pending asset watches to the OS file watcher and reloads any
+/// texture or material whose backing file changed on disk.
+pub fn poll_asset_watcher_system(world: &mut crate::ecs::world::World) {
+    if world.ecs.resource::<FileWatcher>().is_none() {
+        return;
+    }
+    let pending = world
+        .plugin_resource_mut::<AssetWatcher>()
+        .take_pending_watches();
+    for (name, path, kind) in pending {
+        let key = format!("asset:{name}");
+        world
+            .plugin_resource_mut::<FileWatcher>()
+            .watch(key.clone(), path.clone());
+        world
+            .plugin_resource_mut::<AssetWatcher>()
+            .register_asset(key, name, path, kind);
+    }
+
+    let keys = world.plugin_resource::<AssetWatcher>().watched_keys();
+    for key in keys {
+        if world.plugin_resource_mut::<FileWatcher>().take_change(&key)
+            && let Some((kind, name, path)) =
+                world.plugin_resource::<AssetWatcher>().get_by_key(&key)
+        {
+            match kind {
+                AssetKind::Texture => reload_texture(world, name, path),
+                AssetKind::Material => reload_material(world, name, path),
+            }
+        }
+    }
+}
+
+fn reload_texture(world: &mut crate::ecs::world::World, name: String, path: PathBuf) {
+    tracing::info!(
+        "File changed on disk, reloading texture: {}",
+        path.display()
+    );
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            tracing::warn!("Failed to read changed file {}: {}", path.display(), error);
+            return;
+        }
+    };
+    let image = match image::load_from_memory(&bytes) {
+        Ok(image) => image.to_rgba8(),
+        Err(error) => {
+            tracing::warn!(
+                "Failed to decode changed image {}: {}",
+                path.display(),
+                error
+            );
+            return;
+        }
+    };
+    let (width, height) = image.dimensions();
+    tracing::info!("Queuing texture reload: {} ({}x{})", name, width, height);
+    queue_render_command(
+        world,
+        RenderCommand::ReloadTexture {
+            name,
+            rgba_data: image.into_raw(),
+            width,
+            height,
+        },
+    );
+}
+
+fn reload_material(world: &mut crate::ecs::world::World, name: String, path: PathBuf) {
+    tracing::info!(
+        "File changed on disk, reloading material: {}",
+        path.display()
+    );
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(error) => {
+            tracing::warn!("Failed to read material file {}: {}", path.display(), error);
+            return;
+        }
+    };
+    let material: crate::render::material::Material = match serde_json::from_str(&contents) {
+        Ok(material) => material,
+        Err(error) => {
+            tracing::warn!(
+                "Failed to parse material JSON {}: {}",
+                path.display(),
+                error
+            );
+            return;
+        }
+    };
+    tracing::info!("Queuing material reload: {}", name);
+    queue_ecs_command(
+        world,
+        EcsCommand::ReloadMaterial {
+            name,
+            material: Box::new(material),
+        },
+    );
 }

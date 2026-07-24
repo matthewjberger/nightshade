@@ -81,7 +81,11 @@ pub mod components;
 pub mod types;
 
 #[cfg(feature = "physics")]
+pub mod camera_collision;
+#[cfg(feature = "physics")]
 pub mod character_controller;
+#[cfg(feature = "physics")]
+pub mod collision_events;
 #[cfg(feature = "physics")]
 pub mod commands;
 #[cfg(all(feature = "physics", feature = "debug_render"))]
@@ -89,7 +93,11 @@ pub mod debug;
 #[cfg(feature = "physics")]
 pub mod events;
 #[cfg(feature = "physics")]
+pub mod foot_ik;
+#[cfg(feature = "physics")]
 pub mod joints;
+#[cfg(feature = "physics")]
+pub mod ragdoll;
 #[cfg(feature = "physics")]
 pub mod resources;
 #[cfg(feature = "physics")]
@@ -129,10 +137,11 @@ pub fn install(world: &mut crate::ecs::world::World) {
 pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::world::World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(stages, Stage::FrameUpdate, systems::run_physics_systems);
+    push_frame_system(stages, Stage::FrameUpdate, ragdoll::ragdoll_sync_system);
     push_frame_system(
         stages,
         Stage::FrameUpdate,
-        crate::ecs::event::emit_collision_events_system,
+        collision_events::emit_collision_events_system,
     );
 }
 
@@ -149,6 +158,8 @@ impl crate::app::Plugin for PhysicsPlugin {
         app.world
             .insert_resource(crate::plugins::physics::resources::PhysicsWorld::default());
         install(&mut app.world);
+        camera_collision::install_camera_collision(&mut app.world);
+        foot_ik::install_foot_ik_ground_query(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

@@ -153,7 +153,12 @@ fn spawn_model(sandbox_world: &mut SandboxResources, world: &mut World, body: En
             return;
         }
     };
-    nightshade::ecs::loading::queue_gltf_load(world, &mut result);
+    nightshade::ecs::loading::queue_gltf_load(
+        world,
+        std::mem::take(&mut result.encoded_images),
+        std::mem::take(&mut result.texture_plan),
+        std::mem::take(&mut result.meshes),
+    );
     let Some(prefab) = result.prefabs.first().cloned() else {
         return;
     };

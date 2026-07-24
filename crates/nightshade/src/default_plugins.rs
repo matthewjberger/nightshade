@@ -1,7 +1,8 @@
 //! The standard plugin bundle composed above the [`App`](crate::app::App)
 //! core and the capability plugins it names.
 
-use crate::app::{PluginGroup, PluginGroupBuilder, WindowPlugin};
+use crate::app::{PluginGroup, PluginGroupBuilder};
+use crate::plugins::window::WindowPlugin;
 
 /// The standard composition: a visible window, logging, the renderer, and
 /// the UI systems. The capability plugins in [`crate::plugins`] stay
@@ -14,6 +15,7 @@ pub struct DefaultPlugins;
 impl PluginGroup for DefaultPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::new()
+            .add_plugin(crate::plugins::core::CorePlugin)
             .add_plugin(WindowPlugin::default())
             .add_plugin(crate::plugins::log::LogPlugin::default())
             .add_plugin(crate::plugins::render::RenderPlugin::default())

@@ -377,6 +377,8 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::scene::ScenePrefabs::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
+        ecs.insert_resource(crate::ecs::camera::resources::CameraCollision::default());
+        ecs.insert_resource(crate::ecs::animation::systems::FootIkGroundQuery::default());
         #[cfg(feature = "grass")]
         ecs.insert_resource(crate::render::grass_config::GrassSettings::default());
         #[cfg(feature = "terrain")]

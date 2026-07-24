@@ -48,6 +48,7 @@ impl Plugin for RenderPlugin {
         app.world
             .res_mut::<crate::render_driver::Viewport>()
             .create_renderer = true;
+        app.set_runner_if_unset(crate::plugins::window::run_windowed);
         if let Some(vsync) = self.vsync {
             app.world
                 .res_mut::<crate::render::config::RenderSettings>()

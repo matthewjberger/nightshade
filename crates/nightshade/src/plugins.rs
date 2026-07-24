@@ -6,6 +6,7 @@
 
 pub mod audio;
 pub mod camera_controller;
+pub mod core;
 pub mod cutscene;
 pub mod exit_on_escape;
 #[cfg(all(feature = "file_watcher", not(target_arch = "wasm32")))]
@@ -23,3 +24,4 @@ pub mod steam;
 #[cfg(feature = "terrain")]
 pub mod terrain;
 pub mod ui;
+pub mod window;

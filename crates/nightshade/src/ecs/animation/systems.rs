@@ -443,10 +443,8 @@ pub fn resolve_bone_world_transform(
 /// Steers each leg's two-bone IK chain so the foot plants on the ground it stands
 /// over, never below the animated pose. Raycasts the physics world from each
 /// foot's animated position.
-#[cfg(feature = "physics")]
 type FootProbe = (usize, String, String, String, f32, f32);
 
-#[cfg(feature = "physics")]
 fn entity_forward(world: &World, entity: Entity) -> Vec3 {
     world
         .get::<crate::ecs::transform::components::GlobalTransform>(entity)
@@ -466,7 +464,6 @@ fn entity_forward(world: &World, entity: Entity) -> Vec3 {
 /// never splay sideways the way the animated-plane fallback does when the leg
 /// passes through straight; the sign comes from which side the animated knee sits
 /// on, preserving the natural fore/aft bend of each limb.
-#[cfg(feature = "physics")]
 fn sagittal_pole(hip: Vec3, knee: Vec3, foot: Vec3, forward: Vec3) -> Vec3 {
     let chord_mid = (hip + foot) * 0.5;
     let sign = if (knee - chord_mid).dot(&forward) >= 0.0 {
@@ -478,7 +475,18 @@ fn sagittal_pole(hip: Vec3, knee: Vec3, foot: Vec3, forward: Vec3) -> Vec3 {
     knee + forward * (sign * span)
 }
 
-#[cfg(feature = "physics")]
+/// An optional ground-query resolver for foot IK: casts a ray and returns
+/// the ground hit point, if any. The physics plugin installs one; without it
+/// foot IK leaves feet at their animated positions. Kept opaque so the
+/// animation domain does not depend on the physics plugin.
+type FootIkGroundResolver =
+    Box<dyn Fn(&World, Vec3, Vec3, f32, Option<Entity>) -> Option<Vec3> + Send + Sync>;
+
+#[derive(Default)]
+pub struct FootIkGroundQuery {
+    pub resolver: Option<FootIkGroundResolver>,
+}
+
 pub fn foot_ik_system(world: &mut World) {
     let mut player_feet: Vec<(Entity, Vec<FootProbe>)> = Vec::new();
     for (entity, player) in world
@@ -506,6 +514,7 @@ pub fn foot_ik_system(world: &mut World) {
         player_feet.push((entity, feet));
     }
 
+    let ground_query = world.res_mut::<FootIkGroundQuery>().resolver.take();
     let mut updates: Vec<(Entity, usize, Vec3, Option<Vec3>, bool)> = Vec::new();
     for (entity, feet) in player_feet {
         let forward = entity_forward(world, entity);
@@ -524,18 +533,18 @@ pub fn foot_ik_system(world: &mut World) {
                 _ => None,
             };
             let origin = foot_position + Vec3::new(0.0, ray_length, 0.0);
-            let physics =
-                world.plugin_resource::<crate::plugins::physics::resources::PhysicsWorld>();
-            let hit = crate::plugins::physics::resources::physics_world_cast_ray(
-                physics,
-                origin,
-                Vec3::new(0.0, -1.0, 0.0),
-                ray_length * 2.0,
-                Some(entity),
-            );
-            let (target, enabled) = match hit {
-                Some(hit) => {
-                    let desired_y = (hit.point.y + foot_height).max(foot_position.y);
+            let hit_point = ground_query.as_ref().and_then(|resolve| {
+                resolve(
+                    world,
+                    origin,
+                    Vec3::new(0.0, -1.0, 0.0),
+                    ray_length * 2.0,
+                    Some(entity),
+                )
+            });
+            let (target, enabled) = match hit_point {
+                Some(point) => {
+                    let desired_y = (point.y + foot_height).max(foot_position.y);
                     (Vec3::new(foot_position.x, desired_y, foot_position.z), true)
                 }
                 None => (foot_position, false),
@@ -543,6 +552,7 @@ pub fn foot_ik_system(world: &mut World) {
             updates.push((entity, chain_index, target, pole, enabled));
         }
     }
+    world.res_mut::<FootIkGroundQuery>().resolver = ground_query;
 
     for (entity, chain_index, target, pole, enabled) in updates {
         if let Some(player) =

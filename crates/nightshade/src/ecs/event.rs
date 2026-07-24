@@ -166,29 +166,3 @@ pub fn advance_event_frame_system(world: &mut World) {
     let events = world.res_mut::<crate::ecs::event::Events>();
     events.cycle = events.cycle.wrapping_add(1);
 }
-
-/// Reads the physics collision events produced by the last physics step and
-/// republishes them as [`Event::Collision`] for participants.
-#[cfg(feature = "physics")]
-pub fn emit_collision_events_system(world: &mut World) {
-    use crate::plugins::physics::events::CollisionEventKind;
-    use crate::plugins::physics::resources::PhysicsWorld;
-    if world.ecs.resource::<PhysicsWorld>().is_none() {
-        return;
-    }
-    let collisions = crate::plugins::physics::resources::physics_world_collision_events(
-        world.plugin_resource::<PhysicsWorld>(),
-    )
-    .to_vec();
-    for collision in collisions {
-        emit_event(
-            world,
-            Event::Collision {
-                a: collision.entity_a,
-                b: collision.entity_b,
-                sensor: collision.is_sensor,
-                started: collision.kind == CollisionEventKind::Started,
-            },
-        );
-    }
-}

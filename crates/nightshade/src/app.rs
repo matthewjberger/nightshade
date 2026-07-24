@@ -581,7 +581,7 @@ impl Stage {
         Stage::Last,
     ];
 
-    const FRAME_STAGES: [Stage; 5] = [
+    pub(crate) const FRAME_STAGES: [Stage; 5] = [
         Stage::FrameStart,
         Stage::FrameUpdate,
         Stage::FramePostUpdate,
@@ -602,160 +602,6 @@ impl Stage {
             Stage::Last => "last",
         }
     }
-}
-
-/// Pushes a plain per-frame system into a named frame stage of `stages`,
-/// naming it the same way [`App::add_system`] does so the App and
-/// runner-owned frame stages register systems identically.
-pub(crate) fn push_frame_system<F>(
-    stages: &mut nightshade_ecs::Stages<World>,
-    stage: Stage,
-    system: F,
-) where
-    F: FnMut(&mut World) + Send + 'static,
-{
-    stages
-        .stage_mut(stage.name())
-        .push(std::any::type_name_of_val(&system), system);
-}
-
-/// Registers the engine's default per-frame systems into the frame stages
-/// of `stages`, which must already declare the [`Stage::FRAME_STAGES`]. Both
-/// [`App::new`] and [`build_default_frame_stages`] populate through this, so
-/// the App and runner-owned schedules stay in lock-step.
-pub(crate) fn register_default_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
-    push_frame_system(
-        stages,
-        Stage::FrameStart,
-        crate::ecs::event::advance_event_frame_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::graphics::systems::day_night_cycle_system,
-    );
-    #[cfg(target_arch = "wasm32")]
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::camera::systems::sync_wasm_canvas_size,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::bounding_volume::systems::ensure_bounding_volumes,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::evaluate_animation_graphs,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::evaluate_blend_trees,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::update_animation_players,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::apply_animations,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::apply_root_motion,
-    );
-    #[cfg(feature = "physics")]
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::systems::foot_ik_system,
-    );
-    #[cfg(feature = "physics")]
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::animation::ragdoll::ragdoll_sync_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::tween::update_tweens_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::particles::systems::update_particle_emitters,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::cloth::systems::sync_cloth_meshes_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::FrameUpdate,
-        crate::ecs::vfx::systems::update_vfx_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::FramePostUpdate,
-        crate::ecs::transform::systems::run_systems,
-    );
-    push_frame_system(
-        stages,
-        Stage::FramePostUpdate,
-        crate::ecs::mesh::systems::update_instanced_mesh_caches_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::input::systems::apply_ime_allowed_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::input::systems::reset_mouse_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::input::systems::reset_keyboard_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::input::systems::reset_touch_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::builtins::process_commands_system,
-    );
-    push_frame_system(
-        stages,
-        Stage::Last,
-        crate::ecs::builtins::cleanup_unused_resources_system,
-    );
-}
-
-/// Builds a [`nightshade_ecs::Stages`] holding only the engine's frame stages,
-/// populated with the default per-frame systems, for runners that drive
-/// their own [`State`] loop instead of composing an [`App`]. The stage
-/// order matches the tail of [`App`]'s stages, so a runner that runs these
-/// after its own logic reproduces the App's per-frame order.
-pub fn build_default_frame_stages() -> nightshade_ecs::Stages<World> {
-    let mut stages = nightshade_ecs::Stages::new();
-    for stage in Stage::FRAME_STAGES {
-        stages.add_stage(stage.name());
-    }
-    register_default_frame_systems(&mut stages);
-    stages
 }
 
 /// Removes `system` from the frame stages, returning whether anything was
@@ -794,6 +640,21 @@ type UpdateRenderGraphFn = Box<
     ),
 >;
 
+/// Pushes a plain per-frame system into a named frame stage of `stages`,
+/// naming it the same way [`App::add_system`] does so the App and
+/// runner-owned frame stages register systems identically.
+pub(crate) fn push_frame_system<F>(
+    stages: &mut nightshade_ecs::Stages<World>,
+    stage: Stage,
+    system: F,
+) where
+    F: FnMut(&mut World) + Send + 'static,
+{
+    stages
+        .stage_mut(stage.name())
+        .push(std::any::type_name_of_val(&system), system);
+}
+
 /// The plugin-composed application: the world, a startup schedule that
 /// runs once, and per-frame [`Stage`]s that plugins push systems into.
 ///
@@ -828,7 +689,6 @@ impl App {
         for stage in Stage::PER_FRAME {
             stages.add_stage(stage.name());
         }
-        register_default_frame_systems(&mut stages);
         let mut world = World::default();
         world
             .res_mut::<crate::platform::window::Window>()
@@ -977,6 +837,19 @@ impl App {
     /// however its host requires. This is how a plugin claims the main
     /// loop itself, the way `WorkerHostPlugin` hosts the engine inside a
     /// web worker.
+    /// Installs `runner` only if no runner has been set yet. Capability
+    /// plugins that own the main loop (window, renderer) use this so the
+    /// first one composed wins and an explicit [`set_runner`](App::set_runner)
+    /// still overrides them.
+    pub fn set_runner_if_unset(
+        &mut self,
+        runner: impl FnOnce(App) -> Result<(), Box<dyn std::error::Error>> + 'static,
+    ) {
+        if self.runner.is_none() {
+            self.runner = Some(Box::new(runner));
+        }
+    }
+
     pub fn set_runner(
         &mut self,
         runner: impl FnOnce(App) -> Result<(), Box<dyn std::error::Error>> + 'static,
@@ -999,26 +872,10 @@ impl App {
             return runner(self);
         }
 
-        if self
-            .world
-            .res::<crate::platform::window::Window>()
-            .start_hidden
-            && !self
-                .world
-                .res::<crate::render_driver::Viewport>()
-                .create_renderer
-        {
-            let mut world = self.world;
-            self.startup.run(&mut world);
-            self.stages.run(&mut world);
-            return Ok(());
-        }
-
-        let log_guards = std::mem::take(&mut self.log_guards);
-        let (world, state) = self.into_parts();
-        let result = crate::run::launch_with_world(state, world);
-        drop(log_guards);
-        result
+        let mut world = self.world;
+        self.startup.run(&mut world);
+        self.stages.run(&mut world);
+        Ok(())
     }
 
     /// Takes the log appender guards out of the app. A custom runner calls
@@ -1122,34 +979,5 @@ impl State for StageState {
         for hook in &mut self.update_render_graph {
             hook(graph, world);
         }
-    }
-}
-
-/// Adds the winit event loop and a visible window.
-pub struct WindowPlugin {
-    pub title: String,
-    pub size: Option<(u32, u32)>,
-}
-
-impl Default for WindowPlugin {
-    fn default() -> Self {
-        Self {
-            title: "Nightshade".to_string(),
-            size: None,
-        }
-    }
-}
-
-impl Plugin for WindowPlugin {
-    fn build(&self, app: &mut App) {
-        app.world.res_mut::<crate::platform::window::Window>().title = self.title.clone();
-        if self.size.is_some() {
-            app.world
-                .res_mut::<crate::platform::window::Window>()
-                .initial_size = self.size;
-        }
-        app.world
-            .res_mut::<crate::platform::window::Window>()
-            .start_hidden = false;
     }
 }
