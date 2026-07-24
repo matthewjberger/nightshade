@@ -20,6 +20,7 @@ impl Default for WindowPlugin {
 
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugin_if_absent(crate::plugins::core::CorePlugin);
         app.world.res_mut::<crate::platform::window::Window>().title = self.title.clone();
         if self.size.is_some() {
             app.world

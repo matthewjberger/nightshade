@@ -15,7 +15,6 @@ pub struct DefaultPlugins;
 impl PluginGroup for DefaultPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::new()
-            .add_plugin(crate::plugins::core::CorePlugin)
             .add_plugin(WindowPlugin::default())
             .add_plugin(crate::plugins::log::LogPlugin::default())
             .add_plugin(crate::plugins::render::RenderPlugin::default())

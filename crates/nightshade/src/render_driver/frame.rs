@@ -29,7 +29,7 @@ pub fn render_frame(
 
 pub fn configure_with_state(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
-    state: &mut dyn crate::run::State,
+    state: &mut dyn crate::state::State,
 ) -> Result<(), Box<dyn std::error::Error>> {
     pass_sync::rebind_glyph_atlas(renderer);
 
@@ -37,7 +37,7 @@ pub fn configure_with_state(
         &mut renderer.graph,
         &renderer.device,
         renderer.surface_format,
-        crate::run::RenderResources {
+        crate::state::RenderResources {
             scene_color: renderer.targets.scene_color,
             depth: renderer.targets.depth,
             compute_output: renderer.targets.compute_output,
@@ -60,7 +60,7 @@ pub fn configure_with_state(
 
 pub fn update_with_state(
     renderer: &mut crate::render::wgpu::WgpuRenderer,
-    state: &mut dyn crate::run::State,
+    state: &mut dyn crate::state::State,
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pending_font_loads: Vec<_> = world

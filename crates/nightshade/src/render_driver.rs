@@ -10,8 +10,6 @@ mod extract;
 mod frame;
 mod inputs;
 mod lines;
-mod viewport;
 
 pub use frame::*;
 pub use inputs::*;
-pub use viewport::Viewport;

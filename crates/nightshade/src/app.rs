@@ -693,9 +693,7 @@ impl App {
         world
             .res_mut::<crate::platform::window::Window>()
             .start_hidden = true;
-        world
-            .res_mut::<crate::render_driver::Viewport>()
-            .create_renderer = false;
+        world.res_mut::<crate::viewport::Viewport>().create_renderer = false;
         Self {
             world,
             startup: nightshade_ecs::Schedule::new(),
@@ -713,17 +711,22 @@ impl App {
     /// added, since building twice would double every system and hook the
     /// plugin registers.
     pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
-        self.add_plugin_mut(plugin);
+        self.track_plugin(std::any::TypeId::of::<P>(), std::any::type_name::<P>());
+        plugin.build(&mut self);
         self
     }
 
-    /// Adds a plugin from inside another plugin's [`build`](Plugin::build),
-    /// where the app is borrowed rather than owned. A capability plugin uses
-    /// this to pull in a plugin it depends on (the worker host composing
-    /// [`CorePlugin`](crate::plugins::core::CorePlugin), say). Same
-    /// once-per-type rule as [`add_plugin`](App::add_plugin), so a second add
-    /// of the same type still panics.
-    pub fn add_plugin_mut<P: Plugin + 'static>(&mut self, plugin: P) {
+    /// Adds a plugin from inside another plugin's [`build`](Plugin::build), and
+    /// only if a plugin of that type is not already present. A capability
+    /// plugin uses this to pull in a plugin it depends on: the window,
+    /// renderer, and worker hosts all require the engine's default frame
+    /// systems, so each composes [`CorePlugin`](crate::plugins::core::CorePlugin)
+    /// this way. Because more than one may ask, the add is idempotent rather
+    /// than the once-per-type panic of [`add_plugin`](App::add_plugin).
+    pub fn add_plugin_if_absent<P: Plugin + 'static>(&mut self, plugin: P) {
+        if self.added_plugins.contains(&std::any::TypeId::of::<P>()) {
+            return;
+        }
         self.track_plugin(std::any::TypeId::of::<P>(), std::any::type_name::<P>());
         plugin.build(self);
     }

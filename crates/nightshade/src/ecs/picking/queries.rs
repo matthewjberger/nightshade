@@ -14,7 +14,7 @@ impl PickingRay {
     pub fn from_screen_position(world: &World, screen_pos: Vec2) -> Option<Self> {
         let window = &world.res::<crate::platform::window::Window>();
         let active_viewport_rect = world
-            .res::<crate::render_driver::Viewport>()
+            .res::<crate::viewport::Viewport>()
             .active_viewport_rect;
 
         let (local_pos, viewport_width, viewport_height) =

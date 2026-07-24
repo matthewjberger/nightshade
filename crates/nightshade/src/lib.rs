@@ -574,6 +574,7 @@ pub mod state;
 pub mod states;
 #[cfg(feature = "runtime")]
 mod systems;
+pub mod viewport;
 
 #[cfg(feature = "egui")]
 mod egui;
@@ -661,12 +662,12 @@ pub mod prelude {
     pub use crate::plugins::window::WindowPlugin;
     pub use crate::render::config::{DebugDraw, RenderSettings};
     pub use crate::render::wind::Wind;
-    pub use crate::render_driver::Viewport;
     pub use crate::run::*;
     pub use crate::schedule::{RetainedUiSchedule, SystemFn};
     pub use crate::state::{NextStateBuilder, PendingState, RenderResources, State};
     pub use crate::states::current_state;
     pub use crate::systems::*;
+    pub use crate::viewport::Viewport;
     pub use nightshade_ecs::dynamic::DynEcs;
     pub use nightshade_ecs::state::{
         in_state, next_state, on_enter, on_exit, run_if, while_in, while_in_any,

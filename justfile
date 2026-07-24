@@ -89,7 +89,7 @@ lint: lint-wasm lint-rendergraph lint-crates-isolated check-feature-forwarding l
 # that reaches back up (say `use crate::plugins::physics` inside a domain)
 # fails here instead of quietly reintroducing a cycle.
 lint-dag:
-    python scripts/check_engine_dag.py
+    cargo run --quiet -p dag-check
 
 # Clippy each publishable crate on its own default features. The workspace
 # lint above unifies features across every crate, so a field or item that only
@@ -109,7 +109,7 @@ lint-crates-isolated:
 # The meshlet baker links METIS and meshopt, which are C libraries with no
 # wasm target, so the app that bakes is native only and sits out this lint.
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet -- -D warnings
+    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet --exclude dag-check -- -D warnings
     cargo clippy --target wasm32-unknown-unknown -p nightshade-api --no-default-features --features leptos,offscreen -- -D warnings
 
 # Builds the frame graph alone. This is the layering firewall: the rendergraph

@@ -295,10 +295,7 @@ pub(crate) fn step(
     match event {
         WindowEvent::RedrawRequested => match renderer.as_mut() {
             Some(renderer) => run_frame_body(world, state.as_mut(), renderer),
-            None if !world
-                .res::<crate::render_driver::Viewport>()
-                .create_renderer =>
-            {
+            None if !world.res::<crate::viewport::Viewport>().create_renderer => {
                 run_frame_logic(world, state.as_mut())
             }
             None => None,
@@ -692,7 +689,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         if self
             .world
-            .res::<crate::render_driver::Viewport>()
+            .res::<crate::viewport::Viewport>()
             .create_renderer
         {
             match pollster::block_on(crate::render::core::create_renderer(
@@ -718,7 +715,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if self
             .world
-            .res::<crate::render_driver::Viewport>()
+            .res::<crate::viewport::Viewport>()
             .create_renderer
         {
             let (sender, receiver) = futures::channel::oneshot::channel();
@@ -749,7 +746,7 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(target_arch = "wasm32")]
         if !self
             .world
-            .res::<crate::render_driver::Viewport>()
+            .res::<crate::viewport::Viewport>()
             .create_renderer
             && !self.initialized
         {

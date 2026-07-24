@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/*", "crates/*"]
+members = ["apps/*", "crates/*", "tools/*"]
 exclude = ["site", "template", "template_api", "template_leptos", "template_api_leptos", "docs", "apps/editor", "apps/self_assembling", "apps/playground"]
 resolver = "2"
 

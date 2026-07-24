@@ -231,8 +231,8 @@ pub fn input_inject_keyboard(
     state: ElementState,
     text: Option<&str>,
 ) {
-    use crate::ecs::bootstrap::events::{InputEvent, KeyState, Message};
     use crate::ecs::event_bus::commands::publish_event;
+    use crate::ecs::event_bus::resources::{InputEvent, KeyState, Message};
 
     let was_pressed = world
         .res::<crate::platform::input::resources::Input>()
