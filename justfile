@@ -81,8 +81,22 @@ uninstall-hooks:
     rm -f .git/hooks/pre-commit
 
 # Runs linter and displays warnings
-lint: lint-wasm lint-rendergraph check-feature-forwarding
+lint: lint-wasm lint-rendergraph lint-crates-isolated check-feature-forwarding
     cargo clippy --all --all-targets -- -D warnings
+
+# Clippy each publishable crate on its own default features. The workspace
+# lint above unifies features across every crate, so a field or item that only
+# has readers behind an optional feature still looks used and its dead-code
+# warning stays hidden. Building each crate alone reproduces what a downstream
+# consumer that enables only the narrow feature set actually compiles, so those
+# warnings surface here instead of in someone else's build.
+lint-crates-isolated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for crate in nightshade-ecs nightshade-text nightshade-paint nightshade-renderer nightshade-platform nightshade-ui nightshade nightshade-api; do
+        echo "clippy (isolated): ${crate}"
+        cargo clippy -p "${crate}" --all-targets -- -D warnings
+    done
 
 # Runs linter for wasm32 target
 # The meshlet baker links METIS and meshopt, which are C libraries with no
