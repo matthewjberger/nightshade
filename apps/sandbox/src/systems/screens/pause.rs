@@ -2,8 +2,8 @@ use crate::ecs::{PauseHandles, SandboxResources, Screen};
 use crate::systems::screens::menu_button;
 use crate::systems::world::{character, enemies, grass, infinite, player, rocks, terrain};
 use crate::theme::*;
-use nightshade::ecs::ui::components::AccessibleRole;
 use nightshade::prelude::*;
+use nightshade::ui::components::AccessibleRole;
 
 pub fn build(tree: &mut UiTreeBuilder) -> PauseHandles {
     let root = tree
@@ -232,7 +232,7 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
     );
     if let Some(interaction) = tree
         .world_mut()
-        .get_mut::<nightshade::ecs::ui::components::UiNodeInteraction>(row)
+        .get_mut::<nightshade::ui::components::UiNodeInteraction>(row)
     {
         interaction.accessible_role = Some(AccessibleRole::Checkbox);
     }
@@ -244,9 +244,9 @@ fn build_checkbox(tree: &mut UiTreeBuilder, label: &str, initial_value: bool) ->
 /// is driven from elsewhere, like the developer shell.
 pub fn set_checkbox_value(world: &mut World, checkbox: Entity, value: bool) {
     let inner_entity = world
-        .get::<nightshade::ecs::ui::components::UiCheckboxData>(checkbox)
+        .get::<nightshade::ui::components::UiCheckboxData>(checkbox)
         .map(|data| data.inner_entity);
-    if let Some(data) = world.get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(checkbox) {
+    if let Some(data) = world.get_mut::<nightshade::ui::components::UiCheckboxData>(checkbox) {
         data.value = value;
     }
     if let Some(inner_entity) = inner_entity {

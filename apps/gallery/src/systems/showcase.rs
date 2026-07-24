@@ -1,5 +1,5 @@
-use nightshade::ecs::ui::components::{ThemeEffect, ThemeShadow};
 use nightshade::prelude::*;
+use nightshade::ui::components::{ThemeEffect, ThemeShadow};
 
 const BLOCK_PADDING: f32 = 20.0;
 

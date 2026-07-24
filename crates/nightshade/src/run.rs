@@ -394,17 +394,15 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         .res::<crate::platform::window::Window>()
         .handle
         .clone();
-    if world
-        .res::<crate::ecs::ui::resources::RetainedUiState>()
-        .visible
+    if world.res::<crate::ui::resources::RetainedUiState>().visible
         && let Some(window_handle) = window_handle
     {
         let requested = world
-            .res::<crate::ecs::ui::resources::RetainedUiState>()
+            .res::<crate::ui::resources::RetainedUiState>()
             .interaction
             .requested_cursor;
         let applied = world
-            .res::<crate::ecs::ui::resources::RetainedUiState>()
+            .res::<crate::ui::resources::RetainedUiState>()
             .interaction
             .applied_cursor;
         if requested.is_some() && requested != applied {
@@ -412,7 +410,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
                 window_handle.set_cursor(cursor);
             }
             world
-                .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .res_mut::<crate::ui::resources::RetainedUiState>()
                 .interaction
                 .applied_cursor = requested;
         } else if requested.is_none()
@@ -421,7 +419,7 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
         {
             window_handle.set_cursor(winit::window::CursorIcon::Default);
             world
-                .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+                .res_mut::<crate::ui::resources::RetainedUiState>()
                 .interaction
                 .applied_cursor = Some(winit::window::CursorIcon::Default);
         }
@@ -526,7 +524,7 @@ pub struct WindowContext {
         not(target_os = "android"),
         feature = "core"
     ))]
-    pub accesskit: Option<crate::ecs::ui::accessibility::AccessKitHost>,
+    pub accesskit: Option<crate::ui::accessibility::AccessKitHost>,
     pub initialized: bool,
 }
 
@@ -670,7 +668,7 @@ impl winit::application::ApplicationHandler for WindowContext {
             feature = "core"
         ))]
         {
-            self.accesskit = Some(crate::ecs::ui::accessibility::AccessKitHost::new(
+            self.accesskit = Some(crate::ui::accessibility::AccessKitHost::new(
                 event_loop,
                 &window_handle,
             ));

@@ -1,5 +1,5 @@
-use nightshade::ecs::ui::components::{ThemeEffect, ThemeShadow};
 use nightshade::prelude::*;
+use nightshade::ui::components::{ThemeEffect, ThemeShadow};
 
 use crate::ecs::GalleryResources;
 
@@ -414,7 +414,7 @@ pub fn poll_gallery(mut gallery: ResMut<GalleryResources>, input: Res<Input>, wo
             let count = gallery.state.submit_count;
             let message = format!("Submitted {count} time(s)");
             if let Some(UiNodeContent::Text { text_slot, .. }) =
-                world.get::<nightshade::ecs::ui::components::UiNodeContent>(log_entity)
+                world.get::<nightshade::ui::components::UiNodeContent>(log_entity)
             {
                 let slot = *text_slot;
                 world.res_mut::<TextState>().cache.set_text(slot, &message);
@@ -436,7 +436,7 @@ pub fn poll_gallery(mut gallery: ResMut<GalleryResources>, input: Res<Input>, wo
 
     if let Some(virtual_list) = ui_named_entity(world, "virtual_list") {
         let visible_start = world
-            .get::<nightshade::ecs::ui::components::UiVirtualListData>(virtual_list)
+            .get::<nightshade::ui::components::UiVirtualListData>(virtual_list)
             .map(|data| data.visible_start)
             .unwrap_or(0);
         for (pool_index, text_entity) in gallery
@@ -465,7 +465,7 @@ fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool
         .theme_state
         .active_theme()
         .clone();
-    if let Some(color) = world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(label) {
+    if let Some(color) = world.get_mut::<nightshade::ui::components::UiNodeColor>(label) {
         color.colors[UiBase::INDEX] = Some(if active {
             theme.text_color
         } else {
@@ -475,9 +475,9 @@ fn update_nav_label_color(world: &mut World, label: Option<Entity>, active: bool
 }
 
 fn update_slider_y(world: &mut World, slider: Entity, y: f32) {
-    use nightshade::ecs::ui::layout_types::{UiLayoutType, WindowLayout};
-    use nightshade::ecs::ui::units::{Ab, UiValue};
-    let Some(node) = world.get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(slider) else {
+    use nightshade::ui::layout_types::{UiLayoutType, WindowLayout};
+    use nightshade::ui::units::{Ab, UiValue};
+    let Some(node) = world.get_mut::<nightshade::ui::components::UiLayoutNode>(slider) else {
         return;
     };
     let Some(layout) = node.base_layout.as_mut() else {
@@ -1320,8 +1320,8 @@ fn build_tiles_screen(tree: &mut UiTreeBuilder) -> Entity {
                     .entity();
                 tree.in_parent(inner, |tree| {
                     let tile_container = tree.add_tile_container(vec2(0.0, 0.0));
-                    if let Some(node) = tree.world_mut().get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(tile_container)
-                        && let Some(nightshade::ecs::ui::layout_types::UiLayoutType::Window(
+                    if let Some(node) = tree.world_mut().get_mut::<nightshade::ui::components::UiLayoutNode>(tile_container)
+                        && let Some(nightshade::ui::layout_types::UiLayoutType::Window(
                             window,
                         )) = node.base_layout.as_mut()
                     {
@@ -1443,7 +1443,7 @@ fn build_data_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Vec<Entity>) 
                     ui_virtual_list_set_count(t.world_mut(), vl, 64);
                     let pool_containers: Vec<Entity> = t
                         .world_mut()
-                        .get::<nightshade::ecs::ui::components::UiVirtualListData>(vl)
+                        .get::<nightshade::ui::components::UiVirtualListData>(vl)
                         .map(|d| d.pool_items.iter().map(|p| p.container_entity).collect())
                         .unwrap_or_default();
                     text_nodes.clear();
@@ -1608,7 +1608,7 @@ fn build_effects_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, En
 }
 
 fn build_polish_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Entity) {
-    use nightshade::ecs::ui::components::Spring;
+    use nightshade::ui::components::Spring;
 
     let screen = build_screen_root(tree, false);
     let mut progress_slider = Entity::default();
@@ -1707,7 +1707,7 @@ fn build_polish_screen(tree: &mut UiTreeBuilder) -> (Entity, Entity, Entity, Ent
 fn spring_demo_button(
     tree: &mut UiTreeBuilder,
     label: &str,
-    spring: nightshade::ecs::ui::components::Spring,
+    spring: nightshade::ui::components::Spring,
 ) -> Entity {
     let theme = tree.active_theme().clone();
     tree.add_node()

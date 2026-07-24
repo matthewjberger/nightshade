@@ -57,10 +57,8 @@ pub fn update(sandbox_world: &mut SandboxResources, world: &mut World) {
     } else {
         vec4(1.0, 0.3, 0.25, 1.0)
     };
-    if let Some(node_color) =
-        world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(fps_label)
-    {
-        node_color.colors[nightshade::ecs::ui::state::UiBase::INDEX] = Some(color);
+    if let Some(node_color) = world.get_mut::<nightshade::ui::components::UiNodeColor>(fps_label) {
+        node_color.colors[nightshade::ui::state::UiBase::INDEX] = Some(color);
         node_color.computed_color = color;
     }
 }

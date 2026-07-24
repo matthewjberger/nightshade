@@ -53,10 +53,6 @@ pub mod components {
     pub use crate::ecs::transform::components::{
         ChildOf, GlobalTransform, LocalTransform, Rotation,
     };
-    pub use crate::ecs::ui::components::{
-        StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
-        UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
-    };
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::water::components::Water;
     pub use crate::plugins::physics::components::{
@@ -69,6 +65,10 @@ pub mod components {
         ParticleTextureUpload,
     };
     pub use crate::render::render_layer::RenderLayer;
+    pub use crate::ui::components::{
+        StateTransition, UiButtonData, UiDepthMode, UiLayoutNode, UiLayoutRoot, UiNodeColor,
+        UiNodeContent, UiNodeInteraction, UiStateWeights, UiThemeBinding,
+    };
     pub use nightshade_text::text_data::{TextAlignment, VerticalAlignment};
 }
 
@@ -90,8 +90,6 @@ pub mod resources {
     pub use crate::ecs::text::resources::{TextCache, TextState};
     pub use crate::ecs::time::Time;
     pub use crate::ecs::transform::resources::TransformState;
-    pub use crate::ecs::ui::UserInterface;
-    pub use crate::ecs::ui::resources::RetainedUiState;
     pub use crate::ecs::world::WorldId;
     pub use crate::ecs::world::cleanup::CleanupState;
     pub use crate::platform::input::resources::{Input, MouseState};
@@ -110,6 +108,8 @@ pub mod resources {
     pub use crate::render::mesh_state::MeshRenderState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
     pub use crate::render::wind::Wind;
+    pub use crate::ui::UserInterface;
+    pub use crate::ui::resources::RetainedUiState;
     pub use nightshade_ecs::dynamic::HierarchyIndex;
 }
 
@@ -332,10 +332,10 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
-        ecs.insert_resource(crate::ecs::ui::resources::UiWorldIndices { core: CORE, ui: UI });
-        ecs.insert_resource(crate::ecs::ui::resources::RetainedUiState::default());
+        ecs.insert_resource(crate::ui::resources::UiWorldIndices { core: CORE, ui: UI });
+        ecs.insert_resource(crate::ui::resources::RetainedUiState::default());
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
-        ecs.insert_resource(crate::ecs::ui::UserInterface::default());
+        ecs.insert_resource(crate::ui::UserInterface::default());
         #[cfg(feature = "gizmos")]
         ecs.insert_resource(crate::plugins::gizmos::Gizmos::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
@@ -370,7 +370,7 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::transform::resources::TransformState::default());
         ecs.insert_resource(crate::ecs::graphics::scene_sync::RenderSceneSync::default());
         ecs.insert_resource(crate::ecs::world::scratch::Scratch::default());
-        ecs.insert_resource(crate::ecs::ui::resources::UiImageLayerAllocator::default());
+        ecs.insert_resource(crate::ui::resources::UiImageLayerAllocator::default());
         ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
         ecs.insert_resource(crate::platform::input::resources::Input::default());
         ecs.insert_resource(crate::platform::input::resources::Gamepad::default());

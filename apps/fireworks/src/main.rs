@@ -1,5 +1,5 @@
-use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::prelude::*;
+use nightshade::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -363,7 +363,7 @@ impl FireworksDemo {
         let content = panel_content(tree.world_mut(), panel);
         if let Some(node) = tree
             .world_mut()
-            .get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(content)
+            .get_mut::<nightshade::ui::components::UiLayoutNode>(content)
         {
             node.flow_layout = Some(FlowLayout {
                 direction: FlowDirection::Vertical,

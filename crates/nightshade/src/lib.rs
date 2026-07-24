@@ -560,6 +560,7 @@ pub use nightshade_platform as platform;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
 pub use nightshade_text as text;
+pub use nightshade_ui as ui;
 #[cfg(feature = "runtime")]
 pub mod app;
 pub mod render_driver;
@@ -795,41 +796,6 @@ pub mod prelude {
     };
     pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
-    pub use crate::ecs::ui::icons::{self, IconGlyph, IconLookup, IconSet};
-    pub use crate::ecs::ui::layer::UiLayer;
-    pub use crate::ecs::ui::layout_types::GridLayout;
-    pub use crate::ecs::ui::layout_types::{
-        BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
-        SolidLayout, WindowLayout,
-    };
-    pub use crate::ecs::ui::resources::{
-        BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
-        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent,
-        UiImageLayerAllocator, UiViewport, WindowChrome, WindowShortcut, blend_color,
-    };
-    pub use crate::ecs::ui::testing::{
-        UiTestDriver, UiTestResult, create_test_root, setup_test_scene,
-    };
-    pub use crate::ecs::ui::theme::{ThemeState, UiTheme};
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::ui::widgets::world_layout::UiImageUpload;
-    pub use crate::ecs::ui::{
-        Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
-        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, Length, LengthExt,
-        ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig, SplitDirection, StateTransition,
-        TextOverflow, TextSpan, ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode,
-        TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData, UiButtonData,
-        UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
-        UiCommandPaletteData, UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode,
-        UiDisabled, UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode,
-        UiLayoutRoot, UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData,
-        UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind,
-        UiPressed, UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData,
-        UiRichTextData, UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected,
-        UiSliderData, UiSplitterData, UiStateTrait, UiStateWeights, UiTabBarData, UiTextAreaData,
-        UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
-        UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
-    };
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::vfx::presets::{VfxFamily, VfxPreset, despawn_vfx, spawn_vfx};
     pub use crate::ecs::vfx::systems::update_vfx_system;
@@ -934,6 +900,39 @@ pub mod prelude {
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
         texture_cache_release_entity,
     };
+    pub use crate::ui::icons::{self, IconGlyph, IconLookup, IconSet};
+    pub use crate::ui::layer::UiLayer;
+    pub use crate::ui::layout_types::GridLayout;
+    pub use crate::ui::layout_types::{
+        BoundaryLayout, FlowAlignment, FlowDirection, FlowLayout, ResponsiveFlowOverride,
+        SolidLayout, WindowLayout,
+    };
+    pub use crate::ui::resources::{
+        BubbledUiEvent, DrawRectParams, NavDirection, OverlayText, ReservedAreas,
+        RetainedUiGamepadNav, ToastCorner, ToastSeverity, UiBreakpoint, UiEvent,
+        UiImageLayerAllocator, UiViewport, WindowChrome, WindowShortcut, blend_color,
+    };
+    pub use crate::ui::testing::{UiTestDriver, UiTestResult, create_test_root, setup_test_scene};
+    pub use crate::ui::theme::{ThemeState, UiTheme};
+    #[cfg(feature = "assets")]
+    pub use crate::ui::widgets::world_layout::UiImageUpload;
+    pub use crate::ui::{
+        Ab, AutoSizeMode, CanvasCommand, CharStyle, ColorPickerMode, ContextMenuBuilder,
+        DataGridColumn, DragAcceptFilter, DragValueConfig, Em, InputMask, Length, LengthExt,
+        ResizeEdge, Rh, Rl, Rw, ScalingMode, SliderConfig, SplitDirection, StateTransition,
+        TextOverflow, TextSpan, ThemeColor, TileBuilder, TileId, TileLayout, TileLayoutNode,
+        TileNode, Ui, UiAnimationPhase, UiAnimationType, UiBase, UiBreadcrumbData, UiButtonData,
+        UiCanvasData, UiCheckboxData, UiCollapsingHeaderData, UiColorPickerData,
+        UiCommandPaletteData, UiContextMenuData, UiDataGridData, UiDatePickerData, UiDepthMode,
+        UiDisabled, UiDragValueData, UiDropdownData, UiFocused, UiHover, UiLayoutNode,
+        UiLayoutRoot, UiLayoutType, UiMenuData, UiModalDialogData, UiMultiSelectData,
+        UiNodeAnimation, UiNodeColor, UiNodeContent, UiNodeInteraction, UiPanelData, UiPanelKind,
+        UiPressed, UiProgressBarData, UiPropertyGridData, UiRadioData, UiRangeSliderData,
+        UiRichTextData, UiRichTextEditorData, UiScrollAreaData, UiSelectableLabelData, UiSelected,
+        UiSliderData, UiSplitterData, UiStateTrait, UiStateWeights, UiTabBarData, UiTextAreaData,
+        UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
+        UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
+    };
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]
@@ -1021,12 +1020,16 @@ pub mod prelude {
     pub use crate::ecs::transform::systems::{
         propagate_subtree_global_transforms, sync_hierarchy_index, update_parent,
     };
-    pub use crate::ecs::ui::widgets::world_canvas::{
+    pub use crate::ecs::world::commands::{
+        queue_ecs_command, queue_render_command, register_material, set_cursor_locked,
+        set_cursor_visible, spawn_entities, spawn_entities_ui,
+    };
+    pub use crate::ui::widgets::world_canvas::{
         ui_canvas_arc, ui_canvas_circle, ui_canvas_circle_stroke, ui_canvas_clear,
         ui_canvas_cubic_bezier, ui_canvas_hit_test, ui_canvas_line, ui_canvas_polyline,
         ui_canvas_quadratic_bezier, ui_canvas_rect, ui_canvas_rect_stroke, ui_canvas_text,
     };
-    pub use crate::ecs::ui::widgets::world_data::{
+    pub use crate::ui::widgets::world_data::{
         ui_data_grid_clear_filter, ui_data_grid_populate, ui_data_grid_populate_fn,
         ui_data_grid_selection_changed, ui_data_grid_set_cell, ui_data_grid_set_filter,
         ui_data_grid_set_row_count, ui_data_grid_sort_changed, ui_data_grid_start_edit,
@@ -1035,7 +1038,7 @@ pub mod prelude {
         ui_rich_text_editor_toggle_style, ui_rich_text_editor_toggle_underline,
         ui_text_area_set_value,
     };
-    pub use crate::ecs::ui::widgets::world_interaction::{
+    pub use crate::ui::widgets::world_interaction::{
         ui_add_validation_rule, ui_bubbled_events_for, ui_clear_error, ui_close_context_menus,
         ui_command_palette_clear, ui_command_palette_rebuild_results, ui_command_palette_register,
         ui_context_menu_get_checked, ui_context_menu_set_checked, ui_context_menu_widget_content,
@@ -1047,7 +1050,7 @@ pub mod prelude {
         ui_tree_view_clear_filter, ui_tree_view_clear_selection, ui_tree_view_scroll_to_node,
         ui_tree_view_select_node, ui_tree_view_set_filter, ui_validate, ui_widget_content,
     };
-    pub use crate::ecs::ui::widgets::world_layout::{
+    pub use crate::ui::widgets::world_layout::{
         ui_button_clicks, ui_clear_children, ui_clipboard_text, ui_despawn_node, ui_events,
         ui_events_for, ui_focus, ui_is_disabled, ui_label_text, ui_named_entity,
         ui_node_effectively_visible, ui_node_visible, ui_read_system_clipboard,
@@ -1056,19 +1059,19 @@ pub mod prelude {
         ui_set_test_id, ui_set_text, ui_set_tooltip_entity, ui_set_tooltip_text, ui_set_visible,
         ui_set_visible_exclusive, ui_size, ui_text_slot_for_entity, ui_upload_image,
     };
-    pub use crate::ecs::ui::widgets::world_reactive::{
+    pub use crate::ui::widgets::world_reactive::{
         ui_announce, ui_announcements, ui_clicked, ui_data_grid_enable_filters,
         ui_data_grid_set_filtered_indices, ui_date_picker_set_value, ui_multi_select_set_selected,
         ui_set_accessible_label, ui_set_reduced_motion, ui_set_state_active,
     };
-    pub use crate::ecs::ui::widgets::world_state::{
+    pub use crate::ui::widgets::world_state::{
         measure_ui_text_width, ui_apply_dock_state, ui_breadcrumb_set_segments, ui_button_set_text,
         ui_capture_dock_state, ui_changed, ui_checkbox_changed, ui_checkbox_value,
         ui_clear_window_chrome, ui_load_dock_state_from_str, ui_register_window_shortcut,
         ui_save_dock_state_to_str, ui_set_window_menu_bar, ui_set_window_status_bar,
         ui_set_window_toolbar, ui_window_menu_bar, ui_window_status_bar, ui_window_toolbar,
     };
-    pub use crate::ecs::ui::widgets::world_state::{
+    pub use crate::ui::widgets::world_state::{
         ui_collapsing_header_open, ui_color_picker_changed, ui_color_picker_color,
         ui_color_picker_set_value, ui_dock_layout, ui_dock_state, ui_drag_value,
         ui_drag_value_changed, ui_dropdown_selected, ui_dropdown_selected_changed,
@@ -1083,19 +1086,15 @@ pub mod prelude {
         ui_virtual_list_selection_changed, ui_virtual_list_set_count, widget,
     };
     #[cfg(not(target_arch = "wasm32"))]
-    pub use crate::ecs::ui::widgets::world_state::{
+    pub use crate::ui::widgets::world_state::{
         ui_load_dock_state_from_path, ui_save_dock_state_to_path,
     };
-    pub use crate::ecs::ui::widgets::world_tiles::{
+    pub use crate::ui::widgets::world_tiles::{
         build_tiles, spawn_tile_pane_entity, ui_tile_active_pane, ui_tile_add_pane,
         ui_tile_add_pane_to, ui_tile_load_layout, ui_tile_pane_content, ui_tile_pane_title,
         ui_tile_remove, ui_tile_reset_to_panes, ui_tile_save_layout, ui_tile_set_active,
         ui_tile_split, ui_tile_splitter_moved, ui_tile_tab_activated, ui_tile_tab_closed,
         ui_tile_wrap_pane_in_tabs,
-    };
-    pub use crate::ecs::world::commands::{
-        queue_ecs_command, queue_render_command, register_material, set_cursor_locked,
-        set_cursor_visible, spawn_entities, spawn_entities_ui,
     };
     // === decap re-exports end ===
 }

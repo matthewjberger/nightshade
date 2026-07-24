@@ -1,6 +1,6 @@
 //! The retained UI composition: the ordered UI pipeline, the sub-schedule
 //! runner, and [`UiPlugin`]. The UI subsystem itself lives in
-//! [`crate::ecs::ui`] because it is core, not feature-gated; this plugin
+//! [`crate::ui`] because it is core, not feature-gated; this plugin
 //! is what activates it.
 
 use crate::app::{App, Plugin, Stage};
@@ -35,7 +35,7 @@ pub fn run_retained_ui_schedule(world: &mut World) {
 /// [`register_frame_systems`].
 pub fn install(world: &mut World) {
     world
-        .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .res_mut::<crate::ui::resources::RetainedUiState>()
         .visible = true;
     world
         .res_mut::<crate::schedule::RetainedUiSchedule>()
@@ -57,7 +57,7 @@ pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
 
 /// Installs the retained UI: [`install`] seeds the world state and
 /// [`register_frame_systems`] adds the runner. Hide and show the whole tree
-/// at runtime through `world.res::<crate::ecs::ui::resources::RetainedUiState>().visible`.
+/// at runtime through `world.res::<crate::ui::resources::RetainedUiState>().visible`.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {

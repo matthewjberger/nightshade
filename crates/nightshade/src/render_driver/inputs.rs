@@ -150,7 +150,7 @@ fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
 pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let image_uploads = std::mem::take(
         &mut world
-            .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .res_mut::<crate::ui::resources::RetainedUiState>()
             .pending_image_uploads,
     );
     for upload in image_uploads {
@@ -167,7 +167,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     let commands = map_render_commands(world);
 
     let cameras: Vec<CameraFrameInputs> = world
-        .res::<crate::ecs::ui::UserInterface>()
+        .res::<crate::ui::UserInterface>()
         .required_cameras
         .iter()
         .map(|&entity| snapshot_camera(world, entity))
@@ -321,7 +321,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
     #[cfg(feature = "egui")]
     let egui_frame_inputs = crate::egui::take_egui_frame_inputs(world);
-    let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
+    let retained = world.res_mut::<crate::ui::resources::RetainedUiState>();
     RenderInputs {
         scene_world,
         settings,
@@ -422,7 +422,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
         .res_mut::<crate::ecs::asset_state::AssetState>()
         .mesh_cache = inputs.mesh_cache;
     *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = inputs.texture_cache;
-    let retained = world.res_mut::<crate::ecs::ui::resources::RetainedUiState>();
+    let retained = world.res_mut::<crate::ui::resources::RetainedUiState>();
     retained.frame.rects = inputs.ui.rects;
     retained.frame.rect_entities = inputs.ui.rect_entities.into_iter().collect();
     retained.frame.ui_images = inputs.ui.images;
@@ -430,7 +430,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     retained.render_slots = inputs.ui.render_slots;
     if outputs.frame_executed {
         world
-            .res_mut::<crate::ecs::ui::UserInterface>()
+            .res_mut::<crate::ui::UserInterface>()
             .viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {

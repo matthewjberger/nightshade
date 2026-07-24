@@ -42,9 +42,7 @@ pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) 
         let time = uptime_ms as f32 / 1000.0;
         let pulse_alpha = (time * 2.0).sin() * 0.5 + 0.5;
         let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
-        if let Some(color_comp) =
-            world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(pulse)
-        {
+        if let Some(color_comp) = world.get_mut::<nightshade::ui::components::UiNodeColor>(pulse) {
             color_comp.colors[0] = Some(pulse_color);
         }
     }
@@ -63,16 +61,13 @@ pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) 
     if let Some(entity) = ui_named_entity(world, "effects_pulse") {
         let pulse_alpha = (time * 2.5).sin() * 0.5 + 0.5;
         let pulse_color = blend_color(accent_dim, theme.accent_color, pulse_alpha);
-        if let Some(color_comp) =
-            world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
-        {
+        if let Some(color_comp) = world.get_mut::<nightshade::ui::components::UiNodeColor>(entity) {
             color_comp.colors[0] = Some(pulse_color);
         }
     }
 
     if let Some(entity) = ui_named_entity(world, "effects_blend")
-        && let Some(color_comp) =
-            world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
+        && let Some(color_comp) = world.get_mut::<nightshade::ui::components::UiNodeColor>(entity)
     {
         color_comp.colors[0] = Some(blended);
     }
@@ -93,20 +88,18 @@ pub fn run_animation_systems(gallery: &mut GalleryResources, world: &mut World) 
         let g = (hue * 6.0 + 2.0).sin().abs();
         let b = (hue * 6.0 + 4.0).sin().abs();
         let color = vec4(r, g, b, 1.0);
-        if let Some(color_comp) =
-            world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(entity)
-        {
+        if let Some(color_comp) = world.get_mut::<nightshade::ui::components::UiNodeColor>(entity) {
             color_comp.colors[0] = Some(color);
         }
-        if let Some(node) = world.get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(entity) {
+        if let Some(node) = world.get_mut::<nightshade::ui::components::UiLayoutNode>(entity) {
             let radius = 8.0;
             let offset_x = radius * angle.cos();
             let offset_y = radius * angle.sin();
-            if let Some(nightshade::ecs::ui::layout_types::UiLayoutType::Window(window)) =
+            if let Some(nightshade::ui::layout_types::UiLayoutType::Window(window)) =
                 node.base_layout.as_mut()
             {
-                window.position = nightshade::ecs::ui::units::Rl(vec2(50.0, 50.0))
-                    + nightshade::ecs::ui::units::Ab(vec2(offset_x, offset_y));
+                window.position = nightshade::ui::units::Rl(vec2(50.0, 50.0))
+                    + nightshade::ui::units::Ab(vec2(offset_x, offset_y));
             }
         }
     }

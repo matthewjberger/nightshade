@@ -284,7 +284,7 @@ fn make_tower_chip(
 
     if let Some(color) = tree
         .world_mut()
-        .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(chip)
+        .get_mut::<nightshade::ui::components::UiNodeColor>(chip)
     {
         color.colors[UiSelected::INDEX] = if selected {
             Some(vec4(accent.x, accent.y, accent.z, 0.35))
@@ -294,7 +294,7 @@ fn make_tower_chip(
     }
     if let Some(weights) = tree
         .world_mut()
-        .get_mut::<nightshade::ecs::ui::components::UiStateWeights>(chip)
+        .get_mut::<nightshade::ui::components::UiStateWeights>(chip)
     {
         weights.weights[UiSelected::INDEX] = if selected { 1.0 } else { 0.0 };
     }
@@ -437,18 +437,14 @@ pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
         HP_RED
     };
 
-    if let Some(node) =
-        world.get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(handles.hp_fill)
-    {
+    if let Some(node) = world.get_mut::<nightshade::ui::components::UiLayoutNode>(handles.hp_fill) {
         node.base_layout = Some(UiLayoutType::Window(WindowLayout {
             position: Ab(vec2(0.0, 0.0)).into(),
             size: Ab(vec2(HP_BAR_WIDTH * hp_ratio, HP_BAR_HEIGHT)).into(),
             anchor: Anchor::TopLeft,
         }));
     }
-    if let Some(color) =
-        world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.hp_fill)
-    {
+    if let Some(color) = world.get_mut::<nightshade::ui::components::UiNodeColor>(handles.hp_fill) {
         color.colors[UiBase::INDEX] = Some(bar_color);
     }
 
@@ -460,7 +456,7 @@ pub fn update(game_world: &TowerDefenseResources, world: &mut World) {
         ACCENT_RED
     };
     if let Some(color) =
-        world.get_mut::<nightshade::ecs::ui::components::UiNodeColor>(handles.lives_value)
+        world.get_mut::<nightshade::ui::components::UiNodeColor>(handles.lives_value)
     {
         color.colors[UiBase::INDEX] = Some(lives_color);
     }

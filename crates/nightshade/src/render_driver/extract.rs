@@ -89,7 +89,7 @@ pub(crate) fn prepare_text_meshes(
 
     let mut frame_text = std::mem::take(
         &mut world
-            .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+            .res_mut::<crate::ui::resources::RetainedUiState>()
             .frame
             .text_meshes,
     );
@@ -135,7 +135,7 @@ pub(crate) fn prepare_text_meshes(
     }
     pass_sync::retain_ui_text_signatures(renderer, &active_entities);
     world
-        .res_mut::<crate::ecs::ui::resources::RetainedUiState>()
+        .res_mut::<crate::ui::resources::RetainedUiState>()
         .frame
         .text_meshes = frame_text;
 

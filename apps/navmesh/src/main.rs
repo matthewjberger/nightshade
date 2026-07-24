@@ -2,10 +2,10 @@ mod terrain;
 
 use nightshade::ecs::animation::components::{AnimationClip, AnimationProperty};
 use nightshade::ecs::text::components::TextProperties;
-use nightshade::ecs::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
-use nightshade::ecs::ui::state::UiBase;
 use nightshade::plugins::navmesh::resources::NavMeshWorld;
 use nightshade::prelude::*;
+use nightshade::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
+use nightshade::ui::state::UiBase;
 use std::collections::HashSet;
 
 const FOX_MODEL: &[u8] = include_bytes!("../../../assets/gltf/fox.glb");
@@ -265,7 +265,7 @@ impl NavMeshDemo {
         let content = panel_content(tree_builder.world_mut(), panel);
         if let Some(node) = tree_builder
             .world_mut()
-            .get_mut::<nightshade::ecs::ui::components::UiLayoutNode>(content)
+            .get_mut::<nightshade::ui::components::UiLayoutNode>(content)
         {
             node.flow_layout = Some(FlowLayout {
                 direction: FlowDirection::Vertical,
@@ -438,8 +438,8 @@ impl NavMeshDemo {
             self.used_names.clear();
             self.followed_fox_index = None;
             self.follow_mode = false;
-            if let Some(data) = world
-                .get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(self.ui.follow_mode)
+            if let Some(data) =
+                world.get_mut::<nightshade::ui::components::UiCheckboxData>(self.ui.follow_mode)
             {
                 data.value = false;
             }
@@ -478,9 +478,7 @@ impl NavMeshDemo {
                     &format!("Following: {}", fox.full_name),
                 );
                 if let Some(node_color) = world
-                    .get_mut::<nightshade::ecs::ui::components::UiNodeColor>(
-                        self.ui.following_label,
-                    )
+                    .get_mut::<nightshade::ui::components::UiNodeColor>(self.ui.following_label)
                 {
                     node_color.colors[UiBase::INDEX] = Some(fox.name_color);
                 }
@@ -1054,8 +1052,8 @@ impl NavMeshDemo {
         let Some(fox) = self.foxes.get(followed_index) else {
             self.followed_fox_index = None;
             self.follow_mode = false;
-            if let Some(data) = world
-                .get_mut::<nightshade::ecs::ui::components::UiCheckboxData>(self.ui.follow_mode)
+            if let Some(data) =
+                world.get_mut::<nightshade::ui::components::UiCheckboxData>(self.ui.follow_mode)
             {
                 data.value = false;
             }
