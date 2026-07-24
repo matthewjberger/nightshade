@@ -137,12 +137,16 @@ pub fn install(world: &mut crate::ecs::world::World) {
 pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<crate::ecs::world::World>) {
     use crate::app::{Stage, push_frame_system};
     push_frame_system(stages, Stage::FrameUpdate, systems::run_physics_systems);
-    push_frame_system(stages, Stage::FrameUpdate, ragdoll::ragdoll_sync_system);
     push_frame_system(
         stages,
         Stage::FrameUpdate,
         collision_events::emit_collision_events_system,
     );
+    // Runs in FramePostUpdate, after the core transform propagation, so the
+    // proxy bodies (written as local transforms by the step in FrameUpdate)
+    // and the skeleton bones it reads back from carry freshly propagated,
+    // same-frame global transforms.
+    push_frame_system(stages, Stage::FramePostUpdate, ragdoll::ragdoll_sync_system);
 }
 
 /// Installs the physics simulation: [`install`] enables it and

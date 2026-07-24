@@ -81,8 +81,15 @@ uninstall-hooks:
     rm -f .git/hooks/pre-commit
 
 # Runs linter and displays warnings
-lint: lint-wasm lint-rendergraph lint-crates-isolated check-feature-forwarding
+lint: lint-wasm lint-rendergraph lint-crates-isolated check-feature-forwarding lint-dag
     cargo clippy --all --all-targets -- -D warnings
+
+# Enforces that the engine layer stays a module dependency DAG: the ecs
+# domains, plugins, app, and runner must not form a reference cycle. A domain
+# that reaches back up (say `use crate::plugins::physics` inside a domain)
+# fails here instead of quietly reintroducing a cycle.
+lint-dag:
+    python scripts/check_engine_dag.py
 
 # Clippy each publishable crate on its own default features. The workspace
 # lint above unifies features across every crate, so a field or item that only

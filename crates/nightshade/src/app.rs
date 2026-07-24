@@ -713,9 +713,19 @@ impl App {
     /// added, since building twice would double every system and hook the
     /// plugin registers.
     pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
-        self.track_plugin(std::any::TypeId::of::<P>(), std::any::type_name::<P>());
-        plugin.build(&mut self);
+        self.add_plugin_mut(plugin);
         self
+    }
+
+    /// Adds a plugin from inside another plugin's [`build`](Plugin::build),
+    /// where the app is borrowed rather than owned. A capability plugin uses
+    /// this to pull in a plugin it depends on (the worker host composing
+    /// [`CorePlugin`](crate::plugins::core::CorePlugin), say). Same
+    /// once-per-type rule as [`add_plugin`](App::add_plugin), so a second add
+    /// of the same type still panics.
+    pub fn add_plugin_mut<P: Plugin + 'static>(&mut self, plugin: P) {
+        self.track_plugin(std::any::TypeId::of::<P>(), std::any::type_name::<P>());
+        plugin.build(self);
     }
 
     /// Adds a [`PluginGroup`]'s members in group order, skipping disabled

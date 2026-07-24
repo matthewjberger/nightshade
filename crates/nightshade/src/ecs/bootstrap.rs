@@ -77,7 +77,12 @@ pub mod resources {
     #[cfg(feature = "assets")]
     pub use crate::ecs::prefab::resources::CachedPrefab;
     pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::scene::ScenePrefabs;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::ecs::scene::registry::AssetRegistry;
     pub use crate::ecs::text::resources::{TextCache, TextState};
+    pub use crate::ecs::texture_source::TextureSources;
     pub use crate::ecs::time::Time;
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::world::WorldId;
