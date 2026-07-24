@@ -28,6 +28,7 @@ pub mod cloth;
 pub mod cutscene;
 pub mod entity_registry;
 
+pub mod asset;
 pub mod decal;
 pub mod event;
 pub mod event_bus;
