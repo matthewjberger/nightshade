@@ -1,7 +1,7 @@
 pub use crate::ecs::transform::queries::*;
 
 use crate::ecs::world::{
-    GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, PARENT, RENDER_MESH, World,
+    GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT, World,
     components::{ChildOf, GlobalTransform},
 };
 
@@ -144,16 +144,11 @@ pub fn update_global_transforms_system(world: &mut World) {
             *global_transform = GlobalTransform(new_global_transform);
         }
 
-        let render_relevant = RENDER_MESH
-            | INSTANCED_MESH
-            | crate::ecs::world::LIGHT
-            | crate::ecs::world::DECAL
-            | crate::ecs::world::TEXT
-            | crate::ecs::world::WATER
-            | crate::ecs::world::CLOTH;
-        if world.ecs.worlds[CORE].component_mask(current).unwrap_or(0) & render_relevant != 0 {
-            render_dirty_entities.push(current);
-        }
+        // Every entity whose global transform was recomputed is recorded here;
+        // the render-sync layer (`collect_scene_dirt`) filters this set by the
+        // render-relevant component masks it owns. Transform propagation stays
+        // ignorant of what is renderable, so it names no render-domain mask.
+        render_dirty_entities.push(current);
 
         for child in world
             .res::<nightshade_ecs::dynamic::HierarchyIndex>()
