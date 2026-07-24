@@ -245,6 +245,33 @@ cargo install --locked nightshade-editor
 
 The `--locked` flag matters: it builds with the dependency versions the release was tested against instead of resolving fresh, which protects the install from breakage in newly published transitive dependencies.
 
+## Architecture
+
+Nightshade is a set of crates in a strictly layered, acyclic dependency graph: each crate names only the crates below it, and Cargo turns an upward reference into a compile error. `nightshade-ecs` and `nightshade-text` are the leaves; `nightshade` is the composition root that assembles the rest; `nightshade-api` is the high-level facade.
+
+```mermaid
+graph TD
+    api[nightshade-api] --> engine[nightshade]
+    engine --> ui[nightshade-ui]
+    engine --> renderer[nightshade-renderer]
+    engine --> platform[nightshade-platform]
+    engine --> paint[nightshade-paint]
+    engine --> text[nightshade-text]
+    engine --> ecs[nightshade-ecs]
+    ui --> platform
+    ui --> paint
+    ui --> text
+    ui --> ecs
+    renderer --> paint
+    renderer --> text
+    renderer --> ecs
+    paint --> text
+    paint --> ecs
+    platform --> ecs
+```
+
+The `nightshade` crate is layered internally too: the `World` substrate, then the ECS domains (transforms, cameras, meshes, and the rest), then the engine assembly, the capability plugins, and the app builder and runner on top. Rust allows module cycles within a crate, so that layering has no compiler behind it. `just lint-dag` (the `tools/dag-check` binary) parses the module references, runs a strongly-connected-components pass, and fails the lint gate if any layer reaches back up. The [Architecture Overview](https://matthewjberger.github.io/nightshade/book/architecture-overview.html) walks through both graphs.
+
 ## Documentation
 
 - 📖 [Book](https://matthewjberger.github.io/nightshade/book/) - architecture, systems, and tutorials
