@@ -127,7 +127,7 @@ pub struct WgpuRenderer {
     /// [`crate::wgpu::picking::poll_depth_pick`] rather than reaching in here.
     pub(crate) depth_pick: DepthPickState,
     /// Screenshot readback state.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
     pub(crate) screenshot: ScreenshotState,
     /// Current internal render buffer size in pixels.
     pub render_buffer_size: (u32, u32),
@@ -221,7 +221,7 @@ pub(crate) struct DepthPickState {
 }
 
 /// Screenshot capture and readback resources.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
 pub(crate) struct ScreenshotState {
     /// Mappable buffer that receives the captured frame.
     pub staging_buffer: wgpu::Buffer,
@@ -248,10 +248,13 @@ pub(crate) struct FrameState {
     /// Per-entity text mesh signatures, used to skip unchanged rebuilds.
     pub text_mesh_signatures: std::collections::HashMap<nightshade_ecs::Entity, u64>,
     /// Atmosphere captured for the current IBL bake, if any.
+    #[cfg(feature = "hdr")]
     pub captured_ibl_atmosphere: Option<crate::config::Atmosphere>,
     /// Time of day captured for the current IBL bake.
+    #[cfg(feature = "hdr")]
     pub captured_ibl_hour: f32,
     /// Whether day-night IBL snapshots have been captured.
+    #[cfg(feature = "hdr")]
     pub captured_day_night_snapshots: bool,
 }
 

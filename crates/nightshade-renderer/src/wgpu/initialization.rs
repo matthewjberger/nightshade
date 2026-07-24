@@ -774,7 +774,7 @@ impl super::WgpuRenderer {
             mapped_at_creation: false,
         });
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
         let screenshot_staging_buffer = {
             let bytes_per_pixel = 4u32;
             let unpadded_bytes_per_row = initial_width.max(1) * bytes_per_pixel;
@@ -843,7 +843,7 @@ impl super::WgpuRenderer {
                 texture_size: (1, 1),
                 camera: None,
             },
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
             screenshot: super::ScreenshotState {
                 staging_buffer: screenshot_staging_buffer,
                 pending: false,
@@ -859,8 +859,11 @@ impl super::WgpuRenderer {
                 index: 0,
                 last_settings_signature: None,
                 text_mesh_signatures: std::collections::HashMap::new(),
+                #[cfg(feature = "hdr")]
                 captured_ibl_atmosphere: None,
+                #[cfg(feature = "hdr")]
                 captured_ibl_hour: 0.0,
+                #[cfg(feature = "hdr")]
                 captured_day_night_snapshots: false,
             },
             texture_store: crate::wgpu::texture_cache::TextureStore::default(),
