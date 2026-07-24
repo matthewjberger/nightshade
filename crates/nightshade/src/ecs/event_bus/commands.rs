@@ -1,4 +1,5 @@
-use crate::ecs::world::{World, events::Message};
+use crate::ecs::composition::events::Message;
+use crate::ecs::world::World;
 use std::any::Any;
 
 pub fn publish_event(world: &mut World, message: Message) {

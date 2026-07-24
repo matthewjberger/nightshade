@@ -1,9 +1,7 @@
 pub use crate::ecs::transform::queries::*;
 
-use crate::ecs::world::{
-    GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT, World,
-    components::{ChildOf, GlobalTransform},
-};
+use crate::ecs::composition::components::{ChildOf, GlobalTransform};
+use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, PARENT, World};
 
 use crate::prelude::*;
 pub fn run_systems(world: &mut World) {

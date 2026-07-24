@@ -34,9 +34,9 @@
 //! `input_inject_*` functions, which write the same input state the winit loop
 //! produces.
 
+use crate::ecs::composition::resources::MouseState;
 use crate::ecs::world::Vec2;
 use crate::ecs::world::World;
-use crate::ecs::world::resources::MouseState;
 use crate::platform::input::resources::{TouchPhase, TouchPoint};
 use crate::render::wgpu::WgpuRenderer;
 use crate::state::State;
@@ -231,8 +231,8 @@ pub fn input_inject_keyboard(
     state: ElementState,
     text: Option<&str>,
 ) {
+    use crate::ecs::composition::events::{InputEvent, KeyState, Message};
     use crate::ecs::event_bus::commands::publish_event;
-    use crate::ecs::world::events::{InputEvent, KeyState, Message};
 
     let was_pressed = world
         .res::<crate::platform::input::resources::Input>()

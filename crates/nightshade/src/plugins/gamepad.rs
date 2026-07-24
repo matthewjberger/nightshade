@@ -3,9 +3,9 @@
 //! top of every frame; without it the engine never opens the gilrs context.
 
 use crate::app::{App, Plugin, Stage};
+use crate::ecs::composition::events::*;
 use crate::ecs::event_bus::commands::publish_event;
 use crate::ecs::world::World;
-use crate::ecs::world::events::*;
 
 use nightshade_platform::input::gamepad::{Gamepad, with_active_gamepad};
 

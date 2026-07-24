@@ -1,5 +1,5 @@
+use crate::ecs::composition::components::MaterialRef;
 use crate::ecs::world::World;
-use crate::ecs::world::components::MaterialRef;
 
 /// Switches every entity with [`MaterialVariants`] to the material that
 /// covers the supplied variant name, or back to its default if

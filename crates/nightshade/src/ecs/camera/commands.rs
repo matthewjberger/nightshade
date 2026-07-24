@@ -1,9 +1,8 @@
 use crate::ecs::camera::components::{
     ThirdPersonCamera, compute_pan_orbit_transform, compute_third_person_transform,
 };
-use crate::ecs::world::{
-    Entity, PAN_ORBIT_CAMERA, THIRD_PERSON_CAMERA, Vec2, Vec3, World, components::*,
-};
+use crate::ecs::composition::components::*;
+use crate::ecs::world::{Entity, PAN_ORBIT_CAMERA, THIRD_PERSON_CAMERA, Vec2, Vec3, World};
 
 use crate::prelude::*;
 pub fn spawn_camera(world: &mut World, position: Vec3, name: String) -> Entity {

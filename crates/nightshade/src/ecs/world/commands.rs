@@ -413,19 +413,19 @@ pub fn despawn_recursive_immediate(world: &mut World, entity: Entity) {
 pub(crate) fn setup_entity_transforms(
     world: &mut World,
     entity: Entity,
-    local_transform: crate::ecs::world::components::LocalTransform,
+    local_transform: crate::ecs::composition::components::LocalTransform,
 ) {
     world.set(entity, local_transform);
     world.set(
         entity,
-        crate::ecs::world::components::GlobalTransform::default(),
+        crate::ecs::composition::components::GlobalTransform::default(),
     );
     crate::ecs::transform::systems::propagate_subtree_global_transforms(world, entity);
 }
 
 pub fn spawn_sun(world: &mut World) -> Entity {
     use crate::ecs::bundles::{LightBundle, SpatialBundle};
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
 
     world.ecs.spawn_with(LightBundle {
         spatial: SpatialBundle {
@@ -463,7 +463,7 @@ pub fn spawn_sun(world: &mut World) -> Entity {
 /// Spawn a directional light positioned above the origin without shadow casting.
 pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
     use crate::ecs::bundles::{LightBundle, SpatialBundle};
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
 
     world.ecs.spawn_with(LightBundle {
         spatial: SpatialBundle {
@@ -497,7 +497,7 @@ pub fn spawn_sun_without_shadows(world: &mut World) -> Entity {
 
 /// Spawn a positioned light entity carrying a default [`components::Light`] for the caller to configure.
 pub fn spawn_light_entity(world: &mut World, position: nalgebra_glm::Vec3, name: &str) -> Entity {
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
     use crate::ecs::world::{GLOBAL_TRANSFORM, LIGHT, LOCAL_TRANSFORM, NAME};
 
     let entity = spawn_entities(world, NAME | LOCAL_TRANSFORM | GLOBAL_TRANSFORM | LIGHT, 1)[0];
@@ -521,7 +521,7 @@ pub fn spawn_mesh_at(
     position: nalgebra_glm::Vec3,
     scale: nalgebra_glm::Vec3,
 ) -> Entity {
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
 
     let render_mesh = components::RenderMesh::new(mesh_name);
 
@@ -698,7 +698,7 @@ fn spawn_3d_text_impl(
     properties: crate::ecs::text::components::TextProperties,
     billboard: bool,
 ) -> Entity {
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
     use crate::ecs::world::{GLOBAL_TRANSFORM, LOCAL_TRANSFORM, NAME, TEXT, VISIBILITY};
 
     let text_index = world
@@ -981,7 +981,7 @@ pub fn spawn_instanced_mesh(
     mesh_name: &str,
     instances: Vec<crate::ecs::mesh::components::InstanceTransform>,
 ) -> Entity {
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
     use crate::ecs::world::{
         CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, MATERIAL_REF, NAME,
         VISIBILITY,
@@ -1044,7 +1044,7 @@ pub fn spawn_instanced_mesh_with_material(
     instances: Vec<crate::ecs::mesh::components::InstanceTransform>,
     material_name: &str,
 ) -> Entity {
-    use crate::ecs::world::components;
+    use crate::ecs::composition::components;
     use crate::ecs::world::{
         CASTS_SHADOW, GLOBAL_TRANSFORM, INSTANCED_MESH, LOCAL_TRANSFORM, MATERIAL_REF, NAME,
         VISIBILITY,

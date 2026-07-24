@@ -1,6 +1,7 @@
+use crate::ecs::composition::components::ChildOf;
 use crate::ecs::world::CORE;
 use crate::ecs::world::PREFAB_SOURCE;
-use crate::ecs::world::{World, components::ChildOf};
+use crate::ecs::world::World;
 
 /// The entity's direct children as of the last hierarchy sync. The sync
 /// runs every frame in the transform pass; call

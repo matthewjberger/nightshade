@@ -1,10 +1,10 @@
+use crate::ecs::composition::components::{
+    BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
+};
 use crate::ecs::material::resources::material_registry_insert;
 use crate::ecs::world::{
     BOUNDING_VOLUME, CASTS_SHADOW, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME, Quat,
     RENDER_MESH, Vec3, World,
-    components::{
-        BoundingVolume, CastsShadow, LocalTransform, Material, MaterialRef, Name, RenderMesh,
-    },
 };
 use nightshade_ecs::Entity;
 

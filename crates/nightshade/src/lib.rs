@@ -616,12 +616,12 @@ pub mod prelude {
         PluginGroupBuilder, Stage, SystemCollection, WindowPlugin, WorldSystemMarker, game_scope,
     };
     pub use crate::ecs::bundles::*;
+    pub use crate::ecs::composition::components::*;
+    pub use crate::ecs::composition::resources::*;
     pub use crate::ecs::events::{EventReader, EventWriter};
     pub use crate::ecs::graphics::selection::Selection;
     pub use crate::ecs::script::components::GlobalScripts;
     pub use crate::ecs::time::Time;
-    pub use crate::ecs::world::components::*;
-    pub use crate::ecs::world::resources::*;
     pub use crate::ecs::world::*;
     #[cfg(feature = "egui")]
     pub use crate::egui::EguiPlugin;
