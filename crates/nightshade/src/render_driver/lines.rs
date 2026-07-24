@@ -53,9 +53,7 @@ const WIREFRAME_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
 fn append_wireframe_lines(world: &World, line_data: &mut Vec<RenderLine>) {
     let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
-    let mesh_cache = &world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .mesh_cache;
+    let mesh_cache = &world.res::<crate::render::mesh_cache::MeshCache>();
 
     for entity in world.ecs.worlds[CORE]
         .query_entities(crate::ecs::world::RENDER_MESH | crate::ecs::world::GLOBAL_TRANSFORM)
@@ -191,9 +189,7 @@ pub fn gather_bounding_volume_data(
     }
 
     let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
-    let mesh_cache = &world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .mesh_cache;
+    let mesh_cache = &world.res::<crate::render::mesh_cache::MeshCache>();
     let mut bv_data = Vec::new();
 
     for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::BOUNDING_VOLUME) {
@@ -400,9 +396,7 @@ pub fn gather_normal_data(world: &World, show_normals: bool) -> Option<Vec<Rende
     let frustum_planes = extract_frustum_planes(&view_proj);
 
     let camera_entity = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
-    let mesh_cache = &world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .mesh_cache;
+    let mesh_cache = &world.res::<crate::render::mesh_cache::MeshCache>();
     let mut normal_data = Vec::new();
 
     for entity in world.ecs.worlds[CORE]

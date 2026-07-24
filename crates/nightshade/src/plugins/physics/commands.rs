@@ -70,23 +70,19 @@ pub fn spawn_static_physics_cube_with_material(
 
     let fallback_name = format!("StaticPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry,
+        world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
             &mut world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .material_registry
+                .res_mut::<crate::ecs::material::resources::MaterialRegistry>()
                 .registry,
             index,
         );
@@ -164,23 +160,19 @@ pub fn spawn_dynamic_physics_sphere_with_material(
 
     let fallback_name = format!("DynamicPhysicsSphere_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry,
+        world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
             &mut world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .material_registry
+                .res_mut::<crate::ecs::material::resources::MaterialRegistry>()
                 .registry,
             index,
         );
@@ -258,23 +250,19 @@ pub fn spawn_dynamic_physics_cube_with_material(
 
     let fallback_name = format!("DynamicPhysicsCube_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry,
+        world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
             &mut world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .material_registry
+                .res_mut::<crate::ecs::material::resources::MaterialRegistry>()
                 .registry,
             index,
         );
@@ -353,23 +341,19 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
 
     let fallback_name = format!("DynamicPhysicsCylinder_{}", entity.id);
     let material_name = material_registry_find_or_insert(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry,
+        world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
         fallback_name,
         material,
     );
     if let Some(&index) = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .registry
         .name_to_index
         .get(&material_name)
     {
         registry_add_reference(
             &mut world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .material_registry
+                .res_mut::<crate::ecs::material::resources::MaterialRegistry>()
                 .registry,
             index,
         );

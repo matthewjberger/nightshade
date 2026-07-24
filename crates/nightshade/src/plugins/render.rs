@@ -86,12 +86,10 @@ fn material_table_entry(
 /// `MaterialRef` or the renderable entity set changed.
 pub fn render_sync_materials_system(world: &mut World) {
     let registry_version = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .version;
     let registry_names_version = world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry
+        .res::<crate::ecs::material::resources::MaterialRegistry>()
         .names_version;
     let (rebuild_entity_maps, first_run) = {
         let sync = &mut world.res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>();
@@ -112,8 +110,7 @@ pub fn render_sync_materials_system(world: &mut World) {
 
     let mut dirty_indices = std::mem::take(
         &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry
+            .res_mut::<crate::ecs::material::resources::MaterialRegistry>()
             .dirty_indices,
     );
     dirty_indices.sort_unstable();
@@ -121,9 +118,7 @@ pub fn render_sync_materials_system(world: &mut World) {
 
     let mut scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
     {
-        let registry = &world
-            .res::<crate::ecs::asset_state::AssetState>()
-            .material_registry;
+        let registry = &world.res::<crate::ecs::material::resources::MaterialRegistry>();
         let table = &mut scene.render_materials;
         let entry_count = registry.registry.entries.len();
 
@@ -208,9 +203,7 @@ pub fn render_sync_materials_system(world: &mut World) {
     #[cfg(not(feature = "meshlet"))]
     let meshlet_entities: Vec<crate::ecs::world::Entity> = Vec::new();
 
-    let registry = &world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .material_registry;
+    let registry = &world.res::<crate::ecs::material::resources::MaterialRegistry>();
     let mut entity_to_id: std::collections::HashMap<crate::ecs::world::Entity, u32> =
         std::collections::HashMap::new();
     for &entity in mesh_entities

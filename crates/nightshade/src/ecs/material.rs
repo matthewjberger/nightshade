@@ -24,14 +24,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "red_metal".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("red_metal")
+//!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("red_metal")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //!
 //! // Apply to an entity
@@ -46,14 +46,14 @@
 //! ```ignore
 //! // Full registration pattern
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "my_material".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("my_material")
+//!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("my_material")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //! ```
 //!
@@ -77,14 +77,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::asset_state::AssetState>().material_registry,
+//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "brick".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
-//!     world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry.name_to_index.get("brick")
+//!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("brick")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::asset_state::AssetState>().material_registry.registry, index);
+//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //! ```
 //!

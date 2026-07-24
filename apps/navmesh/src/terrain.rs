@@ -166,7 +166,7 @@ pub fn spawn_terrain(
 
     let mesh_name = format!("Terrain_{}", rand::random::<u32>());
     mesh_cache_insert(
-        &mut world.res_mut::<AssetState>().mesh_cache,
+        world.res_mut::<nightshade::render::mesh_cache::MeshCache>(),
         mesh_name.clone(),
         mesh,
     );

@@ -943,9 +943,7 @@ fn sync_meshlets(world: &mut World) {
         crate::render::config::MeshletPlacement,
     )> = {
         use crate::render::generational_registry::{registry_entry, registry_lookup_index};
-        let registry = &world
-            .res::<crate::ecs::asset_state::AssetState>()
-            .material_registry;
+        let registry = &world.res::<crate::ecs::material::resources::MaterialRegistry>();
         collected
             .iter()
             .map(|(entity, asset_id, transform, material_ref)| {

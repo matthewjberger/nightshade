@@ -64,7 +64,6 @@ pub mod components {
 }
 
 pub mod resources {
-    pub use crate::ecs::asset_state::AssetState;
     pub use crate::ecs::camera::resources::ActiveCamera;
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
@@ -367,7 +366,15 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::event::Events::default());
         ecs.insert_resource(crate::ecs::world::cleanup::CleanupState::default());
         ecs.insert_resource(crate::ecs::world::WorldId::default());
-        ecs.insert_resource(crate::ecs::asset_state::AssetState::default());
+        ecs.insert_resource(crate::render::mesh_cache::MeshCache::default());
+        ecs.insert_resource(crate::ecs::material::resources::MaterialRegistry::default());
+        ecs.insert_resource(crate::ecs::prefab::resources::PrefabCache::default());
+        ecs.insert_resource(crate::ecs::prefab::resources::AnimationCache::default());
+        ecs.insert_resource(crate::ecs::texture_source::TextureSources::default());
+        #[cfg(feature = "scene_graph")]
+        ecs.insert_resource(crate::ecs::scene::registry::AssetRegistry::default());
+        #[cfg(feature = "scene_graph")]
+        ecs.insert_resource(crate::ecs::scene::ScenePrefabs::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
         #[cfg(feature = "grass")]

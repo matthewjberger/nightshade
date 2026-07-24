@@ -569,16 +569,14 @@ pub fn material_registry_find_or_insert(
 
 /// Inserts a named material into the world's registry and takes a reference to
 /// it so it stays resident, returning the name. Wraps the registry drilling so
-/// a system never reaches into `world.res::<crate::ecs::asset_state::AssetState>().material_registry`.
+/// a system never reaches into `world.res::<crate::ecs::material::resources::MaterialRegistry>()`.
 pub fn insert_material(
     world: &mut crate::ecs::world::World,
     name: impl Into<String>,
     material: Material,
 ) -> String {
     let name = name.into();
-    let registry = &mut world
-        .res_mut::<crate::ecs::asset_state::AssetState>()
-        .material_registry;
+    let registry = &mut world.res_mut::<crate::ecs::material::resources::MaterialRegistry>();
     material_registry_insert(registry, name.clone(), material);
     if let Some(&index) = registry.registry.name_to_index.get(&name) {
         registry_add_reference(&mut registry.registry, index);
@@ -588,16 +586,14 @@ pub fn insert_material(
 
 /// Mutates an existing named material in place, returning whether it was found.
 /// Wraps the registry drilling so a system never reaches into
-/// `world.res::<crate::ecs::asset_state::AssetState>().material_registry`.
+/// `world.res::<crate::ecs::material::resources::MaterialRegistry>()`.
 pub fn mutate_material(
     world: &mut crate::ecs::world::World,
     name: &str,
     mutate: impl FnOnce(&mut Material),
 ) -> bool {
     material_registry_mutate(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .material_registry,
+        world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
         name,
         mutate,
     )

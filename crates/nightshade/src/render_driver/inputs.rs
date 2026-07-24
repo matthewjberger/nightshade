@@ -311,11 +311,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         &mut world.ecs.worlds[RENDER],
         nightshade_ecs::dynamic::DynWorld::new(),
     );
-    let mesh_cache = std::mem::take(
-        &mut world
-            .res_mut::<crate::ecs::asset_state::AssetState>()
-            .mesh_cache,
-    );
+    let mesh_cache = std::mem::take(world.res_mut::<crate::render::mesh_cache::MeshCache>());
     let world_id = world.res::<crate::ecs::world::WorldId>().0;
     let texture_cache =
         std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
@@ -422,9 +418,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     }
     world.ecs.worlds[RENDER] = inputs.scene_world;
     *world.res_mut::<crate::render::config::RendererState>() = inputs.scene;
-    world
-        .res_mut::<crate::ecs::asset_state::AssetState>()
-        .mesh_cache = inputs.mesh_cache;
+    *world.res_mut::<crate::render::mesh_cache::MeshCache>() = inputs.mesh_cache;
     *world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>() = inputs.texture_cache;
     *world.res_mut::<crate::ui::resources::RenderSlotAllocator>() = inputs.ui.render_slots;
     let frame = world.res_mut::<crate::ui::resources::RetainedUiFrame>();

@@ -291,7 +291,9 @@ fn tile_color(world: &World, entity: Entity) -> Vec4 {
         return fallback;
     };
     let Some(material) = nightshade::render::generational_registry::registry_entry_by_name(
-        &world.res::<AssetState>().material_registry.registry,
+        &world
+            .res::<nightshade::ecs::material::resources::MaterialRegistry>()
+            .registry,
         &material_ref.name,
     ) else {
         return fallback;

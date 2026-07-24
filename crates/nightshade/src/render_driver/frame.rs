@@ -281,11 +281,10 @@ pub(crate) fn drain_loading_tasks(
                         .map(str::to_string);
                     if let Some(name) = texture_name {
                         world
-                            .res_mut::<crate::ecs::asset_state::AssetState>()
-                            .texture_sources
+                            .res_mut::<crate::ecs::texture_source::TextureSources>()
                             .entry(name)
-                            .or_insert_with(|| crate::ecs::asset_state::TextureSourceBytes {
-                                data: crate::ecs::asset_state::TextureSourceData::Rgba {
+                            .or_insert_with(|| crate::ecs::texture_source::TextureSourceBytes {
+                                data: crate::ecs::texture_source::TextureSourceData::Rgba {
                                     rgba: decoded.rgba.clone(),
                                     width: decoded.width,
                                     height: decoded.height,
@@ -334,17 +333,14 @@ pub(crate) fn drain_loading_tasks(
     // resolve plus instance rebuild.
     let needs_resolve = reserved_any
         || !world
-            .res::<crate::ecs::asset_state::AssetState>()
-            .material_registry
+            .res::<crate::ecs::material::resources::MaterialRegistry>()
             .pending_resolve
             .is_empty();
     if needs_resolve {
         let texture_cache =
             std::mem::take(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>());
         crate::ecs::material::resources::material_registry_resolve_uploaded_textures(
-            &mut world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .material_registry,
+            world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
             &texture_cache,
             &uploaded_textures,
         );
@@ -368,8 +364,7 @@ pub(crate) fn drain_loading_tasks(
     if !evicted.is_empty() {
         for name in &evicted {
             world
-                .res_mut::<crate::ecs::asset_state::AssetState>()
-                .texture_sources
+                .res_mut::<crate::ecs::texture_source::TextureSources>()
                 .remove(name);
         }
         world

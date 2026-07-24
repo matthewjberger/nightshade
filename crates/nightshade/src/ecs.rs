@@ -14,7 +14,6 @@
 //! - `world.ecs.worlds[CORE].remove_components(entity, MASK)` - Remove a component
 
 pub mod animation;
-pub mod asset_state;
 #[cfg(all(
     feature = "assets",
     feature = "file_watcher",
@@ -27,6 +26,7 @@ pub mod camera;
 pub mod cloth;
 pub mod cutscene;
 pub mod entity_registry;
+pub mod texture_source;
 
 pub mod asset;
 pub mod decal;

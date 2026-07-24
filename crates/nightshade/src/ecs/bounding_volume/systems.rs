@@ -47,9 +47,7 @@ fn instanced_bounding_volume(mesh_cache: &MeshCache, instanced: &InstancedMesh) 
 pub fn ensure_bounding_volumes(world: &mut World) {
     let mut pending: Vec<(Entity, BoundingVolume)> = Vec::new();
 
-    let mesh_cache = &world
-        .res::<crate::ecs::asset_state::AssetState>()
-        .mesh_cache;
+    let mesh_cache = &world.res::<crate::render::mesh_cache::MeshCache>();
     for (entity, render_mesh) in world
         .query_ref::<&crate::ecs::mesh::components::RenderMesh>()
         .without::<BoundingVolume>()
