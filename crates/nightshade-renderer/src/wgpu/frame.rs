@@ -111,10 +111,16 @@ fn run_frame(
     #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
     presentation::poll_screenshot_readback(renderer);
 
-    renderer.resize_render_buffers(
-        renderer.surface_config.width,
-        renderer.surface_config.height,
-    );
+    // Only when nothing else will size them. The per-camera dispatch resizes to
+    // each camera's target below, so doing it here too makes every frame resize
+    // the whole graph twice when the cameras render at a size other than the
+    // window's, which is always the case in stereo.
+    if inputs.frame.cameras.is_empty() {
+        renderer.resize_render_buffers(
+            renderer.surface_config.width,
+            renderer.surface_config.height,
+        );
+    }
 
     let mut hdr_skybox_commands = Vec::new();
     #[cfg(all(not(target_arch = "wasm32"), feature = "screenshot"))]
@@ -220,9 +226,15 @@ fn run_frame(
         );
     }
 
-    let Some(surface_texture) = presentation::acquire_surface_frame(renderer) else {
+    // A camera rendering into its own target does not need the window: an
+    // occluded, minimized, or lost surface stops the window presenting but must
+    // not stop the cameras, because the window may not be where the frame is
+    // going. A headset is the case that makes this concrete.
+    let surface_texture = presentation::acquire_surface_frame(renderer);
+    let has_surface = surface_texture.is_some();
+    if !has_surface && inputs.frame.cameras.is_empty() {
         return Ok(());
-    };
+    }
     outputs.frame_executed = true;
 
     // Taken only after a surface frame is secured: on a skipped frame the
@@ -243,7 +255,7 @@ fn run_frame(
     // The renderer owns the live GPU textures; swap the persisted store into the
     // inputs so the passes can sample it while the graph runs, then reclaim it.
     std::mem::swap(&mut renderer.texture_store, &mut inputs.texture_store);
-    let dispatch_result = dispatch_window_renders(renderer, inputs, outputs);
+    let dispatch_result = dispatch_window_renders(renderer, inputs, outputs, has_surface);
     std::mem::swap(&mut renderer.texture_store, &mut inputs.texture_store);
     dispatch_result?;
 
@@ -252,7 +264,9 @@ fn run_frame(
         presentation::request_screenshot_copy(renderer, path, max_dimension);
     }
 
-    surface_texture.present();
+    if let Some(surface_texture) = surface_texture {
+        surface_texture.present();
+    }
 
     Ok(())
 }
@@ -261,6 +275,7 @@ fn dispatch_window_renders(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
+    has_surface: bool,
 ) -> Result<(), crate::wgpu::rendergraph::RenderGraphError> {
     let _span = tracing::info_span!(
         "dispatch_window_renders",
@@ -272,7 +287,8 @@ fn dispatch_window_renders(
     let surface_height = renderer.surface_config.height;
     let has_viewports = !inputs.frame.cameras.is_empty();
     let _ = render_graph_set_pass_enabled(&mut renderer.graph, "viewport_blit_pass", has_viewports);
-    let _ = render_graph_set_pass_enabled(&mut renderer.graph, "viewport_compose_pass", true);
+    let _ =
+        render_graph_set_pass_enabled(&mut renderer.graph, "viewport_compose_pass", has_surface);
 
     if !has_viewports {
         renderer.resize_render_buffers_for_window(surface_width, surface_height);
@@ -284,7 +300,7 @@ fn dispatch_window_renders(
     let focus_policy = inputs.scene.focus_policy;
     let global_dirty_signal = inputs.frame.global_dirty_signal;
 
-    let ui_pass_states_before_loop = if has_viewports {
+    let ui_pass_states_before_loop = if has_viewports && has_surface {
         let saved_states = render_graph_save_pass_enabled_states(&renderer.graph);
         let saved = (
             saved_states.get("ui_pass").copied().unwrap_or(true),
@@ -356,8 +372,18 @@ fn dispatch_window_renders(
         };
         let render_scale = inputs.settings.render_scale.clamp(0.25, 4.0);
         let is_main_viewport_camera = Some(camera_entity) == original_active_camera;
-        let render_width = ((display_width as f32 * render_scale).round() as u32).max(1);
-        let render_height = ((display_height as f32 * render_scale).round() as u32).max(1);
+        // A caller-owned target has a size the renderer does not get to choose,
+        // so render scale cannot apply: the graph has to produce exactly the
+        // pixels that target holds.
+        let external_size = renderer
+            .camera_viewports
+            .get(&camera_entity)
+            .filter(|viewport| viewport.external)
+            .map(|viewport| viewport.size);
+        let (render_width, render_height) = external_size.unwrap_or((
+            ((display_width as f32 * render_scale).round() as u32).max(1),
+            ((display_height as f32 * render_scale).round() as u32).max(1),
+        ));
 
         renderer.ensure_camera_viewport(camera_entity, render_width, render_height);
         renderer.resize_render_buffers_for_window(render_width, render_height);

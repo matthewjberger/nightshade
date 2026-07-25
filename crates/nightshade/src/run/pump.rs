@@ -51,6 +51,7 @@ pub fn pump_shell_new(state: Box<dyn State>) -> Result<PumpShell, Box<dyn std::e
         #[cfg(all(not(target_os = "android"), feature = "core"))]
         accesskit: None,
         initialized: false,
+        caller_driven_frame: false,
     };
 
     Ok(PumpShell {
@@ -86,6 +87,7 @@ pub fn pump_shell_with_world(
         #[cfg(all(not(target_os = "android"), feature = "core"))]
         accesskit: None,
         initialized: false,
+        caller_driven_frame: false,
     };
 
     Ok(PumpShell {
@@ -145,6 +147,10 @@ pub fn pump_frame(shell: &mut PumpShell) -> bool {
 /// swapchain, must keep rendering while the desktop window is minimized, and
 /// its pacing comes from that other presentation path rather than from winit.
 pub fn pump_render_frame(shell: &mut PumpShell) -> bool {
+    // Claim the frame before pumping, so the redraw request the window raises
+    // during this pump is not answered by running a second full frame.
+    shell.context.caller_driven_frame = true;
+
     let status = shell
         .event_loop
         .pump_app_events(Some(std::time::Duration::ZERO), &mut shell.context);

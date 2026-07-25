@@ -153,6 +153,7 @@ pub fn launch_with_world(
         ))]
         accesskit: None,
         initialized: false,
+        caller_driven_frame: false,
     };
 
     #[cfg(target_arch = "wasm32")]
@@ -162,6 +163,7 @@ pub fn launch_with_world(
         renderer: None,
         renderer_receiver: None,
         initialized: false,
+        caller_driven_frame: false,
     };
 
     nightshade_platform::run::run_event_loop(context)?;
@@ -279,6 +281,7 @@ pub(crate) fn step(
     state: &mut Box<dyn State + 'static>,
     renderer: &mut Option<crate::render::wgpu::WgpuRenderer>,
     event: &WindowEvent,
+    caller_driven_frame: bool,
 ) -> Option<Box<dyn State>> {
     let delta_ms = (world.res::<crate::ecs::time::Time>().delta_time * 1000.0) as u32;
     let _span = tracing::info_span!("frame", delta_ms).entered();
@@ -286,11 +289,19 @@ pub(crate) fn step(
     sync_min_window_size(world);
     sync_window_title(world);
     sync_window_icon(world);
-    if matches!(event, WindowEvent::RedrawRequested) {
+    if matches!(event, WindowEvent::RedrawRequested) && !caller_driven_frame {
         sync_macos_auto_frame_rate_limit(world);
         throttle_to_frame_rate_limit(world);
     }
     handle_event_systems(world, event);
+
+    // A caller-owned loop runs the frame itself, on its own schedule. The window
+    // still asks for redraws through `about_to_wait`, and answering them here
+    // too would run every system and render every camera a second time per
+    // iteration.
+    if caller_driven_frame {
+        return None;
+    }
 
     match event {
         WindowEvent::RedrawRequested => match renderer.as_mut() {
@@ -339,7 +350,13 @@ pub fn run_frame_body(
             .cached_viewport_size
             .unwrap_or((0, 0))
     };
-    let should_render = viewport_width > 0 && viewport_height > 0;
+    // A zero-sized window means nothing to present to, which normally means
+    // nothing to render. A composition that presents elsewhere says so, and then
+    // its cameras keep drawing into their own targets regardless of the window.
+    let render_without_window = world
+        .res::<crate::viewport::Viewport>()
+        .render_without_window;
+    let should_render = (viewport_width > 0 && viewport_height > 0) || render_without_window;
     if should_render {
         if let Err(error) = crate::render_driver::update_with_state(renderer, state, world) {
             tracing::error!("Failed to update render graph: {error}");
@@ -518,6 +535,10 @@ pub struct WindowContext {
     ))]
     pub accesskit: Option<crate::ui::accessibility::AccessKitHost>,
     pub initialized: bool,
+    /// Set by a caller-owned loop that runs the frame itself. Redraw requests
+    /// from the window are then answered by that loop rather than here, so a
+    /// frame is not run twice per iteration.
+    pub caller_driven_frame: bool,
 }
 
 impl winit::application::ApplicationHandler for WindowContext {
@@ -977,9 +998,13 @@ impl winit::application::ApplicationHandler for WindowContext {
             _ => {}
         }
 
-        if let Some(new_state) =
-            crate::run::step(&mut self.world, &mut self.state, &mut self.renderer, &event)
-        {
+        if let Some(new_state) = crate::run::step(
+            &mut self.world,
+            &mut self.state,
+            &mut self.renderer,
+            &event,
+            self.caller_driven_frame,
+        ) {
             self.state = new_state;
         }
 

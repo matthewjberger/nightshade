@@ -234,6 +234,11 @@ run-web:
 run-app $project="sandbox" *arguments="":
     cargo run -r -p {{project}} -- {{arguments}}
 
+# Runs an OpenXR VR example by name (e.g. `just run-vr hands`). Needs a desktop
+# OpenXR runtime and a connected headset.
+run-vr $name="hello_vr":
+    cargo run -r -p nightshade-openxr --example {{name}}
+
 # Runs a nightshade-api example by name (e.g. `just run-example solar_system`)
 run-example $name="spinning_cube":
     cargo run -r -p nightshade-api --example {{name}}
