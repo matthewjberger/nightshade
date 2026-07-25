@@ -1099,7 +1099,7 @@ impl NavMeshDemo {
     }
 
     fn handle_mouse_input(&mut self, input: &Input, world: &mut World) {
-        if world.res::<UserInterface>().hud_wants_pointer || ui_pointer_over_widget(world) {
+        if world.res::<UserInterface>().hud_wants_pointer || ui_wants_pointer(&world.ecs) {
             return;
         }
 

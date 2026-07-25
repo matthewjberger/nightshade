@@ -1083,7 +1083,7 @@ pub mod prelude {
         ui_color_picker_set_value, ui_dock_layout, ui_dock_state, ui_drag_value,
         ui_drag_value_changed, ui_dropdown_selected, ui_dropdown_selected_changed,
         ui_dropdown_set_value, ui_panel_set_header_visible, ui_panel_set_pinned,
-        ui_pointer_over_widget, ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
+        ui_progress_bar_set_value, ui_radio_group_value, ui_radio_selected,
         ui_range_slider_set_values, ui_reserved_areas, ui_scroll_area_set_offset,
         ui_scroll_area_set_snap, ui_slider_set_value, ui_slider_value, ui_slider_value_changed,
         ui_tab_bar_selected, ui_tab_bar_set_value, ui_text_input_changed, ui_text_input_set_mask,
@@ -1102,6 +1102,9 @@ pub mod prelude {
         ui_tile_remove, ui_tile_reset_to_panes, ui_tile_save_layout, ui_tile_set_active,
         ui_tile_split, ui_tile_splitter_moved, ui_tile_tab_activated, ui_tile_tab_closed,
         ui_tile_wrap_pane_in_tabs,
+    };
+    pub use crate::ui::{
+        ui_is_text_editor, ui_pointer_target, ui_wants_keyboard, ui_wants_pointer,
     };
     // === decap re-exports end ===
 }

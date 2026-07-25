@@ -64,10 +64,7 @@ pub fn input_system(
         game_world.hover_tower_text = Some(text_entity);
     }
 
-    let pointer_over_ui = world
-        .res::<RetainedUiInteraction>()
-        .hovered_entity
-        .is_some();
+    let pointer_over_ui = ui_wants_pointer(&world.ecs);
     let mouse_state = input.mouse.state;
     let mouse_position = input.mouse.position;
     let left_just_pressed = mouse_state.contains(MouseState::LEFT_JUST_PRESSED);

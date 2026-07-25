@@ -298,12 +298,8 @@ impl PickingDemo {
         let mouse = input.mouse;
         let mouse_pos = mouse.position;
         let current_mouse_pos = (mouse_pos.x as u32, mouse_pos.y as u32);
-        let ui_capturing = world.res::<UserInterface>().hud_wants_pointer
-            || world
-                .res::<RetainedUiInteraction>()
-                .hovered_entity
-                .is_some()
-            || world.res::<RetainedUiInteraction>().active_entity.is_some();
+        let ui_capturing =
+            world.res::<UserInterface>().hud_wants_pointer || ui_wants_pointer(&world.ecs);
         let mouse_held = mouse.state.contains(MouseState::LEFT_CLICKED);
         if mouse_held {
             self.highlighted_entity = None;
@@ -372,12 +368,8 @@ impl PickingDemo {
         if !mouse.state.contains(MouseState::LEFT_JUST_PRESSED) {
             return;
         }
-        let ui_capturing = world.res::<UserInterface>().hud_wants_pointer
-            || world
-                .res::<RetainedUiInteraction>()
-                .hovered_entity
-                .is_some()
-            || world.res::<RetainedUiInteraction>().active_entity.is_some();
+        let ui_capturing =
+            world.res::<UserInterface>().hud_wants_pointer || ui_wants_pointer(&world.ecs);
         if ui_capturing {
             return;
         }

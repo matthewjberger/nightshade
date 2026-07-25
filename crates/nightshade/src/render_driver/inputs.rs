@@ -351,6 +351,10 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .res::<crate::ui::resources::RetainedUiRuntime>()
         .background_color;
     let render_slots = std::mem::take(world.res_mut::<crate::ui::resources::RenderSlotAllocator>());
+    // Systems that run after the UI schedule (the gizmo overlays, a host shell)
+    // queue overlay draws too late for the UI's own flush, so drain again here,
+    // at the last point before the draw list leaves for the renderer.
+    crate::ui::render_sync::flush_overlays(&mut world.ecs);
     let frame = world.res_mut::<crate::ui::resources::RetainedUiFrame>();
     RenderInputs {
         scene_world,
