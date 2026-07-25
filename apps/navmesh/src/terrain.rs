@@ -179,11 +179,11 @@ pub fn spawn_terrain(
             | MATERIAL_REF
             | BOUNDING_VOLUME
             | CASTS_SHADOW
-            | RIGID_BODY
-            | COLLIDER
             | VISIBILITY,
         1,
     )[0];
+
+    nightshade::plugins::physics::physics_component_world(world);
 
     if let Some(name) = world.get_mut::<nightshade::ecs::primitives::Name>(entity) {
         name.0 = "Terrain".to_string();
@@ -210,17 +210,14 @@ pub fn spawn_terrain(
         config.resolution_z as usize,
     );
 
-    if let Some(rigid_body) =
-        world.get_mut::<nightshade::plugins::physics::components::RigidBodyComponent>(entity)
-    {
-        *rigid_body =
-            RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z);
-    }
+    world.set(
+        entity,
+        RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z),
+    );
 
-    if let Some(collider) =
-        world.get_mut::<nightshade::plugins::physics::components::ColliderComponent>(entity)
-    {
-        *collider = ColliderComponent {
+    world.set(
+        entity,
+        ColliderComponent {
             handle: None,
             shape: ColliderShape::HeightField {
                 nrows: config.resolution_z as usize,
@@ -234,8 +231,8 @@ pub fn spawn_terrain(
             is_sensor: false,
             collision_groups: InteractionGroups::all(),
             solver_groups: InteractionGroups::all(),
-        };
-    }
+        },
+    );
 
     if let Some(bv) = world.get_mut::<nightshade::render::bounding_volume::BoundingVolume>(entity) {
         let half_width = config.width / 2.0;

@@ -16,7 +16,6 @@ pub mod components {
         OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ShadingMode, Smoothing,
         ViewportShading,
     };
-    pub use crate::plugins::audio::components::{AudioBus, AudioListener, AudioSource};
     pub use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
     pub use crate::render::config::ViewportUpdateMode;
 
@@ -46,10 +45,6 @@ pub mod components {
     };
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};
     pub use crate::ecs::water::components::Water;
-    pub use crate::plugins::physics::components::{
-        CharacterControllerComponent, ColliderComponent, ColliderShape, CollisionListener,
-        PhysicsInterpolation, RigidBodyComponent,
-    };
     pub use crate::render::material::{AlphaMode, Material};
     pub use crate::render::particles::{
         ColorGradient, EmitterShape, EmitterType, ParticleEmitter, ParticleSystemStats,
@@ -116,10 +111,6 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
     let mut registry = nightshade_ecs::dynamic::ComponentRegistry::new();
     let key = registry.register_serde::<crate::ecs::animation::components::AnimationPlayer>();
     debug_assert_eq!(key.mask, crate::ecs::world::ANIMATION_PLAYER);
-    let key = registry.register_serde::<crate::plugins::audio::components::AudioListener>();
-    debug_assert_eq!(key.mask, crate::ecs::world::AUDIO_LISTENER);
-    let key = registry.register_serde::<crate::plugins::audio::components::AudioSource>();
-    debug_assert_eq!(key.mask, crate::ecs::world::AUDIO_SOURCE);
     let key = registry.register_serde::<crate::render::bounding_volume::BoundingVolume>();
     debug_assert_eq!(key.mask, crate::ecs::world::BOUNDING_VOLUME);
     let key = registry.register_serde::<crate::ecs::primitives::CameraCullingMask>();
@@ -132,15 +123,8 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
     debug_assert_eq!(key.mask, crate::ecs::world::CAMERA);
     let key = registry.register_serde::<crate::ecs::primitives::CastsShadow>();
     debug_assert_eq!(key.mask, crate::ecs::world::CASTS_SHADOW);
-    let key = registry
-        .register_serde::<crate::plugins::physics::components::CharacterControllerComponent>();
-    debug_assert_eq!(key.mask, crate::ecs::world::CHARACTER_CONTROLLER);
     let key = registry.register_serde::<crate::ecs::cloth::components::Cloth>();
     debug_assert_eq!(key.mask, crate::ecs::world::CLOTH);
-    let key = registry.register_serde::<crate::plugins::physics::components::ColliderComponent>();
-    debug_assert_eq!(key.mask, crate::ecs::world::COLLIDER);
-    let key = registry.register_serde::<crate::plugins::physics::components::CollisionListener>();
-    debug_assert_eq!(key.mask, crate::ecs::world::COLLISION_LISTENER);
     let key = registry.register_serde::<crate::ecs::camera::components::ConstrainedAspect>();
     debug_assert_eq!(key.mask, crate::ecs::world::CONSTRAINED_ASPECT);
     let key = registry.register_serde::<crate::ecs::primitives::CullingMask>();
@@ -173,25 +157,18 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
     debug_assert_eq!(key.mask, crate::ecs::world::MORPH_WEIGHTS);
     let key = registry.register_serde::<crate::ecs::primitives::Name>();
     debug_assert_eq!(key.mask, crate::ecs::world::NAME);
-    let key = registry.register_serde::<crate::plugins::navmesh::components::NavMeshAgent>();
-    debug_assert_eq!(key.mask, crate::ecs::world::NAVMESH_AGENT);
     let key = registry.register_serde::<crate::ecs::camera::components::PanOrbitCamera>();
     debug_assert_eq!(key.mask, crate::ecs::world::PAN_ORBIT_CAMERA);
     let key = registry.register_serde::<nightshade_ecs::dynamic::ChildOf>();
     debug_assert_eq!(key.mask, crate::ecs::world::PARENT);
     let key = registry.register_serde::<crate::render::particles::ParticleEmitter>();
     debug_assert_eq!(key.mask, crate::ecs::world::PARTICLE_EMITTER);
-    let key =
-        registry.register_serde::<crate::plugins::physics::components::PhysicsInterpolation>();
-    debug_assert_eq!(key.mask, crate::ecs::world::PHYSICS_INTERPOLATION);
     let key = registry.register_serde::<crate::ecs::prefab::components::PrefabSource>();
     debug_assert_eq!(key.mask, crate::ecs::world::PREFAB_SOURCE);
     let key = registry.register_serde::<crate::render::render_layer::RenderLayer>();
     debug_assert_eq!(key.mask, crate::ecs::world::RENDER_LAYER);
     let key = registry.register_serde::<crate::ecs::mesh::components::RenderMesh>();
     debug_assert_eq!(key.mask, crate::ecs::world::RENDER_MESH);
-    let key = registry.register_serde::<crate::plugins::physics::components::RigidBodyComponent>();
-    debug_assert_eq!(key.mask, crate::ecs::world::RIGID_BODY);
     let key = registry.register_serde::<crate::ecs::transform::components::Rotation>();
     debug_assert_eq!(key.mask, crate::ecs::world::ROTATION);
     let key = registry.register_serde::<crate::ecs::script::components::Script>();
@@ -233,17 +210,12 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
 
 nightshade_ecs::impl_component!(
     crate::ecs::animation::components::AnimationPlayer,
-    crate::plugins::audio::components::AudioListener,
-    crate::plugins::audio::components::AudioSource,
     crate::ecs::primitives::CameraCullingMask,
     crate::ecs::camera::components::CameraEnvironment,
     crate::ecs::camera::components::CameraPostProcess,
     crate::ecs::camera::components::Camera,
     crate::ecs::primitives::CastsShadow,
-    crate::plugins::physics::components::CharacterControllerComponent,
     crate::ecs::cloth::components::Cloth,
-    crate::plugins::physics::components::ColliderComponent,
-    crate::plugins::physics::components::CollisionListener,
     crate::ecs::camera::components::ConstrainedAspect,
     crate::ecs::primitives::CullingMask,
     crate::ecs::decal::components::Decal,
@@ -260,12 +232,9 @@ nightshade_ecs::impl_component!(
     crate::ecs::material::components::MaterialVariants,
     crate::ecs::morph::components::MorphWeights,
     crate::ecs::primitives::Name,
-    crate::plugins::navmesh::components::NavMeshAgent,
     crate::ecs::camera::components::PanOrbitCamera,
-    crate::plugins::physics::components::PhysicsInterpolation,
     crate::ecs::prefab::components::PrefabSource,
     crate::ecs::mesh::components::RenderMesh,
-    crate::plugins::physics::components::RigidBodyComponent,
     crate::ecs::transform::components::Rotation,
     crate::ecs::script::components::Script,
     crate::ecs::skin::components::Skin,

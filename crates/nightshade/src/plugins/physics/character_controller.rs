@@ -4,8 +4,10 @@ use rapier3d::prelude::*;
 
 use crate::prelude::*;
 pub fn character_controller_input_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::CHARACTER_CONTROLLER)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::CharacterControllerComponent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     let delta_time = world.plugin_resource::<PhysicsWorld>().fixed_timestep;
@@ -284,10 +286,10 @@ pub fn character_controller_input_system(world: &mut World) {
 }
 
 pub fn character_controller_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(
-            crate::ecs::world::CHARACTER_CONTROLLER | crate::ecs::world::LOCAL_TRANSFORM,
-        )
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::CharacterControllerComponent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     let delta_time = world.plugin_resource::<PhysicsWorld>().fixed_timestep;

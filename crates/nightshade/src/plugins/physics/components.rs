@@ -605,3 +605,11 @@ impl PhysicsInterpolation {
         self.current_rotation = rotation;
     }
 }
+
+nightshade_ecs::impl_component!(
+    RigidBodyComponent,
+    ColliderComponent,
+    CharacterControllerComponent,
+    CollisionListener,
+    PhysicsInterpolation,
+);

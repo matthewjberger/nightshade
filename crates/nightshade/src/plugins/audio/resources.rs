@@ -33,6 +33,7 @@ pub struct AudioEngine {
     pub spatial_tracks: HashMap<Entity, SpatialTrackHandle>,
     pub spatial_sound_handles: HashMap<Entity, StaticSoundHandle>,
     pub paused_handles: HashSet<Entity>,
+    pub component_world: Option<usize>,
 }
 
 pub fn audio_engine_initialize(engine: &mut AudioEngine) -> Result<(), Box<dyn std::error::Error>> {

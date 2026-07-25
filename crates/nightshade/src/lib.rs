@@ -111,12 +111,9 @@
 //! | `MATERIAL_REF` | Material reference |
 //! | `CAMERA` | Camera component |
 //! | `PARENT` | Hierarchy parent link |
-//! | `RIGID_BODY` | Physics body |
-//! | `COLLIDER` | Collision shape |
 //! | `ANIMATION_PLAYER` | Animation controller |
 //! | `PARTICLE_EMITTER` | GPU particles |
 //! | `CLOTH` | GPU cloth sheet |
-//! | `AUDIO_SOURCE` | Sound playback |
 //! | `DECAL` | Projected texture |
 //!
 //! ### Resources
@@ -249,7 +246,7 @@
 //! audio_engine_load_sound(world.plugin_resource_mut::<AudioEngine>(), "shot", data);
 //!
 //! // 3D spatial audio: play it through an AudioSource component
-//! let source = spawn_entities(world, AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let source = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.set(source, AudioSource::new("shot").with_spatial(true).playing());
 //! world.set(source, LocalTransform::from_translation(Vec3::new(5.0, 0.0, 0.0)));
 //! ```
@@ -257,17 +254,16 @@
 //! ### Physics (`physics` feature)
 //!
 //! ```ignore
-//! // Dynamic rigid body with collider
-//! let entity = spawn_entities(world,
-//!     RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
-//!     1
-//! )[0];
+//! // Dynamic rigid body with collider. The physics components live in the
+//! // physics plugin's own member world, so they attach through `world.set`
+//! // rather than a core spawn mask.
+//! let entity = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.set(entity, RigidBodyComponent::new_dynamic());
 //! world.set(entity, ColliderComponent::cuboid(1.0, 1.0, 1.0));
 //! world.set(entity, LocalTransform::from_translation(Vec3::new(0.0, 5.0, 0.0)));
 //!
 //! // Static floor
-//! let floor = spawn_entities(world, RIGID_BODY | COLLIDER | LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+//! let floor = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.set(floor, RigidBodyComponent::new_static());
 //! world.set(floor, ColliderComponent::cuboid(10.0, 0.1, 10.0));
 //!
@@ -838,6 +834,7 @@ pub mod prelude {
     pub use crate::plugins::audio::systems::{
         load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
     };
+    pub use crate::plugins::audio::{AudioBus, AudioListener, AudioSource};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};

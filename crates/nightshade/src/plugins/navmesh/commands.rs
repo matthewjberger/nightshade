@@ -1,7 +1,7 @@
 use super::components::NavMeshAgentState;
 use crate::ecs::world::{
-    BOUNDING_VOLUME, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME, NAVMESH_AGENT,
-    RENDER_MESH, VISIBILITY, World,
+    BOUNDING_VOLUME, GLOBAL_TRANSFORM, LOCAL_TRANSFORM, MATERIAL_REF, NAME, RENDER_MESH,
+    VISIBILITY, World,
 };
 use nalgebra_glm::Vec3;
 
@@ -18,8 +18,7 @@ pub fn spawn_navmesh_agent(
             | RENDER_MESH
             | MATERIAL_REF
             | BOUNDING_VOLUME
-            | VISIBILITY
-            | NAVMESH_AGENT,
+            | VISIBILITY,
         1,
     )[0];
 
@@ -38,10 +37,8 @@ pub fn spawn_navmesh_agent(
         mesh.name = "Capsule".to_string();
     }
 
-    if let Some(agent) = world.get_mut::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
-    {
-        agent.movement_speed = speed;
-    }
+    crate::plugins::navmesh::navmesh_component_world(world);
+    world.set(entity, NavMeshAgent::new().with_speed(speed));
 
     if let Some(bounding_volume) =
         world.get_mut::<crate::render::bounding_volume::BoundingVolume>(entity)

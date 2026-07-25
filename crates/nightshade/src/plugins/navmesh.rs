@@ -110,6 +110,8 @@ pub mod pathfinding;
 #[cfg(feature = "navmesh")]
 pub mod resources;
 #[cfg(feature = "navmesh")]
+pub mod schema;
+#[cfg(feature = "navmesh")]
 pub mod systems;
 
 #[cfg(feature = "navmesh")]
@@ -124,6 +126,8 @@ pub use pathfinding::{
 };
 #[cfg(feature = "navmesh")]
 pub use resources::*;
+#[cfg(feature = "navmesh")]
+pub use schema::navmesh_component_world;
 #[cfg(feature = "navmesh")]
 pub use systems::run_navmesh_systems;
 

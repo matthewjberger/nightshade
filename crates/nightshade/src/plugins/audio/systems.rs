@@ -1,4 +1,3 @@
-use crate::ecs::world::CORE;
 use crate::ecs::world::{Entity, World};
 use crate::plugins::audio::components::{AudioBus, AudioSource};
 use crate::plugins::audio::resources::{
@@ -188,8 +187,9 @@ pub fn set_voice_ducking(world: &mut World, ducking: f32, fade_seconds: f32) {
 }
 
 pub fn update_audio_system(world: &mut World) {
-    let source_count = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::AUDIO_SOURCE)
+    let source_count = world
+        .query_ref::<&crate::plugins::audio::components::AudioSource>()
+        .iter()
         .count();
     let _span = tracing::info_span!("audio", sources = source_count).entered();
 
@@ -200,8 +200,10 @@ pub fn update_audio_system(world: &mut World) {
         return;
     }
 
-    let listener_entity = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::AUDIO_LISTENER)
+    let listener_entity = world
+        .query_ref::<&crate::plugins::audio::components::AudioListener>()
+        .iter()
+        .map(|(entity, _)| entity)
         .next();
 
     let has_listener_entity = listener_entity.is_some();
@@ -285,8 +287,10 @@ pub fn update_audio_system(world: &mut World) {
         }
     }
 
-    let audio_entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::AUDIO_SOURCE)
+    let audio_entities: Vec<_> = world
+        .query_ref::<&crate::plugins::audio::components::AudioSource>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     struct PlayIntent {

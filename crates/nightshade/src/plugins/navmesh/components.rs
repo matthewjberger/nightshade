@@ -153,3 +153,5 @@ pub enum NavMeshAgentState {
     /// No valid path could be found.
     NoPath,
 }
+
+nightshade_ecs::impl_component!(NavMeshAgent);

@@ -73,8 +73,10 @@ pub fn run_physics_systems(world: &mut World) {
 }
 
 fn advance_interpolation_previous_and_restore_transform(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::PHYSICS_INTERPOLATION)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::PhysicsInterpolation>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -241,8 +243,10 @@ pub fn sync_transforms_from_physics_system(world: &mut World) {
 }
 
 pub fn sync_transforms_to_physics_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::LOCAL_TRANSFORM | crate::ecs::world::RIGID_BODY)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::RigidBodyComponent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -291,8 +295,10 @@ pub fn sync_transforms_to_physics_system(world: &mut World) {
 }
 
 pub fn initialize_physics_bodies_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::RIGID_BODY)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::RigidBodyComponent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -456,8 +462,10 @@ pub fn cleanup_physics_bodies_system(world: &mut World) {
 pub fn physics_interpolation_system(world: &mut World) {
     let alpha = physics_world_get_interpolation_alpha(world.plugin_resource::<PhysicsWorld>());
 
-    let interpolation_entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::PHYSICS_INTERPOLATION)
+    let interpolation_entities: Vec<_> = world
+        .query_ref::<&crate::plugins::physics::components::PhysicsInterpolation>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in interpolation_entities {
@@ -497,8 +505,13 @@ pub fn physics_interpolation_system(world: &mut World) {
 }
 
 fn sync_collision_listener_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::COLLISION_LISTENER | crate::ecs::world::COLLIDER)
+    let entities: Vec<_> = world
+        .query_ref::<(
+            &crate::plugins::physics::components::CollisionListener,
+            &crate::plugins::physics::components::ColliderComponent,
+        )>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {

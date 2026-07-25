@@ -103,7 +103,12 @@
 //!         lines.clear();
 //!
 //!         // Draw current frame's debug info
-//!         for entity in world.ecs.worlds[CORE].query_entities(RIGID_BODY | LOCAL_TRANSFORM) {
+//!         let bodies: Vec<_> = world
+//!             .query_ref::<&crate::plugins::physics::components::RigidBodyComponent>()
+//!             .iter()
+//!             .map(|(entity, _)| entity)
+//!             .collect();
+//!         for entity in bodies {
 //!             if let Some(transform) = world.get::<crate::ecs::transform::components::LocalTransform>(entity) {
 //!                 // Draw velocity vector
 //!                 if let Some(rb) = world.get::<crate::plugins::physics::components::RigidBodyComponent>(entity) {

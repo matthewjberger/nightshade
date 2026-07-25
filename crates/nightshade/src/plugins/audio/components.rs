@@ -139,3 +139,5 @@ impl AudioSource {
 
 #[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub struct AudioListener;
+
+nightshade_ecs::impl_component!(AudioSource, AudioListener);

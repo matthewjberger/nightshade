@@ -18,8 +18,10 @@ pub fn run_navmesh_systems(world: &mut World) {
 }
 
 pub fn update_agent_triangles_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -40,8 +42,10 @@ pub fn update_agent_triangles_system(world: &mut World) {
 }
 
 pub fn process_path_requests_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     let mut path_updates = Vec::new();
@@ -107,8 +111,10 @@ pub fn process_path_requests_system(world: &mut World) {
 }
 
 pub fn agent_avoidance_system(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     let agent_data: Vec<(Entity, Vec3, f32, bool)> = entities
@@ -167,8 +173,10 @@ pub fn agent_avoidance_system(world: &mut World) {
 }
 
 pub fn snap_idle_agents_to_navmesh(world: &mut World) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -208,8 +216,10 @@ pub fn snap_idle_agents_to_navmesh(world: &mut World) {
 pub fn agent_movement_system(world: &mut World) {
     let delta_time = world.res::<crate::ecs::time::Time>().delta_time;
 
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT | crate::ecs::world::LOCAL_TRANSFORM)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {
@@ -231,9 +241,11 @@ pub fn agent_movement_system(world: &mut World) {
             let agent = world
                 .get::<crate::plugins::navmesh::components::NavMeshAgent>(entity)
                 .unwrap();
-            let transform = world
-                .get::<crate::ecs::transform::components::LocalTransform>(entity)
-                .unwrap();
+            let Some(transform) =
+                world.get::<crate::ecs::transform::components::LocalTransform>(entity)
+            else {
+                continue;
+            };
 
             if agent.current_waypoint_index >= agent.current_path.len() {
                 Some((transform.translation, transform.rotation, true, 0, 0.0))

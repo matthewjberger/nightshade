@@ -796,8 +796,8 @@ impl NavMeshDemo {
             return;
         };
 
-        let agent_entity =
-            spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM | NAVMESH_AGENT, 1)[0];
+        let agent_entity = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
+        nightshade::plugins::navmesh::navmesh_component_world(world);
 
         if let Some(transform) =
             world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(agent_entity)
@@ -805,11 +805,11 @@ impl NavMeshDemo {
             transform.translation = position;
         }
 
-        if let Some(agent) =
-            world.get_mut::<nightshade::plugins::navmesh::components::NavMeshAgent>(agent_entity)
-        {
-            agent.movement_speed = self.agent_speed;
-        }
+        world.set(
+            agent_entity,
+            nightshade::plugins::navmesh::components::NavMeshAgent::new()
+                .with_speed(self.agent_speed),
+        );
 
         let fox_entity = nightshade::ecs::prefab::spawn_prefab_with_skins(
             world,

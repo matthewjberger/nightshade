@@ -47,8 +47,6 @@ pub fn spawn_static_physics_cube_with_material(
             | crate::ecs::world::MATERIAL_REF
             | crate::ecs::world::BOUNDING_VOLUME
             | crate::ecs::world::CASTS_SHADOW
-            | crate::ecs::world::RIGID_BODY
-            | crate::ecs::world::COLLIDER
             | crate::ecs::world::VISIBILITY,
         1,
     )[0];
@@ -96,20 +94,18 @@ pub fn spawn_static_physics_cube_with_material(
         *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cube");
     }
 
-    if let Some(rigid_body) =
-        world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-    {
-        *rigid_body =
-            RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z);
-    }
+    crate::plugins::physics::schema::physics_component_world(world);
+    world.set(
+        entity,
+        RigidBodyComponent::new_static().with_translation(position.x, position.y, position.z),
+    );
 
-    if let Some(collider) =
-        world.get_mut::<crate::plugins::physics::components::ColliderComponent>(entity)
-    {
-        *collider = ColliderComponent::new_cuboid(size.x / 2.0, size.y / 2.0, size.z / 2.0)
+    world.set(
+        entity,
+        ColliderComponent::new_cuboid(size.x / 2.0, size.y / 2.0, size.z / 2.0)
             .with_friction(0.8)
-            .with_restitution(0.1);
-    }
+            .with_restitution(0.1),
+    );
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
@@ -135,10 +131,6 @@ pub fn spawn_dynamic_physics_sphere_with_material(
             | crate::ecs::world::MATERIAL_REF
             | crate::ecs::world::BOUNDING_VOLUME
             | crate::ecs::world::CASTS_SHADOW
-            | crate::ecs::world::RIGID_BODY
-            | crate::ecs::world::COLLIDER
-            | crate::ecs::world::COLLISION_LISTENER
-            | crate::ecs::world::PHYSICS_INTERPOLATION
             | crate::ecs::world::VISIBILITY,
         1,
     )[0];
@@ -186,21 +178,20 @@ pub fn spawn_dynamic_physics_sphere_with_material(
         *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Sphere");
     }
 
-    if let Some(rigid_body) =
-        world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-    {
-        *rigid_body = RigidBodyComponent::new_dynamic()
+    crate::plugins::physics::schema::physics_component_world(world);
+    world.set(
+        entity,
+        RigidBodyComponent::new_dynamic()
             .with_translation(position.x, position.y, position.z)
-            .with_mass(mass);
-    }
+            .with_mass(mass),
+    );
 
-    if let Some(collider) =
-        world.get_mut::<crate::plugins::physics::components::ColliderComponent>(entity)
-    {
-        *collider = ColliderComponent::new_ball(radius)
+    world.set(
+        entity,
+        ColliderComponent::new_ball(radius)
             .with_friction(0.7)
-            .with_restitution(0.3);
-    }
+            .with_restitution(0.3),
+    );
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
@@ -225,10 +216,6 @@ pub fn spawn_dynamic_physics_cube_with_material(
             | crate::ecs::world::MATERIAL_REF
             | crate::ecs::world::BOUNDING_VOLUME
             | crate::ecs::world::CASTS_SHADOW
-            | crate::ecs::world::RIGID_BODY
-            | crate::ecs::world::COLLIDER
-            | crate::ecs::world::COLLISION_LISTENER
-            | crate::ecs::world::PHYSICS_INTERPOLATION
             | crate::ecs::world::VISIBILITY,
         1,
     )[0];
@@ -276,21 +263,20 @@ pub fn spawn_dynamic_physics_cube_with_material(
         *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cube");
     }
 
-    if let Some(rigid_body) =
-        world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-    {
-        *rigid_body = RigidBodyComponent::new_dynamic()
+    crate::plugins::physics::schema::physics_component_world(world);
+    world.set(
+        entity,
+        RigidBodyComponent::new_dynamic()
             .with_translation(position.x, position.y, position.z)
-            .with_mass(mass);
-    }
+            .with_mass(mass),
+    );
 
-    if let Some(collider) =
-        world.get_mut::<crate::plugins::physics::components::ColliderComponent>(entity)
-    {
-        *collider = ColliderComponent::new_cuboid(size.x / 2.0, size.y / 2.0, size.z / 2.0)
+    world.set(
+        entity,
+        ColliderComponent::new_cuboid(size.x / 2.0, size.y / 2.0, size.z / 2.0)
             .with_friction(0.7)
-            .with_restitution(0.2);
-    }
+            .with_restitution(0.2),
+    );
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
@@ -316,10 +302,6 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
             | crate::ecs::world::MATERIAL_REF
             | crate::ecs::world::BOUNDING_VOLUME
             | crate::ecs::world::CASTS_SHADOW
-            | crate::ecs::world::RIGID_BODY
-            | crate::ecs::world::COLLIDER
-            | crate::ecs::world::COLLISION_LISTENER
-            | crate::ecs::world::PHYSICS_INTERPOLATION
             | crate::ecs::world::VISIBILITY,
         1,
     )[0];
@@ -367,21 +349,20 @@ pub fn spawn_dynamic_physics_cylinder_with_material(
         *bv = crate::render::bounding_volume::BoundingVolume::from_mesh_type("Cylinder");
     }
 
-    if let Some(rigid_body) =
-        world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-    {
-        *rigid_body = RigidBodyComponent::new_dynamic()
+    crate::plugins::physics::schema::physics_component_world(world);
+    world.set(
+        entity,
+        RigidBodyComponent::new_dynamic()
             .with_translation(position.x, position.y, position.z)
-            .with_mass(mass);
-    }
+            .with_mass(mass),
+    );
 
-    if let Some(collider) =
-        world.get_mut::<crate::plugins::physics::components::ColliderComponent>(entity)
-    {
-        *collider = ColliderComponent::new_cylinder(half_height, radius)
+    world.set(
+        entity,
+        ColliderComponent::new_cylinder(half_height, radius)
             .with_friction(0.5)
-            .with_restitution(0.3);
-    }
+            .with_restitution(0.3),
+    );
 
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
@@ -395,9 +376,7 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
         world,
         crate::ecs::world::NAME
             | crate::ecs::world::LOCAL_TRANSFORM
-            | crate::ecs::world::GLOBAL_TRANSFORM
-            | crate::ecs::world::CHARACTER_CONTROLLER
-            | crate::ecs::world::PHYSICS_INTERPOLATION,
+            | crate::ecs::world::GLOBAL_TRANSFORM,
         1,
     )[0];
 
@@ -411,24 +390,21 @@ pub fn spawn_first_person_player(world: &mut World, position: Vec3) -> (Entity, 
         transform.translation = position;
     }
 
-    if let Some(interpolation) =
-        world.get_mut::<crate::plugins::physics::components::PhysicsInterpolation>(player_entity)
-    {
-        interpolation.previous_translation = position;
-        interpolation.previous_rotation = nalgebra_glm::quat_identity();
-        interpolation.current_translation = position;
-        interpolation.current_rotation = nalgebra_glm::quat_identity();
-        interpolation.enabled = true;
-    }
+    crate::plugins::physics::schema::physics_component_world(world);
+    let interpolation = crate::plugins::physics::components::PhysicsInterpolation {
+        previous_translation: position,
+        previous_rotation: nalgebra_glm::quat_identity(),
+        current_translation: position,
+        current_rotation: nalgebra_glm::quat_identity(),
+        enabled: true,
+    };
+    world.set(player_entity, interpolation);
 
-    if let Some(controller) = world
-        .get_mut::<crate::plugins::physics::components::CharacterControllerComponent>(player_entity)
-    {
-        *controller = CharacterControllerComponent::new_capsule(0.7, 0.3);
-        controller.max_speed = 5.0;
-        controller.acceleration = 50.0;
-        controller.jump_impulse = 5.0;
-    }
+    let mut controller = CharacterControllerComponent::new_capsule(0.7, 0.3);
+    controller.max_speed = 5.0;
+    controller.acceleration = 50.0;
+    controller.jump_impulse = 5.0;
+    world.set(player_entity, controller);
 
     let camera_entity = spawn_entities(
         world,

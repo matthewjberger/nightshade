@@ -35,13 +35,13 @@
 //!
 //! ```ignore
 //! let entity = spawn_cube_at(world, Vec3::new(0.0, 5.0, 0.0));
-//! physics_world_add_rigid_body(&mut world.ecs.worlds[CORE], entity);
-//! world.set(entity, RigidBodyComponent::new_dynamic()
-//!     .with_mass(10.0));
-//! physics_world_add_collider(&mut world.ecs.worlds[CORE], entity);
-//! world.set(entity, ColliderComponent::new_cuboid(0.5, 0.5, 0.5)
-//!     .with_restitution(0.3));
+//! world.set(entity, RigidBodyComponent::new_dynamic().with_mass(10.0));
+//! world.set(entity, ColliderComponent::new_cuboid(0.5, 0.5, 0.5).with_restitution(0.3));
 //! ```
+//!
+//! The rigid body and collider components register into the physics plugin's
+//! own member world; the step's initialize pass builds the Rapier bodies from
+//! them on the next frame.
 //!
 //! # Static Colliders
 //!
@@ -49,9 +49,7 @@
 //!
 //! ```ignore
 //! let floor = spawn_plane_at(world, Vec3::zeros());
-//! physics_world_add_rigid_body(&mut world.ecs.worlds[CORE], floor);
 //! world.set(floor, RigidBodyComponent::new_static());
-//! physics_world_add_collider(&mut world.ecs.worlds[CORE], floor);
 //! world.set(floor, ColliderComponent::new_cuboid(50.0, 0.1, 50.0));
 //! ```
 //!
@@ -101,6 +99,8 @@ pub mod ragdoll;
 #[cfg(feature = "physics")]
 pub mod resources;
 #[cfg(feature = "physics")]
+pub mod schema;
+#[cfg(feature = "physics")]
 pub mod systems;
 
 pub use components::*;
@@ -118,6 +118,8 @@ pub use events::*;
 pub use joints::*;
 #[cfg(feature = "physics")]
 pub use resources::*;
+#[cfg(feature = "physics")]
+pub use schema::physics_component_world;
 #[cfg(feature = "physics")]
 pub use systems::*;
 

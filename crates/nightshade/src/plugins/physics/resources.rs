@@ -67,6 +67,9 @@ pub struct PhysicsWorld {
     pub(crate) handle_to_entity: HashMap<RigidBodyHandle, Entity>,
     pub(crate) entity_to_handle: HashMap<Entity, RigidBodyHandle>,
     pub enabled: bool,
+    /// Index of the physics member world in `world.ecs.worlds`, set the first
+    /// time a physics component is written. `None` until then.
+    pub component_world: Option<usize>,
 }
 
 impl Default for PhysicsWorld {
@@ -107,6 +110,7 @@ impl Default for PhysicsWorld {
             handle_to_entity: HashMap::new(),
             entity_to_handle: HashMap::new(),
             enabled: false,
+            component_world: None,
         }
     }
 }

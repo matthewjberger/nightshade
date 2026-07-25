@@ -97,8 +97,10 @@ fn draw_navmesh_triangles(world: &World, lines: &mut Vec<Line>) {
 }
 
 fn draw_agent_paths(world: &World, lines: &mut Vec<Line>) {
-    let entities: Vec<_> = world.ecs.worlds[CORE]
-        .query_entities(crate::ecs::world::NAVMESH_AGENT)
+    let entities: Vec<_> = world
+        .query_ref::<&crate::plugins::navmesh::components::NavMeshAgent>()
+        .iter()
+        .map(|(entity, _)| entity)
         .collect();
 
     for entity in entities {

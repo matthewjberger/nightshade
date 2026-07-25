@@ -11,6 +11,7 @@ pub struct NavMeshWorld {
     pub debug_draw: bool,
     pub debug_entity: Option<nightshade_ecs::Entity>,
     pub algorithm: PathfindingAlgorithm,
+    pub component_world: Option<usize>,
 }
 
 impl Default for NavMeshWorld {
@@ -30,6 +31,7 @@ impl NavMeshWorld {
             debug_draw: false,
             debug_entity: None,
             algorithm: PathfindingAlgorithm::default(),
+            component_world: None,
         }
     }
 

@@ -21,7 +21,7 @@
 //! # Playing Non-Spatial Audio
 //!
 //! ```ignore
-//! let entity = spawn_entities(world, AUDIO_SOURCE, 1)[0];
+//! let entity = spawn_entities(world, 0, 1)[0];
 //! world.set(entity, AudioSource::new("background_music")
 //!     .with_volume(0.8)
 //!     .with_looping(true)
@@ -34,15 +34,13 @@
 //! spatial audio sources with transforms:
 //!
 //! ```ignore
-//! // Add listener to camera (typically done once in initialize)
-//! world.ecs.worlds[CORE].add_audio_listener(camera_entity);
+//! // Add listener to camera (typically done once in initialize). The audio
+//! // components live in the audio plugin's member world and attach with
+//! // `world.set`; the first write creates that world.
 //! world.set(camera_entity, AudioListener);
 //!
 //! // Create spatial audio source at a position
-//! let source = spawn_entities(world,
-//!     AUDIO_SOURCE | LOCAL_TRANSFORM | GLOBAL_TRANSFORM,
-//!     1
-//! )[0];
+//! let source = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
 //! world.set(source, AudioSource::new("explosion")
 //!     .with_spatial(true)
 //!     .with_volume(1.0)
@@ -65,11 +63,15 @@ pub mod components;
 #[cfg(feature = "audio")]
 pub mod resources;
 #[cfg(feature = "audio")]
+pub mod schema;
+#[cfg(feature = "audio")]
 pub mod systems;
 
 pub use components::*;
 #[cfg(feature = "audio")]
 pub use resources::*;
+#[cfg(feature = "audio")]
+pub use schema::audio_component_world;
 #[cfg(feature = "audio")]
 pub use systems::*;
 
