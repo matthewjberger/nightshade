@@ -763,12 +763,7 @@ impl NavMeshDemo {
                 self.skins = result.skins.clone();
                 self.prefab = result.prefabs.first().cloned();
 
-                nightshade::ecs::loading::queue_gltf_load(
-                    world,
-                    std::mem::take(&mut result.encoded_images),
-                    std::mem::take(&mut result.texture_plan),
-                    std::mem::take(&mut result.meshes),
-                );
+                nightshade::ecs::prefab::queue_gltf_load(world, &mut result);
 
                 self.fox_loaded = true;
             }
