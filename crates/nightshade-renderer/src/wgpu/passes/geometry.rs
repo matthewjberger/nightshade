@@ -67,9 +67,3 @@ pub use water::WaterPass;
 
 mod skinned_mesh;
 pub use skinned_mesh::{BlendedIblViews, SkinnedMeshPass};
-
-mod ui_image;
-pub use ui_image::UiImagePass;
-
-mod ui_pass;
-pub use ui_pass::UiPass;

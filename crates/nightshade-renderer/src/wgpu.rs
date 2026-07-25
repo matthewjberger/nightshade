@@ -116,7 +116,7 @@ pub struct WgpuRenderer {
     /// View over [`spotlight_shadow_atlas_texture`](Self::spotlight_shadow_atlas_texture).
     pub spotlight_shadow_atlas_view: wgpu::TextureView,
     /// UI image pass, present when retained-UI images are drawn.
-    pub ui_image_pass: Option<Box<passes::UiImagePass>>,
+    pub ui_image_pass: Option<Box<passes::PaintImagePass>>,
     /// Dynamic glyph atlas backing text rendering. Renderer-internal: drive text
     /// meshing through [`crate::wgpu::pass_sync`] rather than reaching in here.
     pub(crate) glyph_atlas: glyph_atlas::GlyphAtlas,

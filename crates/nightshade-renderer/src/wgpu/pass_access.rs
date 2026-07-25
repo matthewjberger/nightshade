@@ -80,7 +80,7 @@ pub fn scene_overlay_pass_mut(
 }
 
 /// Returns the typed UI pass, or `None` if it is not in the graph.
-pub fn ui_pass_mut(graph: &mut RenderGraph<RenderInputs>) -> Option<&mut passes::UiPass> {
+pub fn ui_pass_mut(graph: &mut RenderGraph<RenderInputs>) -> Option<&mut passes::PaintPass> {
     pass_mut(graph, UI_PASS)
 }
 

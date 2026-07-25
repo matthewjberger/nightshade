@@ -10,15 +10,15 @@ use std::collections::HashMap;
 /// The retained-UI content for the current frame.
 pub struct UiFrameInputs {
     /// Solid-color rectangles to draw this frame.
-    pub rects: Vec<crate::ui_data::UiRect>,
+    pub rects: Vec<crate::paint::DrawRect>,
     /// The source entity for each rectangle, index-aligned with `rects`.
     pub rect_entities: Vec<Option<Entity>>,
     /// Textured image quads to draw this frame.
-    pub images: Vec<crate::ui_data::UiImage>,
+    pub images: Vec<crate::paint::DrawImage>,
     /// Glyph-mesh instances to draw this frame.
-    pub text_meshes: Vec<crate::ui_data::UiTextInstance>,
+    pub text_meshes: Vec<crate::paint::DrawText>,
     /// Allocator assigning render-target slots to UI content this frame.
-    pub render_slots: crate::ui_data::RenderSlotAllocator,
+    pub render_slots: crate::paint::RenderSlotAllocator,
     /// Clear color for the UI layer, or `None` to leave it transparent.
     pub background_color: Option<nalgebra_glm::Vec4>,
 }

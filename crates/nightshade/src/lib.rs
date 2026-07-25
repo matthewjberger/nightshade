@@ -897,9 +897,9 @@ pub mod prelude {
         GrassDomain, GrassHeightMap, GrassPusher, GrassSettings, GrassTypeParams,
     };
     pub use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
+    pub use crate::render::paint::{Anchor, DrawImage, DrawRect, DrawText, Rect};
     #[cfg(feature = "terrain")]
     pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
-    pub use crate::render::ui_data::{Anchor, Rect, UiImage, UiRect, UiTextInstance};
     pub use crate::render::wgpu::texture_cache::{
         TextureOwner, texture_cache_acquire, texture_cache_protect, texture_cache_release,
         texture_cache_release_entity,

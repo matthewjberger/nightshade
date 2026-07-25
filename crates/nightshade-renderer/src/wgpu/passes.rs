@@ -19,7 +19,13 @@
 //! | `TerrainPass` | Clipmap terrain with GPU height cache (`terrain` feature) |
 //! | [`SceneOverlayPass`] | Grid, lines, particles, and text in one render pass |
 //! | [`SkyPass`] | Procedural sky/atmosphere |
-//! | [`UiPass`] | UI rectangle + text rendering (batched) |
+//!
+//! # Paint Passes
+//!
+//! | Pass | Description |
+//! |------|-------------|
+//! | [`PaintPass`] | Batched screen-space rectangle and text rendering |
+//! | [`PaintImagePass`] | Screen-space textured quad rendering |
 //!
 //! # Shadow Passes
 //!
@@ -112,8 +118,12 @@ pub use geometry::MeshletPass;
 pub use geometry::TerrainPass;
 pub use geometry::{
     ClothPass, DecalPass, GridPass, LinesPass, MeshPass, ParticlePass, SceneOverlayPass,
-    SkinnedMeshPass, SkyPass, TextPass, UiImagePass, UiPass, WaterPass,
+    SkinnedMeshPass, SkyPass, TextPass, WaterPass,
 };
+
+/// The passes that draw a `nightshade-paint` draw list over the scene.
+pub mod paint;
+pub use paint::{PaintImagePass, PaintPass};
 
 pub mod shadow_depth;
 pub use shadow_depth::{

@@ -320,10 +320,10 @@ impl super::WgpuRenderer {
         crate::wgpu::stagger::yield_to_event_loop(&queue).await;
         let ui_texture_array = crate::wgpu::texture_array_pool::create_texture_array_pool(
             &device,
-            crate::ui_data::UI_TEXTURE_LAYER_SIZE,
-            crate::ui_data::UI_TEXTURE_MAX_LAYERS,
+            crate::paint::TEXTURE_LAYER_SIZE,
+            crate::paint::TEXTURE_MAX_LAYERS,
         );
-        let mut ui_image_pass = passes::UiImagePass::new(&device, surface_format);
+        let mut ui_image_pass = passes::PaintImagePass::new(&device, surface_format);
         ui_image_pass.set_texture_bind_group(
             &device,
             &ui_texture_array.view,

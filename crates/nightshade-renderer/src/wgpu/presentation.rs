@@ -113,7 +113,7 @@ pub fn install_presentation_passes(
         ],
     )?;
 
-    let mut ui_pass = passes::UiPass::new(&renderer.device, renderer.surface_format);
+    let mut ui_pass = passes::PaintPass::new(&renderer.device, renderer.surface_format);
     ui_pass.update_glyph_atlas(&renderer.device, &renderer.glyph_atlas.texture_view);
     render_graph_add_pass(
         &mut renderer.graph,
