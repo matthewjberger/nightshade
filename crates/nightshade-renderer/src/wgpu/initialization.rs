@@ -27,6 +27,117 @@ pub(super) fn pick_present_mode(
     wgpu::PresentMode::Fifo
 }
 
+/// The device features, limits, and bindless capability the renderer asks an
+/// adapter for.
+pub struct DeviceConfig {
+    /// Features to request when creating the device.
+    pub required_features: wgpu::Features,
+    /// Limits to request when creating the device.
+    pub required_limits: wgpu::Limits,
+    /// Whether bindless material textures are available, and at what capacity.
+    pub bindless: crate::wgpu::material_texture_arrays::BindlessConfig,
+}
+
+/// Resolves what the renderer needs from an adapter, negotiating optional
+/// features down to what the adapter actually offers.
+///
+/// Shared so that a host creating the device itself asks for exactly what
+/// [`WgpuRenderer::new_async`] would. An OpenXR session creates the Vulkan
+/// device on the renderer's behalf and must run this before it does, since the
+/// device cannot gain features afterward; duplicating the logic instead is how
+/// the two silently drift apart.
+pub fn negotiate_device_config(
+    adapter_features: wgpu::Features,
+    adapter_limits: &wgpu::Limits,
+    adapter_info: &wgpu::AdapterInfo,
+) -> DeviceConfig {
+    let mut required_features = wgpu::Features::INDIRECT_FIRST_INSTANCE;
+
+    if !cfg!(target_os = "macos") && !cfg!(target_arch = "wasm32") {
+        required_features |= wgpu::Features::MULTI_DRAW_INDIRECT_COUNT;
+    }
+
+    const BINDLESS_MAX_TEXTURES: u32 = 4096;
+    const BINDLESS_MIN_TEXTURES: u32 = 512;
+    let bindless_features = wgpu::Features::TEXTURE_BINDING_ARRAY
+        | wgpu::Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING
+        | wgpu::Features::PARTIALLY_BOUND_BINDING_ARRAY;
+    let bindless_capacity = adapter_limits
+        .max_binding_array_elements_per_shader_stage
+        .min(BINDLESS_MAX_TEXTURES);
+    let bindless_enabled = !cfg!(target_arch = "wasm32")
+        && adapter_features.contains(bindless_features)
+        && bindless_capacity >= BINDLESS_MIN_TEXTURES;
+    if bindless_enabled {
+        required_features |= bindless_features;
+    }
+    let bindless_config = crate::wgpu::material_texture_arrays::BindlessConfig {
+        enabled: bindless_enabled,
+        max_textures: bindless_capacity,
+    };
+
+    let base_limits = if adapter_info.backend == wgpu::Backend::Gl {
+        wgpu::Limits::downlevel_webgl2_defaults()
+    } else {
+        wgpu::Limits::default()
+    };
+    let mut required_limits = base_limits.using_resolution(adapter_limits.clone());
+    required_limits.max_bind_groups = if cfg!(target_arch = "wasm32") { 4 } else { 8 };
+    required_limits.max_sampled_textures_per_shader_stage =
+        adapter_limits.max_sampled_textures_per_shader_stage.min(64);
+    required_limits.max_samplers_per_shader_stage =
+        adapter_limits.max_samplers_per_shader_stage.min(64);
+    if bindless_enabled {
+        required_limits.max_binding_array_elements_per_shader_stage = bindless_capacity;
+    }
+    // Rasterizing a cluster in compute needs one atomic to settle both
+    // visibility and payload: depth in a value's high bits and the cluster
+    // and triangle in its low bits means a single max over sixty four bits
+    // is the depth test, with no fixed function rasterizer and no quads. A
+    // hardware rasterizer costs a two by two quad per triangle however
+    // small it is, which is most of its throughput once a level of detail
+    // cut has made triangles land on single pixels. Requested where the
+    // adapter has it, and the pass falls back to hardware alone where it
+    // does not.
+    //
+    // Three features, because they answer different questions:
+    // TEXTURE_INT64_ATOMIC allows the R64Uint format at all, TEXTURE_ATOMIC
+    // allows a texture to carry the atomic usage, and SHADER_INT64 allows
+    // the shader to hold the packed value. Asking for less than all three
+    // fails later rather than here.
+    #[cfg(feature = "meshlet")]
+    {
+        let wanted = wgpu::Features::TEXTURE_INT64_ATOMIC
+            | wgpu::Features::TEXTURE_ATOMIC
+            | wgpu::Features::SHADER_INT64;
+        if adapter_features.contains(wanted) {
+            required_features |= wanted;
+        } else {
+            tracing::info!(
+                "adapter has no 64 bit texture atomics: meshlet clusters rasterize on the \
+                     hardware rasterizer alone, which costs a quad per triangle however small"
+            );
+        }
+    }
+    // The default caps a single storage binding at 128mb, which is a
+    // conservative floor rather than anything the hardware minds. Virtualized
+    // geometry keeps every asset's vertices in one shared stream, so a scene
+    // with tens of millions of unique vertices passes that in one buffer.
+    // Take whatever the adapter offers.
+    #[cfg(feature = "meshlet")]
+    {
+        required_limits.max_storage_buffer_binding_size =
+            adapter_limits.max_storage_buffer_binding_size;
+        required_limits.max_buffer_size = adapter_limits.max_buffer_size;
+    }
+
+    DeviceConfig {
+        required_features,
+        required_limits,
+        bindless: bindless_config,
+    }
+}
+
 impl super::WgpuRenderer {
     /// Builds the renderer and its full render graph for the given window surface.
     pub async fn new_async<W>(
@@ -51,89 +162,11 @@ impl super::WgpuRenderer {
             .expect("Failed to request adapter!");
 
         let adapter_info = adapter.get_info();
-
-        let mut required_features = wgpu::Features::INDIRECT_FIRST_INSTANCE;
-
-        if !cfg!(target_os = "macos") && !cfg!(target_arch = "wasm32") {
-            required_features |= wgpu::Features::MULTI_DRAW_INDIRECT_COUNT;
-        }
-
-        let adapter_features = adapter.features();
-        let adapter_limits = adapter.limits();
-
-        const BINDLESS_MAX_TEXTURES: u32 = 4096;
-        const BINDLESS_MIN_TEXTURES: u32 = 512;
-        let bindless_features = wgpu::Features::TEXTURE_BINDING_ARRAY
-            | wgpu::Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING
-            | wgpu::Features::PARTIALLY_BOUND_BINDING_ARRAY;
-        let bindless_capacity = adapter_limits
-            .max_binding_array_elements_per_shader_stage
-            .min(BINDLESS_MAX_TEXTURES);
-        let bindless_enabled = !cfg!(target_arch = "wasm32")
-            && adapter_features.contains(bindless_features)
-            && bindless_capacity >= BINDLESS_MIN_TEXTURES;
-        if bindless_enabled {
-            required_features |= bindless_features;
-        }
-        let bindless_config = crate::wgpu::material_texture_arrays::BindlessConfig {
-            enabled: bindless_enabled,
-            max_textures: bindless_capacity,
-        };
-
-        let base_limits = if adapter_info.backend == wgpu::Backend::Gl {
-            wgpu::Limits::downlevel_webgl2_defaults()
-        } else {
-            wgpu::Limits::default()
-        };
-        let mut required_limits = base_limits.using_resolution(adapter_limits.clone());
-        required_limits.max_bind_groups = if cfg!(target_arch = "wasm32") { 4 } else { 8 };
-        required_limits.max_sampled_textures_per_shader_stage =
-            adapter_limits.max_sampled_textures_per_shader_stage.min(64);
-        required_limits.max_samplers_per_shader_stage =
-            adapter_limits.max_samplers_per_shader_stage.min(64);
-        if bindless_enabled {
-            required_limits.max_binding_array_elements_per_shader_stage = bindless_capacity;
-        }
-        // Rasterizing a cluster in compute needs one atomic to settle both
-        // visibility and payload: depth in a value's high bits and the cluster
-        // and triangle in its low bits means a single max over sixty four bits
-        // is the depth test, with no fixed function rasterizer and no quads. A
-        // hardware rasterizer costs a two by two quad per triangle however
-        // small it is, which is most of its throughput once a level of detail
-        // cut has made triangles land on single pixels. Requested where the
-        // adapter has it, and the pass falls back to hardware alone where it
-        // does not.
-        //
-        // Three features, because they answer different questions:
-        // TEXTURE_INT64_ATOMIC allows the R64Uint format at all, TEXTURE_ATOMIC
-        // allows a texture to carry the atomic usage, and SHADER_INT64 allows
-        // the shader to hold the packed value. Asking for less than all three
-        // fails later rather than here.
-        #[cfg(feature = "meshlet")]
-        {
-            let wanted = wgpu::Features::TEXTURE_INT64_ATOMIC
-                | wgpu::Features::TEXTURE_ATOMIC
-                | wgpu::Features::SHADER_INT64;
-            if adapter_features.contains(wanted) {
-                required_features |= wanted;
-            } else {
-                tracing::info!(
-                    "adapter has no 64 bit texture atomics: meshlet clusters rasterize on the \
-                     hardware rasterizer alone, which costs a quad per triangle however small"
-                );
-            }
-        }
-        // The default caps a single storage binding at 128mb, which is a
-        // conservative floor rather than anything the hardware minds. Virtualized
-        // geometry keeps every asset's vertices in one shared stream, so a scene
-        // with tens of millions of unique vertices passes that in one buffer.
-        // Take whatever the adapter offers.
-        #[cfg(feature = "meshlet")]
-        {
-            required_limits.max_storage_buffer_binding_size =
-                adapter_limits.max_storage_buffer_binding_size;
-            required_limits.max_buffer_size = adapter_limits.max_buffer_size;
-        }
+        let DeviceConfig {
+            required_features,
+            required_limits,
+            bindless,
+        } = negotiate_device_config(adapter.features(), &adapter.limits(), &adapter_info);
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -146,6 +179,51 @@ impl super::WgpuRenderer {
             })
             .await?;
 
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_format = surface_capabilities
+            .formats
+            .iter()
+            .copied()
+            .find(|f| !f.is_srgb())
+            .unwrap_or(surface_capabilities.formats[0]);
+
+        Self::new_with_device(
+            &adapter,
+            device,
+            queue,
+            surface,
+            surface_format,
+            bindless,
+            initial_width,
+            initial_height,
+        )
+        .await
+    }
+
+    /// Builds the renderer and its full render graph over a device the caller
+    /// already created, presenting through `surface` in `surface_format`.
+    ///
+    /// [`new_async`](Self::new_async) is this plus the instance, surface, and
+    /// device bring-up. Split out for hosts that cannot let wgpu create the
+    /// device: an OpenXR runtime dictates the Vulkan instance, physical device,
+    /// and logical device, so the session creates them, the caller adopts them
+    /// with `wgpu::Instance::from_hal` and friends, and hands them here.
+    ///
+    /// `bindless` must come from [`negotiate_device_config`] run against the same
+    /// adapter, since a device cannot gain features after creation.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn new_with_device(
+        adapter: &wgpu::Adapter,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        surface: wgpu::Surface<'static>,
+        surface_format: wgpu::TextureFormat,
+        bindless_config: crate::wgpu::material_texture_arrays::BindlessConfig,
+        initial_width: u32,
+        initial_height: u32,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let adapter_info = adapter.get_info();
+
         tracing::info!("wgpu device features: {:?}", device.features());
 
         let gpu_profile = build_gpu_profile(&adapter_info);
@@ -156,14 +234,12 @@ impl super::WgpuRenderer {
             gpu_profile.device_type
         );
 
-        let surface_capabilities = surface.get_capabilities(&adapter);
-
-        let surface_format = surface_capabilities
-            .formats
-            .iter()
-            .copied()
-            .find(|f| !f.is_srgb())
-            .unwrap_or(surface_capabilities.formats[0]);
+        let surface_capabilities = surface.get_capabilities(adapter);
+        if surface_capabilities.formats.is_empty() {
+            return Err(
+                "the selected adapter cannot present to this surface: no supported formats".into(),
+            );
+        }
 
         let present_mode = pick_present_mode(&surface_capabilities.present_modes, true);
         tracing::info!(

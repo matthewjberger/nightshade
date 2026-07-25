@@ -24,6 +24,20 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
     let up = global_transform.up_vector();
     let target = camera_position + forward;
 
+    // A hand-supplied projection wins outright: the frustum it encodes is one
+    // no field of view and aspect ratio can describe, such as the off-center
+    // frustum of a stereo eye.
+    if let Some(override_projection) =
+        world.get::<crate::ecs::camera::components::ProjectionOverride>(entity)
+    {
+        let view = nalgebra_glm::look_at(&camera_position, &target, &up);
+        return Some(CameraMatrices {
+            camera_position,
+            projection: override_projection.matrix,
+            view,
+        });
+    }
+
     let projection = match &camera.projection {
         crate::ecs::camera::components::Projection::Perspective(persp) => {
             let constrained = world

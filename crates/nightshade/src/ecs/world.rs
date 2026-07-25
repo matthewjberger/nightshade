@@ -74,7 +74,8 @@ nightshade_ecs::dynamic_schema!(@consts 1u64;
     LIGHTNING_BOLT,
     TRAIL,
     VFX_ANIMATOR,
-    MESHLET_MESH
+    MESHLET_MESH,
+    PROJECTION_OVERRIDE
 );
 
 pub const CORE: usize = 0;

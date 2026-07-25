@@ -573,7 +573,7 @@ mod systems;
 pub mod viewport;
 
 #[cfg(feature = "egui")]
-mod egui;
+pub mod egui;
 
 #[cfg(feature = "networking")]
 pub use hearsay as networking;

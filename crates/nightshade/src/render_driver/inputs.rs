@@ -15,31 +15,46 @@ fn snapshot_camera(world: &World, entity: nightshade_ecs::Entity) -> CameraFrame
                 camera_position: matrices.camera_position,
             }
         });
-    let projection = match world
-        .get::<crate::ecs::camera::components::Camera>(entity)
-        .map(|c| &c.projection)
+    // Mirrors the precedence in `query_camera_matrices`: an override supplies
+    // both the matrix and the scalars the passes need alongside it.
+    let projection = if let Some(override_projection) =
+        world.get::<crate::ecs::camera::components::ProjectionOverride>(entity)
     {
-        Some(crate::ecs::camera::components::Projection::Perspective(persp)) => {
-            CameraProjectionParams {
-                z_near: persp.z_near,
-                z_far: persp.z_far.unwrap_or(1000.0),
-                y_fov_rad: persp.y_fov_rad,
-                aspect: persp.aspect_ratio.unwrap_or_else(|| {
-                    crate::ecs::camera::queries::query_window_aspect_ratio(world).unwrap_or(1.78)
-                }),
-                orthographic: None,
-            }
+        CameraProjectionParams {
+            z_near: override_projection.z_near,
+            z_far: override_projection.z_far,
+            y_fov_rad: override_projection.y_fov_rad,
+            aspect: override_projection.aspect,
+            orthographic: None,
         }
-        Some(crate::ecs::camera::components::Projection::Orthographic(ortho)) => {
-            CameraProjectionParams {
-                z_near: ortho.z_near,
-                z_far: ortho.z_far,
-                y_fov_rad: std::f32::consts::FRAC_PI_4,
-                aspect: 1.78,
-                orthographic: Some((ortho.x_mag, ortho.y_mag)),
+    } else {
+        match world
+            .get::<crate::ecs::camera::components::Camera>(entity)
+            .map(|c| &c.projection)
+        {
+            Some(crate::ecs::camera::components::Projection::Perspective(persp)) => {
+                CameraProjectionParams {
+                    z_near: persp.z_near,
+                    z_far: persp.z_far.unwrap_or(1000.0),
+                    y_fov_rad: persp.y_fov_rad,
+                    aspect: persp.aspect_ratio.unwrap_or_else(|| {
+                        crate::ecs::camera::queries::query_window_aspect_ratio(world)
+                            .unwrap_or(1.78)
+                    }),
+                    orthographic: None,
+                }
             }
+            Some(crate::ecs::camera::components::Projection::Orthographic(ortho)) => {
+                CameraProjectionParams {
+                    z_near: ortho.z_near,
+                    z_far: ortho.z_far,
+                    y_fov_rad: std::f32::consts::FRAC_PI_4,
+                    aspect: 1.78,
+                    orthographic: Some((ortho.x_mag, ortho.y_mag)),
+                }
+            }
+            None => CameraProjectionParams::default(),
         }
-        None => CameraProjectionParams::default(),
     };
     let shading = world
         .get::<crate::ecs::camera::components::ViewportShading>(entity)
