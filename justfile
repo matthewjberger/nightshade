@@ -108,8 +108,10 @@ lint-crates-isolated:
 # Runs linter for wasm32 target
 # The meshlet baker links METIS and meshopt, which are C libraries with no
 # wasm target, so the app that bakes is native only and sits out this lint.
+# nightshade-openxr is native only for the same reason: openxr-sys builds the
+# OpenXR SDK with cmake, and there is no wasm libc for it to link against.
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet --exclude dag-check -- -D warnings
+    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet --exclude dag-check --exclude nightshade-openxr -- -D warnings
     cargo clippy --target wasm32-unknown-unknown -p nightshade-api --no-default-features --features leptos,offscreen -- -D warnings
 
 # Builds the frame graph alone. This is the layering firewall: the rendergraph
