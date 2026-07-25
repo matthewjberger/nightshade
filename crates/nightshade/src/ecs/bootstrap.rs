@@ -98,7 +98,7 @@ pub mod resources {
     pub use crate::render::mesh_state::MeshRenderState;
     pub use crate::render::wgpu::texture_cache::TextureCache;
     pub use crate::render::wind::Wind;
-    pub use crate::ui::UserInterface;
+    pub use crate::user_interface::UserInterface;
     pub use nightshade_ecs::dynamic::HierarchyIndex;
 }
 
@@ -310,29 +310,8 @@ impl Default for World {
             ecs
         };
         let mut ecs = ecs;
-        ecs.insert_resource(crate::ui::resources::UiWorldIndices { core: CORE, ui: UI });
-        ecs.insert_resource(crate::ui::resources::RetainedUiRuntime::default());
-        ecs.insert_resource(crate::ui::resources::ThemeState::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiInteraction::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiOverlays::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiTiming::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiDirty::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiTextCache::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiDragDrop::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiAccessibility::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiGroups::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiFrame::default());
-        ecs.insert_resource(crate::ui::resources::UiTaffy::default());
-        ecs.insert_resource(crate::ui::resources::RenderSlotAllocator::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiInputMirror::default());
-        ecs.insert_resource(crate::ui::resources::TopProgressBar::default());
-        ecs.insert_resource(crate::ui::resources::IconSet::default());
-        ecs.insert_resource(crate::ui::resources::DockState::default());
-        ecs.insert_resource(crate::ui::resources::RetainedUiGamepadNav::default());
-        ecs.insert_resource(crate::ui::resources::UiViewport::default());
-        ecs.insert_resource(crate::ui::resources::WindowChrome::default());
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
-        ecs.insert_resource(crate::ui::UserInterface::default());
+        ecs.insert_resource(crate::user_interface::UserInterface::default());
         #[cfg(feature = "gizmos")]
         ecs.insert_resource(crate::plugins::gizmos::Gizmos::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
@@ -377,7 +356,6 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::transform::resources::TransformState::default());
         ecs.insert_resource(crate::ecs::graphics::scene_sync::RenderSceneSync::default());
         ecs.insert_resource(crate::ecs::world::scratch::Scratch::default());
-        ecs.insert_resource(crate::ui::resources::UiImageLayerAllocator::default());
         ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
         ecs.insert_resource(crate::platform::input::resources::Input::default());
         ecs.insert_resource(crate::platform::input::resources::Gamepad::default());
@@ -389,6 +367,10 @@ impl Default for World {
         ecs.insert_resource(crate::state::PendingState::default());
         #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
         ecs.insert_resource(crate::plugins::steam::SteamResources::default());
+        nightshade_ui::insert_ui_resources(
+            &mut ecs,
+            crate::ui::resources::UiWorldIndices { core: CORE, ui: UI },
+        );
         Self { ecs }
     }
 }

@@ -18,6 +18,6 @@ impl PluginGroup for DefaultPlugins {
             .add_plugin(WindowPlugin::default())
             .add_plugin(crate::plugins::log::LogPlugin::default())
             .add_plugin(crate::plugins::render::RenderPlugin::default())
-            .add_plugin(crate::plugins::ui::UiPlugin)
+            .add_plugin(crate::plugins::ui::UiPlugin::new())
     }
 }

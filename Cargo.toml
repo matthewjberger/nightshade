@@ -87,6 +87,8 @@ steamworks-sys = "0.13"
 noise = "0.9"
 notify = "7"
 ehttp = "0.7"
+# Held at 0.7: taffy 0.8 packed `Style` into a tagged `*const ()`, which made it
+# `!Send + !Sync`, and the UI's taffy tree is an ECS resource.
 taffy = "0.7"
 ropey = "1.6"
 wasm-bindgen = "0.2.114"

@@ -570,6 +570,7 @@ pub mod state;
 pub mod states;
 #[cfg(feature = "runtime")]
 mod systems;
+pub mod user_interface;
 pub mod viewport;
 
 #[cfg(feature = "egui")]
@@ -652,9 +653,7 @@ pub mod prelude {
     pub use crate::plugins::render::RenderPlugin;
     #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
     pub use crate::plugins::steam::SteamPlugin;
-    pub use crate::plugins::ui::{
-        UiPlugin, build_default_retained_ui_schedule, run_retained_ui_schedule,
-    };
+    pub use crate::plugins::ui::{UiPlugin, run_retained_ui_schedule};
     pub use crate::plugins::window::WindowPlugin;
     pub use crate::render::config::{DebugDraw, RenderSettings};
     pub use crate::render::wind::Wind;
@@ -939,6 +938,7 @@ pub mod prelude {
         UiTextInputData, UiTileContainerData, UiToggleData, UiTreeBuilder, UiTreeNodeData,
         UiTreeViewData, UiValue, UiVirtualListData, ValidationRule, Vh, Vp, Vw,
     };
+    pub use crate::ui::{UiSystemFn, UiSystemPhase, ui_systems_with};
     #[cfg(feature = "assets")]
     pub use bincode;
     #[cfg(feature = "egui")]

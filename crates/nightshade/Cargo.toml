@@ -39,7 +39,6 @@ core = [
     "dep:thiserror",
     "dep:nalgebra",
     "dep:nalgebra-glm",
-    "dep:raw-window-handle",
     "dep:web-time",
     "dep:winit",
     "nightshade-ui/accesskit",
@@ -57,7 +56,6 @@ assets = [
     "core",
     "nightshade-renderer/hdr",
     "dep:gltf",
-    "dep:half",
     "dep:image",
     "dep:bincode",
     "dep:serde_json",
@@ -104,7 +102,7 @@ engine = [
 shell = []
 audio = ["dep:kira"]
 debug_render = ["nightshade-renderer/debug_render"]
-egui = ["dep:egui", "dep:egui_extras", "dep:egui-wgpu", "dep:egui-winit", "nightshade-renderer/egui"]
+egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "nightshade-renderer/egui"]
 gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
@@ -151,7 +149,6 @@ nightshade-ecs = { workspace = true, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
 gilrs = { workspace = true, optional = true }
 gltf = { workspace = true, optional = true }
-half = { workspace = true, optional = true }
 hearsay = { version = "0.1", optional = true }
 kira = { workspace = true, optional = true }
 bevy_mikktspace = { version = "1.0", optional = true }
@@ -164,7 +161,6 @@ rand = { version = "0.9", optional = true }
 rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.30", optional = true }
 rapier3d = { workspace = true, optional = true }
-raw-window-handle = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 lz4_flex = { version = "0.11", optional = true }
 thiserror = { workspace = true, optional = true }
@@ -173,17 +169,14 @@ uuid = { version = "1.0", features = ["v4", "v5", "serde"], optional = true }
 web-time = { workspace = true, optional = true }
 winit = { workspace = true, optional = true }
 ehttp = { workspace = true, optional = true }
-taffy = { workspace = true }
 
 nightshade-renderer = { workspace = true }
 nightshade-platform = { workspace = true }
 nightshade-text = { workspace = true, features = ["shaping"] }
 nightshade-ui = { workspace = true }
-nightshade-paint = { workspace = true }
 
 egui = { workspace = true, optional = true }
 egui_extras = { workspace = true, optional = true }
-egui-wgpu = { workspace = true, optional = true }
 egui-winit = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

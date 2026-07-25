@@ -102,7 +102,7 @@ fn snapshot_camera(world: &World, entity: nightshade_ecs::Entity) -> CameraFrame
 /// both a UI viewport and a target is dispatched once.
 fn cameras_to_dispatch(world: &World) -> Vec<nightshade_ecs::Entity> {
     let mut cameras = world
-        .res::<crate::ui::UserInterface>()
+        .res::<crate::user_interface::UserInterface>()
         .required_cameras
         .clone();
     for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::RENDER_TARGET) {
@@ -458,7 +458,7 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     frame.text_meshes = inputs.ui.text_meshes;
     if outputs.frame_executed {
         world
-            .res_mut::<crate::ui::UserInterface>()
+            .res_mut::<crate::user_interface::UserInterface>()
             .viewport_texture_sizes = outputs.viewport_texture_sizes;
     }
     if let Some(unconsumed) = inputs.frame.mesh_frame_state {

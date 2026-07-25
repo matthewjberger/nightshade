@@ -59,7 +59,10 @@ pub(crate) fn forward_window_events(world: &mut World, event: &WindowEvent) {
         _ => {}
     }
 
-    if world.res::<crate::ui::UserInterface>().consumed_event {
+    if world
+        .res::<crate::user_interface::UserInterface>()
+        .consumed_event
+    {
         return;
     }
 

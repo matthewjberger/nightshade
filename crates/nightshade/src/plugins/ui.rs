@@ -5,16 +5,7 @@
 
 use crate::app::{App, Plugin, Stage};
 use crate::ecs::world::World;
-use crate::schedule::SystemFn;
-
-/// The UI pipeline in run order. Gamepad navigation has to run after
-/// picking: picking resets every entity's `interaction.clicked` flag at
-/// the top of the frame, so running navigation after it lets the
-/// gamepad's South-press flag survive into widget interaction and click
-/// event emission.
-pub fn build_default_retained_ui_schedule() -> Vec<SystemFn> {
-    nightshade_ui::default_ui_systems()
-}
+use nightshade_ui::{UiSystemFn, UiSystemPhase};
 
 pub fn run_retained_ui_schedule(world: &mut World) {
     let systems = std::mem::take(
@@ -33,13 +24,13 @@ pub fn run_retained_ui_schedule(world: &mut World) {
 /// Populates the retained-UI sub-schedule and marks the tree visible. The
 /// per-frame entry that runs it is registered separately by
 /// [`register_frame_systems`].
-pub fn install(world: &mut World) {
+pub fn install(world: &mut World, systems: &[(UiSystemPhase, UiSystemFn)]) {
     world
         .res_mut::<crate::ui::resources::RetainedUiRuntime>()
         .visible = true;
     world
         .res_mut::<crate::schedule::RetainedUiSchedule>()
-        .systems = build_default_retained_ui_schedule();
+        .systems = nightshade_ui::ui_systems_with(systems);
 }
 
 /// Registers the retained-UI runner into the post-update stage, explicitly
@@ -58,11 +49,35 @@ pub fn register_frame_systems(stages: &mut nightshade_ecs::Stages<World>) {
 /// Installs the retained UI: [`install`] seeds the world state and
 /// [`register_frame_systems`] adds the runner. Hide and show the whole tree
 /// at runtime through `world.res::<crate::ui::resources::RetainedUiRuntime>().visible`.
-pub struct UiPlugin;
+///
+/// [`UiPlugin::with_system`] splices a system of the app's own into the UI
+/// schedule, which is how a canvas-drawn widget the app defines runs at the same
+/// point in the frame the built-in widgets do:
+///
+/// ```ignore
+/// app.add_plugin(UiPlugin::new().with_system(UiSystemPhase::PreDraw, draw_my_widget));
+/// ```
+#[derive(Default)]
+pub struct UiPlugin {
+    systems: Vec<(UiSystemPhase, UiSystemFn)>,
+}
+
+impl UiPlugin {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Runs `system` inside the UI schedule at `phase`, after any system already
+    /// registered for the same phase.
+    pub fn with_system(mut self, phase: UiSystemPhase, system: UiSystemFn) -> Self {
+        self.systems.push((phase, system));
+        self
+    }
+}
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        install(&mut app.world);
+        install(&mut app.world, &self.systems);
         register_frame_systems(&mut app.stages);
     }
 }
