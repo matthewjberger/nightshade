@@ -9,7 +9,9 @@ use crate::wgpu::pass_sync;
 use crate::wgpu::passes;
 use crate::wgpu::picking::dispatch_pick_compute;
 use crate::wgpu::presentation;
-use crate::wgpu::render_configs::{CameraFrameInputs, FrameOutputs, RenderInputs, RendererCommand};
+use crate::wgpu::render_configs::{
+    CameraFrameInputs, CameraTarget, FrameOutputs, RenderInputs, RendererCommand,
+};
 use crate::wgpu::rendergraph;
 use crate::wgpu::rendergraph::{
     render_graph_enable_only_passes, render_graph_execute,
@@ -372,20 +374,39 @@ fn dispatch_window_renders(
         };
         let render_scale = inputs.settings.render_scale.clamp(0.25, 4.0);
         let is_main_viewport_camera = Some(camera_entity) == original_active_camera;
-        // A caller-owned target has a size the renderer does not get to choose,
-        // so render scale cannot apply: the graph has to produce exactly the
-        // pixels that target holds.
-        let external_size = renderer
-            .camera_viewports
-            .get(&camera_entity)
-            .filter(|viewport| viewport.external)
-            .map(|viewport| viewport.size);
-        let (render_width, render_height) = external_size.unwrap_or((
-            ((display_width as f32 * render_scale).round() as u32).max(1),
-            ((display_height as f32 * render_scale).round() as u32).max(1),
-        ));
+        // Render scale decides how many pixels the renderer allocates, so it
+        // applies wherever the renderer is the one allocating. A host-owned
+        // texture already exists at a size nothing here chose, and scaling that
+        // would render into part of it and present the rest as garbage.
+        let (render_width, render_height) = match camera.target {
+            Some(CameraTarget {
+                size,
+                host_owned: true,
+            }) => size,
+            Some(CameraTarget {
+                size: (width, height),
+                host_owned: false,
+            }) => (
+                ((width as f32 * render_scale).round() as u32).max(1),
+                ((height as f32 * render_scale).round() as u32).max(1),
+            ),
+            None => (
+                ((display_width as f32 * render_scale).round() as u32).max(1),
+                ((display_height as f32 * render_scale).round() as u32).max(1),
+            ),
+        };
 
-        renderer.ensure_camera_viewport(camera_entity, render_width, render_height);
+        // A host-owned target was bound by the host before the frame; allocating
+        // one here would replace it with an empty texture nothing presents.
+        if !matches!(
+            camera.target,
+            Some(CameraTarget {
+                host_owned: true,
+                ..
+            })
+        ) {
+            renderer.ensure_camera_viewport(camera_entity, render_width, render_height);
+        }
         renderer.resize_render_buffers_for_window(render_width, render_height);
 
         let viewport_cloned = renderer

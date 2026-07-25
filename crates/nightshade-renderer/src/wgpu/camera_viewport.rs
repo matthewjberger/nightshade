@@ -4,8 +4,10 @@ impl super::WgpuRenderer {
     /// Ensures an offscreen viewport texture of the given size exists for
     /// `camera_entity`, creating or resizing it when absent or mismatched.
     ///
-    /// Viewports bound through [`set_external_camera_viewport`](Self::set_external_camera_viewport)
-    /// are left alone: the caller owns that texture and its size.
+    /// Only called for cameras whose target the renderer owns; a host-owned
+    /// target is bound through
+    /// [`set_external_camera_viewport`](Self::set_external_camera_viewport)
+    /// instead, and the frame skips this.
     pub fn ensure_camera_viewport(
         &mut self,
         camera_entity: nightshade_ecs::Entity,
@@ -13,7 +15,7 @@ impl super::WgpuRenderer {
         height: u32,
     ) {
         if let Some(viewport) = self.camera_viewports.get(&camera_entity)
-            && (viewport.external || viewport.size == (width, height))
+            && viewport.size == (width, height)
         {
             return;
         }
@@ -46,7 +48,6 @@ impl super::WgpuRenderer {
                 last_settings_version: 0,
                 last_render_frame: 0,
                 last_camera_world_transform: None,
-                external: false,
             },
         );
     }
@@ -90,7 +91,6 @@ impl super::WgpuRenderer {
                 last_settings_version,
                 last_render_frame,
                 last_camera_world_transform,
-                external: true,
             },
         );
     }

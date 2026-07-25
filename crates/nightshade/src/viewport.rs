@@ -17,16 +17,6 @@ pub struct Viewport {
     /// window, and stages run without any GPU work. Set by app compositions
     /// that omit the render plugin. Defaults to true.
     pub create_renderer: bool,
-    /// When true, a zero-sized or unavailable window does not stop the frame.
-    ///
-    /// The window is normally both the output and the thing that says how big
-    /// the output is, so minimizing it means there is nothing to draw. That is
-    /// wrong for a composition presenting somewhere else, where the window is a
-    /// mirror at most: an OpenXR runner still has to render both eyes and meet
-    /// the headset's frame deadline while the desktop window is minimized.
-    /// Opt-in, so every windowed app keeps idling when minimized. Defaults to
-    /// false.
-    pub render_without_window: bool,
 }
 
 impl Default for Viewport {
@@ -37,7 +27,6 @@ impl Default for Viewport {
             force_render_cameras: std::collections::HashSet::new(),
             camera_tile_render_iteration: 0,
             create_renderer: true,
-            render_without_window: false,
         }
     }
 }

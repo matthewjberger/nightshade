@@ -14,7 +14,7 @@ pub mod components {
     pub use crate::ecs::camera::components::{
         Camera, CameraEnvironment, CameraPostProcess, ConstrainedAspect, FogOverride,
         OrthographicCamera, PanOrbitCamera, PerspectiveCamera, Projection, ProjectionOverride,
-        ShadingMode, Smoothing, ViewportShading,
+        RenderTarget, RenderTargetOwnership, ShadingMode, Smoothing, ViewportShading,
     };
     pub use crate::render::bounding_volume::{BoundingVolume, OrientedBoundingBox};
     pub use crate::render::config::ViewportUpdateMode;
@@ -207,6 +207,8 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
     debug_assert_eq!(key.mask, crate::ecs::world::MESHLET_MESH);
     let key = registry.register_serde::<crate::ecs::camera::components::ProjectionOverride>();
     debug_assert_eq!(key.mask, crate::ecs::world::PROJECTION_OVERRIDE);
+    let key = registry.register_serde::<crate::ecs::camera::components::RenderTarget>();
+    debug_assert_eq!(key.mask, crate::ecs::world::RENDER_TARGET);
     registry
 }
 
@@ -253,6 +255,7 @@ nightshade_ecs::impl_component!(
     crate::ecs::vfx::components::VfxAnimator,
     crate::ecs::meshlet::components::MeshletMesh,
     crate::ecs::camera::components::ProjectionOverride,
+    crate::ecs::camera::components::RenderTarget,
 );
 
 pub fn build_engine_ecs() -> nightshade_ecs::dynamic::DynEcs {

@@ -351,12 +351,17 @@ pub fn run_frame_body(
             .unwrap_or((0, 0))
     };
     // A zero-sized window means nothing to present to, which normally means
-    // nothing to render. A composition that presents elsewhere says so, and then
-    // its cameras keep drawing into their own targets regardless of the window.
-    let render_without_window = world
-        .res::<crate::viewport::Viewport>()
-        .render_without_window;
-    let should_render = (viewport_width > 0 && viewport_height > 0) || render_without_window;
+    // nothing to render. A camera drawing into a texture the host owns is the
+    // exception: its frame is going somewhere else and still has a deadline, so
+    // the window being minimized cannot be allowed to stop it.
+    let renders_off_window = world.ecs.worlds[CORE]
+        .query_entities(crate::ecs::world::RENDER_TARGET)
+        .any(|entity| {
+            world
+                .get::<crate::ecs::camera::components::RenderTarget>(entity)
+                .is_some_and(|target| target.is_host_owned())
+        });
+    let should_render = (viewport_width > 0 && viewport_height > 0) || renders_off_window;
     if should_render {
         if let Err(error) = crate::render_driver::update_with_state(renderer, state, world) {
             tracing::error!("Failed to update render graph: {error}");

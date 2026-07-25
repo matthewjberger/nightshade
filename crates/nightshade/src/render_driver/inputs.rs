@@ -2,7 +2,7 @@ use crate::ecs::world::{CORE, RENDER, World};
 #[cfg(feature = "terrain")]
 use crate::render::terrain_config::TerrainSettings;
 use crate::render::wgpu::render_configs::{
-    CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, FrameOutputs,
+    CameraFrameInputs, CameraMatricesInputs, CameraProjectionParams, CameraTarget, FrameOutputs,
     LinesFrameInputs, RenderInputs, RendererCommand, UiFrameInputs, ViewInputs,
 };
 
@@ -93,7 +93,35 @@ fn snapshot_camera(world: &World, entity: nightshade_ecs::Entity) -> CameraFrame
         world_transform: world
             .get::<crate::ecs::transform::components::GlobalTransform>(entity)
             .map(|gt| gt.0),
+        target: world
+            .get::<crate::ecs::camera::components::RenderTarget>(entity)
+            .map(|target| CameraTarget {
+                size: target.size(),
+                host_owned: target.is_host_owned(),
+            }),
     }
+}
+
+/// Every camera the frame has to dispatch.
+///
+/// Two sources, because a camera can be scheduled for two different reasons. The
+/// retained UI asks for the cameras its viewport widgets display, which it knows
+/// and the renderer does not. A camera carrying a
+/// [`RenderTarget`](crate::ecs::camera::components::RenderTarget) asks for itself:
+/// it has somewhere to draw and a size to draw at, so nothing else needs to
+/// speak for it. Order is stable and duplicates are dropped, so a camera that is
+/// both a UI viewport and a target is dispatched once.
+fn cameras_to_dispatch(world: &World) -> Vec<nightshade_ecs::Entity> {
+    let mut cameras = world
+        .res::<crate::ui::UserInterface>()
+        .required_cameras
+        .clone();
+    for entity in world.ecs.worlds[CORE].query_entities(crate::ecs::world::RENDER_TARGET) {
+        if !cameras.contains(&entity) {
+            cameras.push(entity);
+        }
+    }
+    cameras
 }
 
 fn map_render_commands(world: &mut World) -> Vec<RendererCommand> {
@@ -181,11 +209,9 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
     }
     let commands = map_render_commands(world);
 
-    let cameras: Vec<CameraFrameInputs> = world
-        .res::<crate::ui::UserInterface>()
-        .required_cameras
-        .iter()
-        .map(|&entity| snapshot_camera(world, entity))
+    let cameras: Vec<CameraFrameInputs> = cameras_to_dispatch(world)
+        .into_iter()
+        .map(|entity| snapshot_camera(world, entity))
         .collect();
     let active_camera = world.res::<crate::ecs::camera::resources::ActiveCamera>().0;
     let active_camera_frame = active_camera.map(|entity| snapshot_camera(world, entity));

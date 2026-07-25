@@ -83,6 +83,18 @@ impl Default for CameraProjectionParams {
     }
 }
 
+/// Where a camera's image goes and how large it is, when the camera says so
+/// itself rather than inheriting the window's size.
+#[derive(Clone, Copy)]
+pub struct CameraTarget {
+    /// Render resolution in pixels.
+    pub size: (u32, u32),
+    /// Whether the host binds the texture before each frame instead of the
+    /// renderer allocating one. A host-owned target is somewhere the renderer
+    /// cannot allocate, and its frame is not going through the window.
+    pub host_owned: bool,
+}
+
 /// Everything the renderer needs to dispatch one camera, captured from the
 /// scene before the frame: matrices, projection parameters, the resolved
 /// per-camera shading, the viewport update policy, and the camera's world
@@ -103,6 +115,9 @@ pub struct CameraFrameInputs {
     pub update_mode: crate::config::ViewportUpdateMode,
     /// The camera's world transform, for dirtiness checks.
     pub world_transform: Option<nalgebra_glm::Mat4>,
+    /// The camera's own render target, when it declares one. Cameras without
+    /// one are sized from their viewport tile or the window, as before.
+    pub target: Option<CameraTarget>,
 }
 
 /// A render-side command drained from the caller's command queue for this
@@ -362,6 +377,7 @@ impl CameraFrameInputs {
             effective_shading,
             update_mode: crate::config::ViewportUpdateMode::Always,
             world_transform: None,
+            target: None,
         }
     }
 }

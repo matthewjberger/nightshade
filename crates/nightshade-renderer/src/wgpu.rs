@@ -78,13 +78,6 @@ pub struct CameraViewport {
     pub last_render_frame: u64,
     /// Camera world transform captured on the last render, for reuse detection.
     pub last_camera_world_transform: Option<nalgebra_glm::Mat4>,
-    /// Whether the texture and view are owned by the caller rather than the
-    /// renderer. External viewports are bound through
-    /// [`WgpuRenderer::set_external_camera_viewport`] and are never allocated,
-    /// resized, or replaced by [`WgpuRenderer::ensure_camera_viewport`], which
-    /// is what lets a host render a camera straight into a surface it owns such
-    /// as one array layer of an OpenXR swapchain image.
-    pub external: bool,
 }
 
 /// Side length in texels of the square depth-pick sample window.
