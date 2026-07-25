@@ -51,6 +51,7 @@ pub fn pump_shell_new(state: Box<dyn State>) -> Result<PumpShell, Box<dyn std::e
         #[cfg(all(not(target_os = "android"), feature = "core"))]
         accesskit: None,
         initialized: false,
+        renderer_factory: None,
         caller_driven_frame: false,
     };
 
@@ -87,6 +88,7 @@ pub fn pump_shell_with_world(
         #[cfg(all(not(target_os = "android"), feature = "core"))]
         accesskit: None,
         initialized: false,
+        renderer_factory: None,
         caller_driven_frame: false,
     };
 

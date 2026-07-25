@@ -153,6 +153,7 @@ pub fn launch_with_world(
         ))]
         accesskit: None,
         initialized: false,
+        renderer_factory: None,
         caller_driven_frame: false,
     };
 
@@ -522,6 +523,22 @@ pub(crate) fn apply_surface_resize(
 }
 
 /// Application context for the winit event loop.
+/// Builds a renderer for a window that has just been created.
+///
+/// Callable more than once, because a suspend drops the renderer and the
+/// following resume has to build another. A factory that could only run once
+/// would leave that rebuild falling back to the default surface bring-up, which
+/// for a caller supplying its own device means silently swapping in a different
+/// device and rendering to nowhere.
+#[cfg(not(target_arch = "wasm32"))]
+pub type RendererFactory = Box<
+    dyn Fn(
+        std::sync::Arc<winit::window::Window>,
+        u32,
+        u32,
+    ) -> Result<crate::render::wgpu::WgpuRenderer, Box<dyn std::error::Error>>,
+>;
+
 pub struct WindowContext {
     /// The ECS world containing all game state.
     pub world: World,
@@ -540,6 +557,17 @@ pub struct WindowContext {
     ))]
     pub accesskit: Option<crate::ui::accessibility::AccessKitHost>,
     pub initialized: bool,
+    /// Builds the renderer instead of the default surface bring-up.
+    ///
+    /// The window has to exist before a renderer can be built on it, and the
+    /// window only exists once the event loop resumes, so renderer creation
+    /// belongs to the resume handler no matter who owns the loop. A caller that
+    /// needs the device made some other way supplies it here rather than
+    /// reimplementing the handshake: an OpenXR runtime dictates the Vulkan
+    /// device, so the XR runner hands one over and the lifecycle stays in one
+    /// place.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub renderer_factory: Option<RendererFactory>,
     /// Set by a caller-owned loop that runs the frame itself. Redraw requests
     /// from the window are then answered by that loop rather than here, so a
     /// frame is not run twice per iteration.
@@ -712,17 +740,30 @@ impl winit::application::ApplicationHandler for WindowContext {
         #[cfg(not(target_arch = "wasm32"))]
         let dimension = window_handle.inner_size();
 
+        // A factory is a caller saying how the renderer gets built, which is
+        // also a caller saying there should be one. Letting `create_renderer`
+        // veto it means a composition that supplies a factory and clears the
+        // flag gets no renderer and no complaint, which is a black screen with
+        // nothing in the log.
         #[cfg(not(target_arch = "wasm32"))]
         if self
             .world
             .res::<crate::viewport::Viewport>()
             .create_renderer
+            || self.renderer_factory.is_some()
         {
-            match pollster::block_on(crate::render::core::create_renderer(
-                window_handle.clone(),
-                dimension.width,
-                dimension.height,
-            )) {
+            let width = dimension.width.max(1);
+            let height = dimension.height.max(1);
+            let built = match self.renderer_factory.as_ref() {
+                Some(factory) => factory(window_handle.clone(), width, height),
+                None => pollster::block_on(crate::render::core::create_renderer(
+                    window_handle.clone(),
+                    width,
+                    height,
+                ))
+                .map_err(|error| -> Box<dyn std::error::Error> { error }),
+            };
+            match built {
                 Ok(mut renderer) => {
                     if let Err(error) = crate::render_driver::configure_with_state(
                         &mut renderer,
