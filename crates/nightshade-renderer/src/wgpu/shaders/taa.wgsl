@@ -136,11 +136,20 @@ fn fragment_main(in: VertexOutput) -> FragmentOutput {
     if params.use_velocity > 0.5 && abs(velocity.x) < 1.5 && abs(velocity.y) < 1.5 {
         prev_uv = in.uv + velocity;
     } else {
+        // This pixel's own depth, not the dilated one. Dilation exists to pick
+        // whose velocity to read at a silhouette; unprojecting one pixel's uv
+        // against a neighbour's depth reconstructs a position on neither
+        // surface. At the edge of an occluder the neighbour is the occluder
+        // while the pixel is the background behind it, so the reprojection
+        // lands on the occluder's history and its colour bleeds through what
+        // should be hiding it.
+        //
         // Infinite reverse-Z places the far plane at depth 0, where the
         // unprojected point lies at infinity and the homogeneous divide yields
         // a non-finite world position. Clamp off the singularity so distant and
         // sky pixels reconstruct a finite, reprojectable position.
-        let reproject_depth = max(closest_depth, 1e-6);
+        let pixel_depth = textureSampleLevel(depth_texture, point_sampler, in.uv, 0);
+        let reproject_depth = max(pixel_depth, 1e-6);
         let ndc = vec4<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0, reproject_depth, 1.0);
         var world = params.inv_view_proj * ndc;
         world = world / world.w;
