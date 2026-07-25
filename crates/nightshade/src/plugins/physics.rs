@@ -94,10 +94,14 @@ pub mod events;
 pub mod foot_ik;
 #[cfg(feature = "physics")]
 pub mod joints;
+#[cfg(all(feature = "physics", feature = "scene_graph"))]
+pub mod prefab;
 #[cfg(feature = "physics")]
 pub mod ragdoll;
 #[cfg(feature = "physics")]
 pub mod resources;
+#[cfg(all(feature = "physics", feature = "scene_graph"))]
+pub mod scene;
 #[cfg(feature = "physics")]
 pub mod schema;
 #[cfg(feature = "physics")]
@@ -166,6 +170,10 @@ impl crate::app::Plugin for PhysicsPlugin {
         install(&mut app.world);
         camera_collision::install_camera_collision(&mut app.world);
         foot_ik::install_foot_ik_ground_query(&mut app.world);
+        #[cfg(feature = "scene_graph")]
+        scene::register_scene_hooks(&mut app.world);
+        #[cfg(feature = "scene_graph")]
+        prefab::register_prefab_hooks(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

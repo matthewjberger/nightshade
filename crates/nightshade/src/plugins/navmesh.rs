@@ -109,6 +109,8 @@ pub mod generation;
 pub mod pathfinding;
 #[cfg(feature = "navmesh")]
 pub mod resources;
+#[cfg(all(feature = "navmesh", feature = "scene_graph"))]
+pub mod scene;
 #[cfg(feature = "navmesh")]
 pub mod schema;
 #[cfg(feature = "navmesh")]
@@ -161,6 +163,8 @@ pub struct NavmeshPlugin;
 impl crate::app::Plugin for NavmeshPlugin {
     fn build(&self, app: &mut crate::app::App) {
         install(&mut app.world);
+        #[cfg(feature = "scene_graph")]
+        scene::register_scene_hooks(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

@@ -334,6 +334,9 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::scene::registry::AssetRegistry::default());
         #[cfg(feature = "scene_graph")]
         ecs.insert_resource(crate::ecs::scene::ScenePrefabs::default());
+        #[cfg(feature = "scene_graph")]
+        ecs.insert_resource(crate::ecs::scene::hooks::SceneCapabilityHooks::default());
+        ecs.insert_resource(crate::ecs::prefab::hooks::PrefabCapabilityHooks::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
         ecs.insert_resource(crate::ecs::camera::resources::CameraCollision::default());

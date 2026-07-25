@@ -62,6 +62,8 @@
 pub mod components;
 #[cfg(feature = "audio")]
 pub mod resources;
+#[cfg(all(feature = "audio", feature = "scene_graph"))]
+pub mod scene;
 #[cfg(feature = "audio")]
 pub mod schema;
 #[cfg(feature = "audio")]
@@ -103,6 +105,8 @@ impl crate::app::Plugin for AudioPlugin {
             crate::app::Stage::First,
             systems::lazy_initialize_audio_system,
         );
+        #[cfg(feature = "scene_graph")]
+        scene::register_scene_hooks(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }
