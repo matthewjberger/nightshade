@@ -10,7 +10,7 @@ use nalgebra_glm::Vec3;
 
 /// Installs the raycast ground-query resolver into [`FootIkGroundQuery`].
 pub fn install_foot_ik_ground_query(world: &mut World) {
-    world.res_mut::<FootIkGroundQuery>().resolver = Some(Box::new(ground_hit_point));
+    world.res_mut::<FootIkGroundQuery>().resolver = Some(ground_hit_point);
 }
 
 fn ground_hit_point(

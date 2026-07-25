@@ -479,8 +479,9 @@ fn sagittal_pole(hip: Vec3, knee: Vec3, foot: Vec3, forward: Vec3) -> Vec3 {
 /// the ground hit point, if any. The physics plugin installs one; without it
 /// foot IK leaves feet at their animated positions. Kept opaque so the
 /// animation domain does not depend on the physics plugin.
-type FootIkGroundResolver =
-    Box<dyn Fn(&World, Vec3, Vec3, f32, Option<Entity>) -> Option<Vec3> + Send + Sync>;
+/// A plain function pointer rather than a boxed closure: the value is `Copy`,
+/// so reading it costs nothing and the caller needs no take-and-restore.
+type FootIkGroundResolver = fn(&World, Vec3, Vec3, f32, Option<Entity>) -> Option<Vec3>;
 
 #[derive(Default)]
 pub struct FootIkGroundQuery {
@@ -514,7 +515,7 @@ pub fn foot_ik_system(world: &mut World) {
         player_feet.push((entity, feet));
     }
 
-    let ground_query = world.res_mut::<FootIkGroundQuery>().resolver.take();
+    let ground_query = world.res::<FootIkGroundQuery>().resolver;
     let mut updates: Vec<(Entity, usize, Vec3, Option<Vec3>, bool)> = Vec::new();
     for (entity, feet) in player_feet {
         let forward = entity_forward(world, entity);
@@ -533,7 +534,7 @@ pub fn foot_ik_system(world: &mut World) {
                 _ => None,
             };
             let origin = foot_position + Vec3::new(0.0, ray_length, 0.0);
-            let hit_point = ground_query.as_ref().and_then(|resolve| {
+            let hit_point = ground_query.and_then(|resolve| {
                 resolve(
                     world,
                     origin,
@@ -552,7 +553,6 @@ pub fn foot_ik_system(world: &mut World) {
             updates.push((entity, chain_index, target, pole, enabled));
         }
     }
-    world.res_mut::<FootIkGroundQuery>().resolver = ground_query;
 
     for (entity, chain_index, target, pole, enabled) in updates {
         if let Some(player) =

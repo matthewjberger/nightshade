@@ -11,12 +11,10 @@ pub struct ActiveCamera(pub Option<crate::ecs::world::Entity>);
 /// receives the world, the focus point, the ideal camera position, the
 /// collision radius, and the desired distance, and returns the distance to
 /// use. Kept opaque so the camera domain does not depend on the physics
-/// plugin.
-type CameraCollisionResolver = Box<
-    dyn Fn(&crate::ecs::world::World, nalgebra_glm::Vec3, nalgebra_glm::Vec3, f32, f32) -> f32
-        + Send
-        + Sync,
->;
+/// plugin. A plain function pointer rather than a boxed closure: the value is
+/// `Copy`, so reading it costs nothing and callers need no take-and-restore.
+type CameraCollisionResolver =
+    fn(&crate::ecs::world::World, nalgebra_glm::Vec3, nalgebra_glm::Vec3, f32, f32) -> f32;
 
 #[derive(Default)]
 pub struct CameraCollision {

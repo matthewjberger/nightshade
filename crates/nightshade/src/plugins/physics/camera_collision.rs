@@ -10,7 +10,7 @@ use nalgebra_glm::Vec3;
 
 /// Installs the raycast collision resolver into [`CameraCollision`].
 pub fn install_camera_collision(world: &mut World) {
-    world.res_mut::<CameraCollision>().resolver = Some(Box::new(camera_collision_distance));
+    world.res_mut::<CameraCollision>().resolver = Some(camera_collision_distance);
 }
 
 fn camera_collision_distance(
