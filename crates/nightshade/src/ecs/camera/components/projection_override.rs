@@ -50,32 +50,34 @@ impl Default for ProjectionOverride {
 }
 
 impl ProjectionOverride {
-    /// The distance [`from_tangents`](Self::from_tangents) reports as the far
-    /// bound.
+    /// Far plane [`from_tangents`](Self::from_tangents) builds against.
     ///
-    /// The matrix it builds has no far plane, so nothing is ever clipped by
-    /// distance. Passes that need a number rather than a matrix cannot work with
-    /// that, and neither can a compositor being told what the depth values mean,
-    /// so this is the finite distance they are given instead. Far enough that
-    /// anything beyond it has no parallax worth reconstructing.
+    /// Far enough that nothing in a scene reaches it, close enough that the
+    /// distance can be stated honestly to anything that needs one: the passes
+    /// reading `z_far`, and a compositor being told what the depth values mean.
     pub const DEFAULT_FAR: f32 = 1000.0;
 
-    /// Builds an off-center reverse-Z projection with an infinite far plane from
-    /// the tangents of the four frustum half-angles.
+    /// Builds an off-center reverse-Z projection from the tangents of the four
+    /// frustum half-angles.
     ///
     /// This is the form OpenXR reports a view's field of view in, where the
     /// frustum is asymmetric because each eye looks through its lens off axis.
-    /// Rows two and three match
-    /// `PerspectiveCamera`'s infinite reverse-Z projection exactly, so depth
-    /// behaves identically to every other camera in the engine; only the
-    /// horizontal and vertical extents differ. With a symmetric frustum it
-    /// reduces to the same matrix a `PerspectiveCamera` would produce.
+    /// Rows two and three match `PerspectiveCamera`'s finite reverse-Z
+    /// projection, so depth behaves identically to every other camera in the
+    /// engine; only the horizontal and vertical extents differ. With a symmetric
+    /// frustum it reduces to the same matrix a `PerspectiveCamera` would produce.
+    ///
+    /// Bounded rather than infinite, so [`z_far`](Self::z_far) describes the
+    /// matrix rather than approximating it. Reverse-Z keeps precision where it
+    /// matters either way, and anything that would have been clipped by a bound
+    /// this distant is too far to resolve.
     pub fn from_tangents(
         tan_left: f32,
         tan_right: f32,
         tan_up: f32,
         tan_down: f32,
         z_near: f32,
+        z_far: f32,
     ) -> Self {
         let tan_width = tan_right - tan_left;
         let tan_height = tan_up - tan_down;
@@ -90,8 +92,8 @@ impl ProjectionOverride {
             0.0,
             0.0,
             0.0,
-            0.0,
-            z_near,
+            z_near / (z_far - z_near),
+            z_near * z_far / (z_far - z_near),
             0.0,
             0.0,
             -1.0,
@@ -100,7 +102,7 @@ impl ProjectionOverride {
         Self {
             matrix,
             z_near,
-            z_far: Self::DEFAULT_FAR,
+            z_far,
             y_fov_rad: tan_height.atan() * 2.0,
             aspect: tan_width / tan_height,
         }

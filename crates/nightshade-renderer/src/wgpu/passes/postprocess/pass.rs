@@ -57,6 +57,13 @@ pub struct PostProcessPass {
     color_lut_view: wgpu::TextureView,
     color_lut_sampler: wgpu::Sampler,
     pending_color_lut: Option<Vec<u8>>,
+    /// Whether the output format applies the transfer function itself.
+    ///
+    /// An sRGB target encodes on write, so encoding in the shader as well
+    /// applies it twice and washes the image out. Knowing the format here is
+    /// what keeps that a property of the target rather than something callers
+    /// have to compensate for by editing a colour setting.
+    output_encodes_srgb: bool,
 }
 
 const COLOR_LUT_SIZE: u32 = 16;
@@ -442,6 +449,7 @@ impl PostProcessPass {
             color_lut_view,
             color_lut_sampler,
             pending_color_lut: Some(identity_color_lut_data()),
+            output_encodes_srgb: surface_format.is_srgb(),
         }
     }
 
@@ -508,7 +516,11 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for PostProcessPass {
             bloom_enabled,
             bloom_intensity,
             letterbox_amount: self.letterbox_amount,
-            gamma: color_grading.gamma,
+            gamma: if self.output_encodes_srgb {
+                1.0
+            } else {
+                color_grading.gamma
+            },
             saturation: color_grading.saturation,
             brightness: color_grading.brightness,
             contrast: color_grading.contrast,
