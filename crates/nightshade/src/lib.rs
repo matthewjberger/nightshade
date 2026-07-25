@@ -36,11 +36,11 @@
 //! }
 //!
 //! fn initialize(game: &mut MyGame, world: &mut World) {
-//!     world.res::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
+//!     world.res_mut::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
 //!     spawn_sun(world);
 //!
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
+//!     world.res_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!     game.camera = Some(camera);
 //!
 //!     spawn_cube_at(world, Vec3::new(0.0, 0.5, 0.0));
@@ -138,7 +138,7 @@
 //! let dt = world.res::<crate::ecs::time::Time>().delta_time;
 //! let fps = world.res::<crate::ecs::time::Time>().frames_per_second;
 //! let uptime_ms = world.res::<crate::ecs::time::Time>().uptime_milliseconds;
-//! world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera_entity);
+//! world.res_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera_entity);
 //! ```
 //!
 //! ### Render Graph
@@ -167,7 +167,7 @@
 //!
 //! **Textures Missing**
 //! - Textures acquired through materials are released on despawn; keep hand-loaded
-//!   textures alive with `texture_cache_protect(&mut world.res::<crate::render::wgpu::texture_cache::TextureCache>(), name)`
+//!   textures alive with `texture_cache_protect(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(), name)`
 //! - Names are case-sensitive
 //!
 //! **Entity Invisible**
@@ -394,8 +394,8 @@
 //!
 //! ```ignore
 //! fn initialize(world: &mut World) {
-//!     steam_initialize(&mut world.res::<crate::plugins::steam::SteamResources>()).ok();
-//!     steam_request_stats(&mut world.res::<crate::plugins::steam::SteamResources>());
+//!     steam_initialize(world.res_mut::<crate::plugins::steam::SteamResources>()).ok();
+//!     steam_request_stats(world.res_mut::<crate::plugins::steam::SteamResources>());
 //! }
 //!
 //! fn tick(game: &mut MyGame, world: &mut World) {

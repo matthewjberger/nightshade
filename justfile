@@ -97,6 +97,11 @@ lint-dag:
 # warning stays hidden. Building each crate alone reproduces what a downstream
 # consumer that enables only the narrow feature set actually compiles, so those
 # warnings surface here instead of in someone else's build.
+[windows]
+lint-crates-isolated:
+    $ErrorActionPreference = 'Stop'; foreach ($crate in @('nightshade-ecs','nightshade-text','nightshade-paint','nightshade-renderer','nightshade-platform','nightshade-ui','nightshade','nightshade-api')) { Write-Host "clippy (isolated): $crate"; cargo clippy -p $crate --all-targets -- -D warnings; if ($LASTEXITCODE -ne 0) { throw "isolated clippy failed for $crate" } }
+
+[unix]
 lint-crates-isolated:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -123,6 +128,11 @@ lint-rendergraph:
 # Verifies every forwarding feature in nightshade still forwards to the
 # matching nightshade-renderer feature, so a dropped entry fails the gate
 # instead of silently compiling the renderer without it.
+[windows]
+check-feature-forwarding:
+    $ErrorActionPreference = 'Stop'; $manifest = Get-Content crates/nightshade/Cargo.toml -Raw; $missing = @(); foreach ($feature in @('wgpu','hdr','egui','debug_render','screenshot','grass','terrain','browser_yield','meshlet','meshlet_processor')) { if ($manifest -notmatch [regex]::Escape("nightshade-renderer/$feature")) { $missing += "nightshade '$feature' does not forward to nightshade-renderer/$feature" } }; foreach ($target in @('nightshade-platform','nightshade-ui')) { if ($manifest -notmatch [regex]::Escape("$target/gamepad")) { $missing += "nightshade 'gamepad' does not forward to $target/gamepad" } }; if ($missing.Count -gt 0) { $missing | ForEach-Object { Write-Host "missing forwarding: $_" }; throw 'feature forwarding check failed' }
+
+[unix]
 check-feature-forwarding:
     #!/usr/bin/env bash
     status=0

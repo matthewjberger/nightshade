@@ -40,7 +40,7 @@
 //! values. Drain them in [`State::run_systems`].
 //!
 //! To transition to a different `State`, set
-//! `world.res::<PendingState>().0 = Some(Box::new(|world| Box::new(NewState::new(world))))`
+//! `world.res_mut::<PendingState>().0 = Some(Box::new(|world| Box::new(NewState::new(world))))`
 //! from inside `run_systems`; the engine takes the builder at the end of the
 //! frame and invokes it with `&mut World` so the new state can be constructed
 //! against the live world.
@@ -50,12 +50,12 @@
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
 //!     // Configure graphics
-//!     world.res::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
-//!     world.res::<crate::render::config::DebugDraw>().show_grid = true;
+//!     world.res_mut::<crate::render::config::RenderSettings>().atmosphere = Atmosphere::Sky;
+//!     world.res_mut::<crate::render::config::DebugDraw>().show_grid = true;
 //!
 //!     // Spawn camera
 //!     let camera = spawn_camera(world, Vec3::new(5.0, 3.0, 5.0), "Camera".to_string());
-//!     world.res::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
+//!     world.res_mut::<crate::ecs::camera::resources::ActiveCamera>().0 = Some(camera);
 //!
 //!     // Spawn lighting
 //!     spawn_sun(world);
@@ -75,7 +75,7 @@
 //! ```ignore
 //! fn run_systems(&mut self, world: &mut World) {
 //!     if self.should_go_to_menu {
-//!         world.res::<PendingState>().0 =
+//!         world.res_mut::<PendingState>().0 =
 //!             Some(Box::new(|_world| Box::new(MenuState::default())));
 //!     }
 //! }

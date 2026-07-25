@@ -24,14 +24,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
+//!     world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "red_metal".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
 //!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("red_metal")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
+//!     registry_add_reference(world.res_mut::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //!
 //! // Apply to an entity
@@ -46,14 +46,14 @@
 //! ```ignore
 //! // Full registration pattern
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
+//!     world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "my_material".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
 //!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("my_material")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
+//!     registry_add_reference(world.res_mut::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //! ```
 //!
@@ -63,8 +63,8 @@
 //!
 //! ```ignore
 //! // Load textures into the cache
-//! texture_cache_add_reference(&mut world.res::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_albedo.png");
-//! texture_cache_add_reference(&mut world.res::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_normal.png");
+//! texture_cache_add_reference(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_albedo.png");
+//! texture_cache_add_reference(world.res_mut::<crate::render::wgpu::texture_cache::TextureCache>(), "assets/brick_normal.png");
 //!
 //! // Create material with texture paths
 //! let material = Material {
@@ -77,14 +77,14 @@
 //! };
 //!
 //! material_registry_insert(
-//!     &mut world.res::<crate::ecs::material::resources::MaterialRegistry>(),
+//!     world.res_mut::<crate::ecs::material::resources::MaterialRegistry>(),
 //!     "brick".to_string(),
 //!     material,
 //! );
 //! if let Some(&index) =
 //!     world.res::<crate::ecs::material::resources::MaterialRegistry>().registry.name_to_index.get("brick")
 //! {
-//!     registry_add_reference(&mut world.res::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
+//!     registry_add_reference(world.res_mut::<crate::ecs::material::resources::MaterialRegistry>().registry, index);
 //! }
 //! ```
 //!

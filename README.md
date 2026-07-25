@@ -186,7 +186,7 @@ fn initialize(game: &mut SpinCube, world: &mut World) {
         Vec3::zeros(), 5.0, 0.5, 0.3,
         "Camera".to_string(),
     );
-    world.resources.active_camera = Some(camera);
+    world.res_mut::<ActiveCamera>().0 = Some(camera);
     spawn_sun(world);
     game.cube = Some(spawn_mesh_at(world, "Cube", Vec3::zeros(), Vec3::new(1.0, 1.0, 1.0)));
 }

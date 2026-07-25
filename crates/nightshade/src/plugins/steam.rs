@@ -17,13 +17,13 @@
 //!
 //! ```ignore
 //! fn initialize(&mut self, world: &mut World) {
-//!     if let Err(error) = steam_initialize(&mut world.res::<crate::plugins::steam::SteamResources>()) {
+//!     if let Err(error) = steam_initialize(world.res_mut::<crate::plugins::steam::SteamResources>()) {
 //!         eprintln!("Steam initialization failed: {error}");
 //!         // Game can still run without Steam
 //!     }
 //!
 //!     // Request stats/achievements from Steam servers
-//!     steam_request_stats(&mut world.res::<crate::plugins::steam::SteamResources>());
+//!     steam_request_stats(world.res_mut::<crate::plugins::steam::SteamResources>());
 //! }
 //! ```
 //!
@@ -47,7 +47,7 @@
 //! steam_store_stats(&world.res::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
 //!
 //! // Check achievement status
-//! steam_refresh_achievements(&mut world.res::<crate::plugins::steam::SteamResources>());
+//! steam_refresh_achievements(world.res_mut::<crate::plugins::steam::SteamResources>());
 //! for achievement in &world.res::<crate::plugins::steam::SteamResources>().achievements {
 //!     println!("{}: {}", achievement.api_name, achievement.achieved);
 //! }
@@ -67,7 +67,7 @@
 //! steam_store_stats(&world.res::<crate::plugins::steam::SteamResources>())?;  // Sync to Steam
 //!
 //! // Read stats
-//! steam_refresh_stats(&mut world.res::<crate::plugins::steam::SteamResources>(), &["total_kills", "play_time_hours"]);
+//! steam_refresh_stats(world.res_mut::<crate::plugins::steam::SteamResources>(), &["total_kills", "play_time_hours"]);
 //! for stat in &world.res::<crate::plugins::steam::SteamResources>().stats {
 //!     match stat.value {
 //!         StatValue::Int(value) => println!("{}: {}", stat.api_name, value),
@@ -84,7 +84,7 @@
 //! Access the player's Steam friends:
 //!
 //! ```ignore
-//! steam_refresh_friends(&mut world.res::<crate::plugins::steam::SteamResources>());
+//! steam_refresh_friends(world.res_mut::<crate::plugins::steam::SteamResources>());
 //!
 //! for friend in &world.res::<crate::plugins::steam::SteamResources>().friends {
 //!     let status = friend.state.as_str();  // "Online", "Away", etc.
@@ -102,12 +102,12 @@
 //!
 //! ```ignore
 //! // Setup networking callbacks (once)
-//! steam_setup_networking_callbacks(&mut world.res::<crate::plugins::steam::SteamResources>());
+//! steam_setup_networking_callbacks(world.res_mut::<crate::plugins::steam::SteamResources>());
 //!
 //! // Send message to a friend
 //! let target_id = friend.steam_id;
 //! steam_send_message(
-//!     &mut world.res::<crate::plugins::steam::SteamResources>(),
+//!     world.res_mut::<crate::plugins::steam::SteamResources>(),
 //!     target_id,
 //!     b"Hello!",
 //!     0,      // Channel
@@ -115,7 +115,7 @@
 //! )?;
 //!
 //! // Receive messages each frame
-//! steam_receive_messages(&mut world.res::<crate::plugins::steam::SteamResources>(), 0, 100);  // Channel 0, max 100 messages
+//! steam_receive_messages(world.res_mut::<crate::plugins::steam::SteamResources>(), 0, 100);  // Channel 0, max 100 messages
 //!
 //! for message in &world.res::<crate::plugins::steam::SteamResources>().received_messages {
 //!     if !message.is_outgoing {
@@ -123,10 +123,10 @@
 //!         println!("From {}: {}", message.sender_name, text);
 //!     }
 //! }
-//! steam_clear_messages(&mut world.res::<crate::plugins::steam::SteamResources>());
+//! steam_clear_messages(world.res_mut::<crate::plugins::steam::SteamResources>());
 //!
 //! // Process incoming session requests
-//! steam_process_pending_requests(&mut world.res::<crate::plugins::steam::SteamResources>());
+//! steam_process_pending_requests(world.res_mut::<crate::plugins::steam::SteamResources>());
 //!
 //! // Check connection state
 //! let state = steam_get_session_state(&world.res::<crate::plugins::steam::SteamResources>(), target_id);
@@ -135,7 +135,7 @@
 //! }
 //!
 //! // Close session
-//! steam_close_session(&mut world.res::<crate::plugins::steam::SteamResources>(), target_id);
+//! steam_close_session(world.res_mut::<crate::plugins::steam::SteamResources>(), target_id);
 //! ```
 //!
 //! # Rich Presence
