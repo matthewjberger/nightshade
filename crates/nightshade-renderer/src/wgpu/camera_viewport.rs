@@ -48,6 +48,7 @@ impl super::WgpuRenderer {
                 last_settings_version: 0,
                 last_render_frame: 0,
                 last_camera_world_transform: None,
+                depth_target: None,
             },
         );
     }
@@ -79,6 +80,7 @@ impl super::WgpuRenderer {
         let last_render_frame = previous.map_or(0, |viewport| viewport.last_render_frame);
         let last_camera_world_transform =
             previous.and_then(|viewport| viewport.last_camera_world_transform);
+        let depth_target = previous.and_then(|viewport| viewport.depth_target.clone());
 
         self.camera_viewports.insert(
             camera_entity,
@@ -91,7 +93,28 @@ impl super::WgpuRenderer {
                 last_settings_version,
                 last_render_frame,
                 last_camera_world_transform,
+                depth_target,
             },
         );
+    }
+
+    /// Publishes this camera's depth into a caller-owned image after it renders.
+    ///
+    /// The frame's depth buffer is shared between cameras and is overwritten by
+    /// whichever renders next, so a host that needs a per-camera copy cannot take
+    /// one after the frame. Naming the destination here lets the frame take it at
+    /// the only moment it is still that camera's depth.
+    ///
+    /// Submitting depth alongside color is what lets an OpenXR compositor
+    /// reproject a frame with parallax rather than as a flat plane.
+    pub fn set_external_camera_depth(
+        &mut self,
+        camera_entity: nightshade_ecs::Entity,
+        texture: wgpu::Texture,
+        array_layer: u32,
+    ) {
+        if let Some(viewport) = self.camera_viewports.get_mut(&camera_entity) {
+            viewport.depth_target = Some((texture, array_layer));
+        }
     }
 }

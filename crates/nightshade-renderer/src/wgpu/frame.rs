@@ -273,6 +273,61 @@ fn run_frame(
     Ok(())
 }
 
+/// Copies the frame's depth into a camera's caller-owned depth image.
+///
+/// Taken here rather than after the frame because the depth buffer is shared:
+/// the next camera to render overwrites it.
+fn publish_camera_depth(
+    renderer: &mut crate::wgpu::WgpuRenderer,
+    camera_entity: nightshade_ecs::Entity,
+    width: u32,
+    height: u32,
+) {
+    let Some((destination, array_layer)) = renderer
+        .camera_viewports
+        .get(&camera_entity)
+        .and_then(|viewport| viewport.depth_target.clone())
+    else {
+        return;
+    };
+    let Some(source) =
+        crate::wgpu::rendergraph::render_graph_get_texture(&renderer.graph, renderer.targets.depth)
+            .cloned()
+    else {
+        return;
+    };
+
+    let mut encoder = renderer
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("camera depth publish"),
+        });
+    encoder.copy_texture_to_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: &source,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::TexelCopyTextureInfo {
+            texture: &destination,
+            mip_level: 0,
+            origin: wgpu::Origin3d {
+                x: 0,
+                y: 0,
+                z: array_layer,
+            },
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
+    renderer.queue.submit(std::iter::once(encoder.finish()));
+}
+
 fn dispatch_window_renders(
     renderer: &mut crate::wgpu::WgpuRenderer,
     inputs: &mut RenderInputs,
@@ -526,6 +581,10 @@ fn dispatch_window_renders(
             {
                 let _span = tracing::info_span!("queue_submit").entered();
                 renderer.queue.submit(command_buffers);
+            }
+
+            if should_render {
+                publish_camera_depth(renderer, camera_entity, render_width, render_height);
             }
 
             if should_render

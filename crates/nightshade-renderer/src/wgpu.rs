@@ -78,6 +78,9 @@ pub struct CameraViewport {
     pub last_render_frame: u64,
     /// Camera world transform captured on the last render, for reuse detection.
     pub last_camera_world_transform: Option<nalgebra_glm::Mat4>,
+    /// A caller-owned depth image and array layer to publish this camera's depth
+    /// into after it renders, for hosts that submit depth alongside color.
+    pub depth_target: Option<(wgpu::Texture, u32)>,
 }
 
 /// Side length in texels of the square depth-pick sample window.
