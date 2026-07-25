@@ -16,8 +16,25 @@ struct TaaParams {
     input_resolution: [f32; 2],
 }
 
+/// One camera's temporal history: two targets it ping-pongs between, and
+/// whether either holds anything worth blending against yet.
+struct CameraHistory {
+    /// Retained to keep [`views`](Self::views) alive.
+    _textures: Vec<wgpu::Texture>,
+    views: Vec<wgpu::TextureView>,
+    index: usize,
+    valid: bool,
+    size: (u32, u32),
+}
+
 /// Render-graph pass that blends the current frame against reprojected history
 /// to resolve temporal anti-aliasing, ping-ponging between two history targets.
+///
+/// History is kept per camera. A frame can dispatch several cameras through this
+/// pass, and they see different things: two eyes of a stereo pair, or the tiles
+/// of a multi-viewport editor. Sharing one history between them resolves each
+/// camera against another camera's frames, which reads as everything trailing
+/// whenever anything moves.
 pub struct TaaPass {
     resolve_pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -25,12 +42,9 @@ pub struct TaaPass {
     point_sampler: wgpu::Sampler,
     params_buffer: wgpu::Buffer,
     format: wgpu::TextureFormat,
-    history_textures: Vec<wgpu::Texture>,
-    history_views: Vec<wgpu::TextureView>,
-    history_index: usize,
-    history_valid: bool,
-    cached_width: u32,
-    cached_height: u32,
+    /// Keyed by the camera being dispatched. `None` is the single-view path,
+    /// which names no camera and needs a history of its own all the same.
+    histories: std::collections::HashMap<Option<nightshade_ecs::Entity>, CameraHistory>,
     dummy_velocity_view: wgpu::TextureView,
 }
 
@@ -214,25 +228,31 @@ impl TaaPass {
             point_sampler,
             params_buffer,
             format,
-            history_textures: Vec::new(),
-            history_views: Vec::new(),
-            history_index: 0,
+            histories: std::collections::HashMap::new(),
             dummy_velocity_view,
-            history_valid: false,
-            cached_width: 0,
-            cached_height: 0,
         }
     }
 
-    fn ensure_history(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        if self.history_views.len() == 2
-            && width == self.cached_width
-            && height == self.cached_height
+    /// Ensures `camera` has a history pair at this size, rebuilding it when the
+    /// size changed and starting it invalid so the first frame after a resize
+    /// blends against nothing.
+    fn ensure_history(
+        &mut self,
+        device: &wgpu::Device,
+        camera: Option<nightshade_ecs::Entity>,
+        width: u32,
+        height: u32,
+    ) {
+        if self
+            .histories
+            .get(&camera)
+            .is_some_and(|history| history.size == (width, height))
         {
             return;
         }
-        self.history_textures.clear();
-        self.history_views.clear();
+
+        let mut textures = Vec::new();
+        let mut views = Vec::new();
         for _ in 0..2 {
             let texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("TAA History Texture"),
@@ -250,13 +270,27 @@ impl TaaPass {
                 view_formats: &[],
             });
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            self.history_textures.push(texture);
-            self.history_views.push(view);
+            textures.push(texture);
+            views.push(view);
         }
-        self.cached_width = width;
-        self.cached_height = height;
-        self.history_index = 0;
-        self.history_valid = false;
+
+        self.histories.insert(
+            camera,
+            CameraHistory {
+                _textures: textures,
+                views,
+                index: 0,
+                valid: false,
+                size: (width, height),
+            },
+        );
+    }
+
+    /// Drops history for cameras the frame no longer dispatches, so a closed
+    /// viewport or a despawned eye does not hold its targets forever.
+    pub fn retain_cameras(&mut self, live: &std::collections::HashSet<nightshade_ecs::Entity>) {
+        self.histories
+            .retain(|camera, _| camera.is_none_or(|entity| live.contains(&entity)));
     }
 }
 
@@ -287,7 +321,8 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
             .map(|texture| (texture.width(), texture.height()))
             .unwrap_or((1920, 1080));
 
-        self.ensure_history(context.device, width, height);
+        let camera = context.configs.view.active_camera;
+        self.ensure_history(context.device, camera, width, height);
 
         // Reproject with the unjittered view-projection the velocity producers
         // use (renderer_state tracks current and previous), so the depth
@@ -304,7 +339,12 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
         let velocity_slot = context.get_texture_view("velocity").ok();
         let has_velocity = velocity_slot.is_some();
         let velocity_view = velocity_slot.unwrap_or(&self.dummy_velocity_view);
-        let valid = taa_enabled && self.history_valid;
+        let (read_index, write_index, history_valid) = self
+            .histories
+            .get(&camera)
+            .map(|history| (history.index, 1 - history.index, history.valid))
+            .unwrap_or((0, 1, false));
+        let valid = taa_enabled && history_valid;
         let (input_width, input_height) = context
             .get_texture("input")
             .map(|texture| (texture.width(), texture.height()))
@@ -323,9 +363,6 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
             .queue
             .write_buffer(&self.params_buffer, 0, bytemuck::cast_slice(&[params]));
 
-        let read_index = self.history_index;
-        let write_index = 1 - self.history_index;
-
         let input_view = context.get_texture_view("input")?;
         let (depth_view, _, _) = context.get_depth_attachment("depth")?;
 
@@ -342,7 +379,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::TextureView(
-                            &self.history_views[read_index],
+                            &self.histories[&camera].views[read_index],
                         ),
                     },
                     wgpu::BindGroupEntry {
@@ -387,7 +424,7 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
                             depth_slice: None,
                         }),
                         Some(wgpu::RenderPassColorAttachment {
-                            view: &self.history_views[write_index],
+                            view: &self.histories[&camera].views[write_index],
                             resolve_target: None,
                             ops: wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
@@ -407,8 +444,10 @@ impl PassNode<crate::wgpu::render_configs::RenderInputs> for TaaPass {
             render_pass.draw(0..3, 0..1);
         }
 
-        self.history_index = write_index;
-        self.history_valid = true;
+        if let Some(history) = self.histories.get_mut(&camera) {
+            history.index = write_index;
+            history.valid = true;
+        }
 
         Ok(context.into_sub_graph_commands())
     }

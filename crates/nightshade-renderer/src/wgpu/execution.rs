@@ -13,6 +13,15 @@ impl super::WgpuRenderer {
     ) {
         self.camera_viewports
             .retain(|entity, _| active_camera_entities.contains(entity));
+
+        // Temporal history is per camera too, and outlives its camera unless
+        // something drops it.
+        if let Some(taa_pass) = render_graph_get_pass_mut(&mut self.graph, "taa_pass")
+            && let Some(taa_pass) =
+                (taa_pass as &mut dyn std::any::Any).downcast_mut::<passes::TaaPass>()
+        {
+            taa_pass.retain_cameras(active_camera_entities);
+        }
     }
 
     /// Resizes the render buffers for a window, skipping a repeat dispatch when

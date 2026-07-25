@@ -49,6 +49,7 @@ impl super::WgpuRenderer {
                 last_render_frame: 0,
                 last_camera_world_transform: None,
                 depth_target: None,
+                last_view_projection: None,
             },
         );
     }
@@ -81,6 +82,7 @@ impl super::WgpuRenderer {
         let last_camera_world_transform =
             previous.and_then(|viewport| viewport.last_camera_world_transform);
         let depth_target = previous.and_then(|viewport| viewport.depth_target.clone());
+        let last_view_projection = previous.and_then(|viewport| viewport.last_view_projection);
 
         self.camera_viewports.insert(
             camera_entity,
@@ -94,6 +96,7 @@ impl super::WgpuRenderer {
                 last_render_frame,
                 last_camera_world_transform,
                 depth_target,
+                last_view_projection,
             },
         );
     }

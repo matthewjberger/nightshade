@@ -81,6 +81,12 @@ pub struct CameraViewport {
     /// A caller-owned depth image and array layer to publish this camera's depth
     /// into after it renders, for hosts that submit depth alongside color.
     pub depth_target: Option<(wgpu::Texture, u32)>,
+    /// The unjittered view-projection this camera last rendered with.
+    ///
+    /// Reprojection needs the previous frame *of this camera*. A frame that
+    /// dispatches several cameras has several previous frames, and taking one of
+    /// them globally reprojects the others against a viewpoint they never had.
+    pub last_view_projection: Option<[[f32; 4]; 4]>,
 }
 
 /// Side length in texels of the square depth-pick sample window.

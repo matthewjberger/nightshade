@@ -548,6 +548,23 @@ fn dispatch_window_renders(
                     crate::config::ViewportUpdateMode::Disabled => !has_rendered_once,
                 };
 
+            // Velocity and the temporal resolve both reproject against this,
+            // and both have to see the same thing, so it is set once here from
+            // the camera about to render rather than taken from whichever
+            // camera happens to be active.
+            let camera_view_projection = camera
+                .matrices
+                .as_ref()
+                .map(|matrices| (matrices.projection * matrices.view).into());
+            if let Some(view_projection) = camera_view_projection {
+                inputs.scene.prev_view_projection = renderer
+                    .camera_viewports
+                    .get(&camera_entity)
+                    .and_then(|viewport| viewport.last_view_projection)
+                    .unwrap_or(view_projection);
+                inputs.scene.view_projection = view_projection;
+            }
+
             inputs.scene.active_view = effective;
             inputs.scene.render_view = build_render_view(
                 camera,
@@ -595,6 +612,9 @@ fn dispatch_window_renders(
                 viewport.last_settings_version = frame_settings_version;
                 viewport.last_render_frame = renderer.frame_state.index;
                 viewport.last_camera_world_transform = camera.world_transform;
+                if let Some(view_projection) = camera_view_projection {
+                    viewport.last_view_projection = Some(view_projection);
+                }
             }
             if should_render && camera_force_render {
                 outputs.force_render_cleared.push(camera_entity);
