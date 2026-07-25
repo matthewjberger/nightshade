@@ -42,7 +42,7 @@ impl Default for ProjectionOverride {
         Self {
             matrix: Mat4::identity(),
             z_near: 0.01,
-            z_far: 1000.0,
+            z_far: Self::DEFAULT_FAR,
             y_fov_rad: std::f32::consts::FRAC_PI_4,
             aspect: 16.0 / 9.0,
         }
@@ -50,6 +50,16 @@ impl Default for ProjectionOverride {
 }
 
 impl ProjectionOverride {
+    /// The distance [`from_tangents`](Self::from_tangents) reports as the far
+    /// bound.
+    ///
+    /// The matrix it builds has no far plane, so nothing is ever clipped by
+    /// distance. Passes that need a number rather than a matrix cannot work with
+    /// that, and neither can a compositor being told what the depth values mean,
+    /// so this is the finite distance they are given instead. Far enough that
+    /// anything beyond it has no parallax worth reconstructing.
+    pub const DEFAULT_FAR: f32 = 1000.0;
+
     /// Builds an off-center reverse-Z projection with an infinite far plane from
     /// the tangents of the four frustum half-angles.
     ///
@@ -90,7 +100,7 @@ impl ProjectionOverride {
         Self {
             matrix,
             z_near,
-            z_far: 1000.0,
+            z_far: Self::DEFAULT_FAR,
             y_fov_rad: tan_height.atan() * 2.0,
             aspect: tan_width / tan_height,
         }
