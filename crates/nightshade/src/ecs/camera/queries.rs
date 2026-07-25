@@ -14,6 +14,53 @@ pub fn query_active_camera_matrices(world: &World) -> Option<CameraMatrices> {
     query_camera_matrices(world, active_camera)
 }
 
+/// How a camera's projection was decided, so the matrix and the scalar
+/// parameters the passes need are read from one place.
+///
+/// Two callers need this and they need different halves of it: the view matrices
+/// want the matrix, the frame inputs want the near and far planes and the field
+/// of view. Resolving the precedence separately in each is how one of them ends
+/// up not knowing about an override.
+pub enum ResolvedProjection {
+    /// A hand-supplied matrix, which wins outright.
+    Override(crate::ecs::camera::components::ProjectionOverride),
+    /// Derived from the camera's own perspective settings.
+    Perspective(crate::ecs::camera::components::PerspectiveCamera, f32),
+    /// Derived from the camera's own orthographic settings.
+    Orthographic(crate::ecs::camera::components::OrthographicCamera),
+    /// The entity carries no camera.
+    None,
+}
+
+/// Decides which projection a camera uses, and with what aspect ratio.
+pub fn resolve_projection(world: &World, entity: Entity) -> ResolvedProjection {
+    if let Some(override_projection) =
+        world.get::<crate::ecs::camera::components::ProjectionOverride>(entity)
+    {
+        return ResolvedProjection::Override(*override_projection);
+    }
+    match world
+        .get::<crate::ecs::camera::components::Camera>(entity)
+        .map(|camera| &camera.projection)
+    {
+        Some(crate::ecs::camera::components::Projection::Perspective(perspective)) => {
+            let constrained = world
+                .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
+                .map(|constrained| constrained.0);
+            let aspect_ratio = constrained
+                .or(perspective.aspect_ratio)
+                .or_else(|| query_camera_tile_aspect_ratio(world, entity))
+                .or_else(|| query_window_aspect_ratio(world))
+                .unwrap_or(16.0 / 9.0);
+            ResolvedProjection::Perspective(*perspective, aspect_ratio)
+        }
+        Some(crate::ecs::camera::components::Projection::Orthographic(orthographic)) => {
+            ResolvedProjection::Orthographic(*orthographic)
+        }
+        None => ResolvedProjection::None,
+    }
+}
+
 pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatrices> {
     let camera = world.get::<crate::ecs::camera::components::Camera>(entity)?;
     let global_transform =
@@ -24,33 +71,13 @@ pub fn query_camera_matrices(world: &World, entity: Entity) -> Option<CameraMatr
     let up = global_transform.up_vector();
     let target = camera_position + forward;
 
-    // A hand-supplied projection wins outright: the frustum it encodes is one
-    // no field of view and aspect ratio can describe, such as the off-center
-    // frustum of a stereo eye.
-    if let Some(override_projection) =
-        world.get::<crate::ecs::camera::components::ProjectionOverride>(entity)
-    {
-        let view = nalgebra_glm::look_at(&camera_position, &target, &up);
-        return Some(CameraMatrices {
-            camera_position,
-            projection: override_projection.matrix,
-            view,
-        });
-    }
-
-    let projection = match &camera.projection {
-        crate::ecs::camera::components::Projection::Perspective(persp) => {
-            let constrained = world
-                .get::<crate::ecs::camera::components::ConstrainedAspect>(entity)
-                .map(|c| c.0);
-            let aspect_ratio = constrained
-                .or(persp.aspect_ratio)
-                .or_else(|| query_camera_tile_aspect_ratio(world, entity))
-                .or_else(|| query_window_aspect_ratio(world))
-                .unwrap_or(16.0 / 9.0);
-            persp.matrix_with_aspect(aspect_ratio)
+    let projection = match resolve_projection(world, entity) {
+        ResolvedProjection::Override(override_projection) => override_projection.matrix,
+        ResolvedProjection::Perspective(perspective, aspect_ratio) => {
+            perspective.matrix_with_aspect(aspect_ratio)
         }
-        crate::ecs::camera::components::Projection::Orthographic(_) => camera.projection.matrix(),
+        ResolvedProjection::Orthographic(_) => camera.projection.matrix(),
+        ResolvedProjection::None => return None,
     };
 
     let view = nalgebra_glm::look_at(&camera_position, &target, &up);

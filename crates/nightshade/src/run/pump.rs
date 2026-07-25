@@ -110,6 +110,10 @@ pub fn pump_shell_ready(shell: &PumpShell) -> bool {
 /// render (no window or renderer yet, or a zero-sized window) so a caller
 /// loop never spins hot.
 pub fn pump_frame(shell: &mut PumpShell) -> bool {
+    // Hands the frame back to the window, so alternating between the two entry
+    // points does not leave rendering switched off.
+    shell.context.caller_driven_frame = false;
+
     let status = shell
         .event_loop
         .pump_app_events(Some(std::time::Duration::ZERO), &mut shell.context);
