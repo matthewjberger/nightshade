@@ -105,6 +105,8 @@ pub mod scene;
 #[cfg(feature = "physics")]
 pub mod schema;
 #[cfg(feature = "physics")]
+pub mod snapshot;
+#[cfg(feature = "physics")]
 pub mod systems;
 
 pub use components::*;
@@ -174,6 +176,7 @@ impl crate::app::Plugin for PhysicsPlugin {
         scene::register_scene_hooks(&mut app.world);
         #[cfg(feature = "scene_graph")]
         prefab::register_prefab_hooks(&mut app.world);
+        snapshot::register_snapshot_capability(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

@@ -114,6 +114,8 @@ pub mod scene;
 #[cfg(feature = "navmesh")]
 pub mod schema;
 #[cfg(feature = "navmesh")]
+pub mod snapshot;
+#[cfg(feature = "navmesh")]
 pub mod systems;
 
 #[cfg(feature = "navmesh")]
@@ -165,6 +167,7 @@ impl crate::app::Plugin for NavmeshPlugin {
         install(&mut app.world);
         #[cfg(feature = "scene_graph")]
         scene::register_scene_hooks(&mut app.world);
+        snapshot::register_snapshot_capability(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }

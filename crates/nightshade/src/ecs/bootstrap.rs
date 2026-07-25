@@ -84,10 +84,6 @@ pub mod resources {
     pub use crate::ecs::world::cleanup::CleanupState;
     pub use crate::platform::input::resources::{Input, MouseState};
     pub use crate::platform::window::Window;
-    #[cfg(feature = "audio")]
-    pub use crate::plugins::audio::resources::AudioEngine;
-    #[cfg(feature = "physics")]
-    pub use crate::plugins::physics::resources::PhysicsWorld;
     pub use crate::render::config::ViewportRect;
     pub use crate::render::config::{
         Atmosphere, ColorGrading, ColorGradingPreset, DebugDraw, Fog, GpuBackend, GpuDeviceType,
@@ -312,8 +308,6 @@ impl Default for World {
         let mut ecs = ecs;
         ecs.insert_resource(crate::ecs::text::resources::TextState::default());
         ecs.insert_resource(crate::user_interface::UserInterface::default());
-        #[cfg(feature = "gizmos")]
-        ecs.insert_resource(crate::plugins::gizmos::Gizmos::default());
         ecs.insert_resource(crate::ecs::entity_registry::EntityRegistry::default());
         ecs.insert_resource(crate::render::mesh_state::MeshRenderState::default());
         ecs.insert_resource(crate::ecs::mesh::components::InstancedMeshMatrices::default());
@@ -337,6 +331,7 @@ impl Default for World {
         #[cfg(feature = "scene_graph")]
         ecs.insert_resource(crate::ecs::scene::hooks::SceneCapabilityHooks::default());
         ecs.insert_resource(crate::ecs::prefab::hooks::PrefabCapabilityHooks::default());
+        ecs.insert_resource(crate::ecs::cutscene::resources::CutsceneAudio::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
         ecs.insert_resource(crate::ecs::camera::resources::CameraCollision::default());
@@ -368,8 +363,6 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::time::Time::default());
         ecs.insert_resource(crate::ecs::loading::LoadingState::default());
         ecs.insert_resource(crate::state::PendingState::default());
-        #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-        ecs.insert_resource(crate::plugins::steam::SteamResources::default());
         nightshade_ui::insert_ui_resources(
             &mut ecs,
             crate::ui::resources::UiWorldIndices { core: CORE, ui: UI },

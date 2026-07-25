@@ -871,6 +871,8 @@ pub struct SteamPlugin;
 
 impl crate::app::Plugin for SteamPlugin {
     fn build(&self, app: &mut crate::app::App) {
+        app.world
+            .insert_resource(crate::plugins::steam::SteamResources::default());
         app.add_system(
             crate::app::Stage::Startup,
             |world: &mut crate::ecs::World| {

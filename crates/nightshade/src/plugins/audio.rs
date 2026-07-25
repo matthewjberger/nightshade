@@ -61,11 +61,15 @@
 
 pub mod components;
 #[cfg(feature = "audio")]
+pub mod cutscene;
+#[cfg(feature = "audio")]
 pub mod resources;
 #[cfg(all(feature = "audio", feature = "scene_graph"))]
 pub mod scene;
 #[cfg(feature = "audio")]
 pub mod schema;
+#[cfg(feature = "audio")]
+pub mod snapshot;
 #[cfg(feature = "audio")]
 pub mod systems;
 
@@ -107,6 +111,8 @@ impl crate::app::Plugin for AudioPlugin {
         );
         #[cfg(feature = "scene_graph")]
         scene::register_scene_hooks(&mut app.world);
+        cutscene::register_cutscene_audio(&mut app.world);
+        snapshot::register_snapshot_capability(&mut app.world);
         register_frame_systems(&mut app.stages);
     }
 }
