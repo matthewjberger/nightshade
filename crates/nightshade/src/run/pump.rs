@@ -160,6 +160,15 @@ pub fn pump_render_frame(shell: &mut PumpShell) -> bool {
         return false;
     }
 
+    if shell.context.renderer.is_none() {
+        return true;
+    }
+
+    // The loop owns the frame, so it owns the clock: a redraw request is not
+    // what starts a frame here, and it stops arriving entirely once the window
+    // is minimized.
+    crate::run::advance_timing(&mut shell.context.world);
+
     let Some(renderer) = shell.context.renderer.as_mut() else {
         return true;
     };

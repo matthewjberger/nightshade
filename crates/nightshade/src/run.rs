@@ -294,7 +294,7 @@ pub(crate) fn step(
         sync_macos_auto_frame_rate_limit(world);
         throttle_to_frame_rate_limit(world);
     }
-    handle_event_systems(world, event);
+    handle_event_systems(world, event, caller_driven_frame);
 
     // A caller-owned loop runs the frame itself, on its own schedule. The window
     // still asks for redraws through `about_to_wait`, and answering them here
@@ -443,17 +443,24 @@ pub(crate) fn run_frame_logic(world: &mut World, state: &mut dyn State) -> Optio
     None
 }
 
-fn handle_event_systems(world: &mut World, event: &WindowEvent) {
+fn handle_event_systems(world: &mut World, event: &WindowEvent, caller_driven_frame: bool) {
     let _span = tracing::info_span!("event_handling").entered();
     #[cfg(feature = "egui")]
     crate::egui::handle_window_event(world, event);
     input_event_system(world, event);
-    timing_system(world, event);
+    timing_system(world, event, caller_driven_frame);
 }
 
-fn timing_system(world: &mut World, event: &WindowEvent) {
+/// Advances the clock on a redraw, unless the caller owns the frame.
+///
+/// A redraw request is the window saying it wants a new image, which is a fine
+/// proxy for "a frame is starting" only while the window is the thing being
+/// driven. A caller-owned loop advances the clock itself, because the window
+/// stops asking for redraws when it is minimized and a frame going somewhere
+/// else still has to keep time.
+fn timing_system(world: &mut World, event: &WindowEvent, caller_driven_frame: bool) {
     let _span = tracing::info_span!("timing").entered();
-    if let WindowEvent::RedrawRequested = event {
+    if matches!(event, WindowEvent::RedrawRequested) && !caller_driven_frame {
         advance_timing(world);
     }
 }
@@ -474,9 +481,10 @@ pub fn advance_timing(world: &mut World) {
         timing.initial_frame_start_instant = Some(now);
     }
 
-    timing.raw_delta_time = timing
+    let measured = timing
         .last_frame_start_instant
         .map_or(0.0, |last_frame| (now - last_frame).as_secs_f32());
+    timing.raw_delta_time = timing.host_delta_time.take().unwrap_or(measured);
 
     timing.delta_time = if timing.paused {
         0.0
