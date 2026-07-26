@@ -4,7 +4,6 @@
 //! built into this crate behind feature flags on purpose: cargo features
 //! decide what code exists, composing the plugin is what activates it.
 
-pub mod audio;
 pub mod camera_controller;
 pub mod core;
 pub mod cutscene;

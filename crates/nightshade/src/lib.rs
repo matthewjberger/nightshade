@@ -604,8 +604,6 @@ pub mod prelude {
         Monitor, Monitors, Window, refresh_monitors_from_event_loop, window_scale_factor,
         window_viewport_size,
     };
-    #[cfg(feature = "audio")]
-    pub use crate::plugins::audio::AudioPlugin;
     pub use crate::plugins::camera_controller::CameraControllerPlugin;
     pub use crate::plugins::core::CorePlugin;
     pub use crate::plugins::cutscene::CutscenePlugin;
@@ -795,18 +793,6 @@ pub mod prelude {
     pub use crate::platform::input::resources::input_mode::InputMode;
     pub use crate::platform::input::resources::mouse::MouseState;
     pub use crate::platform::input::resources::touch::{TouchGesture, TouchPhase};
-    #[cfg(feature = "audio")]
-    pub use crate::plugins::audio::resources::{
-        AudioEngine, audio_engine_cleanup_entity, audio_engine_fade_volume, audio_engine_get_sound,
-        audio_engine_has_handle, audio_engine_initialize, audio_engine_is_initialized,
-        audio_engine_load_sound, audio_engine_pause_sound, audio_engine_resume_sound,
-        audio_engine_stop_sound,
-    };
-    #[cfg(feature = "audio")]
-    pub use crate::plugins::audio::systems::{
-        load_sound_from_bytes, set_audio_bus_volume, set_voice_ducking,
-    };
-    pub use crate::plugins::audio::{AudioBus, AudioListener, AudioSource};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
     pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};

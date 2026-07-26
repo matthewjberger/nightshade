@@ -643,11 +643,8 @@ type UpdateRenderGraphFn = Box<
 /// Pushes a plain per-frame system into a named frame stage of `stages`,
 /// naming it the same way [`App::add_system`] does so the App and
 /// runner-owned frame stages register systems identically.
-pub(crate) fn push_frame_system<F>(
-    stages: &mut nightshade_ecs::Stages<World>,
-    stage: Stage,
-    system: F,
-) where
+pub fn push_frame_system<F>(stages: &mut nightshade_ecs::Stages<World>, stage: Stage, system: F)
+where
     F: FnMut(&mut World) + Send + 'static,
 {
     stages
