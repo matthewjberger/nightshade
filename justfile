@@ -206,7 +206,7 @@ sync-template-api:
 pull-template-api:
     git subtree pull --prefix=template_api {{template_api_repo}} main --squash
 
-# Publishes the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade, and nightshade-api crates to crates.io
+# Publishes the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade-leptos, nightshade, nightshade-api, and nightshade-steam crates to crates.io
 publish-crate:
     cargo publish -p nightshade-ecs
     cargo publish -p nightshade-text
@@ -214,10 +214,12 @@ publish-crate:
     cargo publish -p nightshade-renderer
     cargo publish -p nightshade-platform
     cargo publish -p nightshade-ui
+    cargo publish -p nightshade-leptos
     cargo publish -p nightshade
     cargo publish -p nightshade-api
+    cargo publish -p nightshade-steam
 
-# Dry run of publishing the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade, and nightshade-api crates
+# Dry run of publishing the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade-leptos, nightshade, nightshade-api, and nightshade-steam crates
 publish-crate-dry:
     cargo publish -p nightshade-ecs --dry-run
     cargo publish -p nightshade-text --dry-run
@@ -225,8 +227,10 @@ publish-crate-dry:
     cargo publish -p nightshade-renderer --dry-run
     cargo publish -p nightshade-platform --dry-run
     cargo publish -p nightshade-ui --dry-run
+    cargo publish -p nightshade-leptos --dry-run
     cargo publish -p nightshade --dry-run
     cargo publish -p nightshade-api --dry-run
+    cargo publish -p nightshade-steam --dry-run
 
 # Opens the editor (with its built-in scripting playground tab), or runs a
 # native app by name (e.g. `just run sandbox`)
