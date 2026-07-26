@@ -98,6 +98,8 @@ pub mod foot_ik;
 pub mod geometry;
 #[cfg(feature = "physics")]
 pub mod joints;
+#[cfg(feature = "physics")]
+pub mod picking;
 #[cfg(all(feature = "physics", feature = "scene_graph"))]
 pub mod prefab;
 #[cfg(feature = "physics")]
@@ -173,6 +175,8 @@ impl crate::app::Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::app::App) {
         app.world
             .insert_resource(crate::plugins::physics::resources::PhysicsWorld::default());
+        app.world
+            .insert_resource(crate::plugins::physics::picking::resources::PickingWorld::default());
         install(&mut app.world);
         camera_collision::install_camera_collision(&mut app.world);
         foot_ik::install_foot_ik_ground_query(&mut app.world);

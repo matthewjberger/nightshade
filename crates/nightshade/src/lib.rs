@@ -753,12 +753,6 @@ pub mod prelude {
         PickingOptions, PickingRay, PickingResult, get_ground_position_from_screen,
         pick_closest_entity, pick_entities, pick_entities_in_frustum,
     };
-    #[cfg(all(feature = "picking", feature = "physics"))]
-    pub use crate::ecs::picking::{
-        PickingWorld, pick_closest_entity_trimesh, pick_entities_trimesh,
-        register_entity_for_trimesh_picking, register_entity_hierarchy_for_trimesh_picking,
-        unregister_entity_from_picking, update_picking_transform,
-    };
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
     pub use crate::ecs::snapshot::{WorldSnapshot, restore_world, snapshot_world};
@@ -804,6 +798,12 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::events::{
         CollisionEvent, CollisionEventKind, ContactForceEvent,
+    };
+    #[cfg(all(feature = "picking", feature = "physics"))]
+    pub use crate::plugins::physics::picking::{
+        PickingWorld, pick_closest_entity_trimesh, pick_entities_trimesh,
+        register_entity_for_trimesh_picking, register_entity_hierarchy_for_trimesh_picking,
+        unregister_entity_from_picking, update_picking_transform,
     };
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::resources::{

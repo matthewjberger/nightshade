@@ -270,38 +270,23 @@ pub fn build_engine_ecs() -> nightshade_ecs::dynamic::DynEcs {
 
 impl Default for World {
     fn default() -> Self {
-        // The capability resources (physics, audio, navmesh, terrain, egui, file
-        // watcher) are inserted by their plugins' `build`, so composing the plugin
-        // is what enables the capability; engine-core readers skip their work when
-        // the resource is absent. PickingWorld (engine-core physics-picking state)
-        // and AssetWatcher (asset-file watching) have no owning plugin, so they
-        // stay feature-scoped here.
-        #[cfg(not(any(
-            feature = "physics",
-            all(
-                feature = "assets",
-                feature = "file_watcher",
-                not(target_arch = "wasm32")
-            ),
+        // Capability resources are inserted by their plugins' `build`, so
+        // composing the plugin is what enables the capability and engine-core
+        // readers skip their work when the resource is absent. AssetWatcher has
+        // no owning plugin, so it stays feature-scoped here.
+        #[cfg(not(all(
+            feature = "assets",
+            feature = "file_watcher",
+            not(target_arch = "wasm32")
         )))]
         let ecs = build_engine_ecs();
-        #[cfg(any(
-            feature = "physics",
-            all(
-                feature = "assets",
-                feature = "file_watcher",
-                not(target_arch = "wasm32")
-            ),
+        #[cfg(all(
+            feature = "assets",
+            feature = "file_watcher",
+            not(target_arch = "wasm32")
         ))]
         let ecs = {
             let mut ecs = build_engine_ecs();
-            #[cfg(feature = "physics")]
-            ecs.insert_resource(crate::ecs::picking::resources::PickingWorld::default());
-            #[cfg(all(
-                feature = "assets",
-                feature = "file_watcher",
-                not(target_arch = "wasm32")
-            ))]
             ecs.insert_resource(crate::assets::asset_watcher::AssetWatcher::default());
             ecs
         };
