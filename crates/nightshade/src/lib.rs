@@ -618,8 +618,6 @@ pub mod prelude {
     pub use crate::plugins::gizmos::GizmosPlugin;
     pub use crate::plugins::log::LogPlugin;
     pub use crate::plugins::log::{LogConfig, LogRotation};
-    #[cfg(feature = "navmesh")]
-    pub use crate::plugins::navmesh::NavmeshPlugin;
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsPlugin;
     pub use crate::plugins::render::RenderPlugin;
@@ -795,17 +793,6 @@ pub mod prelude {
     pub use crate::platform::input::resources::touch::{TouchGesture, TouchPhase};
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::detect_input_mode_system;
-    pub use crate::plugins::navmesh::{NavMeshAgent, NavMeshAgentState};
-    #[cfg(feature = "navmesh")]
-    pub use crate::plugins::navmesh::{
-        NavMeshConnection, NavMeshEdge, NavMeshTriangle, NavMeshWorld, PathRequest, PathResult,
-        PathStatus, PathfindingAlgorithm, SpatialHash, clear_navmesh,
-        find_closest_point_on_navmesh, get_agent_path_length, get_agent_state, run_navmesh_systems,
-        sample_navmesh_height, set_agent_destination, set_agent_speed, set_navmesh_debug_draw,
-        spawn_navmesh_agent, stop_agent,
-    };
-    #[cfg(feature = "navmesh-bake")]
-    pub use crate::plugins::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsWorld;
     #[cfg(feature = "physics")]

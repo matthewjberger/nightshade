@@ -99,13 +99,13 @@ lint-dag:
 # warnings surface here instead of in someone else's build.
 [windows]
 lint-crates-isolated:
-    $ErrorActionPreference = 'Stop'; foreach ($crate in @('nightshade-ecs','nightshade-text','nightshade-paint','nightshade-renderer','nightshade-platform','nightshade-ui','nightshade-leptos','nightshade','nightshade-api','nightshade-audio','nightshade-steam')) { Write-Host "clippy (isolated): $crate"; cargo clippy -p $crate --all-targets -- -D warnings; if ($LASTEXITCODE -ne 0) { throw "isolated clippy failed for $crate" } }
+    $ErrorActionPreference = 'Stop'; foreach ($crate in @('nightshade-ecs','nightshade-text','nightshade-paint','nightshade-renderer','nightshade-platform','nightshade-ui','nightshade-leptos','nightshade','nightshade-api','nightshade-audio','nightshade-navmesh','nightshade-steam')) { Write-Host "clippy (isolated): $crate"; cargo clippy -p $crate --all-targets -- -D warnings; if ($LASTEXITCODE -ne 0) { throw "isolated clippy failed for $crate" } }
 
 [unix]
 lint-crates-isolated:
     #!/usr/bin/env bash
     set -euo pipefail
-    for crate in nightshade-ecs nightshade-text nightshade-paint nightshade-renderer nightshade-platform nightshade-ui nightshade-leptos nightshade nightshade-api nightshade-audio nightshade-steam; do
+    for crate in nightshade-ecs nightshade-text nightshade-paint nightshade-renderer nightshade-platform nightshade-ui nightshade-leptos nightshade nightshade-api nightshade-audio nightshade-navmesh nightshade-steam; do
         echo "clippy (isolated): ${crate}"
         cargo clippy -p "${crate}" --all-targets -- -D warnings
     done
@@ -218,6 +218,7 @@ publish-crate:
     cargo publish -p nightshade
     cargo publish -p nightshade-api
     cargo publish -p nightshade-audio
+    cargo publish -p nightshade-navmesh
     cargo publish -p nightshade-steam
 
 # Dry run of publishing the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade-leptos, nightshade, nightshade-api, and nightshade-steam crates
@@ -232,6 +233,7 @@ publish-crate-dry:
     cargo publish -p nightshade --dry-run
     cargo publish -p nightshade-api --dry-run
     cargo publish -p nightshade-audio --dry-run
+    cargo publish -p nightshade-navmesh --dry-run
     cargo publish -p nightshade-steam --dry-run
 
 # Opens the editor (with its built-in scripting playground tab), or runs a

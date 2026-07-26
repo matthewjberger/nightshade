@@ -8,7 +8,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
-nightshade = { workspace = true, features = ["tracing", "navmesh-bake", "physics"] }
+nightshade = { workspace = true, features = ["tracing", "physics"] }
+nightshade-navmesh = { workspace = true, features = ["engine", "bake", "scene_graph"] }
 nalgebra-glm = { workspace = true }
 noise = { workspace = true }
 rand = "0.9"

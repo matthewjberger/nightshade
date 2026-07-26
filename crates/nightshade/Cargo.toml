@@ -105,8 +105,6 @@ gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
 screenshot = ["dep:image", "nightshade-renderer/screenshot"]
-navmesh = []
-navmesh-bake = ["navmesh", "dep:rerecast", "dep:glam"]
 gamepad = ["dep:gilrs", "nightshade-platform/gamepad", "nightshade-ui/gamepad"]
 networking = ["dep:hearsay"]
 
@@ -116,7 +114,6 @@ full = [
     "shell",
     "physics",
     "gamepad",
-    "navmesh",
     "networking",
     "grass",
     "terrain",
@@ -153,8 +150,6 @@ nalgebra = { workspace = true, optional = true }
 nalgebra-glm = { workspace = true, optional = true }
 petgraph = { workspace = true, optional = true }
 rand = { version = "0.9", optional = true }
-rerecast = { version = "0.2", default-features = false, features = ["std"], optional = true }
-glam = { version = "0.30", optional = true }
 rapier3d = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 lz4_flex = { version = "0.11", optional = true }

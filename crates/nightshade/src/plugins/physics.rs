@@ -95,6 +95,8 @@ pub mod events;
 #[cfg(feature = "physics")]
 pub mod foot_ik;
 #[cfg(feature = "physics")]
+pub mod geometry;
+#[cfg(feature = "physics")]
 pub mod joints;
 #[cfg(all(feature = "physics", feature = "scene_graph"))]
 pub mod prefab;

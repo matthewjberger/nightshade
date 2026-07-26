@@ -15,7 +15,6 @@ pub mod gamepad;
 #[cfg(feature = "gizmos")]
 pub mod gizmos;
 pub mod log;
-pub mod navmesh;
 pub mod physics;
 pub mod render;
 #[cfg(feature = "terrain")]

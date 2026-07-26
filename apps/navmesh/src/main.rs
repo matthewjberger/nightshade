@@ -2,10 +2,11 @@ mod terrain;
 
 use nightshade::ecs::animation::components::{AnimationClip, AnimationProperty};
 use nightshade::ecs::text::components::TextProperties;
-use nightshade::plugins::navmesh::resources::NavMeshWorld;
 use nightshade::prelude::*;
 use nightshade::ui::layout_types::{FlowAlignment, FlowDirection, FlowLayout};
 use nightshade::ui::state::UiBase;
+use nightshade_navmesh::NavMeshWorld;
+use nightshade_navmesh::*;
 use std::collections::HashSet;
 
 const FOX_MODEL: &[u8] = include_bytes!("../../../assets/gltf/fox.glb");
@@ -792,7 +793,7 @@ impl NavMeshDemo {
         };
 
         let agent_entity = spawn_entities(world, LOCAL_TRANSFORM | GLOBAL_TRANSFORM, 1)[0];
-        nightshade::plugins::navmesh::navmesh_component_world(world);
+        nightshade_navmesh::navmesh_component_world(world);
 
         if let Some(transform) =
             world.get_mut::<nightshade::ecs::transform::components::LocalTransform>(agent_entity)
@@ -802,8 +803,7 @@ impl NavMeshDemo {
 
         world.set(
             agent_entity,
-            nightshade::plugins::navmesh::components::NavMeshAgent::new()
-                .with_speed(self.agent_speed),
+            nightshade_navmesh::NavMeshAgent::new().with_speed(self.agent_speed),
         );
 
         let fox_entity = nightshade::ecs::prefab::spawn_prefab_with_skins(
@@ -923,8 +923,7 @@ impl NavMeshDemo {
                 terrain::sample_terrain_height(agent_pos.x, agent_pos.z, &terrain_config);
             let fox_pos = Vec3::new(agent_pos.x, terrain_y, agent_pos.z);
 
-            let agent = world
-                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world.get::<nightshade_navmesh::NavMeshAgent>(fox.agent_entity);
             let is_moving = agent
                 .map(|a| a.state == NavMeshAgentState::Moving)
                 .unwrap_or(false);
@@ -972,8 +971,7 @@ impl NavMeshDemo {
         const WALK_DISTANCE_THRESHOLD: f32 = 2.0;
 
         for fox in &mut self.foxes {
-            let agent = world
-                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world.get::<nightshade_navmesh::NavMeshAgent>(fox.agent_entity);
             let (is_moving, distance) = agent
                 .map(|a| {
                     (
@@ -1020,8 +1018,7 @@ impl NavMeshDemo {
         let terrain_config = self.terrain_config.to_terrain_config();
 
         for fox in &self.foxes {
-            let agent = world
-                .get::<nightshade::plugins::navmesh::components::NavMeshAgent>(fox.agent_entity);
+            let agent = world.get::<nightshade_navmesh::NavMeshAgent>(fox.agent_entity);
             let needs_destination = agent
                 .map(|a| {
                     a.state == NavMeshAgentState::Idle
