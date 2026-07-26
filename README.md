@@ -247,17 +247,60 @@ The `--locked` flag matters: it builds with the dependency versions the release 
 
 ## Architecture
 
-Nightshade is a set of crates in a strictly layered, acyclic dependency graph: each crate names only the crates below it, and Cargo turns an upward reference into a compile error. `nightshade-ecs` and `nightshade-text` are the leaves; `nightshade` is the composition root that assembles the rest; `nightshade-api` is the high-level facade.
+Nightshade is a set of crates in a strictly layered, acyclic dependency graph: each crate names only the crates below it, and Cargo turns an upward reference into a compile error. `nightshade-ecs` and `nightshade-text` are the leaves; `nightshade` is the composition root that assembles the rest; `nightshade-api` is the high-level facade. The capability crates above the root also name whichever leaves they use, left off below to keep the picture readable.
 
 ```mermaid
-graph TD
-    api[nightshade-api] --> engine[nightshade]
-    engine --> ui[nightshade-ui]
-    engine --> renderer[nightshade-renderer]
-    engine --> platform[nightshade-platform]
-    engine --> paint[nightshade-paint]
-    engine --> text[nightshade-text]
-    engine --> ecs[nightshade-ecs]
+flowchart TD
+    classDef above fill:#2d2438,stroke:#7c5cbf,color:#e8e3f0
+    classDef root fill:#3a2d1f,stroke:#c9903f,color:#f0e8dc
+    classDef mid fill:#1f2d3a,stroke:#4a90c9,color:#dce8f0
+    classDef leaf fill:#1f3a2d,stroke:#4ac98f,color:#dcf0e8
+
+    subgraph plugins ["above the composition root"]
+        direction LR
+        api[nightshade-api]
+        openxr[nightshade-openxr]
+        steam[nightshade-steam]
+        audio[nightshade-audio]
+        navmesh[nightshade-navmesh]
+        gizmos[nightshade-gizmos]
+    end
+
+    engine[nightshade]
+
+    subgraph siblings ["siblings, independent of each other"]
+        direction LR
+        ui[nightshade-ui]
+        renderer[nightshade-renderer]
+        platform[nightshade-platform]
+    end
+
+    paint[nightshade-paint]
+
+    subgraph leaves ["leaves, naming nothing"]
+        direction LR
+        ecs[nightshade-ecs]
+        text[nightshade-text]
+    end
+
+    leptos[nightshade-leptos]
+
+    api --> engine
+    api --> leptos
+    openxr --> engine
+    steam --> engine
+    audio --> engine
+    navmesh --> engine
+    gizmos --> engine
+
+    engine --> ui
+    engine --> renderer
+    engine --> platform
+    engine --> paint
+
+    engine --> text
+    engine --> ecs
+
     ui --> platform
     ui --> paint
     ui --> text
@@ -265,9 +308,15 @@ graph TD
     renderer --> paint
     renderer --> text
     renderer --> ecs
+    platform --> ecs
+
     paint --> text
     paint --> ecs
-    platform --> ecs
+
+    class api,openxr,steam,audio,navmesh,gizmos above
+    class engine root
+    class ui,renderer,platform,paint mid
+    class ecs,text,leptos leaf
 ```
 
 The `nightshade` crate is layered internally too: the `World` substrate, then the ECS domains (transforms, cameras, meshes, and the rest), then the engine assembly, the capability plugins, and the app builder and runner on top. Rust allows module cycles within a crate, so that layering has no compiler behind it. `just lint-dag` (the `tools/dag-check` binary) parses the module references, runs a strongly-connected-components pass, and fails the lint gate if any layer reaches back up. The [Architecture Overview](https://matthewjberger.github.io/nightshade/book/architecture-overview.html) walks through both graphs.
