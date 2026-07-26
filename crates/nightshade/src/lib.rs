@@ -612,10 +612,6 @@ pub mod prelude {
     pub use crate::plugins::file_watcher::FileWatcherPlugin;
     #[cfg(feature = "gamepad")]
     pub use crate::plugins::gamepad::GamepadPlugin;
-    #[cfg(feature = "gizmos")]
-    pub use crate::plugins::gizmos::Gizmos;
-    #[cfg(feature = "gizmos")]
-    pub use crate::plugins::gizmos::GizmosPlugin;
     pub use crate::plugins::log::LogPlugin;
     pub use crate::plugins::log::{LogConfig, LogRotation};
     #[cfg(feature = "physics")]

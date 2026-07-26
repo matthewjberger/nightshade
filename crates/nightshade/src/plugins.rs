@@ -12,8 +12,6 @@ pub mod exit_on_escape;
 pub mod file_watcher;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
-#[cfg(feature = "gizmos")]
-pub mod gizmos;
 pub mod log;
 pub mod physics;
 pub mod render;

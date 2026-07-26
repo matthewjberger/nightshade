@@ -63,6 +63,7 @@ nightshade-openxr = { version = "0.56.0", path = "crates/nightshade-openxr" }
 nightshade-leptos = { version = "0.56.0", path = "crates/nightshade-leptos", default-features = false }
 nightshade-audio = { version = "0.56.0", path = "crates/nightshade-audio", default-features = false }
 nightshade-navmesh = { version = "0.56.0", path = "crates/nightshade-navmesh", default-features = false }
+nightshade-gizmos = { version = "0.56.0", path = "crates/nightshade-gizmos" }
 nightshade-steam = { version = "0.56.0", path = "crates/nightshade-steam" }
 nightshade-platform = { version = "0.56.0", path = "crates/nightshade-platform" }
 nightshade-text = { version = "0.56.0", path = "crates/nightshade-text", default-features = false }

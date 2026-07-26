@@ -101,7 +101,6 @@ engine = [
 shell = []
 debug_render = ["nightshade-renderer/debug_render"]
 egui = ["dep:egui", "dep:egui_extras", "dep:egui-winit", "nightshade-renderer/egui"]
-gizmos = []
 physics = ["dep:rapier3d"]
 picking = []
 screenshot = ["dep:image", "nightshade-renderer/screenshot"]
