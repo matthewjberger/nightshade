@@ -521,6 +521,7 @@
 pub mod filesystem;
 
 #[cfg(feature = "runtime")]
+pub mod assets;
 pub mod ecs;
 #[cfg(feature = "runtime")]
 pub mod plugins;
@@ -636,6 +637,57 @@ pub mod prelude {
 
     pub const LOGO_BYTES: &[u8] = include_bytes!("../images/logo.png");
 
+    pub use crate::assets::loading::load_font_from_bytes;
+    pub use crate::assets::loading::{
+        LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
+        loading_pipeline_allocate_source_image, loading_pipeline_completed,
+        loading_pipeline_fraction, loading_pipeline_is_active, loading_pipeline_last_category,
+        loading_pipeline_last_label, loading_pipeline_mark_completed, loading_pipeline_pending_len,
+        loading_pipeline_pop, loading_pipeline_push, loading_pipeline_release_recipe_sources,
+        loading_pipeline_release_source, loading_pipeline_reset_source_arena,
+        loading_pipeline_total, queue_decoded_texture,
+    };
+    #[cfg(feature = "assets")]
+    pub use crate::assets::loading::{
+        load_texture_from_image_bytes, load_texture_pack_from_image_bytes,
+    };
+    #[cfg(feature = "assets")]
+    pub use crate::assets::prefab::commands::import_gltf_from_bytes;
+    #[cfg(feature = "assets")]
+    pub use crate::assets::prefab::commands::import_gltf_with_resources;
+    pub use crate::assets::prefab::commands::spawn_prefab_with_animations;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::assets::scene::SceneNavMesh;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::assets::scene::registry::{
+        AssetRegistry, RuntimeAssetEntry, RuntimeAssetRegistry, asset_registry_add_manifest,
+        asset_registry_all_assets, asset_registry_asset_count, asset_registry_assets_of_type,
+        asset_registry_clear, asset_registry_get_base_path, asset_registry_get_entry,
+        asset_registry_manifest_count, asset_registry_name_exists, asset_registry_path_exists,
+        asset_registry_resolve_name, asset_registry_resolve_path, asset_registry_resolve_uuid,
+        asset_registry_uuid_exists, runtime_asset_registry_clear, runtime_asset_registry_get,
+        runtime_asset_registry_get_by_name, runtime_asset_registry_is_loaded,
+        runtime_asset_registry_mark_loaded, runtime_asset_registry_mark_unloaded,
+        runtime_asset_registry_register, runtime_asset_registry_resolve_name,
+        runtime_asset_registry_unregister,
+    };
+    #[cfg(feature = "scene_graph")]
+    pub use crate::assets::scene::{
+        AssetMode, AssetUuid, ComponentDescriptor, ComponentTypeRegistry, FieldDescriptor,
+        FieldKind, Persistence, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType,
+        SceneCamera, SceneCollider, SceneComponents, SceneDeserializer, SceneEntity, SceneError,
+        SceneHdrSkybox, SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh,
+        SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SceneSerializer, SpawnSceneResult,
+        TypedComponent, TypedPayload, TypedResource, apply_field_overrides, component_descriptor,
+        load_scene, register_component_descriptor, save_scene, spawn_scene,
+        spawn_scene_with_deserializer, world_to_scene, world_to_scene_with_serializer,
+    };
+    #[cfg(feature = "assets")]
+    pub use crate::assets::texture_loader::{
+        AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
+        TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
+        process_texture_queue, queue_texture_from_path, set_asset_search_paths,
+    };
     pub use crate::ecs::animation::blend_tree::{Blend1DChild, Blend2DChild, BlendTree};
     pub use crate::ecs::animation::components::{LayerBlendMode, LoopMode, SpringChain};
     pub use crate::ecs::animation::compression::{clip_keyframe_count, compress_clip};
@@ -689,19 +741,6 @@ pub mod prelude {
     };
     pub use crate::ecs::input::systems::{apply_ime_allowed_system, set_ime_allowed};
     pub use crate::ecs::light::commands::spawn_light_entity;
-    pub use crate::ecs::loading::{
-        LoadingPipeline, loading_pipeline_acquire_recipe_sources, loading_pipeline_acquire_source,
-        loading_pipeline_allocate_source_image, loading_pipeline_completed,
-        loading_pipeline_fraction, loading_pipeline_is_active, loading_pipeline_last_category,
-        loading_pipeline_last_label, loading_pipeline_mark_completed, loading_pipeline_pending_len,
-        loading_pipeline_pop, loading_pipeline_push, loading_pipeline_release_recipe_sources,
-        loading_pipeline_release_source, loading_pipeline_reset_source_arena,
-        loading_pipeline_total, queue_decoded_texture,
-    };
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::loading::{
-        load_texture_from_image_bytes, load_texture_pack_from_image_bytes,
-    };
     pub use crate::ecs::material::resources::{
         insert_material, material_registry_insert, material_registry_mutate, mutate_material,
         set_material,
@@ -720,52 +759,13 @@ pub mod prelude {
         register_entity_for_trimesh_picking, register_entity_hierarchy_for_trimesh_picking,
         unregister_entity_from_picking, update_picking_transform,
     };
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::prefab::commands::import_gltf_from_bytes;
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::prefab::commands::import_gltf_with_resources;
-    pub use crate::ecs::prefab::commands::spawn_prefab_with_animations;
     pub use crate::ecs::primitives::EasingFunction;
     pub use crate::ecs::primitives::Guid;
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::scene::SceneNavMesh;
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::scene::registry::{
-        AssetRegistry, RuntimeAssetEntry, RuntimeAssetRegistry, asset_registry_add_manifest,
-        asset_registry_all_assets, asset_registry_asset_count, asset_registry_assets_of_type,
-        asset_registry_clear, asset_registry_get_base_path, asset_registry_get_entry,
-        asset_registry_manifest_count, asset_registry_name_exists, asset_registry_path_exists,
-        asset_registry_resolve_name, asset_registry_resolve_path, asset_registry_resolve_uuid,
-        asset_registry_uuid_exists, runtime_asset_registry_clear, runtime_asset_registry_get,
-        runtime_asset_registry_get_by_name, runtime_asset_registry_is_loaded,
-        runtime_asset_registry_mark_loaded, runtime_asset_registry_mark_unloaded,
-        runtime_asset_registry_register, runtime_asset_registry_resolve_name,
-        runtime_asset_registry_unregister,
-    };
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::scene::{
-        AssetMode, AssetUuid, ComponentDescriptor, ComponentTypeRegistry, FieldDescriptor,
-        FieldKind, Persistence, Scene, SceneAlphaMode, SceneAudioSource, SceneBodyType,
-        SceneCamera, SceneCollider, SceneComponents, SceneDeserializer, SceneEntity, SceneError,
-        SceneHdrSkybox, SceneInstancedMesh, SceneLight, SceneMaterial, SceneMesh,
-        SceneMeshInstance, ScenePhysics, ScenePrefabInstance, SceneSerializer, SpawnSceneResult,
-        TypedComponent, TypedPayload, TypedResource, apply_field_overrides, component_descriptor,
-        load_scene, register_component_descriptor, save_scene, spawn_scene,
-        spawn_scene_with_deserializer, world_to_scene, world_to_scene_with_serializer,
-    };
     pub use crate::ecs::snapshot::{WorldSnapshot, restore_world, snapshot_world};
     #[cfg(feature = "assets")]
     pub use crate::ecs::snapshot::{load_world_snapshot_from_bytes, save_world_snapshot_to_bytes};
-    pub use crate::ecs::text::commands::{
-        load_font_from_bytes, spawn_ui_text, spawn_ui_text_with_properties,
-    };
+    pub use crate::ecs::text::commands::{spawn_ui_text, spawn_ui_text_with_properties};
     pub use crate::ecs::text::components::TextProperties;
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::texture_loader::{
-        AssetLoadingState, AssetLoadingStatus, LoadedTexture, SharedTextureQueue, TextureLoadQueue,
-        TextureLoadRequest, create_shared_queue, get_asset_search_paths, process_and_load_textures,
-        process_texture_queue, queue_texture_from_path, set_asset_search_paths,
-    };
     pub use crate::ecs::timer::{Stopwatch, Timer, TimerMode};
     pub use crate::ecs::tween::{Shake, Tween, TweenTarget, Tweens, update_tweens_system};
     pub use crate::ecs::vfx::components::{Beam, LightningBolt, Trail, VfxAnimator, VfxHandle};

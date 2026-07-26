@@ -98,7 +98,7 @@ impl crate::app::Plugin for FileWatcherPlugin {
     }
 }
 
-use crate::ecs::asset_watcher::{AssetKind, AssetWatcher};
+use crate::assets::asset_watcher::{AssetKind, AssetWatcher};
 use crate::ecs::world::commands::{EcsCommand, RenderCommand};
 use crate::prelude::{queue_ecs_command, queue_render_command};
 

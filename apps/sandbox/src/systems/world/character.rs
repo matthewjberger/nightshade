@@ -146,18 +146,18 @@ fn spawn_model(sandbox_world: &mut SandboxResources, world: &mut World, body: En
         env!("CARGO_MANIFEST_DIR"),
         "/../../assets/gltf/x_bot.glb"
     ));
-    let mut result = match nightshade::ecs::prefab::import_gltf_from_bytes(MODEL_BYTES) {
+    let mut result = match nightshade::assets::prefab::import_gltf_from_bytes(MODEL_BYTES) {
         Ok(result) => result,
         Err(error) => {
             tracing::error!("failed to import character model: {error}");
             return;
         }
     };
-    nightshade::ecs::prefab::queue_gltf_load(world, &mut result);
+    nightshade::assets::prefab::queue_gltf_load(world, &mut result);
     let Some(prefab) = result.prefabs.first().cloned() else {
         return;
     };
-    let model = nightshade::ecs::prefab::spawn_prefab_with_skins(
+    let model = nightshade::assets::prefab::spawn_prefab_with_skins(
         world,
         &prefab,
         &result.animations,

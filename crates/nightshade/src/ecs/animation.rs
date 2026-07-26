@@ -56,7 +56,7 @@
 //! }
 //! ```
 //!
-//! [`spawn_prefab_with_animations`]: crate::ecs::prefab::commands::spawn_prefab_with_animations
+//! [`spawn_prefab_with_animations`]: crate::assets::prefab::commands::spawn_prefab_with_animations
 
 pub mod blend_tree;
 pub mod components;

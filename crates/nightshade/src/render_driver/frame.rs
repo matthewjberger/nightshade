@@ -1,4 +1,4 @@
-use crate::ecs::loading::{
+use crate::assets::loading::{
     loading_pipeline_is_active, loading_pipeline_mark_completed, loading_pipeline_poll_decodes,
     loading_pipeline_pop, loading_pipeline_recipe_ready, loading_pipeline_release_recipe_sources,
     loading_pipeline_requeue_front, loading_pipeline_reset_source_arena,
@@ -64,7 +64,7 @@ pub fn update_with_state(
     world: &mut crate::ecs::world::World,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pending_font_loads: Vec<_> = world
-        .res_mut::<crate::ecs::loading::LoadingState>()
+        .res_mut::<crate::assets::loading::LoadingState>()
         .pending_font_loads
         .drain(..)
         .collect();
@@ -157,33 +157,33 @@ pub(crate) fn drain_loading_tasks(
     // is the only throttled step; decoding already ran off this thread.
     loading_pipeline_poll_decodes(
         &mut world
-            .res_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::assets::loading::LoadingState>()
             .pipeline,
-        crate::ecs::loading::DECODE_POLL_BUDGET,
+        crate::assets::loading::DECODE_POLL_BUDGET,
     );
 
     let budget = world
-        .res::<crate::ecs::loading::LoadingState>()
+        .res::<crate::assets::loading::LoadingState>()
         .pipeline
         .tasks_per_frame
         .max(1);
     let mut uploaded_textures: Vec<crate::render::asset_id::TextureId> = Vec::new();
-    let mut deferred: Vec<crate::ecs::loading::LoadingTask> = Vec::new();
+    let mut deferred: Vec<crate::assets::loading::LoadingTask> = Vec::new();
     let mut reserved_any = false;
     let mut uploads = 0usize;
     while uploads < budget {
         let Some(task) = loading_pipeline_pop(
             &mut world
-                .res_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::assets::loading::LoadingState>()
                 .pipeline,
         ) else {
             break;
         };
         let category = task.category();
         let label = match &task {
-            crate::ecs::loading::LoadingTask::ReserveLayer { texture, .. }
-            | crate::ecs::loading::LoadingTask::UploadDecodedTexture { texture, .. }
-            | crate::ecs::loading::LoadingTask::MaterializeTexture { texture, .. } => {
+            crate::assets::loading::LoadingTask::ReserveLayer { texture, .. }
+            | crate::assets::loading::LoadingTask::UploadDecodedTexture { texture, .. }
+            | crate::assets::loading::LoadingTask::MaterializeTexture { texture, .. } => {
                 crate::render::wgpu::texture_cache::texture_cache_texture_name(
                     world.res::<crate::render::wgpu::texture_cache::TextureCache>(),
                     texture.index,
@@ -193,7 +193,7 @@ pub(crate) fn drain_loading_tasks(
             }
         };
         match task {
-            crate::ecs::loading::LoadingTask::ReserveLayer {
+            crate::assets::loading::LoadingTask::ReserveLayer {
                 texture,
                 usage,
                 sampler,
@@ -211,7 +211,7 @@ pub(crate) fn drain_loading_tasks(
                     reserved_any = true;
                 }
             }
-            crate::ecs::loading::LoadingTask::UploadDecodedTexture {
+            crate::assets::loading::LoadingTask::UploadDecodedTexture {
                 texture,
                 rgba_data,
                 width,
@@ -234,7 +234,7 @@ pub(crate) fn drain_loading_tasks(
                 uploaded_textures.push(texture);
                 uploads += 1;
             }
-            crate::ecs::loading::LoadingTask::MaterializeTexture {
+            crate::assets::loading::LoadingTask::MaterializeTexture {
                 texture,
                 recipe,
                 usage,
@@ -243,10 +243,10 @@ pub(crate) fn drain_loading_tasks(
                 // Hold the task until every source image it samples has finished
                 // decoding in the worker pool, then upload into the reserved layer.
                 if !loading_pipeline_recipe_ready(
-                    &world.res::<crate::ecs::loading::LoadingState>().pipeline,
+                    &world.res::<crate::assets::loading::LoadingState>().pipeline,
                     &recipe,
                 ) {
-                    deferred.push(crate::ecs::loading::LoadingTask::MaterializeTexture {
+                    deferred.push(crate::assets::loading::LoadingTask::MaterializeTexture {
                         texture,
                         recipe,
                         usage,
@@ -254,16 +254,16 @@ pub(crate) fn drain_loading_tasks(
                     });
                     continue;
                 }
-                let produced = crate::ecs::loading::execute_texture_recipe(
+                let produced = crate::assets::loading::execute_texture_recipe(
                     &recipe,
                     &world
-                        .res::<crate::ecs::loading::LoadingState>()
+                        .res::<crate::assets::loading::LoadingState>()
                         .pipeline
                         .decoded_images,
                 );
                 loading_pipeline_release_recipe_sources(
                     &mut world
-                        .res_mut::<crate::ecs::loading::LoadingState>()
+                        .res_mut::<crate::assets::loading::LoadingState>()
                         .pipeline,
                     &recipe,
                 );
@@ -281,10 +281,10 @@ pub(crate) fn drain_loading_tasks(
                         .map(str::to_string);
                     if let Some(name) = texture_name {
                         world
-                            .res_mut::<crate::ecs::texture_source::TextureSources>()
+                            .res_mut::<crate::assets::texture_source::TextureSources>()
                             .entry(name)
-                            .or_insert_with(|| crate::ecs::texture_source::TextureSourceBytes {
-                                data: crate::ecs::texture_source::TextureSourceData::Rgba {
+                            .or_insert_with(|| crate::assets::texture_source::TextureSourceBytes {
+                                data: crate::assets::texture_source::TextureSourceData::Rgba {
                                     rgba: decoded.rgba.clone(),
                                     width: decoded.width,
                                     height: decoded.height,
@@ -314,7 +314,7 @@ pub(crate) fn drain_loading_tasks(
         }
         loading_pipeline_mark_completed(
             &mut world
-                .res_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::assets::loading::LoadingState>()
                 .pipeline,
             label,
             category,
@@ -323,7 +323,7 @@ pub(crate) fn drain_loading_tasks(
     for task in deferred.into_iter().rev() {
         loading_pipeline_requeue_front(
             &mut world
-                .res_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::assets::loading::LoadingState>()
                 .pipeline,
             task,
         );
@@ -349,10 +349,10 @@ pub(crate) fn drain_loading_tasks(
             .res_mut::<crate::render::mesh_state::MeshRenderState>()
             .request_full_rebuild();
     }
-    if !loading_pipeline_is_active(&world.res::<crate::ecs::loading::LoadingState>().pipeline) {
+    if !loading_pipeline_is_active(&world.res::<crate::assets::loading::LoadingState>().pipeline) {
         loading_pipeline_reset_source_arena(
             &mut world
-                .res_mut::<crate::ecs::loading::LoadingState>()
+                .res_mut::<crate::assets::loading::LoadingState>()
                 .pipeline,
         );
     }
@@ -364,7 +364,7 @@ pub(crate) fn drain_loading_tasks(
     if !evicted.is_empty() {
         for name in &evicted {
             world
-                .res_mut::<crate::ecs::texture_source::TextureSources>()
+                .res_mut::<crate::assets::texture_source::TextureSources>()
                 .remove(name);
         }
         world

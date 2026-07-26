@@ -14,21 +14,13 @@
 //! - `world.ecs.worlds[CORE].remove_components(entity, MASK)` - Remove a component
 
 pub mod animation;
-#[cfg(all(
-    feature = "assets",
-    feature = "file_watcher",
-    not(target_arch = "wasm32")
-))]
-pub mod asset_watcher;
 pub mod bounding_volume;
 pub mod bundles;
 pub mod camera;
 pub mod cloth;
 pub mod cutscene;
 pub mod entity_registry;
-pub mod texture_source;
 
-pub mod asset;
 pub mod decal;
 pub mod event;
 pub mod event_bus;
@@ -38,7 +30,6 @@ pub mod graphics;
 pub mod input;
 pub mod light;
 pub mod lines;
-pub mod loading;
 pub mod material;
 pub mod mesh;
 pub mod meshlet;
@@ -46,16 +37,11 @@ pub mod morph;
 pub mod particles;
 #[cfg(feature = "picking")]
 pub mod picking;
-pub mod prefab;
 pub mod primitives;
-#[cfg(feature = "scene_graph")]
-pub mod scene;
 pub mod script;
 pub mod skin;
 pub mod snapshot;
 pub mod text;
-#[cfg(feature = "assets")]
-pub mod texture_loader;
 pub mod time;
 pub mod timer;
 pub mod transform;

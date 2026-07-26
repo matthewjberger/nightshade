@@ -333,7 +333,7 @@ pub fn compose_render_inputs(world: &mut World) -> RenderInputs {
         .active_viewport_rect;
     let loading_particle_textures = std::mem::take(
         &mut world
-            .res_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::assets::loading::LoadingState>()
             .pending_particle_textures,
     );
     let scene = std::mem::take(world.res_mut::<crate::render::config::RendererState>());
@@ -440,11 +440,11 @@ pub fn restore_render_inputs(world: &mut World, inputs: RenderInputs, outputs: F
     let mut pending = inputs.pending_particle_textures;
     pending.extend(std::mem::take(
         &mut world
-            .res_mut::<crate::ecs::loading::LoadingState>()
+            .res_mut::<crate::assets::loading::LoadingState>()
             .pending_particle_textures,
     ));
     world
-        .res_mut::<crate::ecs::loading::LoadingState>()
+        .res_mut::<crate::assets::loading::LoadingState>()
         .pending_particle_textures = pending;
     #[cfg(feature = "grass")]
     {

@@ -139,8 +139,8 @@ struct NavMeshDemo {
     fox_loaded: bool,
     animation_indices: AnimationIndices,
     filtered_animations: Vec<AnimationClip>,
-    skins: Vec<nightshade::ecs::prefab::GltfSkin>,
-    prefab: Option<nightshade::ecs::prefab::Prefab>,
+    skins: Vec<nightshade::assets::prefab::GltfSkin>,
+    prefab: Option<nightshade::assets::prefab::Prefab>,
     terrain_config: TerrainConfig,
     ui: UiHandles,
     last_following_index: Option<usize>,
@@ -719,7 +719,7 @@ impl NavMeshDemo {
     }
 
     fn load_fox_model(&mut self, world: &mut World) {
-        let load_result = nightshade::ecs::prefab::import_gltf_from_bytes(FOX_MODEL);
+        let load_result = nightshade::assets::prefab::import_gltf_from_bytes(FOX_MODEL);
 
         match load_result {
             Ok(mut result) => {
@@ -764,7 +764,7 @@ impl NavMeshDemo {
                 self.skins = result.skins.clone();
                 self.prefab = result.prefabs.first().cloned();
 
-                nightshade::ecs::prefab::queue_gltf_load(world, &mut result);
+                nightshade::assets::prefab::queue_gltf_load(world, &mut result);
 
                 self.fox_loaded = true;
             }
@@ -806,7 +806,7 @@ impl NavMeshDemo {
             nightshade_navmesh::NavMeshAgent::new().with_speed(self.agent_speed),
         );
 
-        let fox_entity = nightshade::ecs::prefab::spawn_prefab_with_skins(
+        let fox_entity = nightshade::assets::prefab::spawn_prefab_with_skins(
             world,
             prefab,
             &self.filtered_animations,

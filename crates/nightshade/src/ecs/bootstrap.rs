@@ -59,25 +59,25 @@ pub mod components {
 }
 
 pub mod resources {
+    pub use crate::assets::loading::LoadingState;
+    #[cfg(feature = "assets")]
+    pub use crate::assets::prefab::resources::CachedPrefab;
+    pub use crate::assets::prefab::resources::{AnimationCache, PrefabCache};
+    #[cfg(feature = "scene_graph")]
+    pub use crate::assets::scene::ScenePrefabs;
+    #[cfg(feature = "scene_graph")]
+    pub use crate::assets::scene::registry::AssetRegistry;
+    pub use crate::assets::texture_source::TextureSources;
     pub use crate::ecs::camera::resources::ActiveCamera;
     pub use crate::ecs::cloth::resources::ClothMeshSync;
     pub use crate::ecs::entity_registry::EntityRegistry;
     pub use crate::ecs::event::Events;
     pub use crate::ecs::event_bus::resources::{EventBus, Message};
     pub use crate::ecs::graphics::selection::Selection;
-    pub use crate::ecs::loading::LoadingState;
     pub use crate::ecs::material::resources::MaterialRegistry;
     #[cfg(feature = "meshlet")]
     pub use crate::ecs::meshlet::resources::MeshletAssets;
-    #[cfg(feature = "assets")]
-    pub use crate::ecs::prefab::resources::CachedPrefab;
-    pub use crate::ecs::prefab::resources::{AnimationCache, PrefabCache};
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::scene::ScenePrefabs;
-    #[cfg(feature = "scene_graph")]
-    pub use crate::ecs::scene::registry::AssetRegistry;
     pub use crate::ecs::text::resources::{TextCache, TextState};
-    pub use crate::ecs::texture_source::TextureSources;
     pub use crate::ecs::time::Time;
     pub use crate::ecs::transform::resources::TransformState;
     pub use crate::ecs::world::WorldId;
@@ -159,7 +159,7 @@ pub(crate) fn register_core_components() -> nightshade_ecs::dynamic::ComponentRe
     debug_assert_eq!(key.mask, crate::ecs::world::PARENT);
     let key = registry.register_serde::<crate::render::particles::ParticleEmitter>();
     debug_assert_eq!(key.mask, crate::ecs::world::PARTICLE_EMITTER);
-    let key = registry.register_serde::<crate::ecs::prefab::components::PrefabSource>();
+    let key = registry.register_serde::<crate::assets::prefab::components::PrefabSource>();
     debug_assert_eq!(key.mask, crate::ecs::world::PREFAB_SOURCE);
     let key = registry.register_serde::<crate::render::render_layer::RenderLayer>();
     debug_assert_eq!(key.mask, crate::ecs::world::RENDER_LAYER);
@@ -233,7 +233,7 @@ nightshade_ecs::impl_component!(
     crate::ecs::morph::components::MorphWeights,
     crate::ecs::primitives::Name,
     crate::ecs::camera::components::PanOrbitCamera,
-    crate::ecs::prefab::components::PrefabSource,
+    crate::assets::prefab::components::PrefabSource,
     crate::ecs::mesh::components::RenderMesh,
     crate::ecs::transform::components::Rotation,
     crate::ecs::script::components::Script,
@@ -302,7 +302,7 @@ impl Default for World {
                 feature = "file_watcher",
                 not(target_arch = "wasm32")
             ))]
-            ecs.insert_resource(crate::ecs::asset_watcher::AssetWatcher::default());
+            ecs.insert_resource(crate::assets::asset_watcher::AssetWatcher::default());
             ecs
         };
         let mut ecs = ecs;
@@ -321,16 +321,16 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::world::WorldId::default());
         ecs.insert_resource(crate::render::mesh_cache::MeshCache::default());
         ecs.insert_resource(crate::ecs::material::resources::MaterialRegistry::default());
-        ecs.insert_resource(crate::ecs::prefab::resources::PrefabCache::default());
-        ecs.insert_resource(crate::ecs::prefab::resources::AnimationCache::default());
-        ecs.insert_resource(crate::ecs::texture_source::TextureSources::default());
+        ecs.insert_resource(crate::assets::prefab::resources::PrefabCache::default());
+        ecs.insert_resource(crate::assets::prefab::resources::AnimationCache::default());
+        ecs.insert_resource(crate::assets::texture_source::TextureSources::default());
         #[cfg(feature = "scene_graph")]
-        ecs.insert_resource(crate::ecs::scene::registry::AssetRegistry::default());
+        ecs.insert_resource(crate::assets::scene::registry::AssetRegistry::default());
         #[cfg(feature = "scene_graph")]
-        ecs.insert_resource(crate::ecs::scene::ScenePrefabs::default());
+        ecs.insert_resource(crate::assets::scene::ScenePrefabs::default());
         #[cfg(feature = "scene_graph")]
-        ecs.insert_resource(crate::ecs::scene::hooks::SceneCapabilityHooks::default());
-        ecs.insert_resource(crate::ecs::prefab::hooks::PrefabCapabilityHooks::default());
+        ecs.insert_resource(crate::assets::scene::hooks::SceneCapabilityHooks::default());
+        ecs.insert_resource(crate::assets::prefab::hooks::PrefabCapabilityHooks::default());
         ecs.insert_resource(crate::ecs::cutscene::resources::CutsceneAudio::default());
         ecs.insert_resource(crate::render::config::RendererState::default());
         ecs.insert_resource(crate::ecs::camera::resources::ActiveCamera::default());
@@ -354,14 +354,14 @@ impl Default for World {
         ecs.insert_resource(crate::ecs::transform::resources::TransformState::default());
         ecs.insert_resource(crate::ecs::graphics::scene_sync::RenderSceneSync::default());
         ecs.insert_resource(crate::ecs::world::scratch::Scratch::default());
-        ecs.insert_resource(crate::ecs::scene::typed::ComponentTypeRegistry::default());
+        ecs.insert_resource(crate::assets::scene::typed::ComponentTypeRegistry::default());
         ecs.insert_resource(crate::platform::input::resources::Input::default());
         ecs.insert_resource(crate::platform::input::resources::Gamepad::default());
         ecs.insert_resource(crate::render::config::RenderSettings::default());
         ecs.insert_resource(crate::platform::window::Window::default());
         ecs.insert_resource(crate::viewport::Viewport::default());
         ecs.insert_resource(crate::ecs::time::Time::default());
-        ecs.insert_resource(crate::ecs::loading::LoadingState::default());
+        ecs.insert_resource(crate::assets::loading::LoadingState::default());
         ecs.insert_resource(crate::state::PendingState::default());
         nightshade_ui::insert_ui_resources(
             &mut ecs,

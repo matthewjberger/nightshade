@@ -117,8 +117,8 @@ fn collect_rs(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// The module a source file belongs to: `ecs` and `plugins` resolve one level
-/// deep (`ecs::camera`), everything else to the top-level module name.
+/// The module a source file belongs to: `ecs`, `assets` and `plugins` resolve
+/// one level deep (`ecs::camera`), everything else to the top-level module name.
 fn module_of(file: &Path, src: &Path) -> String {
     let relative = file.strip_prefix(src).unwrap_or(file);
     let parts: Vec<String> = relative
@@ -126,7 +126,7 @@ fn module_of(file: &Path, src: &Path) -> String {
         .map(|component| component.as_os_str().to_string_lossy().into_owned())
         .collect();
     let first = strip_rs(&parts[0]);
-    if (first == "ecs" || first == "plugins") && parts.len() > 1 {
+    if (first == "ecs" || first == "assets" || first == "plugins") && parts.len() > 1 {
         return format!("{first}::{}", strip_rs(&parts[1]));
     }
     first
@@ -138,7 +138,7 @@ fn module_of(file: &Path, src: &Path) -> String {
 fn map_target(reference: &str, top_modules: &BTreeSet<String>) -> Option<String> {
     let mut segments = reference.split("::");
     let first = segments.next()?;
-    if first == "ecs" || first == "plugins" {
+    if first == "ecs" || first == "assets" || first == "plugins" {
         return match segments.next() {
             Some(second) => Some(format!("{first}::{second}")),
             None => Some(first.to_string()),

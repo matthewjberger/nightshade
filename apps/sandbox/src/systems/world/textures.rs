@@ -1,4 +1,4 @@
-use nightshade::ecs::loading::load_texture_pack_from_image_bytes;
+use nightshade::assets::loading::load_texture_pack_from_image_bytes;
 use nightshade::prelude::*;
 use nightshade::render::material::{Material, TextureTransform};
 use nightshade::render::texture_data::{SamplerSettings, TextureUsage};

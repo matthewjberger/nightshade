@@ -15,7 +15,7 @@ const PATH_TILE_COLOR: [f32; 4] = [0.5, 0.3, 0.1, 1.0];
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_or_build_level(game_world: &mut TowerDefenseResources, world: &mut World) {
-    use nightshade::ecs::scene::commands::{load_scene, spawn_scene};
+    use nightshade::assets::scene::commands::{load_scene, spawn_scene};
     use std::path::Path;
 
     let path = Path::new(LEVEL_PATH);
@@ -54,7 +54,7 @@ pub fn load_or_build_level(game_world: &mut TowerDefenseResources, world: &mut W
 
 #[cfg(not(target_arch = "wasm32"))]
 fn save_current_world_as_level(world: &World) {
-    use nightshade::ecs::scene::commands::{save_scene, world_to_scene};
+    use nightshade::assets::scene::commands::{save_scene, world_to_scene};
     use std::path::Path;
 
     let target = Path::new(LEVEL_PATH);

@@ -14,7 +14,7 @@ use crate::plugins::physics::resources::{
 };
 use nightshade_ecs::Entity;
 
-use crate::ecs::prefab::components::{
+use crate::assets::prefab::components::{
     PrefabBodyType, PrefabCollider, PrefabColliderShape, PrefabComponents, PrefabRigidBody,
 };
 
@@ -118,7 +118,7 @@ pub fn spawn_from_prefab(
 /// Appends this plugin's prefab hook. Called from the plugin's `build`.
 pub fn register_prefab_hooks(world: &mut World) {
     world
-        .res_mut::<crate::ecs::prefab::hooks::PrefabCapabilityHooks>()
+        .res_mut::<crate::assets::prefab::hooks::PrefabCapabilityHooks>()
         .entity_spawn
         .push(spawn_from_prefab);
 }

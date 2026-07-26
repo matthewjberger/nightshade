@@ -570,7 +570,7 @@ pub fn load_procedural_textures(world: &mut World) {
     let color = crate::render::texture_data::TextureUsage::Color;
 
     let checkerboard = generate_checkerboard_texture();
-    crate::ecs::loading::queue_decoded_texture(
+    crate::assets::loading::queue_decoded_texture(
         world,
         "checkerboard".to_string(),
         checkerboard.0,
@@ -581,7 +581,7 @@ pub fn load_procedural_textures(world: &mut World) {
     );
 
     let gradient = generate_gradient_texture();
-    crate::ecs::loading::queue_decoded_texture(
+    crate::assets::loading::queue_decoded_texture(
         world,
         "gradient".to_string(),
         gradient.0,
@@ -592,7 +592,7 @@ pub fn load_procedural_textures(world: &mut World) {
     );
 
     let uv_test = generate_uv_test_texture();
-    crate::ecs::loading::queue_decoded_texture(
+    crate::assets::loading::queue_decoded_texture(
         world,
         "uv_test".to_string(),
         uv_test.0,
