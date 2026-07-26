@@ -224,10 +224,6 @@
 //!
 //! - **`gamepad`** - Gamepad input using gilrs. Add `GamepadPlugin` to poll devices.
 //!
-//! ### Platform Features
-//!
-//! - **`steam`** - Steamworks integration.
-//!
 //! ### Profiling Features
 //!
 //! - **`tracing`** - Rolling log files and `RUST_LOG` support.
@@ -384,29 +380,6 @@
 //!         if gamepad.pressed(GamepadButton::South) { /* A/Cross */ }
 //!         if gamepad.just_pressed(GamepadButton::North) { /* Y/Triangle */ }
 //!     }
-//! }
-//! ```
-//!
-//! ### Steam Integration (`steam` feature)
-//!
-//! The engine pumps Steam callbacks every frame; systems only initialize
-//! and use the API.
-//!
-//! ```ignore
-//! fn initialize(world: &mut World) {
-//!     steam_initialize(world.res_mut::<crate::plugins::steam::SteamResources>()).ok();
-//!     steam_request_stats(world.res_mut::<crate::plugins::steam::SteamResources>());
-//! }
-//!
-//! fn tick(game: &mut MyGame, world: &mut World) {
-//!     // Unlock achievement
-//!     if game.score >= 1000 {
-//!         steam_unlock_achievement(&world.res::<crate::plugins::steam::SteamResources>(), "ACH_HIGH_SCORE").ok();
-//!         steam_store_stats(&world.res::<crate::plugins::steam::SteamResources>()).ok();
-//!     }
-//!
-//!     // Update stat
-//!     steam_set_stat_int(&world.res::<crate::plugins::steam::SteamResources>(), "total_score", game.score).ok();
 //! }
 //! ```
 //!
@@ -651,8 +624,6 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsPlugin;
     pub use crate::plugins::render::RenderPlugin;
-    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub use crate::plugins::steam::SteamPlugin;
     pub use crate::plugins::ui::{UiPlugin, run_retained_ui_schedule};
     pub use crate::plugins::window::WindowPlugin;
     pub use crate::render::config::{DebugDraw, RenderSettings};
@@ -1005,14 +976,6 @@ pub mod prelude {
     pub use nalgebra_glm;
     pub use nalgebra_glm::{vec2, vec3, vec4};
     pub use nightshade_renderer::wgpu;
-
-    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub use crate::plugins::steam::{
-        AchievementInfo, ActiveSession, FriendInfo, NetworkMessage, PendingSessionRequest,
-        PersonaState, SessionState, StatInfo, StatValue, SteamResources,
-    };
-    #[cfg(all(feature = "steam", not(target_arch = "wasm32")))]
-    pub use steamworks::SteamId;
 
     #[cfg(feature = "shell")]
     pub use crate::shell::{

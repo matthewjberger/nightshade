@@ -1,6 +1,5 @@
-//! The passes that draw a `nightshade-paint` draw list over the finished
-//! scene: the batched rectangle and text pass, and the image pass that blits
-//! textured quads into the same layers.
+//! The passes that draw a `nightshade-paint` draw list over the scene: the
+//! batched rectangle and text pass, and the textured quad pass.
 
 mod image;
 pub use image::PaintImagePass;

@@ -60,6 +60,7 @@ nightshade = { version = "0.56.0", path = "crates/nightshade" }
 nightshade-api = { version = "0.56.0", path = "crates/nightshade-api" }
 nightshade-renderer = { version = "0.56.0", path = "crates/nightshade-renderer", default-features = false }
 nightshade-openxr = { version = "0.56.0", path = "crates/nightshade-openxr" }
+nightshade-steam = { version = "0.56.0", path = "crates/nightshade-steam" }
 nightshade-platform = { version = "0.56.0", path = "crates/nightshade-platform" }
 nightshade-text = { version = "0.56.0", path = "crates/nightshade-text", default-features = false }
 nightshade-ui = { version = "0.56.0", path = "crates/nightshade-ui" }
