@@ -79,6 +79,8 @@ pub mod components;
 pub mod types;
 
 #[cfg(feature = "physics")]
+pub mod bundles;
+#[cfg(feature = "physics")]
 pub mod camera_collision;
 #[cfg(feature = "physics")]
 pub mod character_controller;

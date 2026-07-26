@@ -24,7 +24,7 @@ fn text_mesh_params(properties: &TextProperties) -> TextMeshParams {
     }
 }
 
-fn compute_ui_text_signature(text_instance: &crate::render::paint::DrawText) -> u64 {
+fn compute_ui_text_signature(text_instance: &crate::paint::DrawText) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text_instance.text.hash(&mut hasher);

@@ -525,6 +525,7 @@ pub mod ecs;
 #[cfg(feature = "runtime")]
 pub mod plugins;
 #[cfg(feature = "runtime")]
+pub use nightshade_paint as paint;
 pub use nightshade_platform as platform;
 #[cfg(feature = "runtime")]
 pub use nightshade_renderer as render;
@@ -785,6 +786,7 @@ pub mod prelude {
     };
     #[cfg(feature = "egui")]
     pub use crate::egui::{EguiState, egui_context};
+    pub use crate::paint::{Anchor, DrawImage, DrawRect, DrawText, Rect};
     pub use crate::platform::host::open_url;
     #[cfg(feature = "gamepad")]
     pub use crate::platform::input::gamepad::Gamepad;
@@ -820,6 +822,8 @@ pub mod prelude {
     pub use crate::plugins::navmesh::{RecastNavMeshConfig, generate_navmesh_recast};
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::PhysicsWorld;
+    #[cfg(feature = "physics")]
+    pub use crate::plugins::physics::bundles::RigidBodyBundle;
     #[cfg(feature = "physics")]
     pub use crate::plugins::physics::commands::{
         create_textured_material, reset_physics_interpolation,
@@ -868,7 +872,6 @@ pub mod prelude {
         GrassDomain, GrassHeightMap, GrassPusher, GrassSettings, GrassTypeParams,
     };
     pub use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
-    pub use crate::render::paint::{Anchor, DrawImage, DrawRect, DrawText, Rect};
     #[cfg(feature = "terrain")]
     pub use crate::render::terrain_config::{TERRAIN_PICK_ID, TerrainRenderState, TerrainSettings};
     pub use crate::render::wgpu::texture_cache::{

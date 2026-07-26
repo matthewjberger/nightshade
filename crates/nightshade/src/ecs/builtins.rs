@@ -9,10 +9,6 @@ use crate::ecs::world::commands::{
     spawn_entities,
 };
 use crate::ecs::world::{CORE, Entity, World};
-#[cfg(feature = "physics")]
-use crate::plugins::physics::resources::{
-    physics_world_add_collider, physics_world_add_rigid_body,
-};
 use crate::prelude::*;
 use crate::render::generational_registry::registry_entry_by_name;
 use crate::render::mesh_cache::{mesh_cache_insert, mesh_cache_remove_unused};
@@ -55,46 +51,6 @@ pub fn register_material(
     world
         .res_mut::<crate::render::mesh_state::MeshRenderState>()
         .mark_entity_added(entity);
-}
-
-#[cfg(feature = "physics")]
-pub fn spawn_physics_body(world: &mut World, entity: Entity) {
-    if world.ecs.resource::<PhysicsWorld>().is_none() {
-        return;
-    }
-    let rigid_body_comp = world
-        .get::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-        .cloned();
-    let collider_comp = world
-        .get::<crate::plugins::physics::components::ColliderComponent>(entity)
-        .cloned();
-
-    if let Some(rigid_body_comp) = rigid_body_comp {
-        let rapier_body = rigid_body_comp.to_rapier_rigid_body();
-        let rapier_handle =
-            physics_world_add_rigid_body(world.plugin_resource_mut::<PhysicsWorld>(), rapier_body);
-
-        if let Some(collider_comp) = collider_comp {
-            let rapier_collider = collider_comp.to_rapier_collider();
-            physics_world_add_collider(
-                world.plugin_resource_mut::<PhysicsWorld>(),
-                rapier_collider,
-                rapier_handle,
-            );
-        }
-
-        if let Some(rigid_body_mut) =
-            world.get_mut::<crate::plugins::physics::components::RigidBodyComponent>(entity)
-        {
-            rigid_body_mut.handle =
-                Some(crate::plugins::physics::types::rigid_body_handle_from_rapier(rapier_handle));
-        }
-
-        world
-            .plugin_resource_mut::<PhysicsWorld>()
-            .handle_to_entity
-            .insert(rapier_handle, entity);
-    }
 }
 
 pub fn process_commands_system(world: &mut World) {

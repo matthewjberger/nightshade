@@ -169,6 +169,7 @@ winit = { workspace = true, optional = true }
 ehttp = { workspace = true, optional = true }
 
 nightshade-renderer = { workspace = true }
+nightshade-paint = { workspace = true }
 nightshade-platform = { workspace = true }
 nightshade-text = { workspace = true, features = ["shaping"] }
 nightshade-ui = { workspace = true }
