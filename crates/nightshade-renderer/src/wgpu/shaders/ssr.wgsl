@@ -239,12 +239,18 @@ fn fragment_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let view_pos = reconstruct_view_position(in.uv, depth);
-    let normal_sample = textureSampleLevel(normal_texture, point_sampler, in.uv, 0.0).xyz;
-    let normal_len = length(normal_sample);
+    let normal_sample = textureSampleLevel(normal_texture, point_sampler, in.uv, 0.0);
+    let normal_len = length(normal_sample.xyz);
     if normal_len < 0.001 {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
-    let view_normal = normal_sample / normal_len;
+    let view_normal = normal_sample.xyz / normal_len;
+    // How much of what is around it this surface shows, written by whoever
+    // drew it. A surface that shows nothing is not worth marching a ray for.
+    let reflectivity = saturate(normal_sample.w);
+    if reflectivity < 0.002 {
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
 
     let view_dir = normalize(view_pos);
     let reflect_dir = reflect(view_dir, view_normal);
@@ -304,7 +310,7 @@ fn fragment_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         let edge_fade = screen_edge_fade(hit_uv);
-        let confidence = saturate(distance_fade * edge_fade * params.intensity);
+        let confidence = saturate(distance_fade * edge_fade * params.intensity * reflectivity);
 
         return vec4<f32>(reflected_color * confidence, confidence);
     }

@@ -81,6 +81,32 @@ fn getIBLVolumeRefraction(
     return (1.0 - specular_color) * attenuated_color * base_color;
 }
 
+// How much of what is around it a surface shows. A polished metal shows nearly
+// all of it, a rough one almost none, and a dielectric shows more of it the
+// more side on it is looked at. Screen space reflection reads this off the
+// normal buffer rather than guessing, which is what stops a mirror and a
+// concrete floor being handed the same reflection.
+fn surface_reflectivity(
+    albedo: vec3<f32>,
+    metallic: f32,
+    roughness: f32,
+    ior: f32,
+    normal: vec3<f32>,
+    world_pos: vec3<f32>,
+    camera_position: vec3<f32>
+) -> f32 {
+    let view = normalize(camera_position - world_pos);
+    let n_dot_v = clamp(dot(normal, view), 0.0, 1.0);
+    let dielectric_f0 = pow((ior - 1.0) / (ior + 1.0), 2.0);
+    let f0 = mix(vec3<f32>(dielectric_f0), albedo, metallic);
+    let fresnel = f0 + (vec3<f32>(1.0) - f0) * pow(1.0 - n_dot_v, 5.0);
+    let strength = dot(fresnel, vec3<f32>(0.2126, 0.7152, 0.0722));
+    // A rough surface scatters what it reflects and a screen space trace only
+    // has the sharp answer, so roughness fades the reflection out rather than
+    // spreading it.
+    return saturate(strength * (1.0 - roughness));
+}
+
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
@@ -1607,6 +1633,22 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
 
     final_color = clamp(select(vec3<f32>(0.0), final_color, final_color == final_color), vec3<f32>(0.0), vec3<f32>(65000.0));
 
+    // Rides in the spare channel of the normal buffer, which the reflection
+    // pass already reads. An unlit surface answers for its own colour and takes
+    // nothing from around it.
+    var reflectivity = 0.0;
+    if material.unlit == 0u && uniforms.global_unlit <= 0.5 {
+        reflectivity = surface_reflectivity(
+            albedo,
+            metallic,
+            roughness,
+            material.ior,
+            normal,
+            in.world_pos,
+            uniforms.camera_position.xyz
+        );
+    }
+
     if uniforms.texture_debug_stripes != 0u {
         let num_stripes = 7u;
         let line_width = 3.0;
@@ -1654,7 +1696,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
 
         output.color = vec4<f32>(stripe_color, 1.0);
         output.entity_id = bitcast<f32>(in.entity_id);
-        output.view_normal = vec4<f32>(normalize(in.view_normal), 1.0);
+        output.view_normal = vec4<f32>(normalize(in.view_normal), reflectivity);
         return output;
     }
 
@@ -1703,12 +1745,12 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) is_front_face: bool) -> Frag
         }
         output.color = vec4<f32>(debug_color, 1.0);
         output.entity_id = bitcast<f32>(in.entity_id);
-        output.view_normal = vec4<f32>(normalize(in.view_normal), 1.0);
+        output.view_normal = vec4<f32>(normalize(in.view_normal), reflectivity);
         return output;
     }
 
     output.color = vec4<f32>(final_color, alpha);
     output.entity_id = bitcast<f32>(in.entity_id);
-    output.view_normal = vec4<f32>(normalize(in.view_normal), 1.0);
+    output.view_normal = vec4<f32>(normalize(in.view_normal), reflectivity);
     return output;
 }
