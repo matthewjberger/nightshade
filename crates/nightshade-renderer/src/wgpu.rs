@@ -272,9 +272,10 @@ pub async fn create_wgpu_renderer<W>(
     window_handle: W,
     initial_width: u32,
     initial_height: u32,
+    request: crate::wgpu::initialization::DeviceRequest,
 ) -> Result<WgpuRenderer, Box<dyn std::error::Error>>
 where
     W: Into<wgpu::SurfaceTarget<'static>>,
 {
-    WgpuRenderer::new_async(window_handle, initial_width, initial_height).await
+    WgpuRenderer::new_async(window_handle, initial_width, initial_height, request).await
 }

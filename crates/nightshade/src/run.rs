@@ -173,6 +173,19 @@ pub fn launch_with_world(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// What the composition asks of the device beyond the renderer's own needs.
+///
+/// Absent when nothing asked, which is the common case, so a composition that
+/// never mentions it gets exactly the features the renderer negotiates for
+/// itself.
+fn device_request(world: &World) -> crate::render::wgpu::initialization::DeviceRequest {
+    world
+        .ecs
+        .resource::<crate::render::wgpu::initialization::DeviceRequest>()
+        .copied()
+        .unwrap_or_default()
+}
+
 fn sync_min_window_size(world: &mut World) {
     let desired = world
         .res::<crate::platform::window::Window>()
@@ -768,6 +781,7 @@ impl winit::application::ApplicationHandler for WindowContext {
                     window_handle.clone(),
                     width,
                     height,
+                    device_request(&self.world),
                 ))
                 .map_err(|error| -> Box<dyn std::error::Error> { error }),
             };
@@ -797,12 +811,14 @@ impl winit::application::ApplicationHandler for WindowContext {
             self.renderer_receiver = Some(receiver);
 
             let window_handle_clone = std::sync::Arc::clone(&window_handle);
+            let request = device_request(&self.world);
 
             wasm_bindgen_futures::spawn_local(async move {
                 match crate::render::core::create_renderer(
                     window_handle_clone,
                     canvas_width,
                     canvas_height,
+                    request,
                 )
                 .await
                 {

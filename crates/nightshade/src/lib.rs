@@ -924,6 +924,8 @@ pub mod prelude {
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::WgpuRenderer;
     #[cfg(feature = "wgpu")]
+    pub use crate::render::wgpu::initialization::DeviceRequest;
+    #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::passes;
     #[cfg(feature = "wgpu")]
     pub use crate::render::wgpu::render_configs::RenderInputs;
