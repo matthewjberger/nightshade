@@ -15,8 +15,19 @@ pub fn build_render_view(
     let matrices = camera.matrices.as_ref()?;
     let view = matrices.view;
     let mut projection = matrices.projection;
-    projection[(0, 2)] += taa_jitter[0];
-    projection[(1, 2)] += taa_jitter[1];
+    // The jitter is a constant offset in normalized device space, and clip is
+    // divided by w to get there, so it has to be added as a multiple of the row
+    // that produces w. A perspective projection takes w off the view depth, and
+    // adding straight to the depth column happens to cancel against that; an
+    // orthographic one leaves w at one, so the same write instead offsets every
+    // fragment by its own distance from the camera and the whole scene shakes
+    // as the sequence advances. Going through the w row is the one form that is
+    // right for both.
+    for column in 0..4 {
+        let weight = projection[(3, column)];
+        projection[(0, column)] += taa_jitter[0] * weight;
+        projection[(1, column)] += taa_jitter[1] * weight;
+    }
     let view_projection = projection * view;
     let inverse_view = nalgebra_glm::inverse(&view);
     let inverse_projection = nalgebra_glm::inverse(&projection);
