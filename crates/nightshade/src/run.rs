@@ -172,7 +172,6 @@ pub fn launch_with_world(
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What the composition asks of the device beyond the renderer's own needs.
 ///
 /// Absent when nothing asked, which is the common case, so a composition that
@@ -186,6 +185,7 @@ fn device_request(world: &World) -> crate::render::wgpu::initialization::DeviceR
         .unwrap_or_default()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn sync_min_window_size(world: &mut World) {
     let desired = world
         .res::<crate::platform::window::Window>()
