@@ -36,6 +36,7 @@ pub mod presentation;
 pub mod render_configs;
 mod surface;
 pub mod texture_uploads;
+pub mod timing;
 pub(crate) mod view;
 pub use crate::rendergraph;
 pub mod shader_compose;
@@ -132,6 +133,8 @@ pub struct WgpuRenderer {
     pub ui_texture_array: texture_array_pool::TextureArrayPool,
     /// Compute helper that generates mip chains for uploaded textures.
     pub mip_generator: mip_generator::MipGenerator,
+    /// How long the device spent on the last frame it managed to resolve.
+    pub timing: timing::GpuTiming,
     /// GPU depth-pick readback state. Renderer-internal: poll picks through
     /// [`crate::wgpu::picking::poll_depth_pick`] rather than reaching in here.
     pub(crate) depth_pick: DepthPickState,

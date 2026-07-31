@@ -65,12 +65,16 @@ pub fn negotiate_device_config(
         required_features |= wgpu::Features::FLOAT32_FILTERABLE;
     }
 
-    // Nothing the renderer draws writes a timestamp, but a host pass that wants
-    // to time its own work cannot add the feature after the device exists.
-    // Taken where the adapter offers it, and absent on the web, where browsers
-    // keep timestamps behind a flag for timing-attack reasons.
-    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
-        required_features |= wgpu::Features::TIMESTAMP_QUERY;
+    // The frame timing brackets every submission with a timestamp pair, which
+    // needs to stamp from an encoder rather than from a pass, since the graph
+    // decides for itself how many passes a frame has. Both are capability reads
+    // on the backends rather than driver switches, so an adapter that has them
+    // costs nothing to ask. Usually absent on the web, where browsers keep
+    // timestamps behind a flag for timing-attack reasons.
+    let timestamps =
+        wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS;
+    if adapter_features.contains(timestamps) {
+        required_features |= timestamps;
     }
 
     const BINDLESS_MAX_TEXTURES: u32 = 4096;
@@ -885,6 +889,8 @@ impl super::WgpuRenderer {
         let glyph_atlas = glyph_atlas::GlyphAtlas::new(&device);
         crate::wgpu::stagger::drain_queued_work(&queue).await;
 
+        let timing = crate::wgpu::timing::GpuTiming::new(&device, &queue);
+
         Ok(Self {
             surface,
             device,
@@ -922,6 +928,7 @@ impl super::WgpuRenderer {
             material_texture_arrays,
             ui_texture_array,
             mip_generator,
+            timing,
             depth_pick: super::DepthPickState {
                 compute_pipeline: depth_pick_compute_pipeline,
                 bind_group_layout: depth_pick_bind_group_layout,

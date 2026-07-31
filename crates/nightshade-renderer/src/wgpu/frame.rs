@@ -41,9 +41,26 @@ pub fn render_frame(
     inputs: &mut RenderInputs,
     outputs: &mut FrameOutputs,
 ) -> Result<(), crate::wgpu::rendergraph::RenderGraphError> {
+    // The timing brackets the whole frame from out here rather than reaching
+    // into the graph, because submission order is preserved and a frame takes
+    // several different paths through `run_frame` depending on what it is
+    // drawing. Opening before and closing after spans all of them without any
+    // pass having to know it is being timed.
+    if let Some(open) = renderer.timing.open(&renderer.device) {
+        renderer.queue.submit(std::iter::once(open));
+    }
+
     std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
     let result = run_frame(renderer, inputs, outputs);
     std::mem::swap(&mut renderer.ibl_views, &mut inputs.ibl_views);
+
+    if let Some(close) = renderer.timing.close(&renderer.device) {
+        renderer.queue.submit(std::iter::once(close));
+    }
+    // Polled after the close is submitted, never before: a map asked for on a
+    // buffer whose copy is still unsubmitted is ordered ahead of that copy.
+    renderer.timing.poll();
+
     result
 }
 
