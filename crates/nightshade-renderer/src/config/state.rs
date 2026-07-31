@@ -74,6 +74,12 @@ pub struct RendererState {
     /// reference, kept warm across frames.
     #[cfg(feature = "meshlet")]
     pub meshlet_assets: MeshletAssetCache,
+    /// Bumped by the scene sync whenever a meshlet placement was written or
+    /// retired, so the meshlet pass can gate its instance rebuild on a counter
+    /// rather than reading a quarter of a million placements back every frame
+    /// to find that none of them moved.
+    #[cfg(feature = "meshlet")]
+    pub meshlet_placements_generation: u64,
     /// The color the outline pass draws the selection outline with, resolved
     /// once per frame. The covered entities carry the
     /// [`crate::render_world::SelectionOutline`] tag in the scene world.
@@ -142,6 +148,8 @@ impl Default for RendererState {
             render_skinned_mesh_names: std::collections::HashMap::new(),
             #[cfg(feature = "meshlet")]
             meshlet_assets: MeshletAssetCache::default(),
+            #[cfg(feature = "meshlet")]
+            meshlet_placements_generation: 0,
             render_selection_outline_color: [1.0, 0.45, 0.0, 1.0],
             render_shadow_casters: RenderShadowCasters::default(),
             render_skinned_meshes: Vec::new(),

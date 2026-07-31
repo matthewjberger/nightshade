@@ -90,6 +90,11 @@ pub struct RenderSceneSync {
     pub animation_skinned_generation_seen: u64,
     pub animation_player_clips: HashMap<crate::ecs::world::Entity, (i64, i64)>,
     pub animation_player_clips_scratch: HashMap<crate::ecs::world::Entity, (i64, i64)>,
+    /// The material registry's content and name versions as of the last meshlet
+    /// placement resolve. A registry edit can move an id under a placement
+    /// nothing else touched, so a change here refreshes them all.
+    #[cfg(feature = "meshlet")]
+    pub meshlet_materials_version_seen: (u64, u64),
 }
 
 #[derive(Default)]
@@ -108,6 +113,8 @@ struct SceneDirt {
     water: bool,
     cloth: bool,
     texts: bool,
+    #[cfg(feature = "meshlet")]
+    meshlet_refresh: HashSet<crate::ecs::world::Entity>,
 }
 
 const OBJECT_STRUCTURAL_MASK: u64 = crate::ecs::world::RENDER_MESH
@@ -300,6 +307,31 @@ fn collect_scene_dirt(world: &mut World) -> SceneDirt {
                 .mark_material_dirty(entity);
         }
     }
+    // A meshlet entity is a transform, an asset id, and a material name, so
+    // those three ticks plus the structural log are the whole of what can move
+    // a placement. Gathered here rather than in the sync itself so the sync
+    // reads the same cursor every other domain does.
+    #[cfg(feature = "meshlet")]
+    {
+        for change in &changes {
+            if change.mask & crate::ecs::world::MESHLET_MESH != 0 {
+                dirt.meshlet_refresh.insert(change.entity);
+            }
+        }
+        for entity in world.ecs.worlds[CORE].query_entities_changed_since(
+            crate::ecs::world::MESHLET_MESH | crate::ecs::world::GLOBAL_TRANSFORM,
+            since,
+        ) {
+            dirt.meshlet_refresh.insert(entity);
+        }
+        for entity in world.ecs.worlds[CORE].query_entities_changed_since(
+            crate::ecs::world::MESHLET_MESH | crate::ecs::world::MATERIAL_REF,
+            since,
+        ) {
+            dirt.meshlet_refresh.insert(entity);
+        }
+    }
+
     world
         .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
         .data_cursor = world.ecs.worlds[CORE].current_tick();
@@ -906,102 +938,145 @@ fn sync_water(world: &mut World) {
     }
 }
 
-/// Rebuilds the renderer's meshlet placements and hands over any asset it has
-/// not been given yet. Rebuilt in full every frame rather than from the dirt
-/// set: an instance is a transform and an id, and the assets behind them are
-/// shared handles, so there is nothing here worth tracking deltas for.
+/// The material id a placement carries: the registry index offset by one, or
+/// zero for the renderer's built-in default.
 ///
-/// The material id is resolved here, against the registry directly, rather than
-/// in the pass against the resolved material table: the registry is the source
-/// of truth and already current, so the id never trails the table's separate
-/// rebuild cadence.
+/// Resolved here, against the registry directly, rather than in the pass
+/// against the resolved material table: the registry is the source of truth and
+/// already current, so the id never trails the table's separate rebuild cadence.
 #[cfg(feature = "meshlet")]
-fn sync_meshlets(world: &mut World) {
-    let collected: Vec<(
-        crate::ecs::world::Entity,
-        u64,
-        nalgebra_glm::Mat4,
-        Option<crate::ecs::material::components::MaterialRef>,
-    )> = world
-        .query_ref::<(
-            &crate::ecs::meshlet::components::MeshletMesh,
-            &crate::ecs::transform::components::GlobalTransform,
-            Option<&crate::ecs::material::components::MaterialRef>,
-        )>()
-        .iter()
-        .map(|(entity, (meshlet_mesh, global_transform, material_ref))| {
-            (
-                entity,
-                meshlet_mesh.asset_id,
-                global_transform.0,
-                material_ref.cloned(),
-            )
-        })
-        .collect();
-    let placements: Vec<(
-        crate::ecs::world::Entity,
-        crate::render::config::MeshletPlacement,
-    )> = {
-        use crate::render::generational_registry::{registry_entry, registry_lookup_index};
-        let registry = &world.res::<crate::ecs::material::resources::MaterialRegistry>();
-        collected
-            .iter()
-            .map(|(entity, asset_id, transform, material_ref)| {
-                let material_id = material_ref.as_ref().map_or(0, |reference| {
-                    reference
-                        .id
-                        .and_then(|id| {
-                            registry_entry(&registry.registry, id.index, id.generation)
-                                .map(|_| id.index + 1)
-                        })
-                        .or_else(|| {
-                            registry_lookup_index(&registry.registry, &reference.name).and_then(
-                                |(index, _generation)| {
-                                    registry.registry.entries[index as usize]
-                                        .as_ref()
-                                        .map(|_| index + 1)
-                                },
-                            )
-                        })
-                        .unwrap_or(0)
-                });
-                (
-                    *entity,
-                    crate::render::config::MeshletPlacement {
-                        transform: *transform,
-                        asset_id: *asset_id,
-                        material_id,
+fn meshlet_material_id(
+    registry: &crate::ecs::material::resources::MaterialRegistry,
+    material_ref: Option<&crate::ecs::material::components::MaterialRef>,
+) -> u32 {
+    use crate::render::generational_registry::{registry_entry, registry_lookup_index};
+    material_ref.map_or(0, |reference| {
+        reference
+            .id
+            .and_then(|id| {
+                registry_entry(&registry.registry, id.index, id.generation).map(|_| id.index + 1)
+            })
+            .or_else(|| {
+                registry_lookup_index(&registry.registry, &reference.name).and_then(
+                    |(index, _generation)| {
+                        registry.registry.entries[index as usize]
+                            .as_ref()
+                            .map(|_| index + 1)
                     },
                 )
             })
-            .collect()
+            .unwrap_or(0)
+    })
+}
+
+/// Writes the renderer's meshlet placements for the entities that moved, and
+/// hands over any asset it has not been given yet.
+///
+/// A placement is a transform, an asset id, and a material id, and for a scene
+/// that mostly sits still none of the three change. Writing the whole set every
+/// frame is not merely redundant: stripping a placement and writing it again is
+/// two archetype migrations per entity per frame, so a scene holding a quarter
+/// of a million of them spends the entire frame moving rows between tables that
+/// end up exactly as they started. So placements are written only where the
+/// entity's own state moved, and one is stripped only from a row that stopped
+/// being a meshlet.
+///
+/// A full resync still clears first, because a structural-log gap means the
+/// dirt set cannot say which rows went stale.
+#[cfg(feature = "meshlet")]
+fn sync_meshlets(world: &mut World, dirt: &SceneDirt) {
+    let registry_version = {
+        let registry = world.res::<crate::ecs::material::resources::MaterialRegistry>();
+        (registry.version, registry.names_version)
     };
+    let materials_moved = world
+        .res::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .meshlet_materials_version_seen
+        != registry_version;
+    world
+        .res_mut::<crate::ecs::graphics::scene_sync::RenderSceneSync>()
+        .meshlet_materials_version_seen = registry_version;
+
+    let refresh: Vec<crate::ecs::world::Entity> = if dirt.full || materials_moved {
+        world.ecs.worlds[CORE]
+            .query_entities(crate::ecs::world::MESHLET_MESH)
+            .collect()
+    } else if dirt.meshlet_refresh.is_empty() {
+        return;
+    } else {
+        dirt.meshlet_refresh.iter().copied().collect()
+    };
+
+    let mut placements: Vec<(
+        crate::ecs::world::Entity,
+        crate::render::config::MeshletPlacement,
+    )> = Vec::with_capacity(refresh.len());
+    let mut retired: Vec<crate::ecs::world::Entity> = Vec::new();
+    {
+        let registry = world.res::<crate::ecs::material::resources::MaterialRegistry>();
+        for &entity in &refresh {
+            let Some(meshlet_mesh) =
+                world.get::<crate::ecs::meshlet::components::MeshletMesh>(entity)
+            else {
+                retired.push(entity);
+                continue;
+            };
+            let Some(global_transform) =
+                world.get::<crate::ecs::transform::components::GlobalTransform>(entity)
+            else {
+                retired.push(entity);
+                continue;
+            };
+            let material_id = meshlet_material_id(
+                registry,
+                world.get::<crate::ecs::material::components::MaterialRef>(entity),
+            );
+            placements.push((
+                entity,
+                crate::render::config::MeshletPlacement {
+                    transform: global_transform.0,
+                    asset_id: meshlet_mesh.asset_id,
+                    material_id,
+                },
+            ));
+        }
+    }
 
     let mut assets = std::mem::take(
         &mut world
             .res_mut::<crate::render::config::RendererState>()
             .meshlet_assets,
     );
-    for (_, asset_id, _, _) in &collected {
-        if assets.contains_key(asset_id) {
+    for (_, placement) in &placements {
+        if assets.contains_key(&placement.asset_id) {
             continue;
         }
         let Some(asset) = world
             .res::<crate::ecs::meshlet::resources::MeshletAssets>()
-            .get(*asset_id)
+            .get(placement.asset_id)
             .cloned()
         else {
             continue;
         };
-        assets.insert(*asset_id, asset);
+        assets.insert(placement.asset_id, asset);
     }
     world
         .res_mut::<crate::render::config::RendererState>()
         .meshlet_assets = assets;
 
-    clear_render_component(world, render_world::MESHLET);
+    if dirt.full {
+        clear_render_component(world, render_world::MESHLET);
+    }
+    let touched = dirt.full || !placements.is_empty() || !retired.is_empty();
     for (entity, placement) in placements {
         world.set(entity, placement);
+    }
+    for entity in retired {
+        world.ecs.worlds[RENDER].remove_components(entity, render_world::MESHLET);
+    }
+    if touched {
+        let state = world.res_mut::<crate::render::config::RendererState>();
+        state.meshlet_placements_generation = state.meshlet_placements_generation.wrapping_add(1);
     }
 }
 
@@ -1167,9 +1242,9 @@ fn sync_selection_outline(world: &mut World) {
 /// only the domains something actually changed in are touched.
 pub fn render_sync_system(world: &mut World) {
     let _span = tracing::info_span!("render_sync").entered();
-    #[cfg(feature = "meshlet")]
-    sync_meshlets(world);
     let dirt = collect_scene_dirt(world);
+    #[cfg(feature = "meshlet")]
+    sync_meshlets(world, &dirt);
 
     if dirt.full {
         world
