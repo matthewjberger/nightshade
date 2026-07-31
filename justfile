@@ -35,7 +35,7 @@ format:
 # Install Debian/Ubuntu dependencies for building
 [linux]
 install-debian-deps:
-    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libwebkit2gtk-4.1-dev
+    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libwebkit2gtk-4.1-dev libspeechd-dev
 
 # Installs mise and the editor's pinned wasm toolchain (Windows)
 [windows]
