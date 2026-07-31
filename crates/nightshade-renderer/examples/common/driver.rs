@@ -301,7 +301,6 @@ impl<E: Example> ApplicationHandler for Harness<E> {
             window.clone(),
             size.width.max(1),
             size.height.max(1),
-            nightshade_renderer::wgpu::initialization::DeviceRequest::default(),
         ))
         .expect("failed to create renderer");
         install_presentation_passes(&mut renderer).expect("failed to install presentation passes");

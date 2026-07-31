@@ -27,28 +27,6 @@ pub(super) fn pick_present_mode(
     wgpu::PresentMode::Fifo
 }
 
-/// What a host asks of the device on top of what the renderer needs itself.
-///
-/// Everything the renderer uses is negotiated from the adapter without being
-/// asked for. This is the other half: capabilities no built-in pass touches,
-/// which exist only so a host-installed pass can use them. They stay off unless
-/// a host says otherwise, because an unused feature is still a feature the
-/// driver was told to turn on.
-///
-/// Read from the world as a resource when the renderer comes up, so it is a
-/// runtime decision a composition makes rather than a build-time one that can
-/// differ between two binaries built from the same source.
-#[derive(Clone, Copy, Default, Debug)]
-pub struct DeviceRequest {
-    /// Ask for `TIMESTAMP_QUERY` so a host pass can carry its own query set and
-    /// time its own work. Nothing in the renderer writes a timestamp.
-    ///
-    /// Still gated on the adapter having it, so setting this can never fail
-    /// device creation. On the web it is usually absent, because the browser
-    /// keeps timestamps behind a flag for timing-attack reasons.
-    pub timestamp_query: bool,
-}
-
 /// The device features, limits, and bindless capability the renderer asks an
 /// adapter for.
 pub struct DeviceConfig {
@@ -72,7 +50,6 @@ pub fn negotiate_device_config(
     adapter_features: wgpu::Features,
     adapter_limits: &wgpu::Limits,
     adapter_info: &wgpu::AdapterInfo,
-    request: DeviceRequest,
 ) -> DeviceConfig {
     let mut required_features = wgpu::Features::INDIRECT_FIRST_INSTANCE;
 
@@ -88,8 +65,11 @@ pub fn negotiate_device_config(
         required_features |= wgpu::Features::FLOAT32_FILTERABLE;
     }
 
-    // Asked for rather than assumed. See [`DeviceRequest`].
-    if request.timestamp_query && adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
+    // Nothing the renderer draws writes a timestamp, but a host pass that wants
+    // to time its own work cannot add the feature after the device exists.
+    // Taken where the adapter offers it, and absent on the web, where browsers
+    // keep timestamps behind a flag for timing-attack reasons.
+    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
         required_features |= wgpu::Features::TIMESTAMP_QUERY;
     }
 
@@ -180,7 +160,6 @@ impl super::WgpuRenderer {
         window_handle: W,
         initial_width: u32,
         initial_height: u32,
-        request: DeviceRequest,
     ) -> Result<Self, Box<dyn std::error::Error>>
     where
         W: Into<wgpu::SurfaceTarget<'static>>,
@@ -203,12 +182,7 @@ impl super::WgpuRenderer {
             required_features,
             required_limits,
             bindless,
-        } = negotiate_device_config(
-            adapter.features(),
-            &adapter.limits(),
-            &adapter_info,
-            request,
-        );
+        } = negotiate_device_config(adapter.features(), &adapter.limits(), &adapter_info);
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
