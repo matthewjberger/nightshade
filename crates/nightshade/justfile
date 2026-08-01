@@ -2,26 +2,20 @@ set windows-shell := ["powershell.exe"]
 export RUST_LOG := "info,wgpu_core=off"
 export RUST_BACKTRACE := "1"
 
-# Lists the available commands
 @just:
     just --list
 
-# Builds the crate with default features (compile gate)
 build:
     cargo build -p nightshade
 
-# Runs the test suite
 test:
     cargo test -p nightshade
 
-# Clippy the crate and its targets with warnings denied
 lint:
     cargo clippy -p nightshade --all-targets -- -D warnings
 
-# Formats the crate
 format:
     cargo fmt -p nightshade
 
-# Builds the API documentation
 doc:
     cargo doc -p nightshade --no-deps

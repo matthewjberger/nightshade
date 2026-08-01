@@ -1,0 +1,32 @@
+[package]
+name = "workers"
+description = "A crowd that asks a crew of worker threads for routes while the frame stays clear"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "workers-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true
+nightshade-worker.workspace = true
+rand = "0.9"

@@ -1,0 +1,33 @@
+[package]
+name = "nightshade-portal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = [
+    "contract",
+], optional = true }
+nightshade-ecs = { workspace = true, optional = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = [
+    "contract",
+], optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = [
+    "contract",
+], optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:nalgebra-glm", "dep:nightshade-ecs"]
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-camera",
+    "dep:nightshade-platform",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+]

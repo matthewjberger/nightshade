@@ -1,0 +1,31 @@
+[package]
+name = "nightshade-countdown"
+description = "The time a round has left, and the word it sends when the time is gone"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = ["contract", "dep:nightshade", "dep:nightshade-platform"]
+
+[dependencies]
+nightshade = { workspace = true, optional = true }
+nightshade-platform = { path = "../../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"], optional = true }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+
+[lints]
+workspace = true

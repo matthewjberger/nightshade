@@ -1,0 +1,45 @@
+-- Two descriptions in one program. Both declare Run and neither can see the
+-- other's, because a name belongs to the module that declares it.
+
+runs "readout.ns"
+   Sign.color = (0.88, 0.92, 1.0)
+
+runs "daylight.ns"
+
+module game
+
+runs "orbit.ns"
+   Ring.count = 16
+   Ring.radius = 7
+   Ring.color = (1.0, 0.62, 0.30)
+
+
+resource Run
+   score number = 0
+
+config World
+   cameraEye = (0, 7, 13)
+   ground
+      reach number = 12
+      color = (0.09, 0.11, 0.16)
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color World.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (World.ground.reach * 2, 1, World.ground.reach * 2)
+
+system play.score
+   in Time, Run
+   out Run
+
+   Run.score += Time.dt * 10
+
+system hud.show
+   in Run, orbit.Run
+   any order over lines: out Label with Readout
+
+   Label := "score " + floor(Run.score) + "   turns " + floor(orbit.Run.turns)

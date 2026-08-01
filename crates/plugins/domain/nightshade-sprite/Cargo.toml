@@ -1,0 +1,21 @@
+﻿[package]
+name = "nightshade-sprite"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+enum2schema = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:enum2schema", "dep:nalgebra-glm", "dep:serde"]
+plugin = ["contract", "dep:nightshade", "dep:nightshade-render"]

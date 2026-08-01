@@ -1,0 +1,68 @@
+-- Walkers that find their own way. A thing that carries a Ground is floor a
+-- walker may stand on, a thing that is solid is in the way, and a thing that
+-- carries a Path walks to that point around whatever stands between.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.angle = (-0.95, 0.5, 0)
+
+module paths
+
+component Walker
+
+config World
+   cameraEye = (0, 22, 24)
+   yard
+      reach number = 14
+   walkers
+      count number = 7
+      pace number = 3.4
+
+resource Trip
+   goal = (0, 0.6, 0)
+   left number = 0
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color (0.2, 0.23, 0.28),
+         Transform (0, -0.5, 0),
+         Scale (World.yard.reach * 2, 1, World.yard.reach * 2),
+         Ground 1
+   spawn Mesh "Cube", Color (0.5, 0.32, 0.3),
+         Transform (0, 1, -3), Scale (16, 2, 1), Body "static"
+   spawn Mesh "Cube", Color (0.5, 0.32, 0.3),
+         Transform (0 - 5, 1, 4), Scale (1, 2, 12), Body "static"
+   spawn Mesh "Cube", Color (0.5, 0.32, 0.3),
+         Transform (6, 1, 4), Scale (1, 2, 12), Body "static"
+   for each index in 0 .. World.walkers.count
+      spawn Mesh "Sphere", Color (0.4 + index / 14, 0.75, 0.9),
+            Transform (index * 1.6 - 5, 0.6, 10),
+            Scale (0.8, 0.8, 0.8),
+            Path (0, 0.6, 0),
+            Pace World.walkers.pace,
+            Walker index
+
+system trip.turn
+   in Time
+   out Trip
+
+   Trip.left := Trip.left - Time.dt
+   when Trip.left <= 0
+      Trip.left := 5
+      Trip.goal := (sin(Time.uptime * 1.7) * 9, 0.6, cos(Time.uptime * 2.3) * 9 - 6)
+
+system walkers.aim
+   in Trip
+   over walkers: in Walker, out Path
+
+   Path := Trip.goal
+
+system hud.show
+   in Trip
+   any order over lines: out Label with Readout
+
+   Label := "walkers making for " + floor(Trip.goal.x) + " " + floor(Trip.goal.z)

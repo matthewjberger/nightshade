@@ -1,0 +1,367 @@
+use nightshade_wgpu::backend::PassBuild;
+use nightshade_wgpu::backend::build;
+use nightshade_wgpu::backend::{PassDecl, PassExecutionContext, PassNode, PassPosition};
+use nightshade_wgpu::wgpu;
+use wgpu::util::DeviceExt;
+
+const KERNEL_SIZE: usize = 16;
+const NOISE_SIZE: u32 = 4;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+struct SsgiParams {
+    projection: [[f32; 4]; 4],
+    inv_projection: [[f32; 4]; 4],
+    screen_size: [f32; 2],
+    radius: f32,
+    intensity: f32,
+    max_steps: u32,
+    enabled: f32,
+    padding: [f32; 2],
+}
+
+pub struct SsgiPass {
+    pipeline: wgpu::RenderPipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
+    kernel_buffer: wgpu::Buffer,
+    params_buffer: wgpu::Buffer,
+    noise_texture: wgpu::Texture,
+    noise_view: wgpu::TextureView,
+    point_sampler: wgpu::Sampler,
+    linear_sampler: wgpu::Sampler,
+    noise_sampler: wgpu::Sampler,
+    cached_bind_group: Option<wgpu::BindGroup>,
+    cached_params: SsgiParams,
+    noise_initialized: bool,
+}
+
+impl SsgiPass {
+    pub fn new(build: PassBuild) -> Self {
+        let PassBuild {
+            device, composer, ..
+        } = build;
+        let shader =
+            composer.compile_wgsl(device, "ssgi.wgsl", include_str!("../shaders/ssgi.wgsl"));
+
+        let kernel_samples = Self::generate_kernel();
+        let kernel_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("SSGI Kernel Buffer"),
+            contents: bytemuck::cast_slice(&kernel_samples),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+
+        let params = SsgiParams {
+            projection: [[0.0; 4]; 4],
+            inv_projection: [[0.0; 4]; 4],
+            screen_size: [1920.0, 1080.0],
+            radius: 2.0,
+            intensity: 1.0,
+            max_steps: 16,
+            enabled: 1.0,
+            padding: [0.0; 2],
+        };
+
+        let params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("SSGI Params Buffer"),
+            contents: bytemuck::cast_slice(&[params]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let noise_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("SSGI Noise Texture"),
+            size: nightshade_wgpu::backend::texture_extent(device, NOISE_SIZE, NOISE_SIZE, 1),
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        let noise_view = noise_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let point_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let linear_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Linear,
+            ..Default::default()
+        });
+
+        let noise_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::Repeat,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let bind_group_layout = build::bind_layout(
+            device,
+            "SSGI Bind Group Layout",
+            &[
+                build::depth_at(0, wgpu::ShaderStages::FRAGMENT),
+                build::painted_at(1),
+                build::painted_at(2),
+                build::painted_at(3),
+                build::sampler_at(
+                    4,
+                    wgpu::SamplerBindingType::NonFiltering,
+                    wgpu::ShaderStages::FRAGMENT,
+                ),
+                build::filtering_at(5),
+                build::filtering_at(6),
+                build::uniform_at(7, wgpu::ShaderStages::FRAGMENT),
+                build::storage_at(8, false, wgpu::ShaderStages::FRAGMENT),
+            ],
+        );
+
+        let pipeline_layout =
+            build::pipeline_layout(device, "SSGI Pipeline Layout", &[&bind_group_layout]);
+
+        let pipeline = build::Pipe::new(device, "SSGI Pipeline", &shader)
+            .layout(&pipeline_layout)
+            .target(wgpu::ColorTargetState {
+                format: wgpu::TextureFormat::Rgba16Float,
+                blend: None,
+                write_mask: wgpu::ColorWrites::ALL,
+            })
+            .make();
+
+        Self {
+            pipeline,
+            bind_group_layout,
+            kernel_buffer,
+            params_buffer,
+            noise_texture,
+            noise_view,
+            point_sampler,
+            linear_sampler,
+            noise_sampler,
+            cached_bind_group: None,
+            cached_params: params,
+            noise_initialized: false,
+        }
+    }
+
+    fn generate_kernel() -> [[f32; 4]; KERNEL_SIZE] {
+        let mut kernel = [[0.0f32; 4]; KERNEL_SIZE];
+        let mut rng_state = 67890u32;
+
+        for (index, sample) in kernel.iter_mut().enumerate() {
+            rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+            let x = (rng_state as f32 / u32::MAX as f32) * 2.0 - 1.0;
+
+            rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+            let y = (rng_state as f32 / u32::MAX as f32) * 2.0 - 1.0;
+
+            rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+            let z = (rng_state as f32 / u32::MAX as f32) * 0.9 + 0.1;
+
+            let length = (x * x + y * y + z * z).sqrt();
+            let (normalized_x, normalized_y, normalized_z) = if length > 0.001 {
+                (x / length, y / length, z / length)
+            } else {
+                (0.0, 0.0, 1.0)
+            };
+
+            let scale = index as f32 / KERNEL_SIZE as f32;
+            let scale = 0.1 + scale * scale * 0.9;
+
+            *sample = [
+                normalized_x * scale,
+                normalized_y * scale,
+                normalized_z * scale,
+                0.0,
+            ];
+        }
+
+        kernel
+    }
+
+    fn generate_noise() -> Vec<u8> {
+        let mut noise = Vec::with_capacity((NOISE_SIZE * NOISE_SIZE * 4) as usize);
+        let mut rng_state = 98765u32;
+
+        for _ in 0..(NOISE_SIZE * NOISE_SIZE) {
+            rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+            let x = (rng_state as f32 / u32::MAX as f32) * 2.0 - 1.0;
+
+            rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+            let y = (rng_state as f32 / u32::MAX as f32) * 2.0 - 1.0;
+
+            noise.push(((x * 0.5 + 0.5) * 255.0) as u8);
+            noise.push(((y * 0.5 + 0.5) * 255.0) as u8);
+            noise.push(128);
+            noise.push(255);
+        }
+
+        noise
+    }
+}
+
+const SSGI_PASS_DECL: PassDecl = PassDecl {
+    name: "ssgi_pass",
+    position: PassPosition::PostProcess,
+    reads: &["depth", "view_normals", "scene_color"],
+    writes: &["ssgi_raw"],
+    ..PassDecl::EMPTY
+};
+
+impl PassNode<nightshade_wgpu::backend::RenderInputs> for SsgiPass {
+    fn decl(&self) -> &PassDecl {
+        &SSGI_PASS_DECL
+    }
+
+    fn invalidate_bind_groups(&mut self) {
+        self.cached_bind_group = None;
+    }
+
+    fn prepare(
+        &mut self,
+        _device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        configs: &nightshade_wgpu::backend::RenderInputs,
+    ) {
+        if !self.noise_initialized {
+            let noise_data = Self::generate_noise();
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &self.noise_texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &noise_data,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(NOISE_SIZE * 4),
+                    rows_per_image: Some(NOISE_SIZE),
+                },
+                wgpu::Extent3d {
+                    width: NOISE_SIZE,
+                    height: NOISE_SIZE,
+                    depth_or_array_layers: 1,
+                },
+            );
+            self.noise_initialized = true;
+        }
+
+        let graphics = &configs.scene;
+        let enabled = if graphics.active_view.ssgi_enabled {
+            1.0
+        } else {
+            0.0
+        };
+
+        if let Some(camera_matrices) = configs.scene.render_view.as_ref() {
+            let projection: [[f32; 4]; 4] = camera_matrices.projection.into();
+            let inv_projection: [[f32; 4]; 4] = camera_matrices
+                .projection
+                .try_inverse()
+                .unwrap_or(nalgebra_glm::Mat4::identity())
+                .into();
+
+            let (screen_width, screen_height) = configs.view.viewport_size.unwrap_or((1920, 1080));
+
+            let half_width = (screen_width / 2).max(1);
+            let half_height = (screen_height / 2).max(1);
+
+            let view = &graphics.active_view;
+            let params = SsgiParams {
+                projection,
+                inv_projection,
+                screen_size: [half_width as f32, half_height as f32],
+                radius: view.ssgi_radius,
+                intensity: view.ssgi_intensity,
+                max_steps: view.ssgi_max_steps,
+                enabled,
+                padding: [0.0; 2],
+            };
+
+            if params != self.cached_params {
+                queue.write_buffer(&self.params_buffer, 0, bytemuck::cast_slice(&[params]));
+                self.cached_params = params;
+            }
+        }
+    }
+
+    fn execute<'r, 'e>(
+        &mut self,
+        context: PassExecutionContext<'r, 'e, nightshade_wgpu::backend::RenderInputs>,
+    ) -> nightshade_wgpu::backend::Result<()> {
+        if !context.is_pass_enabled() {
+            return Ok(());
+        }
+        if !context.configs.scene.active_view.ssgi_enabled {
+            return Ok(());
+        }
+
+        if self.cached_bind_group.is_none() {
+            let (depth_view, _, _) = context.get_depth_attachment("depth")?;
+            let normal_view = context.get_texture_view("view_normals")?;
+            let scene_color_view = context.get_texture_view("scene_color")?;
+
+            self.cached_bind_group = Some(build::binding(
+                context.device,
+                "SSGI Bind Group",
+                &self.bind_group_layout,
+                vec![
+                    wgpu::BindingResource::TextureView(depth_view),
+                    wgpu::BindingResource::TextureView(normal_view),
+                    wgpu::BindingResource::TextureView(scene_color_view),
+                    wgpu::BindingResource::TextureView(&self.noise_view),
+                    wgpu::BindingResource::Sampler(&self.point_sampler),
+                    wgpu::BindingResource::Sampler(&self.linear_sampler),
+                    wgpu::BindingResource::Sampler(&self.noise_sampler),
+                    self.params_buffer.as_entire_binding(),
+                    self.kernel_buffer.as_entire_binding(),
+                ],
+            ));
+        }
+
+        let (output_view, output_load_op, output_store_op) =
+            context.get_color_attachment("ssgi_raw")?;
+
+        let mut render_pass = context
+            .encoder
+            .begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("SSGI Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: output_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: output_load_op,
+                        store: output_store_op,
+                    },
+                    depth_slice: None,
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+
+        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, self.cached_bind_group.as_ref().unwrap(), &[]);
+        render_pass.draw(0..3, 0..1);
+
+        drop(render_pass);
+
+        Ok(())
+    }
+}

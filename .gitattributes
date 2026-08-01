@@ -1,0 +1,15 @@
+# Check every text file out with LF on every platform, so the working tree does
+# not depend on each machine's core.autocrlf and rustfmt's newline_style =
+# "Unix" is satisfied on Windows the same as on macOS and Linux.
+* text=auto eol=lf
+
+*.png binary
+*.glb binary
+*.bin binary
+*.hdr binary
+*.mp3 binary
+*.ogg binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.eot binary

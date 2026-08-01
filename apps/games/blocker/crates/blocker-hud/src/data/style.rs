@@ -1,0 +1,42 @@
+use crate::theme;
+use nightshade_ui_menu::prelude::CardStyle;
+
+pub fn card_style() -> CardStyle {
+    CardStyle {
+        card_background: theme::PANEL_COLOR,
+        card_border: theme::PANEL_BORDER,
+        card_radius: 12.0,
+        card_border_width: 2.0,
+        frame_corner: theme::FRAME_CORNER,
+        frame_tint: theme::FRAME_TINT,
+        title_height: theme::TITLE_HEIGHT,
+        title_color: theme::TITLE_COLOR,
+        heading_size: theme::HEADING_SIZE,
+        heading_color: theme::ACCENT_COLOR,
+        footer_height: theme::FOOTER_HEIGHT,
+        footer_color: theme::FOOTER_COLOR,
+        body_padding: theme::BODY_PADDING,
+        row_gap: theme::ROW_GAP,
+        row_height: theme::ROW_HEIGHT,
+        row_padding: theme::ROW_PADDING,
+        row_spacing: theme::ROW_SPACING,
+        row_color: theme::ROW_COLOR,
+        row_alt_color: theme::ROW_ALT_COLOR,
+        small_size: theme::SMALL_SIZE,
+        body_size: theme::BODY_SIZE,
+        text_color: theme::TEXT_COLOR,
+        bright_color: theme::TEXT_BRIGHT,
+        dim_color: theme::DIM_TEXT_COLOR,
+        action_width: theme::ACTION_WIDTH,
+        action_height: theme::ACTION_HEIGHT,
+        bar_height: theme::BAR_HEIGHT,
+        bar_border: theme::BAR_BORDER,
+        bar_background: theme::BAR_BACKGROUND,
+        cell_size: theme::CELL_SIZE,
+        cell_icon: theme::CELL_ICON,
+        cell_gap: theme::CELL_GAP,
+        cell_color: theme::CELL_COLOR,
+        cell_border: theme::CELL_BORDER,
+        count_size: theme::COUNT_SIZE,
+    }
+}

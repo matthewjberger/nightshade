@@ -1,0 +1,31 @@
+# The commands that still change nothing, one per line as "path name". A
+# command changes a value, so it takes what it changes by &mut, by Commands,
+# or by self for a builder. A function that takes none of those, reads a
+# shared reference and returns a plain value is reporting, which is what
+# queries are for.
+#
+# Three shapes never join this list, because none of them is a report. A
+# function returning Result is working outside the ECS, a file or a socket. A
+# function returning Self is a constructor. A function that reads no shared
+# reference is making a value rather than reporting on one it was handed.
+#
+# Nine lines stay for a reason. store_write, store_write_text, store_remove,
+# save_write, open_url and write_clipboard do reach a file, a browser or the
+# clipboard, and report whether it worked with a bool that no rule can tell
+# from a report. execute_texture_recipe and generate_navmesh_recast sit in the
+# middle of a chain of private helpers in their own commands band, so moving
+# either one alone pulls the file apart. take_pending empties the agent queue
+# through a mutex the whole program shares, so the change it makes never
+# reaches its signature.
+#
+# This list only shrinks. The check fails on a line whose function is gone or
+# already clean.
+apps/viewer/src/commands/agent.rs take_pending
+crates/plugins/domain/nightshade-graphics/src/commands/loading.rs execute_texture_recipe
+crates/plugins/domain/nightshade-navmesh/src/commands/generation.rs generate_navmesh_recast
+crates/plugins/describe/nightshade-platform/src/commands/host.rs open_url
+crates/plugins/describe/nightshade-platform/src/commands/host.rs write_clipboard
+crates/plugins/domain/nightshade-save/src/commands.rs save_write
+crates/support/nightshade-store/src/commands.rs store_remove
+crates/support/nightshade-store/src/commands.rs store_write
+crates/support/nightshade-store/src/commands.rs store_write_text

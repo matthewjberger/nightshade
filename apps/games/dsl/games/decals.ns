@@ -1,0 +1,50 @@
+-- A mark laid over what is already there. A thing that carries a Decal is
+-- thrown onto the surfaces in front of it rather than drawn as a shape of its
+-- own, so the mark follows the wall and the floor it lands on.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.strength = 1.4
+
+module decals
+
+assets Marks from builtin
+   spot decal "spot"
+   lines decal "grid"
+
+component Drifter
+
+config World
+   cameraEye = (0, 14, 21)
+   floor
+      reach number = 12
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color (0.26, 0.28, 0.33),
+         Transform (0, -0.5, 0),
+         Scale (World.floor.reach * 2, 1, World.floor.reach * 2)
+   spawn Mesh "Cube", Color (0.42, 0.34, 0.3),
+         Transform (0, 2, -7), Scale (16, 5, 1)
+   for each index in 0 .. 6
+      spawn Decal Marks.spot, Color (1.0, 0.52, 0.2),
+            Transform (index * 3 - 7.5, 0.4, 2),
+            Rotation (0 - 1.5708, 0, 0),
+            Scale (3, 3, 2)
+   spawn Decal Marks.lines, Color (0.42, 0.8, 1.0),
+         Transform (0, 2.2, -6.2), Scale (5, 3, 2), Drifter 1
+
+system marks.drift
+   in Time
+   over marks: in Drifter, out Transform
+
+   Transform := (sin(Time.uptime * 0.7) * 5, 2.2, -6.2)
+
+system hud.show
+   any order over lines: out Label with Readout
+
+   Label := "marks thrown onto the floor and the wall"

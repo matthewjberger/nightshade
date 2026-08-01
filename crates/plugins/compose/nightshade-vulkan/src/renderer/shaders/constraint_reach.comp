@@ -1,0 +1,57 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 64) in;
+
+#include "constraint_common.glsl"
+
+struct ReachChain {
+    uint joint_start;
+    uint joint_count;
+    uint carried_start;
+    uint carried_count;
+    vec4 goal;
+    float weight;
+    float widest_swing;
+    uint rounds;
+    uint padding;
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer Chains { ReachChain chains[]; };
+layout(std430, set = 0, binding = 2) readonly buffer Joints { uint joints[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Carried { uint carried[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= chains.length()) {
+        return;
+    }
+    ReachChain chain = chains[index];
+    if (chain.weight <= 0.0 || chain.joint_count < 2u) {
+        return;
+    }
+    uint tip = joints[chain.joint_start + chain.joint_count - 1u];
+
+    for (uint round = 0u; round < chain.rounds; ++round) {
+        for (uint step = 0u; step + 1u < chain.joint_count; ++step) {
+            uint along = chain.joint_count - 2u - step;
+            uint joint = joints[chain.joint_start + along];
+            vec3 pivot = bone_transforms[joint][3].xyz;
+            vec3 toward_tip = bone_transforms[tip][3].xyz - pivot;
+            vec3 toward_goal = chain.goal.xyz - pivot;
+            if (length(toward_tip) < 1.0e-5 || length(toward_goal) < 1.0e-5) {
+                continue;
+            }
+            vec4 turn = turn_weighted(
+                turn_clamped(turn_from_to(toward_tip, toward_goal), chain.widest_swing),
+                chain.weight
+            );
+            for (uint after = along; after < chain.joint_count; ++after) {
+                turn_bone_about(joints[chain.joint_start + after], pivot, turn);
+            }
+            for (uint dragged = 0u; dragged < chain.carried_count; ++dragged) {
+                turn_bone_about(carried[chain.carried_start + dragged], pivot, turn);
+            }
+        }
+    }
+}

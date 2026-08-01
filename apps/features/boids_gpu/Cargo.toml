@@ -1,0 +1,41 @@
+﻿[package]
+name = "boids_gpu"
+description = "A 3D flock that never leaves the GPU"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "boids_gpu-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-random.workspace = true
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-wgpu = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-vulkan = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-ui.workspace = true
+nalgebra-glm.workspace = true
+bytemuck.workspace = true
+tracing = { workspace = true }
+
+[features]
+default = ["wgpu"]
+wgpu = ["dep:nightshade-wgpu", "nightshade-app/wgpu"]
+vulkan = ["dep:nightshade-vulkan", "nightshade-app/vulkan"]

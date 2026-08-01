@@ -1,151 +1,15 @@
-//! System-parameter functions over [`DynWorld`]: functions whose
-//! arguments are [`Res`], [`ResMut`], and [`Query`] resolve into runnable
-//! systems the existing [`Schedule`] accepts, with no
-//! `unsafe` and no new executor.
-//!
-//! A system is any function whose parameters are system parameters. Register
-//! it on a [`Schedule`] over a [`DynWorld`] with
-//! [`ScheduleExt::add_system`]:
-//!
-//! ```rust
-//! use nightshade_ecs::Schedule;
-//! use nightshade_ecs::dynamic::DynWorld;
-//! use nightshade_ecs::system_param::{Query, Res, ResMut, ScheduleExt};
-//!
-//! #[derive(Default, Clone, Debug)]
-//! struct Position { x: f32, y: f32 }
-//! #[derive(Default, Clone, Debug)]
-//! struct Velocity { x: f32, y: f32 }
-//!
-//! nightshade_ecs::impl_component!(Position, Velocity);
-//!
-//! struct DeltaTime(f32);
-//! struct Score(u32);
-//!
-//! fn movement(dt: Res<DeltaTime>, mut score: ResMut<Score>, query: Query<(&mut Position, &Velocity)>) {
-//!     query.for_each(|_entity, (position, velocity)| {
-//!         position.x += velocity.x * dt.0;
-//!         position.y += velocity.y * dt.0;
-//!     });
-//!     score.0 += 1;
-//! }
-//!
-//! let mut world = DynWorld::new();
-//! world.insert_resources((DeltaTime(0.5), Score(0)));
-//! world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 2.0, y: 4.0 }));
-//!
-//! let mut schedule = Schedule::new();
-//! schedule.add_system("movement", movement);
-//! schedule.run(&mut world);
-//!
-//! assert_eq!(world.resource::<Score>().unwrap().0, 1);
-//! ```
-//!
-//! Resource parameters ([`Res`], [`ResMut`]) resolve out of the world's
-//! [`ResourceMap`](crate::dynamic::ResourceMap) through the same take/put
-//! scope [`resources_scope`](crate::dynamic::ResourceHostExt::resources_scope)
-//! uses, so they never alias a query's table borrow. Resource parameters
-//! come first, query parameters after.
-//!
-//! A single query parameter borrows the world directly and pays nothing
-//! beyond the query itself. Several query parameters in one system, such as
-//! `fn(a: Query<&mut Position>, b: Query<&Velocity>)`, share the world
-//! through a cell and each take it only for the span of one
-//! [`for_each`](Query::for_each), so the cost is one borrow check per call
-//! rather than anything per entity. Because `for_each` consumes the query,
-//! two of them run in sequence, never nested. Type-level filters ([`With`],
-//! [`Without`], [`Changed`], [`Added`], [`WithTag`], [`WithoutTag`], and
-//! tuples of them) narrow a query as `Query<(&mut Position,), With<Player>>`.
-//! [`ParamSet`] groups queries behind `p0()`/`p1()` accessors when you would
-//! rather name a set than list the queries.
-//!
-//! Resource-only systems, and systems that end in a `&mut W` host argument,
-//! run over any [`ResourceHost`], not just
-//! [`DynWorld`]. So an engine wrapper that implements `ResourceHost` can
-//! register `fn(Res<A>, ResMut<B>, &mut MyWorld)` on its own
-//! `Schedule<MyWorld>`, pulling resources out of the host's map while the
-//! `&mut MyWorld` stays free for the wrapper's own queries. [`Query`]
-//! parameters resolve against [`DynWorld`], and an unfiltered `Query<Q>` also
-//! resolves against a [`DynEcs`] group through
-//! `query_join`. [`ParamSet`], multiple query parameters, and type-level
-//! query filters are [`DynWorld`] only.
-//!
-//! ```rust
-//! use nightshade_ecs::dynamic::DynWorld;
-//! use nightshade_ecs::system_param::{Query, ScheduleExt};
-//!
-//! #[derive(Default, Clone, Debug)]
-//! struct Position { x: f32, y: f32 }
-//! #[derive(Default, Clone, Debug)]
-//! struct Velocity { x: f32, y: f32 }
-//!
-//! nightshade_ecs::impl_component!(Position, Velocity);
-//!
-//! fn drift(positions: Query<&mut Position>, velocities: Query<&Velocity>) {
-//!     let mut total = (0.0, 0.0);
-//!     velocities.for_each(|_entity, velocity| {
-//!         total.0 += velocity.x;
-//!         total.1 += velocity.y;
-//!     });
-//!     positions.for_each(|_entity, position| {
-//!         position.x += total.0;
-//!         position.y += total.1;
-//!     });
-//! }
-//!
-//! let mut world = DynWorld::new();
-//! world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 1.0, y: 2.0 }));
-//!
-//! let mut schedule = nightshade_ecs::Schedule::new();
-//! schedule.add_system("drift", drift);
-//! schedule.run(&mut world);
-//!
-//! assert_eq!(world.get::<Position>(world.query_ref::<&Position>().single().unwrap().0).unwrap().x, 1.0);
-//! ```
-//!
-//! [`EventReader`] and [`EventWriter`] are extract parameters over the host's
-//! event bus. A writer buffers its sends and flushes them after the system
-//! returns; a reader keeps its own cursor in the runner, so it sees each event
-//! once and coexists with a [`Query`] borrowing the world in the same system.
-//!
-//! ```rust
-//! use nightshade_ecs::Schedule;
-//! use nightshade_ecs::dynamic::DynWorld;
-//! use nightshade_ecs::system_param::{EventReader, EventWriter, ResMut, ScheduleExt};
-//!
-//! #[derive(Clone)]
-//! struct Damaged { amount: u32 }
-//! struct Total(u32);
-//!
-//! fn emit(mut writer: EventWriter<Damaged>) {
-//!     writer.send(Damaged { amount: 3 });
-//!     writer.send(Damaged { amount: 4 });
-//! }
-//! fn accumulate(reader: EventReader<Damaged>, mut total: ResMut<Total>) {
-//!     for event in &reader {
-//!         total.0 += event.amount;
-//!     }
-//! }
-//!
-//! let mut world = DynWorld::new();
-//! world.insert_resource(Total(0));
-//!
-//! let mut schedule = Schedule::new();
-//! schedule.add_system("emit", emit);
-//! schedule.add_system("accumulate", accumulate);
-//! schedule.run(&mut world);
-//!
-//! assert_eq!(world.resource::<Total>().unwrap().0, 7);
-//! ```
-
+use crate::Command;
 use crate::Entity;
 use crate::Schedule;
-use crate::dynamic::{DynEcs, DynJoin, DynQuery, DynWorld, EventBus, QueryTuple, ResourceHost};
+use crate::access::{Access, SystemAccess};
+use crate::schedule::SystemRunner;
+use crate::{
+    Bundle, CloneBundle, EventBus, QueryBuilder, QueryTuple, ResourceHost, ResourceMap,
+    ResourceSlot, StagedComponents, Storage, World,
+};
 use std::cell::RefCell;
 use std::marker::PhantomData;
 
-/// A shared reference to a resource of type `T`, resolved for a system
-/// parameter. Dereferences to `T`.
 pub struct Res<'world, T> {
     value: &'world T,
 }
@@ -157,8 +21,6 @@ impl<T> std::ops::Deref for Res<'_, T> {
     }
 }
 
-/// An exclusive reference to a resource of type `T`, resolved for a system
-/// parameter. Dereferences to `T` and, mutably, writes through to it.
 pub struct ResMut<'world, T> {
     value: &'world mut T,
 }
@@ -176,21 +38,13 @@ impl<T> std::ops::DerefMut for ResMut<'_, T> {
     }
 }
 
-/// A host that owns an [`EventBus`], so [`EventReader`] and [`EventWriter`]
-/// parameters resolve against it. [`DynWorld`] and [`DynEcs`] both embed one;
-/// a bare [`ResourceHost`] does not, which is why event parameters are
-/// offered over those two containers rather than any host.
 pub trait EventHost {
-    /// The host's event bus, for reading and writing events.
     fn event_bus_mut(&mut self) -> &mut EventBus;
 
-    /// The same bus, shared, for reading events behind a `&self`, such as the
-    /// frame-settled broadcast [`EventBus::read_frame`](crate::dynamic::EventBus::read_frame).
-    /// Must return the same bus as [`event_bus_mut`](Self::event_bus_mut).
     fn event_bus(&self) -> &EventBus;
 }
 
-impl EventHost for DynWorld {
+impl EventHost for World {
     fn event_bus_mut(&mut self) -> &mut EventBus {
         &mut self.events
     }
@@ -200,108 +54,112 @@ impl EventHost for DynWorld {
     }
 }
 
-impl EventHost for DynEcs {
-    fn event_bus_mut(&mut self) -> &mut EventBus {
-        &mut self.events
+pub trait EcsHost {
+    fn split_mut(&mut self) -> (&mut Storage, &mut ResourceMap);
+
+    fn storage(&self) -> &Storage;
+}
+
+impl EcsHost for World {
+    fn split_mut(&mut self) -> (&mut Storage, &mut ResourceMap) {
+        (&mut self.storage, &mut self.resources)
     }
 
-    fn event_bus(&self) -> &EventBus {
-        &self.events
+    fn storage(&self) -> &Storage {
+        &self.storage
     }
 }
 
-/// A system parameter resolved by taking data out of the host before the
-/// system runs and writing data back after. [`Res`], [`ResMut`],
-/// [`EventReader`], and [`EventWriter`] are the extract parameters. Each
-/// carries a [`State`](Self::State) kept in the runner between runs (an event
-/// reader's cursor, say), produces an [`Owned`](Self::Owned) value the
-/// parameter borrows for the call, and flushes through [`apply`](Self::apply)
-/// afterward. Extract parameters lead a system's argument list, ahead of a
-/// [`Query`], [`ParamSet`], or trailing `&mut W` host argument. Because the
-/// owned value is lifted out of the host before the run, an extract parameter
-/// never aliases the world a query borrows.
 pub trait ExtractParam<W> {
-    /// Per-system state kept in the runner across runs.
     type State: Send + 'static;
-    /// The owned value produced for one run; the parameter borrows it.
     type Owned;
-    /// The parameter value handed to the system for a given borrow.
     type Item<'item>;
-    /// The initial state for a freshly registered system.
     fn init() -> Self::State;
-    /// Lifts the owned value out of the host before the run.
-    fn extract(state: &mut Self::State, host: &mut W) -> Self::Owned;
-    /// Wraps the owned value as the parameter value.
-    fn build(owned: &mut Self::Owned) -> Self::Item<'_>;
-    /// Writes back after the run: a resource returns to the map, buffered
-    /// events flush to the bus, a reader does nothing.
-    fn apply(state: &mut Self::State, owned: Self::Owned, host: &mut W);
+    fn extract(state: &mut Self::State, host: &W) -> Self::Owned;
+    fn resources() -> Vec<ResourceNeed> {
+        Vec::new()
+    }
+    fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+        owned: &'a mut Self::Owned,
+        slots: &mut I,
+        resources: &'a ResourceMap,
+    ) -> Self::Item<'a>;
+    fn apply(state: &mut Self::State, owned: Self::Owned, host: &W);
+    fn access() -> SystemAccess {
+        SystemAccess::exclusive()
+    }
+    fn warm(_host: &mut W) {}
+    fn flush(_host: &mut W) {}
 }
 
-impl<W: ResourceHost, T: Send + Sync + 'static> ExtractParam<W> for Res<'_, T> {
-    type State = ();
-    type Owned = T;
-    type Item<'item> = Res<'item, T>;
-    fn init() -> Self::State {}
-    fn extract(_state: &mut (), host: &mut W) -> T {
-        host.resource_map_mut().remove::<T>().unwrap_or_else(|| {
-            panic!(
-                "system requires resource {} to be present",
-                std::any::type_name::<T>()
-            )
-        })
-    }
-    fn build(owned: &mut T) -> Res<'_, T> {
-        Res { value: owned }
-    }
-    fn apply(_state: &mut (), owned: T, host: &mut W) {
-        host.resource_map_mut().insert(owned);
-    }
+macro_rules! impl_resource_param {
+    ($wrapper:ident, $need:ident, $access:ident, $next:ident) => {
+        impl<W: ResourceHost, T: Send + Sync + 'static> ExtractParam<W> for $wrapper<'_, T> {
+            type State = ();
+            type Owned = ();
+            type Item<'item> = $wrapper<'item, T>;
+            fn init() -> Self::State {}
+            fn resources() -> Vec<ResourceNeed> {
+                vec![ResourceNeed::$need::<T>()]
+            }
+            fn extract(_state: &mut (), _host: &W) {}
+            fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+                _owned: &'a mut (),
+                slots: &mut I,
+                _resources: &'a ResourceMap,
+            ) -> $wrapper<'a, T> {
+                $wrapper {
+                    value: $next(slots).expect("the runner lends a slot for a required resource"),
+                }
+            }
+            fn apply(_state: &mut (), _owned: (), _host: &W) {}
+            fn access() -> SystemAccess {
+                SystemAccess::empty().with_resource(std::any::TypeId::of::<T>(), Access::$access)
+            }
+        }
+
+        impl<W: ResourceHost, T: Send + Sync + 'static> ExtractParam<W>
+            for Option<$wrapper<'_, T>>
+        {
+            type State = ();
+            type Owned = ();
+            type Item<'item> = Option<$wrapper<'item, T>>;
+            fn init() -> Self::State {}
+            fn resources() -> Vec<ResourceNeed> {
+                vec![ResourceNeed::optional(ResourceNeed::$need::<T>())]
+            }
+            fn extract(_state: &mut (), _host: &W) {}
+            fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+                _owned: &'a mut (),
+                slots: &mut I,
+                _resources: &'a ResourceMap,
+            ) -> Option<$wrapper<'a, T>> {
+                $next(slots).map(|value| $wrapper { value })
+            }
+            fn apply(_state: &mut (), _owned: (), _host: &W) {}
+            fn access() -> SystemAccess {
+                SystemAccess::empty().with_resource(std::any::TypeId::of::<T>(), Access::$access)
+            }
+        }
+    };
 }
 
-impl<W: ResourceHost, T: Send + Sync + 'static> ExtractParam<W> for ResMut<'_, T> {
-    type State = ();
-    type Owned = T;
-    type Item<'item> = ResMut<'item, T>;
-    fn init() -> Self::State {}
-    fn extract(_state: &mut (), host: &mut W) -> T {
-        host.resource_map_mut().remove::<T>().unwrap_or_else(|| {
-            panic!(
-                "system requires resource {} to be present",
-                std::any::type_name::<T>()
-            )
-        })
-    }
-    fn build(owned: &mut T) -> ResMut<'_, T> {
-        ResMut { value: owned }
-    }
-    fn apply(_state: &mut (), owned: T, host: &mut W) {
-        host.resource_map_mut().insert(owned);
-    }
-}
+impl_resource_param!(Res, read, Read, next_resource_ref);
+impl_resource_param!(ResMut, write, Write, next_resource_mut);
 
-/// A system parameter that reads events of type `T` from the host's event
-/// bus, delivering each event to this system exactly once across frames. The
-/// reader keeps its own cursor in the runner, so two systems reading the same
-/// event type advance independently and neither disturbs the bus's two-frame
-/// buffer. Events are copied out for the run, so `T` is [`Clone`], and a
-/// [`Query`] in the same system borrows the world freely alongside it.
 pub struct EventReader<'a, T: Clone + Send + Sync + 'static> {
     events: &'a [T],
 }
 
 impl<T: Clone + Send + Sync + 'static> EventReader<'_, T> {
-    /// Visits the events delivered to this reader this run, oldest first.
     pub fn iter(&self) -> std::slice::Iter<'_, T> {
         self.events.iter()
     }
 
-    /// The number of events delivered to this reader this run.
     pub fn len(&self) -> usize {
         self.events.len()
     }
 
-    /// Whether no events were delivered to this reader this run.
     pub fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
@@ -322,30 +180,31 @@ impl<W: EventHost, T: Clone + Send + Sync + 'static> ExtractParam<W> for EventRe
     fn init() -> u64 {
         0
     }
-    fn extract(state: &mut u64, host: &mut W) -> Vec<T> {
-        host.event_bus_mut().consume::<T>(state).to_vec()
+    fn extract(state: &mut u64, host: &W) -> Vec<T> {
+        host.event_bus().consume::<T>(state).to_vec()
     }
-    fn build(owned: &mut Vec<T>) -> EventReader<'_, T> {
+    fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+        owned: &'a mut Vec<T>,
+        _slots: &mut I,
+        _resources: &'a ResourceMap,
+    ) -> EventReader<'a, T> {
         EventReader { events: owned }
     }
-    fn apply(_state: &mut u64, _owned: Vec<T>, _host: &mut W) {}
+    fn apply(_state: &mut u64, _owned: Vec<T>, _host: &W) {}
+    fn access() -> SystemAccess {
+        SystemAccess::empty().with_event(std::any::TypeId::of::<T>(), Access::Read)
+    }
 }
 
-/// A system parameter that writes events of type `T` to the host's event bus.
-/// Sends are buffered during the run and flushed to the bus after the system
-/// returns, so a writer and a [`Query`] coexist without contending for the
-/// world. Readers pick the events up through the bus's two-frame buffer.
 pub struct EventWriter<'a, T: Send + Sync + 'static> {
     pending: &'a mut Vec<T>,
 }
 
 impl<T: Send + Sync + 'static> EventWriter<'_, T> {
-    /// Buffers one event to flush to the bus after the system runs.
     pub fn send(&mut self, event: T) {
         self.pending.push(event);
     }
 
-    /// Buffers a batch of events to flush after the system runs.
     pub fn send_batch(&mut self, events: impl IntoIterator<Item = T>) {
         self.pending.extend(events);
     }
@@ -356,95 +215,333 @@ impl<W: EventHost, T: Send + Sync + 'static> ExtractParam<W> for EventWriter<'_,
     type Owned = Vec<T>;
     type Item<'item> = EventWriter<'item, T>;
     fn init() -> Self::State {}
-    fn extract(_state: &mut (), _host: &mut W) -> Vec<T> {
+    fn extract(_state: &mut (), _host: &W) -> Vec<T> {
         Vec::new()
     }
-    fn build(owned: &mut Vec<T>) -> EventWriter<'_, T> {
+    fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+        owned: &'a mut Vec<T>,
+        _slots: &mut I,
+        _resources: &'a ResourceMap,
+    ) -> EventWriter<'a, T> {
         EventWriter { pending: owned }
     }
-    fn apply(_state: &mut (), owned: Vec<T>, host: &mut W) {
+    fn apply(_state: &mut (), owned: Vec<T>, host: &W) {
         for event in owned {
-            host.event_bus_mut().send::<T>(event);
+            host.event_bus().send_shared::<T>(event);
         }
+    }
+    fn access() -> SystemAccess {
+        SystemAccess::empty().with_event(std::any::TypeId::of::<T>(), Access::Write)
+    }
+    fn warm(host: &mut W) {
+        host.event_bus_mut().ensure_channel::<T>();
     }
 }
 
-/// A type-level query filter: [`With`], [`Without`], [`Changed`], [`Added`],
-/// the unit type for no filter, or a tuple of filters applied in order.
+pub struct MainThread;
+
+impl<W> ExtractParam<W> for MainThread {
+    type State = ();
+    type Owned = ();
+    type Item<'item> = MainThread;
+
+    fn init() -> Self::State {}
+
+    fn extract(_state: &mut Self::State, _host: &W) -> Self::Owned {}
+
+    fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+        _owned: &'a mut Self::Owned,
+        _slots: &mut I,
+        _resources: &'a ResourceMap,
+    ) -> Self::Item<'a> {
+        MainThread
+    }
+
+    fn apply(_state: &mut Self::State, _owned: Self::Owned, _host: &W) {}
+
+    fn access() -> SystemAccess {
+        SystemAccess::empty().main_thread()
+    }
+}
+
+#[derive(Default)]
+pub struct CommandBuffer {
+    commands: Vec<Command>,
+    reserved: Vec<Entity>,
+    ids: Option<crate::IdCursor>,
+    staged: StagedComponents,
+}
+
+pub struct Commands<'a> {
+    pending: &'a mut CommandBuffer,
+}
+
+impl CommandBuffer {
+    pub fn drawing_from(cursor: crate::IdCursor) -> Self {
+        Self {
+            ids: Some(cursor),
+            ..Self::default()
+        }
+    }
+
+    pub fn take_reserved(&mut self) -> Vec<Entity> {
+        std::mem::take(&mut self.reserved)
+    }
+
+    pub(crate) fn take_commands(&mut self) -> Vec<Command> {
+        std::mem::take(&mut self.commands)
+    }
+}
+
+impl<'a> Commands<'a> {
+    pub fn over(pending: &'a mut CommandBuffer) -> Self {
+        Self { pending }
+    }
+}
+
+impl Commands<'_> {
+    pub fn queue(
+        &mut self,
+        command: impl FnOnce(&mut Storage, &mut ResourceMap) + Send + Sync + 'static,
+    ) {
+        self.pending
+            .commands
+            .push(Command::Closure(Box::new(command)));
+    }
+
+    pub fn reserve_entity(&mut self) -> Entity {
+        let id = match &self.pending.ids {
+            Some(cursor) => cursor.next(),
+            None => panic!("a command buffer reserves ids from the world's cursor"),
+        };
+        let entity = Entity { id, generation: 0 };
+        self.pending.reserved.push(entity);
+        entity
+    }
+
+    pub fn spawn<B: CloneBundle + Send + Sync + 'static>(&mut self, bundle: B) -> Entity {
+        let entity = self.reserve_entity();
+        self.spawn_reserved(entity, bundle);
+        entity
+    }
+
+    pub fn spawn_reserved<B: CloneBundle + Send + Sync + 'static>(
+        &mut self,
+        entity: Entity,
+        bundle: B,
+    ) {
+        bundle.stage(entity, &mut self.pending.staged);
+        self.queue(move |storage, _| {
+            let mask = B::component_mask(storage);
+            if !storage.contains_entity(entity) {
+                storage.insert_row(entity, mask);
+            }
+            bundle.write(storage, entity);
+        });
+    }
+
+    pub fn despawn(&mut self, entity: Entity) {
+        self.pending.commands.push(Command::DespawnEntity(entity));
+    }
+
+    pub fn despawn_batch(&mut self, entities: Vec<Entity>) {
+        self.pending
+            .commands
+            .push(Command::DespawnEntities(entities));
+    }
+
+    pub fn despawn_recursive(&mut self, entity: Entity) {
+        self.queue(move |storage, resources| {
+            let mut targets = resources.res::<crate::HierarchyIndex>().descendants(entity);
+            targets.insert(0, entity);
+            storage.despawn_entities(&targets);
+        });
+    }
+
+    pub fn set<T: Clone + Send + Sync + Default + 'static>(&mut self, entity: Entity, value: T) {
+        self.pending.staged.insert(
+            (std::any::TypeId::of::<T>(), entity),
+            Box::new(value.clone()),
+        );
+        self.queue(move |storage, _| storage.set(entity, value));
+    }
+
+    pub fn staged<T: Send + Sync + 'static>(&self, entity: Entity) -> Option<&T> {
+        self.pending
+            .staged
+            .get(&(std::any::TypeId::of::<T>(), entity))
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    pub fn staged_mut<T: Send + Sync + 'static>(&mut self, entity: Entity) -> Option<&mut T> {
+        self.pending
+            .staged
+            .get_mut(&(std::any::TypeId::of::<T>(), entity))
+            .and_then(|value| value.downcast_mut::<T>())
+    }
+
+    pub fn restage<T: Clone + Send + Sync + Default + 'static>(&mut self, entity: Entity) {
+        let Some(value) = self.staged::<T>(entity).cloned() else {
+            return;
+        };
+        self.queue(move |storage, _| storage.set(entity, value));
+    }
+
+    pub fn insert_bundle<B: Bundle + Send + Sync + 'static>(&mut self, entity: Entity, bundle: B) {
+        self.queue(move |storage, _| storage.insert_bundle(entity, bundle));
+    }
+
+    pub fn remove<B: Bundle + Send + Sync + 'static>(&mut self, entity: Entity) {
+        self.queue(move |storage, _| {
+            storage.remove_components::<B>(entity);
+        });
+    }
+
+    pub fn add_tag_type<T: 'static>(&mut self, entity: Entity) {
+        self.queue(move |storage, _| storage.add_tag_type::<T>(entity));
+    }
+
+    pub fn remove_tag_type<T: 'static>(&mut self, entity: Entity) {
+        self.queue(move |storage, _| {
+            storage.remove_tag_type::<T>(entity);
+        });
+    }
+}
+
+impl<W: EcsHost> ExtractParam<W> for Commands<'_> {
+    type State = ();
+    type Owned = CommandBuffer;
+    type Item<'item> = Commands<'item>;
+
+    fn init() -> Self::State {}
+
+    fn extract(_state: &mut (), host: &W) -> CommandBuffer {
+        CommandBuffer::drawing_from(host.storage().allocator.next_id.clone())
+    }
+
+    fn build<'a, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+        owned: &'a mut CommandBuffer,
+        _slots: &mut I,
+        _resources: &'a ResourceMap,
+    ) -> Commands<'a> {
+        Commands { pending: owned }
+    }
+
+    fn apply(_state: &mut (), owned: CommandBuffer, host: &W) {
+        host.storage()
+            .defer_commands(owned.commands, owned.reserved);
+    }
+
+    fn flush(host: &mut W) {
+        apply_deferred_commands(host);
+    }
+
+    fn access() -> SystemAccess {
+        SystemAccess::empty()
+    }
+}
+
+pub fn apply_deferred_commands<W: EcsHost>(host: &mut W) {
+    let (storage, resources) = host.split_mut();
+    for parked in storage.take_deferred_commands() {
+        for entity in parked.reserved {
+            storage.allocator.revive(entity);
+        }
+        storage.extend_commands(parked.commands);
+        let commands = storage.take_commands();
+        crate::apply_commands_to(commands, storage, resources);
+    }
+}
+
 pub trait QueryFilter {
-    /// Applies this filter to a query builder.
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q>;
+    fn apply<Q: QueryTuple>(query: QueryBuilder<'_, Q>) -> QueryBuilder<'_, Q>;
+
+    fn register(_world: &mut Storage) {}
+
+    fn filter_access(access: SystemAccess) -> SystemAccess {
+        access
+    }
 }
 
 impl QueryFilter for () {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
+    fn apply<Q: QueryTuple>(query: QueryBuilder<'_, Q>) -> QueryBuilder<'_, Q> {
         query
     }
 }
 
-/// Restricts a query to entities that also carry component `T`, without
-/// fetching it.
-pub struct With<T>(PhantomData<fn() -> T>);
+macro_rules! impl_query_filter {
+    ($filter:ident, $bound:path, $method:ident, $register:ident $(, $access:expr)?) => {
+        pub struct $filter<T>(PhantomData<fn() -> T>);
 
-impl<T: Send + Sync + Default + 'static> QueryFilter for With<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.with::<T>()
-    }
+        impl<T: $bound> QueryFilter for $filter<T> {
+            fn apply<Q: QueryTuple>(query: QueryBuilder<'_, Q>) -> QueryBuilder<'_, Q> {
+                query.$method::<T>()
+            }
+
+            fn register(world: &mut Storage) {
+                world.$register::<T>();
+            }
+
+            $(
+                fn filter_access(access: SystemAccess) -> SystemAccess {
+                    let build: fn(SystemAccess, std::any::TypeId) -> SystemAccess = $access;
+                    build(access, std::any::TypeId::of::<T>())
+                }
+            )?
+        }
+    };
 }
 
-/// Restricts a query to entities that do not carry component `T`.
-pub struct Without<T>(PhantomData<fn() -> T>);
+impl_query_filter!(
+    With,
+    ComponentType,
+    with,
+    component_key,
+    SystemAccess::requiring
+);
+impl_query_filter!(
+    Without,
+    ComponentType,
+    without,
+    component_key,
+    SystemAccess::excluding
+);
+impl_query_filter!(
+    Changed,
+    ComponentType,
+    changed,
+    component_key,
+    |access, type_id| access.with_component(type_id, Access::Read)
+);
+impl_query_filter!(
+    Added,
+    ComponentType,
+    added,
+    component_key,
+    |access, type_id| access.with_component(type_id, Access::Read)
+);
+impl_query_filter!(WithTag, TagType, with_tag_type, tag_key);
+impl_query_filter!(WithoutTag, TagType, without_tag_type, tag_key);
 
-impl<T: Send + Sync + Default + 'static> QueryFilter for Without<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.without::<T>()
-    }
-}
+pub trait ComponentType: Send + Sync + Default + 'static {}
 
-/// Restricts a query to entities whose component `T` changed since the last
-/// step. `T` must appear in the query tuple.
-pub struct Changed<T>(PhantomData<fn() -> T>);
+impl<T: Send + Sync + Default + 'static> ComponentType for T {}
 
-impl<T: Send + Sync + Default + 'static> QueryFilter for Changed<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.changed::<T>()
-    }
-}
+pub trait TagType: 'static {}
 
-/// Restricts a query to entities that gained component `T` since the last
-/// step. `T` must appear in the query tuple.
-pub struct Added<T>(PhantomData<fn() -> T>);
-
-impl<T: Send + Sync + Default + 'static> QueryFilter for Added<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.added::<T>()
-    }
-}
-
-/// Restricts a query to entities carrying the marker tag type `T`.
-pub struct WithTag<T>(PhantomData<fn() -> T>);
-
-impl<T: 'static> QueryFilter for WithTag<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.with_tag_type::<T>()
-    }
-}
-
-/// Restricts a query to entities not carrying the marker tag type `T`.
-pub struct WithoutTag<T>(PhantomData<fn() -> T>);
-
-impl<T: 'static> QueryFilter for WithoutTag<T> {
-    fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
-        query.without_tag_type::<T>()
-    }
-}
+impl<T: 'static> TagType for T {}
 
 macro_rules! impl_query_filter_tuple {
     ($($filter:ident),+) => {
         impl<$($filter: QueryFilter),+> QueryFilter for ($($filter,)+) {
-            fn apply<Q: QueryTuple>(query: DynQuery<'_, Q>) -> DynQuery<'_, Q> {
+            fn apply<Q: QueryTuple>(query: QueryBuilder<'_, Q>) -> QueryBuilder<'_, Q> {
                 $(let query = $filter::apply(query);)+
                 query
+            }
+
+            fn filter_access(access: SystemAccess) -> SystemAccess {
+                $(let access = $filter::filter_access(access);)+
+                access
             }
         }
     };
@@ -456,575 +553,445 @@ impl_query_filter_tuple!(A, B, C);
 impl_query_filter_tuple!(A, B, C, D);
 
 enum QueryState<'world, Q: QueryTuple> {
-    Eager(DynQuery<'world, Q>),
-    Lazy(&'world RefCell<&'world mut DynWorld>),
-    Join(DynJoin<'world, Q>),
+    Eager(Box<QueryBuilder<'world, Q>>),
+    Lazy(&'world RefCell<&'world Storage>),
 }
 
-/// A query system parameter over tuple `Q` with type-level filter `F`. The
-/// filter defaults to none. A single query parameter borrows the world
-/// directly; several query parameters in one system share the world through
-/// a cell and take it one [`for_each`](Self::for_each) at a time.
 pub struct Query<'world, Q: QueryTuple, F: QueryFilter = ()> {
     state: QueryState<'world, Q>,
     filter: PhantomData<fn() -> F>,
 }
 
 impl<'world, Q: QueryTuple, F: QueryFilter> Query<'world, Q, F> {
-    /// Visits every matching entity with its fetched components.
     pub fn for_each(self, f: impl for<'item> FnMut(Entity, Q::Item<'item>)) {
         match self.state {
-            QueryState::Eager(query) => F::apply(query).for_each(f),
+            QueryState::Eager(query) => F::apply(*query).for_each(f),
             QueryState::Lazy(cell) => {
-                let mut guard = cell.borrow_mut();
-                let world: &mut DynWorld = &mut guard;
-                F::apply(world.query::<Q>()).for_each(f);
+                let guard = cell.borrow_mut();
+                F::apply(guard.query_shared::<Q>()).for_each(f);
             }
-            QueryState::Join(join) => join.for_each(f),
         }
     }
 
-    /// The parallel form of [`for_each`](Self::for_each), table-granular.
-    #[cfg(not(target_family = "wasm"))]
-    pub fn par_for_each<Fun>(self, f: Fun)
-    where
-        Fun: for<'item> Fn(Entity, Q::Item<'item>) + Send + Sync,
-    {
-        match self.state {
-            QueryState::Eager(query) => F::apply(query).par_for_each(f),
+    pub fn for_each_mut(&mut self, f: impl for<'item> FnMut(Entity, Q::Item<'item>)) {
+        match &mut self.state {
+            QueryState::Eager(query) => F::apply(query.reborrow()).for_each(f),
             QueryState::Lazy(cell) => {
-                let mut guard = cell.borrow_mut();
-                let world: &mut DynWorld = &mut guard;
-                F::apply(world.query::<Q>()).par_for_each(f);
+                let guard = cell.borrow_mut();
+                F::apply(guard.query_shared::<Q>()).for_each(f);
             }
-            QueryState::Join(join) => join.par_for_each(f),
+        }
+    }
+
+    pub fn for_entity(&mut self, entity: Entity, f: impl for<'item> FnOnce(Q::Item<'item>)) {
+        match &mut self.state {
+            QueryState::Eager(query) => F::apply(query.reborrow()).for_entity(entity, f),
+            QueryState::Lazy(cell) => {
+                let guard = cell.borrow_mut();
+                F::apply(guard.query_shared::<Q>()).for_entity(entity, f);
+            }
         }
     }
 }
 
-/// A world-borrowing system parameter in the single-query slot, resolved
-/// after the resource parameters are lifted out. Implemented for [`Query`]
-/// and [`ParamSet`].
+pub fn warm_query<Q: QueryTuple, F: QueryFilter>(world: &mut Storage) {
+    F::register(world);
+    let element_masks = Q::element_masks(world);
+    let required = Q::required_mask_from(&element_masks);
+    let (include, exclude) = {
+        let builder = F::apply(QueryBuilder::<Q>::over(&*world, element_masks, required));
+        (builder.include, builder.exclude)
+    };
+    world.warm_masks(include, exclude);
+}
+
 pub trait WorldParam {
-    /// The parameter value handed to the system for a given borrow.
     type Item<'world>;
-    /// Resolves the parameter against the world.
-    fn build(world: &mut DynWorld) -> Self::Item<'_>;
+    fn build(world: &Storage) -> Self::Item<'_>;
+    fn access() -> SystemAccess;
+    fn warm(world: &mut Storage);
 }
 
 impl<'a, Q: QueryTuple, F: QueryFilter> WorldParam for Query<'a, Q, F> {
     type Item<'world> = Query<'world, Q, F>;
-    fn build(world: &mut DynWorld) -> Query<'_, Q, F> {
+    fn build(world: &Storage) -> Query<'_, Q, F> {
         Query {
-            state: QueryState::Eager(world.query::<Q>()),
+            state: QueryState::Eager(Box::new(world.query_shared::<Q>())),
             filter: PhantomData,
         }
     }
-}
-
-/// A query parameter resolved against a [`DynEcs`] group through
-/// [`query_join`](crate::dynamic::DynEcs::query_join), so a system over a
-/// `Schedule<DynEcs>` can take a `Query`. Group queries join across member
-/// worlds under the driver rule, and carry no type-level filter, so only the
-/// unfiltered [`Query<Q>`](Query) is an `EcsParam`. Filter a group query by
-/// taking the group as a `&mut DynEcs` host argument and calling
-/// `query_join` with its builder methods.
-pub trait EcsParam {
-    /// The parameter value handed to the system for a given borrow.
-    type Item<'ecs>;
-    /// Resolves the parameter against the group.
-    fn build_ecs(ecs: &mut DynEcs) -> Self::Item<'_>;
-}
-
-impl<'a, Q: QueryTuple> EcsParam for Query<'a, Q, ()> {
-    type Item<'ecs> = Query<'ecs, Q, ()>;
-    fn build_ecs(ecs: &mut DynEcs) -> Query<'_, Q, ()> {
-        Query {
-            state: QueryState::Join(ecs.query_join::<Q>()),
-            filter: PhantomData,
-        }
+    fn access() -> SystemAccess {
+        F::filter_access(Q::component_access(SystemAccess::empty()))
+    }
+    fn warm(world: &mut Storage) {
+        warm_query::<Q, F>(world);
     }
 }
 
-/// A query parameter that shares the world with sibling query parameters
-/// through a cell, so a system can take several [`Query`] arguments. Each
-/// query borrows the world only for the span of one
-/// [`for_each`](Query::for_each), so two queries never iterate at once.
-pub trait MultiQueryParam {
-    /// The parameter value handed to the system for a given borrow.
+pub trait StorageParam {
     type Item<'world>;
-    /// Resolves the parameter against the shared world cell.
-    fn build_lazy<'world>(cell: &'world RefCell<&'world mut DynWorld>) -> Self::Item<'world>;
+    fn build(world: &mut Storage) -> Self::Item<'_>;
+    fn access() -> SystemAccess;
+}
+
+impl StorageParam for &mut Storage {
+    type Item<'world> = &'world mut Storage;
+    fn build(world: &mut Storage) -> &mut Storage {
+        world
+    }
+    fn access() -> SystemAccess {
+        SystemAccess::exclusive()
+    }
+}
+
+pub trait MultiQueryParam {
+    type Item<'world>;
+    fn build_lazy<'world>(cell: &'world RefCell<&'world Storage>) -> Self::Item<'world>;
+    fn access() -> SystemAccess;
+    fn warm(world: &mut Storage);
 }
 
 impl<'a, Q: QueryTuple, F: QueryFilter> MultiQueryParam for Query<'a, Q, F> {
     type Item<'world> = Query<'world, Q, F>;
-    fn build_lazy<'world>(cell: &'world RefCell<&'world mut DynWorld>) -> Query<'world, Q, F> {
+    fn build_lazy<'world>(cell: &'world RefCell<&'world Storage>) -> Query<'world, Q, F> {
         Query {
             state: QueryState::Lazy(cell),
             filter: PhantomData,
         }
     }
+    fn access() -> SystemAccess {
+        F::filter_access(Q::component_access(SystemAccess::empty()))
+    }
+    fn warm(world: &mut Storage) {
+        warm_query::<Q, F>(world);
+    }
 }
 
-/// A set of conflicting query parameters accessed one at a time. Holds the
-/// world and lends each member query through [`p0`](Self::p0),
-/// [`p1`](Self::p1), and so on, so two mutable queries never live at once.
-pub struct ParamSet<'world, T> {
-    world: &'world mut DynWorld,
-    marker: PhantomData<fn() -> T>,
+pub trait QueryBundle: MultiQueryParam {}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ResourceNeed {
+    pub type_id: std::any::TypeId,
+    pub name: &'static str,
+    pub optional: bool,
+    pub write: bool,
 }
 
-impl<'a, T: 'static> WorldParam for ParamSet<'a, T>
-where
-    ParamSet<'a, T>: ParamSetAccess,
-{
-    type Item<'world> = ParamSet<'world, T>;
-    fn build(world: &mut DynWorld) -> ParamSet<'_, T> {
-        ParamSet {
-            world,
-            marker: PhantomData,
+impl ResourceNeed {
+    pub fn read<T: 'static>() -> Self {
+        Self::of::<T>(false, false)
+    }
+
+    pub fn write<T: 'static>() -> Self {
+        Self::of::<T>(false, true)
+    }
+
+    pub fn optional_read<T: 'static>() -> Self {
+        Self::of::<T>(true, false)
+    }
+
+    pub fn optional_write<T: 'static>() -> Self {
+        Self::of::<T>(true, true)
+    }
+
+    pub fn optional(mut self) -> Self {
+        self.optional = true;
+        self
+    }
+
+    fn of<T: 'static>(optional: bool, write: bool) -> Self {
+        Self {
+            type_id: std::any::TypeId::of::<T>(),
+            name: std::any::type_name::<T>(),
+            optional,
+            write,
         }
     }
 }
 
-/// Marks the [`ParamSet`] tuples that expose member accessors.
-pub trait ParamSetAccess {}
+pub fn declared_resources(per_param: &[Vec<ResourceNeed>]) -> Vec<ResourceNeed> {
+    per_param.iter().flatten().copied().collect()
+}
 
-impl<P0: WorldParam, P1: WorldParam> ParamSetAccess for ParamSet<'_, (P0, P1)> {}
-
-impl<'world, P0: WorldParam, P1: WorldParam> ParamSet<'world, (P0, P1)> {
-    /// Borrows the world for the first member query.
-    pub fn p0(&mut self) -> P0::Item<'_> {
-        P0::build(self.world)
-    }
-
-    /// Borrows the world for the second member query.
-    pub fn p1(&mut self) -> P1::Item<'_> {
-        P1::build(self.world)
+pub fn assert_resources_named_once<Func>(declared: &[ResourceNeed]) {
+    for (index, need) in declared.iter().enumerate() {
+        if declared[..index]
+            .iter()
+            .any(|seen| seen.type_id == need.type_id)
+        {
+            panic!(
+                "system {} names resource {} through two parameters",
+                std::any::type_name::<Func>(),
+                need.name
+            );
+        }
     }
 }
 
-impl<P0: WorldParam, P1: WorldParam, P2: WorldParam> ParamSetAccess for ParamSet<'_, (P0, P1, P2)> {}
-
-impl<'world, P0: WorldParam, P1: WorldParam, P2: WorldParam> ParamSet<'world, (P0, P1, P2)> {
-    /// Borrows the world for the first member query.
-    pub fn p0(&mut self) -> P0::Item<'_> {
-        P0::build(self.world)
-    }
-
-    /// Borrows the world for the second member query.
-    pub fn p1(&mut self) -> P1::Item<'_> {
-        P1::build(self.world)
-    }
-
-    /// Borrows the world for the third member query.
-    pub fn p2(&mut self) -> P2::Item<'_> {
-        P2::build(self.world)
-    }
+pub fn resource_borrows(
+    resources: &ResourceMap,
+    declared: &[ResourceNeed],
+) -> Vec<Option<crate::ResourceBorrow>> {
+    declared
+        .iter()
+        .map(|need| match resources.id_of_type(&need.type_id) {
+            Some(id) if resources.holds(need.type_id) => Some(crate::ResourceBorrow {
+                id,
+                write: need.write,
+            }),
+            _ if need.optional => None,
+            _ => panic!("system requires resource {} to be present", need.name),
+        })
+        .collect()
 }
 
-/// Converts a system-parameter function into a runner the
-/// [`Schedule`] accepts, over a world type `W`. `Marker` is inferred from
-/// the function's parameter types. Resource-only systems (`fn(Res<A>,
-/// ResMut<B>)`) and systems that take the host as a final `&mut W` argument
-/// work over any [`ResourceHost`]; systems with [`Query`]/[`ParamSet`]
-/// parameters resolve against [`DynWorld`] specifically. Register through
-/// [`ScheduleExt::add_system`].
+fn next_resource_ref<'a, T: Send + Sync + 'static, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+    slots: &mut I,
+) -> Option<&'a T> {
+    slots
+        .next()
+        .expect("the runner lends one slot per resource a parameter names")
+        .map(|slot| slot.into_ref::<T>())
+}
+
+fn next_resource_mut<'a, T: Send + Sync + 'static, I: Iterator<Item = Option<ResourceSlot<'a>>>>(
+    slots: &mut I,
+) -> Option<&'a mut T> {
+    slots
+        .next()
+        .expect("the runner lends one slot per resource a parameter names")
+        .map(|slot| slot.into_mut::<T>())
+}
+
 pub trait IntoSystem<W, Marker>: Sized {
-    /// Wraps the function into a closure that resolves its parameters from
-    /// the world on each call.
-    fn into_runner(self) -> impl FnMut(&mut W) + Send + 'static;
+    fn into_runner(self) -> SystemRunner<W>;
+
+    fn access() -> SystemAccess {
+        SystemAccess::exclusive()
+    }
+
+    fn warmer() -> Option<fn(&mut W)> {
+        None
+    }
+
+    fn flusher() -> Option<fn(&mut W)> {
+        None
+    }
+
+    fn declared_resources() -> Vec<ResourceNeed> {
+        Vec::new()
+    }
 }
 
-/// Registers system-parameter functions on a [`Schedule<W>`](crate::Schedule),
-/// resolving [`Res`]/[`ResMut`]/[`Query`] parameters per run.
 pub trait ScheduleExt<W> {
-    /// Adds a system-parameter function under `name`, like
-    /// [`Schedule::push`](crate::Schedule::push) for plain systems. Returns
-    /// `&mut Self`, so calls chain in builder style.
-    fn add_system<Marker>(
-        &mut self,
-        name: &'static str,
-        system: impl IntoSystem<W, Marker>,
-    ) -> &mut Self;
-
-    /// Adds a system-parameter function that runs only on the passes where
-    /// `condition` holds, the param-system form of
-    /// [`Schedule::push_if`](crate::Schedule::push_if). The condition reads
-    /// the world each pass; a false skips the system for that pass without
-    /// removing it. This is how a run condition composes with resource,
-    /// query, and event parameters, so gating a system on a state the host
-    /// carries stays declarative: pass `|world| in_state(world, ...)` as the
-    /// condition. The state machinery itself belongs to the host, not here.
-    fn add_system_if<Marker>(
-        &mut self,
-        name: &'static str,
-        condition: impl Fn(&W) -> bool + Send + 'static,
-        system: impl IntoSystem<W, Marker>,
-    ) -> &mut Self;
-
-    /// Adds a tuple of system-parameter functions in one call, each named
-    /// after its function type, so `schedule.add_systems((movement, score))`
-    /// stands in for one [`add_system`](Self::add_system) per system. Reach
-    /// for `add_system` when a system needs an explicit name for later
-    /// [`replace`](crate::Schedule::replace) or removal.
-    fn add_systems<Marker>(&mut self, systems: impl IntoSystems<W, Marker>) -> &mut Self;
+    fn add_system<Marker, S>(&mut self, name: &'static str, system: S) -> &mut Self
+    where
+        S: IntoSystem<W, Marker>;
 }
 
 impl<W> ScheduleExt<W> for Schedule<W> {
-    fn add_system<Marker>(
-        &mut self,
-        name: &'static str,
-        system: impl IntoSystem<W, Marker>,
-    ) -> &mut Self {
-        self.push(name, system.into_runner())
-    }
-
-    fn add_system_if<Marker>(
-        &mut self,
-        name: &'static str,
-        condition: impl Fn(&W) -> bool + Send + 'static,
-        system: impl IntoSystem<W, Marker>,
-    ) -> &mut Self {
-        self.push_if(name, condition, system.into_runner())
-    }
-
-    fn add_systems<Marker>(&mut self, systems: impl IntoSystems<W, Marker>) -> &mut Self {
-        systems.register(self);
-        self
+    fn add_system<Marker, S>(&mut self, name: &'static str, system: S) -> &mut Self
+    where
+        S: IntoSystem<W, Marker>,
+    {
+        self.push_with_access(
+            name,
+            S::access(),
+            S::warmer(),
+            S::flusher(),
+            system.into_runner(),
+        )
     }
 }
 
-fn add_named_system<W, Marker>(schedule: &mut Schedule<W>, system: impl IntoSystem<W, Marker>) {
-    let base = std::any::type_name_of_val(&system);
-    let name = if schedule.contains(base) {
-        let mut suffix = 2;
-        loop {
-            let candidate = format!("{base}#{suffix}");
-            if !schedule.contains(&candidate) {
-                break Box::leak(candidate.into_boxed_str()) as &'static str;
-            }
-            suffix += 1;
+pub fn into_standalone_runner<W, Marker, S>(system: S) -> impl FnMut(&mut W) + Send + 'static
+where
+    S: IntoSystem<W, Marker>,
+    W: 'static,
+{
+    let warmer = S::warmer();
+    let flusher = S::flusher();
+    let mut runner = system.into_runner();
+    move |world: &mut W| {
+        if let Some(warm) = warmer {
+            warm(world);
         }
-    } else {
-        base
-    };
-    schedule.push(name, system.into_runner());
-}
-
-/// A tuple of system-parameter functions registered together by
-/// [`ScheduleExt::add_systems`]. Implemented for tuples of up to eight
-/// systems, each of which is an [`IntoSystem`].
-pub trait IntoSystems<W, Marker> {
-    /// Registers each system in the tuple onto `schedule`.
-    fn register(self, schedule: &mut Schedule<W>);
-}
-
-macro_rules! impl_into_systems {
-    ($(($system:ident, $marker:ident)),+) => {
-        impl<W, $($system, $marker,)+> IntoSystems<W, ($($marker,)+)> for ($($system,)+)
-        where
-            $($system: IntoSystem<W, $marker>,)+
-        {
-            #[allow(non_snake_case)]
-            fn register(self, schedule: &mut Schedule<W>) {
-                let ($($system,)+) = self;
-                $(add_named_system(schedule, $system);)+
-            }
+        runner.run(world);
+        if let Some(flush) = flusher {
+            flush(world);
         }
-    };
+    }
 }
 
-impl_into_systems!((S0, M0));
-impl_into_systems!((S0, M0), (S1, M1));
-impl_into_systems!((S0, M0), (S1, M1), (S2, M2));
-impl_into_systems!((S0, M0), (S1, M1), (S2, M2), (S3, M3));
-impl_into_systems!((S0, M0), (S1, M1), (S2, M2), (S3, M3), (S4, M4));
-impl_into_systems!((S0, M0), (S1, M1), (S2, M2), (S3, M3), (S4, M4), (S5, M5));
-impl_into_systems!(
-    (S0, M0),
-    (S1, M1),
-    (S2, M2),
-    (S3, M3),
-    (S4, M4),
-    (S5, M5),
-    (S6, M6)
-);
-impl_into_systems!(
-    (S0, M0),
-    (S1, M1),
-    (S2, M2),
-    (S3, M3),
-    (S4, M4),
-    (S5, M5),
-    (S6, M6),
-    (S7, M7)
-);
+pub fn run_system<H, Marker>(host: &mut H, system: impl IntoSystem<H, Marker>) {
+    system.into_runner().run(host);
+}
 
-/// The marker for a system whose parameters are all extract parameters.
 pub struct ExtractSystemMarker<E>(PhantomData<fn() -> E>);
 
-/// The marker for a system with extract parameters and one trailing
-/// world-borrowing parameter.
 pub struct QuerySystemMarker<E, Q>(PhantomData<fn() -> (E, Q)>);
 
-impl<Func, Q> IntoSystem<DynWorld, QuerySystemMarker<(), Q>> for Func
+pub struct MultiQuerySystemMarker<R, Q>(PhantomData<fn() -> (R, Q)>);
+
+pub struct BundleSystemMarker<E, B>(PhantomData<fn() -> (E, B)>);
+
+pub struct StorageSystemMarker<E, S>(PhantomData<fn() -> (E, S)>);
+
+impl<H, Func, S> IntoSystem<H, StorageSystemMarker<(), S>> for Func
 where
+    H: EcsHost + 'static,
+    S: StorageParam,
+    Func: FnMut(S) + for<'world> FnMut(S::Item<'world>) + Send + 'static,
+{
+    fn into_runner(mut self) -> SystemRunner<H> {
+        SystemRunner::Exclusive(Box::new(move |host: &mut H| {
+            self(S::build(host.split_mut().0));
+        }))
+    }
+
+    fn access() -> SystemAccess {
+        S::access()
+    }
+}
+
+macro_rules! impl_storage_system {
+    ($($param:ident $state:ident $owned:ident),+) => {
+        impl<H, Func, $($param,)+ S> IntoSystem<H, StorageSystemMarker<($($param,)+), S>> for Func
+        where
+            H: EcsHost + ResourceHost + 'static,
+            $($param: ExtractParam<H>,)+
+            S: StorageParam,
+            Func: FnMut($($param,)+ S)
+                + for<'item> FnMut($($param::Item<'item>,)+ S::Item<'item>)
+                + Send
+                + 'static,
+        {
+            fn into_runner(mut self) -> SystemRunner<H> {
+                let declared = extract_preamble!(Func, H, $($param),+);
+                $(let mut $state = <$param as ExtractParam<H>>::init();)+
+                SystemRunner::Exclusive(Box::new(move |host: &mut H| {
+                    $(let mut $owned =
+                        <$param as ExtractParam<H>>::extract(&mut $state, &*host);)+
+                    let result = {
+                        let (storage, resources) = host.split_mut();
+                        let resources = &*resources;
+                        let borrows = resource_borrows(resources, &declared);
+                        let mut slots = resources.disjoint_slots(&borrows).into_iter();
+                        $(let $owned = <$param as ExtractParam<H>>::build(
+                            &mut $owned,
+                            &mut slots,
+                            resources,
+                        );)+
+                        let rows = S::build(storage);
+                        let this = &mut self;
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                            this($($owned,)+ rows);
+                        }))
+                    };
+                    $(<$param as ExtractParam<H>>::apply(&mut $state, $owned, &*host);)+
+                    if let Err(panic) = result {
+                        std::panic::resume_unwind(panic);
+                    }
+                }))
+            }
+
+            fn access() -> SystemAccess {
+                SystemAccess::empty()
+                    $(.merge(<$param as ExtractParam<H>>::access()))+
+                    .merge(S::access())
+            }
+
+            fn declared_resources() -> Vec<ResourceNeed> {
+                declared_resources(&[$(<$param as ExtractParam<H>>::resources(),)+])
+            }
+
+            fn warmer() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::warm(host);)+
+                })
+            }
+
+            fn flusher() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::flush(host);)+
+                })
+            }
+        }
+    };
+}
+
+impl<H, Func, Q> IntoSystem<H, QuerySystemMarker<(), Q>> for Func
+where
+    H: EcsHost + 'static,
     Q: WorldParam,
     Func: FnMut(Q) + for<'world> FnMut(Q::Item<'world>) + Send + 'static,
 {
-    fn into_runner(mut self) -> impl FnMut(&mut DynWorld) + Send + 'static {
-        move |world: &mut DynWorld| {
-            let query = Q::build(world);
-            self(query);
-        }
+    fn into_runner(mut self) -> SystemRunner<H> {
+        SystemRunner::Shared(Box::new(move |host: &H| {
+            self(Q::build(host.storage()));
+        }))
+    }
+
+    fn access() -> SystemAccess {
+        Q::access()
+    }
+
+    fn warmer() -> Option<fn(&mut H)> {
+        Some(|host: &mut H| Q::warm(host.split_mut().0))
     }
 }
 
-/// The marker for a system whose parameters are all extract parameters
-/// followed by a final `&mut W` host argument.
-pub struct HostSystemMarker<E>(PhantomData<fn() -> E>);
-
-macro_rules! impl_extract_system {
-    ($($param:ident $state:ident $owned:ident),+) => {
-        impl<W, Func, $($param,)+> IntoSystem<W, ExtractSystemMarker<($($param,)+)>>
-            for Func
-        where
-            W: 'static,
-            $($param: ExtractParam<W>,)+
-            Func: FnMut($($param,)+)
-                + for<'item> FnMut($($param::Item<'item>,)+)
-                + Send
-                + 'static,
-        {
-            fn into_runner(mut self) -> impl FnMut(&mut W) + Send + 'static {
-                $(let mut $state = <$param as ExtractParam<W>>::init();)+
-                move |host: &mut W| {
-                    $(let mut $owned = <$param as ExtractParam<W>>::extract(&mut $state, host);)+
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        self($(<$param as ExtractParam<W>>::build(&mut $owned),)+);
-                    }));
-                    $(<$param as ExtractParam<W>>::apply(&mut $state, $owned, host);)+
-                    if let Err(panic) = result {
-                        std::panic::resume_unwind(panic);
-                    }
-                }
-            }
-        }
-
-        impl<W, Func, $($param,)+> IntoSystem<W, HostSystemMarker<($($param,)+)>>
-            for Func
-        where
-            W: 'static,
-            $($param: ExtractParam<W>,)+
-            Func: FnMut($($param,)+ &mut W)
-                + for<'item> FnMut($($param::Item<'item>,)+ &'item mut W)
-                + Send
-                + 'static,
-        {
-            fn into_runner(mut self) -> impl FnMut(&mut W) + Send + 'static {
-                $(let mut $state = <$param as ExtractParam<W>>::init();)+
-                move |host: &mut W| {
-                    $(let mut $owned = <$param as ExtractParam<W>>::extract(&mut $state, host);)+
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        self($(<$param as ExtractParam<W>>::build(&mut $owned),)+ host);
-                    }));
-                    $(<$param as ExtractParam<W>>::apply(&mut $state, $owned, host);)+
-                    if let Err(panic) = result {
-                        std::panic::resume_unwind(panic);
-                    }
-                }
-            }
-        }
-    };
-}
-
-macro_rules! impl_extract_query_system {
-    ($($param:ident $state:ident $owned:ident),+) => {
-        impl<Func, $($param,)+ Q>
-            IntoSystem<DynWorld, QuerySystemMarker<($($param,)+), Q>> for Func
-        where
-            $($param: ExtractParam<DynWorld>,)+
-            Q: WorldParam,
-            Func: FnMut($($param,)+ Q)
-                + for<'item> FnMut($($param::Item<'item>,)+ Q::Item<'item>)
-                + Send
-                + 'static,
-        {
-            fn into_runner(mut self) -> impl FnMut(&mut DynWorld) + Send + 'static {
-                $(let mut $state = <$param as ExtractParam<DynWorld>>::init();)+
-                move |world: &mut DynWorld| {
-                    $(let mut $owned =
-                        <$param as ExtractParam<DynWorld>>::extract(&mut $state, world);)+
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        let query = Q::build(world);
-                        self($(<$param as ExtractParam<DynWorld>>::build(&mut $owned),)+ query);
-                    }));
-                    $(<$param as ExtractParam<DynWorld>>::apply(&mut $state, $owned, world);)+
-                    if let Err(panic) = result {
-                        std::panic::resume_unwind(panic);
-                    }
-                }
-            }
-        }
-    };
-}
-
-impl_extract_system!(P0 state0 owned0);
-impl_extract_system!(P0 state0 owned0, P1 state1 owned1);
-impl_extract_system!(P0 state0 owned0, P1 state1 owned1, P2 state2 owned2);
-impl_extract_system!(P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3);
-impl_extract_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4
-);
-impl_extract_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5
-);
-impl_extract_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5, P6 state6 owned6
-);
-impl_extract_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5, P6 state6 owned6, P7 state7 owned7
-);
-
-impl_extract_query_system!(P0 state0 owned0);
-impl_extract_query_system!(P0 state0 owned0, P1 state1 owned1);
-impl_extract_query_system!(P0 state0 owned0, P1 state1 owned1, P2 state2 owned2);
-impl_extract_query_system!(P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3);
-impl_extract_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4
-);
-impl_extract_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5
-);
-impl_extract_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5, P6 state6 owned6
-);
-
-impl<Func, Q> IntoSystem<DynEcs, QuerySystemMarker<(), Q>> for Func
+impl<H, Func, B> IntoSystem<H, BundleSystemMarker<(), B>> for Func
 where
-    Q: EcsParam,
-    Func: FnMut(Q) + for<'ecs> FnMut(Q::Item<'ecs>) + Send + 'static,
+    H: EcsHost + 'static,
+    B: QueryBundle,
+    Func: FnMut(B) + for<'world> FnMut(B::Item<'world>) + Send + 'static,
 {
-    fn into_runner(mut self) -> impl FnMut(&mut DynEcs) + Send + 'static {
-        move |ecs: &mut DynEcs| {
-            let query = Q::build_ecs(ecs);
-            self(query);
-        }
+    fn into_runner(mut self) -> SystemRunner<H> {
+        SystemRunner::Shared(Box::new(move |host: &H| {
+            let cell = RefCell::new(host.storage());
+            self(B::build_lazy(&cell));
+        }))
+    }
+
+    fn access() -> SystemAccess {
+        <B as MultiQueryParam>::access()
+    }
+
+    fn warmer() -> Option<fn(&mut H)> {
+        Some(|host: &mut H| <B as MultiQueryParam>::warm(host.split_mut().0))
     }
 }
-
-macro_rules! impl_extract_ecs_query_system {
-    ($($param:ident $state:ident $owned:ident),+) => {
-        impl<Func, $($param,)+ Q>
-            IntoSystem<DynEcs, QuerySystemMarker<($($param,)+), Q>> for Func
-        where
-            $($param: ExtractParam<DynEcs>,)+
-            Q: EcsParam,
-            Func: FnMut($($param,)+ Q)
-                + for<'item> FnMut($($param::Item<'item>,)+ Q::Item<'item>)
-                + Send
-                + 'static,
-        {
-            fn into_runner(mut self) -> impl FnMut(&mut DynEcs) + Send + 'static {
-                $(let mut $state = <$param as ExtractParam<DynEcs>>::init();)+
-                move |ecs: &mut DynEcs| {
-                    $(let mut $owned = <$param as ExtractParam<DynEcs>>::extract(&mut $state, ecs);)+
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        let query = Q::build_ecs(ecs);
-                        self($(<$param as ExtractParam<DynEcs>>::build(&mut $owned),)+ query);
-                    }));
-                    $(<$param as ExtractParam<DynEcs>>::apply(&mut $state, $owned, ecs);)+
-                    if let Err(panic) = result {
-                        std::panic::resume_unwind(panic);
-                    }
-                }
-            }
-        }
-    };
-}
-
-impl_extract_ecs_query_system!(P0 state0 owned0);
-impl_extract_ecs_query_system!(P0 state0 owned0, P1 state1 owned1);
-impl_extract_ecs_query_system!(P0 state0 owned0, P1 state1 owned1, P2 state2 owned2);
-impl_extract_ecs_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3
-);
-impl_extract_ecs_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4
-);
-impl_extract_ecs_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5
-);
-impl_extract_ecs_query_system!(
-    P0 state0 owned0, P1 state1 owned1, P2 state2 owned2, P3 state3 owned3, P4 state4 owned4,
-    P5 state5 owned5, P6 state6 owned6
-);
-
-/// The marker for a system with resource parameters and two or more
-/// world-borrowing query parameters resolved through a shared world cell.
-pub struct MultiQuerySystemMarker<R, Q>(PhantomData<fn() -> (R, Q)>);
 
 macro_rules! impl_multi_query_bare {
     ($($query:ident $qbind:ident),+) => {
-        impl<Func, $($query,)+>
-            IntoSystem<DynWorld, MultiQuerySystemMarker<(), ($($query,)+)>> for Func
+        impl<H, Func, $($query,)+>
+            IntoSystem<H, MultiQuerySystemMarker<(), ($($query,)+)>> for Func
         where
+            H: EcsHost + 'static,
             $($query: MultiQueryParam,)+
             Func: FnMut($($query,)+)
                 + for<'world> FnMut($($query::Item<'world>,)+)
                 + Send
                 + 'static,
         {
-            #[allow(non_snake_case)]
-            fn into_runner(mut self) -> impl FnMut(&mut DynWorld) + Send + 'static {
-                move |world: &mut DynWorld| {
-                    let cell = RefCell::new(world);
+            fn into_runner(mut self) -> SystemRunner<H> {
+                SystemRunner::Shared(Box::new(move |host: &H| {
+                    let cell = RefCell::new(host.storage());
                     $(let $qbind = $query::build_lazy(&cell);)+
                     self($($qbind,)+);
-                }
+                }))
             }
-        }
-    };
-}
 
-macro_rules! impl_extract_multi_query {
-    (($($param:ident $state:ident $owned:ident),+), ($($query:ident $qbind:ident),+)) => {
-        impl<Func, $($param,)+ $($query,)+>
-            IntoSystem<DynWorld, MultiQuerySystemMarker<($($param,)+), ($($query,)+)>> for Func
-        where
-            $($param: ExtractParam<DynWorld>,)+
-            $($query: MultiQueryParam,)+
-            Func: FnMut($($param,)+ $($query,)+)
-                + for<'item> FnMut($($param::Item<'item>,)+ $($query::Item<'item>,)+)
-                + Send
-                + 'static,
-        {
-            fn into_runner(mut self) -> impl FnMut(&mut DynWorld) + Send + 'static {
-                $(let mut $state = <$param as ExtractParam<DynWorld>>::init();)+
-                move |world: &mut DynWorld| {
-                    $(let mut $owned =
-                        <$param as ExtractParam<DynWorld>>::extract(&mut $state, world);)+
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        let cell = RefCell::new(&mut *world);
-                        $(let $qbind = $query::build_lazy(&cell);)+
-                        self(
-                            $(<$param as ExtractParam<DynWorld>>::build(&mut $owned),)+
-                            $($qbind,)+
-                        );
-                    }));
-                    $(<$param as ExtractParam<DynWorld>>::apply(&mut $state, $owned, world);)+
-                    if let Err(panic) = result {
-                        std::panic::resume_unwind(panic);
-                    }
-                }
+            fn access() -> SystemAccess {
+                SystemAccess::empty()
+                    $(.merge(<$query as MultiQueryParam>::access()))+
+            }
+
+            fn warmer() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$query as MultiQueryParam>::warm(host.split_mut().0);)+
+                })
             }
         }
     };
@@ -1033,724 +1000,397 @@ macro_rules! impl_extract_multi_query {
 impl_multi_query_bare!(Q0 q0, Q1 q1);
 impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2);
 impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2, Q3 q3);
+impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4);
+impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5);
+impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5, Q6 q6);
+impl_multi_query_bare!(Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5, Q6 q6, Q7 q7);
 
-impl_extract_multi_query!((P0 state0 owned0), (Q0 q0, Q1 q1));
-impl_extract_multi_query!((P0 state0 owned0), (Q0 q0, Q1 q1, Q2 q2));
-impl_extract_multi_query!((P0 state0 owned0, P1 state1 owned1), (Q0 q0, Q1 q1));
-impl_extract_multi_query!((P0 state0 owned0, P1 state1 owned1), (Q0 q0, Q1 q1, Q2 q2));
-impl_extract_multi_query!((P0 state0 owned0, P1 state1 owned1, P2 state2 owned2), (Q0 q0, Q1 q1));
-impl_extract_multi_query!(
-    (P0 state0 owned0, P1 state1 owned1, P2 state2 owned2),
-    (Q0 q0, Q1 q1, Q2 q2)
+macro_rules! extract_preamble {
+    ($func:ty, $world:ty, $($param:ident),+) => {{
+        let declared = declared_resources(&[$(<$param as ExtractParam<$world>>::resources(),)+]);
+        assert_resources_named_once::<$func>(&declared);
+        declared
+    }};
+}
+
+macro_rules! impl_extract_system {
+    ($($param:ident $state:ident $owned:ident),+) => {
+        impl<W, Func, $($param,)+> IntoSystem<W, ExtractSystemMarker<($($param,)+)>> for Func
+        where
+            W: ResourceHost + 'static,
+            $($param: ExtractParam<W>,)+
+            Func: FnMut($($param,)+)
+                + for<'item> FnMut($($param::Item<'item>,)+)
+                + Send
+                + 'static,
+        {
+            fn into_runner(mut self) -> SystemRunner<W> {
+                let declared = extract_preamble!(Func, W, $($param),+);
+                $(let mut $state = <$param as ExtractParam<W>>::init();)+
+                SystemRunner::Shared(Box::new(move |host: &W| {
+                    $(let mut $owned = <$param as ExtractParam<W>>::extract(&mut $state, host);)+
+                    let result = {
+                        let resources = host.resource_map();
+                        let borrows = resource_borrows(resources, &declared);
+                        let mut slots = resources.disjoint_slots(&borrows).into_iter();
+                        $(let $owned = <$param as ExtractParam<W>>::build(
+                            &mut $owned,
+                            &mut slots,
+                            resources,
+                        );)+
+                        let this = &mut self;
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                            this($($owned,)+);
+                        }))
+                    };
+                    $(<$param as ExtractParam<W>>::apply(&mut $state, $owned, host);)+
+                    if let Err(panic) = result {
+                        std::panic::resume_unwind(panic);
+                    }
+                }))
+            }
+
+            fn access() -> SystemAccess {
+                SystemAccess::empty() $(.merge(<$param as ExtractParam<W>>::access()))+
+            }
+
+            fn declared_resources() -> Vec<ResourceNeed> {
+                declared_resources(&[$(<$param as ExtractParam<W>>::resources(),)+])
+            }
+
+            fn warmer() -> Option<fn(&mut W)> {
+                Some(|host: &mut W| {
+                    $(<$param as ExtractParam<W>>::warm(host);)+
+                })
+            }
+
+            fn flusher() -> Option<fn(&mut W)> {
+                Some(|host: &mut W| {
+                    $(<$param as ExtractParam<W>>::flush(host);)+
+                })
+            }
+        }
+    };
+}
+
+macro_rules! impl_extract_query_system {
+    ($($param:ident $state:ident $owned:ident),+) => {
+        impl<H, Func, $($param,)+ Q> IntoSystem<H, QuerySystemMarker<($($param,)+), Q>> for Func
+        where
+            H: EcsHost + ResourceHost + 'static,
+            $($param: ExtractParam<H>,)+
+            Q: WorldParam,
+            Func: FnMut($($param,)+ Q)
+                + for<'item> FnMut($($param::Item<'item>,)+ Q::Item<'item>)
+                + Send
+                + 'static,
+        {
+            fn into_runner(mut self) -> SystemRunner<H> {
+                let declared = extract_preamble!(Func, H, $($param),+);
+                $(let mut $state = <$param as ExtractParam<H>>::init();)+
+                SystemRunner::Shared(Box::new(move |host: &H| {
+                    $(let mut $owned = <$param as ExtractParam<H>>::extract(&mut $state, host);)+
+                    let result = {
+                        let resources = host.resource_map();
+                        let borrows = resource_borrows(resources, &declared);
+                        let mut slots = resources.disjoint_slots(&borrows).into_iter();
+                        $(let $owned = <$param as ExtractParam<H>>::build(
+                            &mut $owned,
+                            &mut slots,
+                            resources,
+                        );)+
+                        let query = Q::build(host.storage());
+                        let this = &mut self;
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                            this($($owned,)+ query);
+                        }))
+                    };
+                    $(<$param as ExtractParam<H>>::apply(&mut $state, $owned, host);)+
+                    if let Err(panic) = result {
+                        std::panic::resume_unwind(panic);
+                    }
+                }))
+            }
+
+            fn access() -> SystemAccess {
+                SystemAccess::empty()
+                    $(.merge(<$param as ExtractParam<H>>::access()))+
+                    .merge(Q::access())
+            }
+
+            fn declared_resources() -> Vec<ResourceNeed> {
+                declared_resources(&[$(<$param as ExtractParam<H>>::resources(),)+])
+            }
+
+            fn warmer() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::warm(host);)+
+                    Q::warm(host.split_mut().0);
+                })
+            }
+
+            fn flusher() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::flush(host);)+
+                })
+            }
+        }
+    };
+}
+
+macro_rules! impl_lazy_system {
+    (
+        $marker:ident,
+        ($($param:ident $state:ident $owned:ident),+),
+        ($($query:ident $qbind:ident),+),
+        $build:ident
+    ) => {
+        impl<H, Func, $($param,)+ $($query,)+>
+            IntoSystem<H, $marker<($($param,)+), ($($query,)+)>> for Func
+        where
+            H: EcsHost + ResourceHost + 'static,
+            $($param: ExtractParam<H>,)+
+            $($query: $build,)+
+            Func: FnMut($($param,)+ $($query,)+)
+                + for<'item> FnMut($($param::Item<'item>,)+ $($query::Item<'item>,)+)
+                + Send
+                + 'static,
+        {
+            fn into_runner(mut self) -> SystemRunner<H> {
+                let declared = extract_preamble!(Func, H, $($param),+);
+                $(let mut $state = <$param as ExtractParam<H>>::init();)+
+                SystemRunner::Shared(Box::new(move |host: &H| {
+                    $(let mut $owned = <$param as ExtractParam<H>>::extract(&mut $state, host);)+
+                    let result = {
+                        let resources = host.resource_map();
+                        let borrows = resource_borrows(resources, &declared);
+                        let mut slots = resources.disjoint_slots(&borrows).into_iter();
+                        $(let $owned = <$param as ExtractParam<H>>::build(
+                            &mut $owned,
+                            &mut slots,
+                            resources,
+                        );)+
+                        let cell = RefCell::new(host.storage());
+                        $(let $qbind = $query::build_lazy(&cell);)+
+                        let this = &mut self;
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                            this($($owned,)+ $($qbind,)+);
+                        }))
+                    };
+                    $(<$param as ExtractParam<H>>::apply(&mut $state, $owned, host);)+
+                    if let Err(panic) = result {
+                        std::panic::resume_unwind(panic);
+                    }
+                }))
+            }
+
+            fn access() -> SystemAccess {
+                SystemAccess::empty()
+                    $(.merge(<$param as ExtractParam<H>>::access()))+
+                    $(.merge(<$query as MultiQueryParam>::access()))+
+            }
+
+            fn declared_resources() -> Vec<ResourceNeed> {
+                declared_resources(&[$(<$param as ExtractParam<H>>::resources(),)+])
+            }
+
+            fn warmer() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::warm(host);)+
+                    $(<$query as MultiQueryParam>::warm(host.split_mut().0);)+
+                })
+            }
+
+            fn flusher() -> Option<fn(&mut H)> {
+                Some(|host: &mut H| {
+                    $(<$param as ExtractParam<H>>::flush(host);)+
+                })
+            }
+        }
+    };
+}
+
+macro_rules! impl_param_systems {
+    ($($param:ident $state:ident $owned:ident),+) => {
+        impl_extract_system!($($param $state $owned),+);
+        impl_extract_query_system!($($param $state $owned),+);
+        impl_storage_system!($($param $state $owned),+);
+        impl_lazy_system!(
+            BundleSystemMarker, ($($param $state $owned),+), (B0 b0), QueryBundle
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2, Q3 q3), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5, Q6 q6), MultiQueryParam
+        );
+        impl_lazy_system!(
+            MultiQuerySystemMarker, ($($param $state $owned),+),
+            (Q0 q0, Q1 q1, Q2 q2, Q3 q3, Q4 q4, Q5 q5, Q6 q6, Q7 q7), MultiQueryParam
+        );
+    };
+}
+
+impl_param_systems!(P0 s0 o0);
+impl_param_systems!(P0 s0 o0, P1 s1 o1);
+impl_param_systems!(P0 s0 o0, P1 s1 o1, P2 s2 o2);
+impl_param_systems!(P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3);
+impl_param_systems!(P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4);
+impl_param_systems!(P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5);
+impl_param_systems!(P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6);
+impl_param_systems!(
+    P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6, P7 s7 o7
+);
+impl_param_systems!(
+    P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6, P7 s7 o7, P8 s8 o8
+);
+impl_param_systems!(
+    P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6, P7 s7 o7, P8 s8 o8,
+    P9 s9 o9
+);
+impl_param_systems!(
+    P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6, P7 s7 o7, P8 s8 o8,
+    P9 s9 o9, P10 s10 o10
+);
+impl_param_systems!(
+    P0 s0 o0, P1 s1 o1, P2 s2 o2, P3 s3 o3, P4 s4 o4, P5 s5 o5, P6 s6 o6, P7 s7 o7, P8 s8 o8,
+    P9 s9 o9, P10 s10 o10, P11 s11 o11
 );
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Schedule;
-    use crate::dynamic::{ComponentRegistry, DynEcs, DynWorld, ResourceMap};
-
-    struct Engine {
-        resources: ResourceMap,
-        frames: u32,
-    }
-
-    impl ResourceHost for Engine {
-        fn resource_map_mut(&mut self) -> &mut ResourceMap {
-            &mut self.resources
+#[macro_export]
+macro_rules! query_bundle {
+    (
+        $(#[$bundle_meta:meta])*
+        $bundle_visibility:vis struct $name:ident<$world:lifetime, $item:lifetime> {
+            $(
+                $(#[$field_meta:meta])*
+                $field_visibility:vis $field:ident: $query:ty,
+            )+
         }
-        fn resource_map(&self) -> &ResourceMap {
-            &self.resources
-        }
-    }
-
-    #[derive(Default, Clone, Debug, PartialEq)]
-    struct Position {
-        x: f32,
-        y: f32,
-    }
-
-    #[derive(Default, Clone, Debug, PartialEq)]
-    struct Velocity {
-        x: f32,
-        y: f32,
-    }
-
-    #[derive(Default, Clone, Debug, PartialEq)]
-    struct Health {
-        value: f32,
-    }
-
-    crate::impl_component!(Position, Velocity, Health);
-
-    struct DeltaTime(f32);
-    struct Score(u32);
-    struct Tally(u32);
-    struct Seen(Vec<u32>);
-    struct Enabled(bool);
-    struct Frozen;
-
-    #[derive(Clone, Debug, PartialEq)]
-    struct Collision {
-        entity: u32,
-    }
-
-    fn run<Marker>(world: &mut DynWorld, system: impl IntoSystem<DynWorld, Marker>) {
-        let mut runner = system.into_runner();
-        runner(world);
-    }
-
-    #[test]
-    fn single_resource_param() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        run(&mut world, |mut score: ResMut<Score>| score.0 += 5);
-        assert_eq!(world.resource::<Score>().unwrap().0, 5);
-    }
-
-    #[test]
-    fn multiple_resource_params() {
-        let mut world = DynWorld::new();
-        world.insert_resource(DeltaTime(2.0));
-        world.insert_resource(Score(1));
-        run(
-            &mut world,
-            |delta: Res<DeltaTime>, mut score: ResMut<Score>| {
-                score.0 += delta.0 as u32;
-            },
-        );
-        assert_eq!(world.resource::<Score>().unwrap().0, 3);
-    }
-
-    #[test]
-    fn query_only_param() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 1.0, y: 2.0 },));
-        run(&mut world, |query: Query<&mut Position>| {
-            query.for_each(|_entity, position| position.x += 10.0);
-        });
-        let position = world.query_ref::<&Position>().single().unwrap().1.clone();
-        assert_eq!(position, Position { x: 11.0, y: 2.0 });
-    }
-
-    #[test]
-    fn resources_and_query_together() {
-        let mut world = DynWorld::new();
-        world.insert_resource(DeltaTime(0.5));
-        world.insert_resource(Score(0));
-        world.spawn((
-            Position { x: 0.0, y: 0.0 },
-            Velocity { x: 2.0, y: 4.0 },
-            Health { value: 100.0 },
-        ));
-        world.spawn((Position { x: 5.0, y: 5.0 }, Velocity { x: 1.0, y: 1.0 }));
-
-        run(
-            &mut world,
-            |delta: Res<DeltaTime>,
-             mut score: ResMut<Score>,
-             query: Query<(&mut Position, &Velocity, Option<&mut Health>)>| {
-                query.for_each(|_entity, (position, velocity, health)| {
-                    position.x += velocity.x * delta.0;
-                    position.y += velocity.y * delta.0;
-                    if let Some(health) = health {
-                        health.value *= 0.9;
-                    }
-                });
-                score.0 += 1;
-            },
-        );
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 1);
-        let mut positions: Vec<(f32, f32)> = world
-            .query_ref::<&Position>()
-            .iter()
-            .map(|(_entity, position)| (position.x, position.y))
-            .collect();
-        positions.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        assert_eq!(positions, vec![(1.0, 2.0), (5.5, 5.5)]);
-    }
-
-    #[test]
-    fn with_filter_narrows_match() {
-        let mut world = DynWorld::new();
-        let frozen = world.spawn((Position { x: 0.0, y: 0.0 },));
-        world.add_tag_type::<Frozen>(frozen);
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-
-        run(&mut world, |query: Query<&mut Position, With<Health>>| {
-            query.for_each(|_entity, position| position.x = 1.0);
-        });
-        assert!(
-            world
-                .query_ref::<&Position>()
-                .iter()
-                .all(|(_entity, position)| position.x == 0.0)
-        );
-
-        run(
-            &mut world,
-            |query: Query<&mut Position, WithoutTag<Frozen>>| {
-                query.for_each(|_entity, position| position.x = 2.0);
-            },
-        );
-        let moved = world
-            .query_ref::<&Position>()
-            .iter()
-            .filter(|(_entity, position)| position.x == 2.0)
-            .count();
-        assert_eq!(moved, 1);
-    }
-
-    #[test]
-    fn changed_filter_visits_only_mutated() {
-        let mut world = DynWorld::new();
-        world.set_change_detection(true);
-        let entity = world.spawn((Position { x: 0.0, y: 0.0 },));
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-        world.step();
-        world.get_mut::<Position>(entity).unwrap().x = 1.0;
-
-        let mut visited = 0;
-        run(&mut world, |query: Query<&Position, Changed<Position>>| {
-            query.for_each(|_entity, _position| {});
-        });
-        world
-            .query_ref::<&Position>()
-            .changed::<Position>()
-            .iter()
-            .for_each(|_| visited += 1);
-        assert_eq!(visited, 1);
-    }
-
-    #[test]
-    fn param_set_lends_conflicting_queries() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 1.0, y: 1.0 }, Velocity { x: 3.0, y: 3.0 }));
-
-        run(
-            &mut world,
-            |mut set: ParamSet<(Query<&mut Position>, Query<&Velocity>)>| {
-                let mut velocity = (0.0, 0.0);
-                set.p1()
-                    .for_each(|_entity, value| velocity = (value.x, value.y));
-                set.p0().for_each(|_entity, position| {
-                    position.x += velocity.0;
-                    position.y += velocity.1;
-                });
-            },
-        );
-
-        let position = world.query_ref::<&Position>().single().unwrap().1.clone();
-        assert_eq!(position, Position { x: 4.0, y: 4.0 });
-    }
-
-    #[test]
-    fn two_direct_queries_disjoint_components() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 1.0, y: 1.0 }, Velocity { x: 3.0, y: 4.0 }));
-
-        run(
-            &mut world,
-            |positions: Query<&mut Position>, velocities: Query<&Velocity>| {
-                let mut sample = (0.0, 0.0);
-                velocities.for_each(|_entity, velocity| sample = (velocity.x, velocity.y));
-                positions.for_each(|_entity, position| {
-                    position.x += sample.0;
-                    position.y += sample.1;
-                });
-            },
-        );
-
-        let position = world.query_ref::<&Position>().single().unwrap().1.clone();
-        assert_eq!(position, Position { x: 4.0, y: 5.0 });
-    }
-
-    #[test]
-    fn two_direct_queries_same_component_run_sequentially() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-
-        run(
-            &mut world,
-            |first: Query<&mut Position>, second: Query<&mut Position>| {
-                first.for_each(|_entity, position| position.x += 1.0);
-                second.for_each(|_entity, position| position.x += 10.0);
-            },
-        );
-
-        assert_eq!(world.query_ref::<&Position>().single().unwrap().1.x, 11.0);
-    }
-
-    #[test]
-    fn resource_with_two_direct_queries() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 2.0, y: 0.0 }));
-
-        run(
-            &mut world,
-            |mut score: ResMut<Score>,
-             positions: Query<&mut Position>,
-             velocities: Query<&Velocity>| {
-                let mut velocity_x = 0.0;
-                velocities.for_each(|_entity, velocity| velocity_x = velocity.x);
-                positions.for_each(|_entity, position| position.x += velocity_x);
-                score.0 += 1;
-            },
-        );
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 1);
-        assert_eq!(world.query_ref::<&Position>().single().unwrap().1.x, 2.0);
-    }
-
-    #[test]
-    fn schedule_add_system_runs_param_systems() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 1.0, y: 0.0 }));
-
-        fn movement(query: Query<(&mut Position, &Velocity)>) {
-            query.for_each(|_entity, (position, velocity)| position.x += velocity.x);
-        }
-        fn scoring(mut score: ResMut<Score>) {
-            score.0 += 1;
+    ) => {
+        $(#[$bundle_meta])*
+        $bundle_visibility struct $name<$world, $item> {
+            $(
+                $(#[$field_meta])*
+                $field_visibility $field: $query,
+            )+
         }
 
-        let mut schedule = Schedule::new();
-        schedule.add_system("movement", movement);
-        schedule.add_system("scoring", scoring);
-        schedule.run(&mut world);
-        schedule.run(&mut world);
+        impl<$world, $item> $crate::system_param::MultiQueryParam for $name<$world, $item> {
+            type Item<'bundle> = $name<'bundle, $item>;
 
-        assert_eq!(world.resource::<Score>().unwrap().0, 2);
-        let position = world.query_ref::<&Position>().single().unwrap().1.clone();
-        assert_eq!(position, Position { x: 2.0, y: 0.0 });
-    }
+            fn build_lazy<'bundle>(
+                cell: &'bundle ::std::cell::RefCell<&'bundle $crate::Storage>,
+            ) -> $name<'bundle, $item> {
+                $name {
+                    $($field: <$query as $crate::system_param::MultiQueryParam>::build_lazy(cell),)+
+                }
+            }
 
-    #[test]
-    fn add_systems_registers_a_tuple() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 1.0, y: 0.0 }));
+            fn access() -> $crate::SystemAccess {
+                $crate::SystemAccess::empty()
+                    $(.merge(<$query as $crate::system_param::MultiQueryParam>::access()))+
+            }
 
-        fn movement(query: Query<(&mut Position, &Velocity)>) {
-            query.for_each(|_entity, (position, velocity)| position.x += velocity.x);
-        }
-        fn scoring(mut score: ResMut<Score>) {
-            score.0 += 1;
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_systems((movement, scoring));
-        assert_eq!(schedule.len(), 2);
-        schedule.run(&mut world);
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 1);
-        assert_eq!(world.query_ref::<&Position>().single().unwrap().1.x, 1.0);
-    }
-
-    #[test]
-    fn add_systems_dedups_repeated_registration() {
-        fn noop(_query: Query<&Position>) {}
-
-        let mut schedule = Schedule::<DynWorld>::new();
-        schedule.add_systems((noop,));
-        schedule.add_systems((noop,));
-        assert_eq!(schedule.len(), 2);
-    }
-
-    #[test]
-    fn insert_resources_batches_a_tuple() {
-        let mut world = DynWorld::new();
-        world.insert_resources((DeltaTime(0.5), Score(7)));
-        assert_eq!(world.resource::<DeltaTime>().unwrap().0, 0.5);
-        assert_eq!(world.resource::<Score>().unwrap().0, 7);
-    }
-
-    #[test]
-    fn resource_system_runs_on_custom_host() {
-        let mut engine = Engine {
-            resources: ResourceMap::default(),
-            frames: 0,
-        };
-        engine.resources.insert(Score(0));
-
-        let mut schedule = Schedule::<Engine>::new();
-        schedule.add_system("bump", |mut score: ResMut<Score>| score.0 += 3);
-        schedule.run(&mut engine);
-
-        assert_eq!(engine.resources.get::<Score>().unwrap().0, 3);
-    }
-
-    #[test]
-    fn host_system_gets_resources_and_the_host() {
-        fn tick(mut score: ResMut<Score>, engine: &mut Engine) {
-            score.0 += 1;
-            engine.frames += 1;
-        }
-
-        let mut engine = Engine {
-            resources: ResourceMap::default(),
-            frames: 0,
-        };
-        engine.resources.insert(Score(10));
-
-        let mut schedule = Schedule::<Engine>::new();
-        schedule.add_system("tick", tick);
-        schedule.run(&mut engine);
-        schedule.run(&mut engine);
-
-        assert_eq!(engine.resources.get::<Score>().unwrap().0, 12);
-        assert_eq!(engine.frames, 2);
-    }
-
-    #[test]
-    fn host_system_on_dynworld_can_query() {
-        fn count_positions(mut score: ResMut<Score>, world: &mut DynWorld) {
-            score.0 += world.query_ref::<&Position>().iter().count() as u32;
-        }
-
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-        world.spawn((Position { x: 1.0, y: 1.0 },));
-
-        run(&mut world, count_positions);
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 2);
-    }
-
-    #[test]
-    fn query_param_runs_over_a_group() {
-        fn movement(query: Query<(&mut Position, &Velocity)>) {
-            query.for_each(|_entity, (position, velocity)| position.x += velocity.x);
-        }
-
-        let mut registry = ComponentRegistry::new();
-        registry.register::<Position>();
-        registry.register::<Velocity>();
-        let mut ecs = DynEcs::new();
-        ecs.add_world(registry);
-        let entity = ecs.spawn_with((Position { x: 1.0, y: 0.0 }, Velocity { x: 3.0, y: 0.0 }));
-
-        let mut schedule = Schedule::<DynEcs>::new();
-        schedule.add_system("movement", movement);
-        schedule.run(&mut ecs);
-
-        assert_eq!(ecs.get::<Position>(entity).unwrap().x, 4.0);
-    }
-
-    #[test]
-    fn resource_and_query_over_a_group() {
-        fn tick(mut score: ResMut<Score>, query: Query<(&mut Position, &Velocity)>) {
-            query.for_each(|_entity, (position, velocity)| position.x += velocity.x);
-            score.0 += 1;
-        }
-
-        let mut registry = ComponentRegistry::new();
-        registry.register::<Position>();
-        registry.register::<Velocity>();
-        let mut ecs = DynEcs::new();
-        ecs.add_world(registry);
-        ecs.insert_resource(Score(0));
-        let entity = ecs.spawn_with((Position { x: 0.0, y: 0.0 }, Velocity { x: 5.0, y: 0.0 }));
-
-        let mut schedule = Schedule::<DynEcs>::new();
-        schedule.add_system("tick", tick);
-        schedule.run(&mut ecs);
-
-        assert_eq!(ecs.resource::<Score>().unwrap().0, 1);
-        assert_eq!(ecs.get::<Position>(entity).unwrap().x, 5.0);
-    }
-
-    #[test]
-    fn added_filter_visits_only_new() {
-        let mut world = DynWorld::new();
-        world.set_change_detection(true);
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-        world.step();
-        world.spawn((Position { x: 9.0, y: 9.0 },));
-
-        run(
-            &mut world,
-            |query: Query<&mut Position, Added<Position>>| {
-                query.for_each(|_entity, position| position.y = 100.0);
-            },
-        );
-        let marked = world
-            .query_ref::<&Position>()
-            .iter()
-            .filter(|(_entity, position)| position.y == 100.0)
-            .map(|(_entity, position)| position.x)
-            .collect::<Vec<_>>();
-        assert_eq!(marked, vec![9.0]);
-    }
-
-    #[test]
-    fn tuple_filter_combines_constraints() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 0.0, y: 0.0 }, Health { value: 1.0 }));
-        world.spawn((
-            Position { x: 0.0, y: 0.0 },
-            Health { value: 1.0 },
-            Velocity { x: 0.0, y: 0.0 },
-        ));
-
-        run(
-            &mut world,
-            |query: Query<&mut Position, (With<Health>, Without<Velocity>)>| {
-                query.for_each(|_entity, position| position.x = 1.0);
-            },
-        );
-        let moved = world
-            .query_ref::<&Position>()
-            .iter()
-            .filter(|(_entity, position)| position.x == 1.0)
-            .count();
-        assert_eq!(moved, 1);
-    }
-
-    #[test]
-    fn par_for_each_runs_over_query() {
-        let mut world = DynWorld::new();
-        for index in 0..64 {
-            world.spawn((
-                Position {
-                    x: index as f32,
-                    y: 0.0,
-                },
-                Velocity { x: 1.0, y: 0.0 },
-            ));
-        }
-        run(&mut world, |query: Query<(&mut Position, &Velocity)>| {
-            query.par_for_each(|_entity, (position, velocity)| position.x += velocity.x);
-        });
-        let total: f32 = world
-            .query_ref::<&Position>()
-            .iter()
-            .map(|(_entity, position)| position.x)
-            .sum();
-        assert_eq!(total, (0..64).map(|index| index as f32 + 1.0).sum());
-    }
-
-    #[test]
-    #[should_panic(expected = "DeltaTime")]
-    fn missing_resource_panics() {
-        let mut world = DynWorld::new();
-        run(&mut world, |_delta: Res<DeltaTime>| {});
-    }
-
-    fn emit_pair(mut writer: EventWriter<Collision>) {
-        writer.send(Collision { entity: 1 });
-        writer.send(Collision { entity: 2 });
-    }
-
-    #[test]
-    fn writer_flushes_after_run_and_reader_consumes_once() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-
-        fn tally(reader: EventReader<Collision>, mut score: ResMut<Score>) {
-            score.0 += reader.len() as u32;
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_system("emit", emit_pair);
-        schedule.add_system("tally", tally);
-
-        schedule.run(&mut world);
-        assert_eq!(world.resource::<Score>().unwrap().0, 2);
-
-        world.step();
-        schedule.run(&mut world);
-        assert_eq!(
-            world.resource::<Score>().unwrap().0,
-            4,
-            "the reader consumes only the events sent this frame"
-        );
-    }
-
-    #[test]
-    fn reader_coexists_with_a_query() {
-        let mut world = DynWorld::new();
-        world.events.send::<Collision>(Collision { entity: 0 });
-        world.spawn((Position { x: 0.0, y: 0.0 },));
-
-        fn shift(reader: EventReader<Collision>, query: Query<&mut Position>) {
-            let delta = reader.len() as f32;
-            query.for_each(|_entity, position| position.x += delta);
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_system("shift", shift);
-        schedule.run(&mut world);
-
-        assert_eq!(world.query_ref::<&Position>().single().unwrap().1.x, 1.0);
-    }
-
-    #[test]
-    fn resource_reader_and_query_in_one_system() {
-        let mut world = DynWorld::new();
-        world.insert_resource(DeltaTime(2.0));
-        world.events.send::<Collision>(Collision { entity: 7 });
-        world.spawn((Position { x: 0.0, y: 0.0 }, Velocity { x: 1.0, y: 0.0 }));
-
-        fn integrate(
-            delta: Res<DeltaTime>,
-            reader: EventReader<Collision>,
-            query: Query<(&mut Position, &Velocity)>,
-        ) {
-            let bump = reader.len() as f32;
-            query.for_each(|_entity, (position, velocity)| {
-                position.x += velocity.x * delta.0 + bump;
-            });
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_system("integrate", integrate);
-        schedule.run(&mut world);
-
-        assert_eq!(world.query_ref::<&Position>().single().unwrap().1.x, 3.0);
-    }
-
-    #[test]
-    fn writer_coexists_with_a_query() {
-        let mut world = DynWorld::new();
-        world.spawn((Position { x: 3.0, y: 0.0 },));
-        world.spawn((Position { x: 5.0, y: 0.0 },));
-
-        fn report(mut writer: EventWriter<Collision>, query: Query<&Position>) {
-            query.for_each(|_entity, position| {
-                writer.send(Collision {
-                    entity: position.x as u32,
-                });
-            });
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_system("report", report);
-        schedule.run(&mut world);
-
-        let mut ids: Vec<u32> = world
-            .events
-            .read::<Collision>()
-            .iter()
-            .map(|collision| collision.entity)
-            .collect();
-        ids.sort();
-        assert_eq!(ids, vec![3, 5]);
-    }
-
-    #[test]
-    fn two_readers_keep_independent_cursors() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.insert_resource(Tally(0));
-        world.events.send::<Collision>(Collision { entity: 1 });
-        world.events.send::<Collision>(Collision { entity: 2 });
-        world.events.send::<Collision>(Collision { entity: 3 });
-
-        fn reader_a(reader: EventReader<Collision>, mut score: ResMut<Score>) {
-            score.0 += reader.len() as u32;
-        }
-        fn reader_b(reader: EventReader<Collision>, mut tally: ResMut<Tally>) {
-            tally.0 += reader.len() as u32;
-        }
-
-        let mut schedule = Schedule::new();
-        schedule.add_system("reader_a", reader_a);
-        schedule.add_system("reader_b", reader_b);
-        schedule.run(&mut world);
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 3);
-        assert_eq!(world.resource::<Tally>().unwrap().0, 3);
-    }
-
-    #[test]
-    fn reader_iterates_each_event_once() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Seen(Vec::new()));
-        world.events.send::<Collision>(Collision { entity: 10 });
-        world.events.send::<Collision>(Collision { entity: 20 });
-
-        fn collect(reader: EventReader<Collision>, mut seen: ResMut<Seen>) {
-            for collision in &reader {
-                seen.0.push(collision.entity);
+            fn warm(storage: &mut $crate::Storage) {
+                $(<$query as $crate::system_param::MultiQueryParam>::warm(storage);)+
             }
         }
 
-        let mut schedule = Schedule::new();
-        schedule.add_system("collect", collect);
-        schedule.run(&mut world);
+        impl<$world, $item> $crate::system_param::QueryBundle for $name<$world, $item> {}
+    };
+}
 
-        assert_eq!(world.resource::<Seen>().unwrap().0, vec![10, 20]);
-    }
-
-    #[test]
-    fn reader_is_empty_before_any_send() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-
-        fn tally(reader: EventReader<Collision>, mut score: ResMut<Score>) {
-            assert!(reader.is_empty());
-            score.0 += reader.len() as u32;
+#[macro_export]
+macro_rules! resource_bundle {
+    (
+        $(#[$bundle_meta:meta])*
+        $bundle_visibility:vis struct $name:ident<$map:lifetime> {
+            write {
+                $($write_field:ident: $write_type:ty,)+
+            }
+            read {
+                $($read_field:ident: $read_type:ty,)*
+            }
+        }
+    ) => {
+        $(#[$bundle_meta])*
+        $bundle_visibility struct $name<$map> {
+            $(pub $write_field: &$map mut $write_type,)+
+            $(pub $read_field: &$map $read_type,)*
         }
 
-        let mut schedule = Schedule::new();
-        schedule.add_system("tally", tally);
-        schedule.run(&mut world);
-
-        assert_eq!(world.resource::<Score>().unwrap().0, 0);
-    }
-
-    #[test]
-    fn events_flow_over_a_group() {
-        let mut ecs = DynEcs::new();
-        ecs.insert_resource(Score(0));
-
-        fn tally(reader: EventReader<Collision>, mut score: ResMut<Score>) {
-            score.0 += reader.len() as u32;
+        impl $name<'_> {
+            pub fn reborrow(&mut self) -> $name<'_> {
+                $name {
+                    $($write_field: self.$write_field,)+
+                    $($read_field: self.$read_field,)*
+                }
+            }
         }
 
-        let mut schedule = Schedule::<DynEcs>::new();
-        schedule.add_system("emit", emit_pair);
-        schedule.add_system("tally", tally);
-        schedule.run(&mut ecs);
+        impl<W: $crate::ResourceHost> $crate::system_param::ExtractParam<W> for $name<'_> {
+            type State = ();
+            type Owned = ();
+            type Item<'item> = $name<'item>;
 
-        assert_eq!(ecs.resource::<Score>().unwrap().0, 2);
-    }
+            fn init() -> Self::State {}
 
-    #[test]
-    fn add_system_if_gates_a_param_system() {
-        let mut world = DynWorld::new();
-        world.insert_resource(Score(0));
-        world.insert_resource(Enabled(false));
+            fn resources() -> ::std::vec::Vec<$crate::system_param::ResourceNeed> {
+                ::std::vec![
+                    $($crate::system_param::ResourceNeed::write::<$write_type>(),)+
+                    $($crate::system_param::ResourceNeed::read::<$read_type>(),)*
+                ]
+            }
 
-        fn bump(mut score: ResMut<Score>) {
-            score.0 += 1;
+            fn extract(_state: &mut (), _host: &W) {}
+
+            fn build<'slots, I: ::std::iter::Iterator<Item = ::std::option::Option<$crate::ResourceSlot<'slots>>>>(
+                _owned: &'slots mut (),
+                slots: &mut I,
+                _resources: &'slots $crate::ResourceMap,
+            ) -> $name<'slots> {
+                $name {
+                    $($write_field: $crate::system_param::bundled_slot(slots).into_mut::<$write_type>(),)+
+                    $($read_field: $crate::system_param::bundled_slot(slots).into_ref::<$read_type>(),)*
+                }
+            }
+
+            fn apply(_state: &mut (), _owned: (), _host: &W) {}
+
+            fn access() -> $crate::SystemAccess {
+                use ::std::any::TypeId;
+                $crate::SystemAccess::empty()
+                    $(.with_resource(TypeId::of::<$write_type>(), $crate::Access::Write))+
+                    $(.with_resource(TypeId::of::<$read_type>(), $crate::Access::Read))*
+            }
         }
+    };
+}
 
-        let mut schedule = Schedule::new();
-        schedule.add_system_if(
-            "bump",
-            |world: &DynWorld| world.resource::<Enabled>().unwrap().0,
-            bump,
-        );
-
-        schedule.run(&mut world);
-        assert_eq!(
-            world.resource::<Score>().unwrap().0,
-            0,
-            "the system is skipped while the condition is false"
-        );
-
-        world.resource_mut::<Enabled>().unwrap().0 = true;
-        schedule.run(&mut world);
-        assert_eq!(
-            world.resource::<Score>().unwrap().0,
-            1,
-            "the system runs once the condition holds"
-        );
-    }
+pub fn bundled_slot<'map>(
+    slots: &mut impl Iterator<Item = Option<ResourceSlot<'map>>>,
+) -> ResourceSlot<'map> {
+    slots
+        .next()
+        .expect("the runner borrows one slot for each resource a bundle names")
+        .expect("a resource bundle names no resource it can do without")
 }

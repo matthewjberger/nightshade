@@ -1,0 +1,30 @@
+[package]
+name = "demolition"
+description = "A building of small voxels over nightshade-voxels at one eighth of a meter a block, blasted apart a sphere at a time, with the bricks above each hole falling into it"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "demolition-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-cli.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-text.workspace = true
+nightshade-ui.workspace = true
+nightshade-voxels.workspace = true
+nightshade-window.workspace = true

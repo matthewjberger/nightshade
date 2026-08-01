@@ -1,0 +1,61 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 64) in;
+
+#include "line_common.glsl"
+
+struct Volume {
+    mat4 transform;
+    vec4 center;
+    vec4 half_extents;
+    vec4 orientation;
+    vec4 color;
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer Volumes { Volume volumes[]; };
+
+vec3 turned(vec4 quaternion, vec3 point) {
+    vec3 axis = quaternion.xyz;
+    float scalar = quaternion.w;
+    return axis * (2.0 * dot(axis, point))
+        + point * (scalar * scalar - dot(axis, axis))
+        + cross(axis, point) * (2.0 * scalar);
+}
+
+const vec3 SIGNS[8] = vec3[8](
+    vec3(-1.0, -1.0, -1.0),
+    vec3(1.0, -1.0, -1.0),
+    vec3(-1.0, 1.0, -1.0),
+    vec3(1.0, 1.0, -1.0),
+    vec3(-1.0, -1.0, 1.0),
+    vec3(1.0, -1.0, 1.0),
+    vec3(-1.0, 1.0, 1.0),
+    vec3(1.0, 1.0, 1.0)
+);
+
+const uint EDGES[24] = uint[24](
+    0u, 1u, 1u, 3u, 3u, 2u, 2u, 0u,
+    4u, 5u, 5u, 7u, 7u, 6u, 6u, 4u,
+    0u, 4u, 1u, 5u, 2u, 6u, 3u, 7u
+);
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= batch.count) {
+        return;
+    }
+    Volume volume = volumes[index];
+
+    vec3 corners[8];
+    for (uint corner = 0u; corner < 8u; ++corner) {
+        vec3 local = volume.center.xyz
+            + turned(volume.orientation, volume.half_extents.xyz * SIGNS[corner]);
+        corners[corner] = (volume.transform * vec4(local, 1.0)).xyz;
+    }
+
+    uint first = batch.first_end + index * 24u;
+    for (uint end = 0u; end < 24u; ++end) {
+        put_end(first + end, corners[EDGES[end]], volume.color);
+    }
+}

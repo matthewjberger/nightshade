@@ -1,0 +1,41 @@
+﻿[package]
+name = "sponza"
+description = "The Sponza palace under an evening sun, lit through the air, walked in first person, on either backend"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "sponza-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-physics.workspace = true
+nightshade-platform.workspace = true
+nightshade-load = { workspace = true }
+nightshade-gltf.workspace = true
+nightshade-prefab.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true
+nalgebra-glm.workspace = true
+tracing = { workspace = true }
+
+[features]
+default = ["wgpu"]
+vulkan = ["nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

@@ -1,0 +1,22 @@
+[package]
+name = "blocker-chat"
+description = "The chat blocker keeps: the channels, the threads the folk speak in and the lines a player types back"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-figure = { path = "../blocker-figure" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-player = { path = "../blocker-player" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-weather = { path = "../blocker-weather" }
+blocker-world = { path = "../blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade.workspace = true

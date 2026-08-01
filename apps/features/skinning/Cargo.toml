@@ -1,0 +1,37 @@
+[package]
+name = "skinning"
+description = "Two foxes walking on the spot, one animated by the whole clip and one by the clip a channel filter left behind"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "skinning-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-window.workspace = true
+nalgebra-glm.workspace = true
+nightshade-platform.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-animation.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-load = { workspace = true }
+nightshade-gltf.workspace = true
+nightshade-prefab.workspace = true
+nightshade-log.workspace = true
+tracing.workspace = true
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

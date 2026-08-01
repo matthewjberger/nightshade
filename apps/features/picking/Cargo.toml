@@ -1,0 +1,36 @@
+[package]
+name = "picking"
+description = "Hover-to-select picking demo with debug volume visualization"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "picking-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-window.workspace = true
+nightshade-scene.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-picking.workspace = true
+nightshade-ui.workspace = true
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

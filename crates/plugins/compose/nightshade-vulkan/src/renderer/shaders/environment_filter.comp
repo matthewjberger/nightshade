@@ -1,0 +1,112 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "environment_common.glsl"
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform samplerCube source;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2DArray faces;
+
+layout(push_constant) uniform Params {
+    uint size;
+    uint samples;
+    float roughness;
+    float source_size;
+    uint diffuse;
+} params;
+
+float distribution_ggx(float normal_half, float roughness) {
+    float alpha = roughness * roughness;
+    float alpha_squared = alpha * alpha;
+    float denominator = normal_half * normal_half * (alpha_squared - 1.0) + 1.0;
+    return alpha_squared / max(PI * denominator * denominator, 1.0e-6);
+}
+
+vec3 importance_sample_ggx(vec2 point, float roughness, vec3 normal) {
+    float alpha = roughness * roughness;
+    float phi = 2.0 * PI * point.x;
+    float cosine = sqrt((1.0 - point.y) / (1.0 + (alpha * alpha - 1.0) * point.y));
+    float sine = sqrt(1.0 - cosine * cosine);
+    vec3 local = vec3(sine * cos(phi), sine * sin(phi), cosine);
+    return normalize(orthonormal_basis(normal) * local);
+}
+
+uint scatter(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float scatter_unit(uint seed) {
+    return float(scatter(seed)) / 4294967295.0;
+}
+
+vec2 turn_of(uvec2 coords, uint face) {
+    uint seed = (coords.x * 2131358057u) ^ (coords.y * 3416869721u) ^ (face * 1199786941u);
+    return vec2(scatter_unit(seed), scatter_unit(seed + 1u));
+}
+
+vec3 irradiance(vec3 normal, vec2 turn) {
+    mat3 basis = orthonormal_basis(normal);
+    vec3 total = vec3(0.0);
+    float lod = max(log2(params.source_size) - 5.0, 0.0);
+    for (uint index = 0u; index < params.samples; ++index) {
+        vec2 point = fract(hammersley(index, params.samples) + turn);
+        float phi = 2.0 * PI * point.x;
+        float cosine = sqrt(1.0 - point.y);
+        float sine = sqrt(point.y);
+        vec3 direction = basis * vec3(sine * cos(phi), sine * sin(phi), cosine);
+        total += min(textureLod(source, direction, lod).rgb, vec3(10.0));
+    }
+    return total / float(params.samples);
+}
+
+vec3 prefiltered(vec3 normal, float roughness, vec2 turn) {
+    if (roughness <= 0.0) {
+        return min(textureLod(source, normal, 0.0).rgb, vec3(4.0));
+    }
+    vec3 total = vec3(0.0);
+    float weight = 0.0;
+    float texel_solid_angle = 4.0 * PI / (6.0 * params.source_size * params.source_size);
+    for (uint index = 0u; index < params.samples; ++index) {
+        vec2 point = fract(hammersley(index, params.samples) + turn);
+        vec3 half_vector = importance_sample_ggx(point, roughness, normal);
+        vec3 light = normalize(2.0 * dot(normal, half_vector) * half_vector - normal);
+        float normal_light = clamp(dot(normal, light), 0.0, 1.0);
+        if (normal_light <= 0.0) {
+            continue;
+        }
+        float normal_half = clamp(dot(normal, half_vector), 0.0, 1.0);
+        float view_half = clamp(dot(normal, half_vector), 0.0, 1.0);
+        float density =
+            distribution_ggx(normal_half, roughness) * normal_half / (4.0 * view_half) + 0.0001;
+        float sample_solid_angle = 1.0 / (float(params.samples) * density);
+        float lod = max(0.5 * log2(sample_solid_angle / texel_solid_angle) + 1.0, 0.0);
+        total += min(textureLod(source, light, lod).rgb, vec3(4.0)) * normal_light;
+        weight += normal_light;
+    }
+    if (weight <= 0.0) {
+        return textureLod(source, normal, 0.0).rgb;
+    }
+    return total / weight;
+}
+
+void main() {
+    uvec2 coords = gl_GlobalInvocationID.xy;
+    uint face = gl_GlobalInvocationID.z;
+    if (coords.x >= params.size || coords.y >= params.size || face >= 6u) {
+        return;
+    }
+    vec2 uv = (vec2(coords) + 0.5) / float(params.size);
+    vec3 direction = cube_direction(face, uv);
+    vec2 turn = turn_of(coords, face);
+    vec3 color = params.diffuse != 0u
+        ? irradiance(direction, turn)
+        : prefiltered(direction, params.roughness, turn);
+    imageStore(
+        faces,
+        ivec3(ivec2(coords), int(face)),
+        vec4(clamp(color, vec3(0.0), vec3(65000.0)), 1.0)
+    );
+}

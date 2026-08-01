@@ -1,0 +1,122 @@
+#version 460
+#extension GL_EXT_mesh_shader : require
+
+#define BOIDS_PER_TASK 32u
+#define BOIDS_PER_MESH 4u
+#define SIDES 6u
+#define VERTICES_PER_BOID 18u
+#define TRIANGLES_PER_BOID 6u
+#define TAU 6.283185307179586
+
+layout(local_size_x = 24) in;
+layout(triangles, max_vertices = 72, max_primitives = 24) out;
+
+layout(set = 0, binding = 0) readonly buffer Positions { vec4 positions[]; };
+layout(set = 0, binding = 1) readonly buffer Velocities { vec4 velocities[]; };
+
+layout(set = 0, binding = 2) uniform DrawUniforms {
+    mat4 view_projection;
+    vec4 sun;
+    vec4 scale;
+    vec4 planes[6];
+} uniforms;
+
+struct TaskPayload {
+    uint count;
+    uint indices[BOIDS_PER_TASK];
+};
+
+taskPayloadSharedEXT TaskPayload payload;
+
+layout(location = 0) out VertexOutput {
+    vec3 normal;
+    vec3 tint;
+} vertices[];
+
+vec3 shade_for(uint index) {
+    float turn = float(index + 1u) * 0.618033988749895;
+    float hue = fract(turn);
+    float saturation = 0.78 + fract(float(index + 1u) * 0.276393202250021) * 0.22;
+    float value = 0.55 + fract(float(index + 1u) * 0.414213562373095) * 0.40;
+
+    float sector = hue * 6.0;
+    float offset = sector - floor(sector);
+    float falling = value * (1.0 - saturation);
+    float rising = value * (1.0 - saturation * offset);
+    float peaking = value * (1.0 - saturation * (1.0 - offset));
+
+    switch (uint(sector) % 6u) {
+        case 0u: return vec3(value, peaking, falling);
+        case 1u: return vec3(rising, value, falling);
+        case 2u: return vec3(falling, value, peaking);
+        case 3u: return vec3(falling, rising, value);
+        case 4u: return vec3(peaking, falling, value);
+        default: return vec3(value, falling, rising);
+    }
+}
+
+mat3 heading_basis(vec3 velocity) {
+    float speed = length(velocity);
+    if (speed < 1.0e-6) {
+        return mat3(1.0);
+    }
+    vec3 forward = velocity / speed;
+    vec3 reference = vec3(0.0, 1.0, 0.0);
+    if (abs(forward.y) > 0.99) {
+        reference = vec3(0.0, 0.0, 1.0);
+    }
+    vec3 right = normalize(cross(reference, forward));
+    vec3 up = cross(right, forward);
+    return mat3(right, forward, up);
+}
+
+void main() {
+    uint first = gl_WorkGroupID.x * BOIDS_PER_MESH;
+    uint remaining = payload.count > first ? payload.count - first : 0u;
+    uint drawn = min(remaining, BOIDS_PER_MESH);
+
+    SetMeshOutputsEXT(drawn * VERTICES_PER_BOID, drawn * TRIANGLES_PER_BOID);
+    if (drawn == 0u) {
+        return;
+    }
+
+    float half_width = uniforms.scale.x;
+    float half_length = uniforms.scale.y;
+
+    for (uint slot = 0u; slot < drawn; slot++) {
+        uint boid = payload.indices[first + slot];
+        mat3 basis = heading_basis(velocities[boid].xyz);
+        vec3 center = positions[boid].xyz;
+        vec3 tint = shade_for(boid);
+
+        for (uint local = gl_LocalInvocationIndex; local < VERTICES_PER_BOID; local += 24u) {
+            uint triangle = local / 3u;
+            uint corner = local % 3u;
+
+            vec3 offset = vec3(0.0, half_length, 0.0);
+            vec3 normal = vec3(0.0, 1.0, 0.0);
+            if (corner != 0u) {
+                uint step_index = corner == 2u ? triangle + 1u : triangle;
+                float angle = float(step_index % SIDES) * float(TAU) / float(SIDES);
+                vec3 around = vec3(cos(angle), 0.0, sin(angle));
+                offset = around * half_width - vec3(0.0, half_length, 0.0);
+                normal = normalize(around + vec3(0.0, 0.5, 0.0));
+            } else {
+                float angle = (float(triangle % SIDES) + 0.5) * float(TAU) / float(SIDES);
+                normal = normalize(vec3(cos(angle), 0.5, sin(angle)));
+            }
+
+            vec3 world = center + basis * offset;
+            uint target = slot * VERTICES_PER_BOID + local;
+            gl_MeshVerticesEXT[target].gl_Position = uniforms.view_projection * vec4(world, 1.0);
+            vertices[target].normal = basis * normal;
+            vertices[target].tint = tint;
+        }
+
+        for (uint local = gl_LocalInvocationIndex; local < TRIANGLES_PER_BOID; local += 24u) {
+            uint base = slot * VERTICES_PER_BOID + local * 3u;
+            uint target = slot * TRIANGLES_PER_BOID + local;
+            gl_PrimitiveTriangleIndicesEXT[target] = uvec3(base, base + 1u, base + 2u);
+        }
+    }
+}

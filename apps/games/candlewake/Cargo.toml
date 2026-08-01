@@ -1,0 +1,29 @@
+[package]
+name = "candlewake"
+description = "A lighthouse told in words, read and played from one story file"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "candlewake-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-story.workspace = true
+nightshade-ui.workspace = true
+nightshade-ui-story.workspace = true
+
+[lints]
+workspace = true

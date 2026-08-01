@@ -1,0 +1,19 @@
+[package]
+name = "nightshade-wgpu-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-wgpu = { workspace = true }
+nightshade-wgpu-geometry = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-text = { path = "../../describe/nightshade-text", default-features = false, features = ["contract"] }
+bytemuck = { workspace = true, features = ["derive"] }
+nalgebra-glm = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

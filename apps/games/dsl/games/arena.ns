@@ -1,0 +1,46 @@
+-- The ground, the runner and the coins, shared by anything played on this floor.
+
+shows Arena, Random, Home, Phase, Speed, spot
+
+component Home
+component Phase
+component Speed
+
+resource Random
+   seed number = 305419896
+
+config Arena
+   cameraEye = (0, 24, 16)
+   reach number = 14
+   floorColor = (0.09, 0.11, 0.16)
+   player
+      speed number = 10
+      height number = 0.5
+      color = (0.1, 0.65, 0.65)
+   coins
+      count number = 8
+      height number = 0.7
+      color = (1.0, 0.85, 0.2)
+
+query spot() = ((draw() * 2 - 1) * Arena.reach, Arena.coins.height, (draw() * 2 - 1) * Arena.reach)
+
+system arena.build
+   once
+   in Arena
+   out Random
+   creates entities
+
+   spawn Mesh "Cube", Color Arena.floorColor,
+         Transform (0, -0.5, 0),
+         Scale (Arena.reach * 2 + 4, 1, Arena.reach * 2 + 4)
+   spawn Mesh "Sphere", Color Arena.player.color,
+         Transform (0, Arena.player.height, 0),
+         Scale (1.2, 1.2, 1.2),
+         Speed Arena.player.speed
+   for each index in 0 .. Arena.coins.count
+      let place := spot()
+      spawn Mesh "Cylinder", Color Arena.coins.color,
+            Transform place,
+            Scale (0.7, 0.12, 0.7),
+            Home place,
+            Phase index * 0.7

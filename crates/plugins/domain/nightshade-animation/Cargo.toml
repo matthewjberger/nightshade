@@ -1,0 +1,21 @@
+[package]
+name = "nightshade-animation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-ecs = { workspace = true, optional = true }
+petgraph = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:nalgebra-glm", "dep:nightshade-ecs", "dep:petgraph", "dep:serde"]
+plugin = ["contract", "dep:nightshade"]

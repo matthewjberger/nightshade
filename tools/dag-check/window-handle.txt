@@ -1,0 +1,13 @@
+# A window call belongs on the thread that owns the event loop, because a
+# platform routes one there and waits for it to arrive. Each file below either
+# is the runner itself, runs while a backend builds its surface at startup, or
+# names the MainThread system parameter in every system that makes the call.
+crates/plugins/compose/nightshade-window/src/run.rs
+crates/plugins/compose/nightshade-window/src/run/pump.rs
+crates/plugins/compose/nightshade-window/src/pacing.rs
+crates/plugins/compose/nightshade-window/src/systems/canvas.rs
+crates/plugins/compose/nightshade-window/src/platform/content_rect.rs
+crates/plugins/describe/nightshade-platform/src/systems/window.rs
+crates/plugins/describe/nightshade-platform/src/systems/input.rs
+apps/games/iam/src/systems/desk.rs
+crates/plugins/compose/nightshade-window/src/platform/input.rs

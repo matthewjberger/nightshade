@@ -1,0 +1,92 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 64) in;
+
+#include "constraint_common.glsl"
+
+struct LimbChain {
+    uint root;
+    uint middle;
+    uint tip;
+    uint has_pole;
+    vec4 goal;
+    vec4 pole;
+    float weight;
+    uint carried_start;
+    uint carried_count;
+    uint padding;
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer Chains { LimbChain chains[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Carried { uint carried[]; };
+
+void turn_carried(LimbChain chain, vec3 pivot, vec4 turn) {
+    for (uint index = 0u; index < chain.carried_count; ++index) {
+        turn_bone_about(carried[chain.carried_start + index], pivot, turn);
+    }
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= chains.length()) {
+        return;
+    }
+    LimbChain chain = chains[index];
+    if (chain.weight <= 0.0) {
+        return;
+    }
+
+    vec3 at_root = bone_transforms[chain.root][3].xyz;
+    vec3 at_middle = bone_transforms[chain.middle][3].xyz;
+    vec3 at_tip = bone_transforms[chain.tip][3].xyz;
+
+    float upper = length(at_middle - at_root);
+    float lower = length(at_tip - at_middle);
+    if (upper < 1.0e-5 || lower < 1.0e-5) {
+        return;
+    }
+    float reach = upper + lower;
+    vec3 toward_goal = chain.goal.xyz - at_root;
+    float distance_to_goal = clamp(length(toward_goal), 1.0e-4, reach - 1.0e-4);
+
+    vec3 bend = chain.has_pole != 0u
+        ? cross(at_middle - at_root, chain.pole.xyz - at_root)
+        : cross(at_tip - at_root, at_middle - at_root);
+    if (length(bend) < 1.0e-5) {
+        bend = cross(toward_goal, vec3(0.0, 1.0, 0.0));
+        if (length(bend) < 1.0e-5) {
+            bend = cross(toward_goal, vec3(1.0, 0.0, 0.0));
+        }
+    }
+    bend = normalize(bend);
+
+    float root_now = angle_between(at_tip - at_root, at_middle - at_root);
+    float middle_now = angle_between(at_root - at_middle, at_tip - at_middle);
+    float root_wanted = angle_across(upper, distance_to_goal, lower);
+    float middle_wanted = angle_across(upper, lower, distance_to_goal);
+
+    vec4 root_turn = turn_weighted(turn_about(bend, root_wanted - root_now), chain.weight);
+    vec4 middle_turn = turn_weighted(turn_about(bend, middle_wanted - middle_now), chain.weight);
+
+    turn_bone_about(chain.root, at_root, root_turn);
+    turn_bone_about(chain.middle, at_root, root_turn);
+    turn_bone_about(chain.tip, at_root, root_turn);
+    turn_carried(chain, at_root, root_turn);
+
+    vec3 middle_pivot = bone_transforms[chain.middle][3].xyz;
+    turn_bone_about(chain.middle, middle_pivot, middle_turn);
+    turn_bone_about(chain.tip, middle_pivot, middle_turn);
+    turn_carried(chain, middle_pivot, middle_turn);
+
+    vec3 root_pivot = bone_transforms[chain.root][3].xyz;
+    vec3 tip_now = bone_transforms[chain.tip][3].xyz;
+    vec4 aim = turn_weighted(
+        turn_from_to(tip_now - root_pivot, chain.goal.xyz - root_pivot),
+        chain.weight
+    );
+    turn_bone_about(chain.root, root_pivot, aim);
+    turn_bone_about(chain.middle, root_pivot, aim);
+    turn_bone_about(chain.tip, root_pivot, aim);
+    turn_carried(chain, root_pivot, aim);
+}

@@ -1,0 +1,12 @@
+[package]
+name = "nightshade-steam"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade.workspace = true
+steamworks.workspace = true
+steamworks-sys.workspace = true
+tracing.workspace = true

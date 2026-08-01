@@ -1,0 +1,90 @@
+-- Candlewake, written in the story format nightshade-story reads.
+
+story Candlewake
+opening The sea has gone quiet, which is worse than the noise.
+opening You are on the shingle below the lighthouse, and the light is out.
+start shore
+
+value lit 0
+value filled 0
+
+room shore
+  title The Shingle
+  look Grey stones grind under you. The lighthouse stands above the tide line, and its door is open on the dark.
+  way north hall
+
+room hall
+  title The Long Hall
+  look Salt has eaten the plaster off the walls. A stair climbs into the dark, and a hatch lies open in the floor.
+  way south shore
+  way up stair when lit same 1 barred The stair is black above you. You will not climb it blind.
+  way down cellar when lit same 1 barred The hatch is a hole full of night.
+
+room stair
+  title The Turning Stair
+  look The steps turn and turn. Your light throws your shadow up the wall ahead of you.
+  way down hall
+  way up lamp
+
+room lamp
+  title The Lamp Room
+  look Glass on every side, and the great lamp cold in the middle of it. Beyond the glass the sea waits for a light.
+  way down stair
+
+room cellar
+  title The Cellar
+  look Water stands ankle deep and takes the warmth out of you. Crates have swollen and split against the wall.
+  way up hall
+
+thing tinderbox
+  words tinderbox tinder box flint
+  look A tinderbox, dry inside, which is a small mercy.
+  at shore
+  portable
+  taking The tinderbox is dry. You put it in your pocket.
+
+thing door
+  words door doorway
+  look The door has stood open a long time. The wood has gone soft with salt.
+  at shore
+
+thing lantern
+  words lantern brass
+  look A brass lantern with a cold wick. It has been waiting for someone.
+  at hall
+  portable
+  taking You lift the lantern. It is lighter than it should be.
+
+thing oil
+  words oil can tin
+  look A tin of lamp oil, still heavy, still sealed.
+  at cellar
+  portable
+  taking You take the tin. It sloshes.
+
+thing beacon
+  words beacon great wick
+  look The beacon stands taller than you, with a wick as thick as your wrist and nothing in it to burn.
+  at lamp
+
+verb light lantern
+  when holds lantern and holds tinderbox
+  say You strike the tinderbox. The wick takes, and a small warm room moves with you wherever you go.
+  set lit set 1
+  barred You want the lantern in your hand and something to strike it with.
+
+verb pour oil
+  when holds oil and at lamp
+  say You tip the tin into the reservoir, and the beacon drinks every drop of it.
+  set filled set 1
+  move oil gone
+  barred There is nothing here worth pouring it into.
+
+verb light beacon
+  when filled same 1 and lit same 1
+  say You touch the lantern to the wick. The beacon catches, and the whole room turns white.
+  end Far out on the water a boat corrects its course. You sit down on the iron floor and wait for the morning.
+  barred The wick is dry, and it will not take.
+
+verb wait
+  say You wait. The sea says nothing back.

@@ -1,0 +1,27 @@
+[package]
+name = "nightshade-tiles"
+description = "A grid of bytes read from a picture of a level, and the walk across it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-cells = { workspace = true }
+nightshade-ecs = { workspace = true }
+nalgebra-glm = { workspace = true }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+
+[lints]
+workspace = true

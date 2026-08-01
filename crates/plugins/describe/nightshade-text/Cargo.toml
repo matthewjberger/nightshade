@@ -1,0 +1,26 @@
+[package]
+name = "nightshade-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+bytemuck = { workspace = true, features = ["derive"] }
+cosmic-text = { workspace = true }
+enum2schema = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"], optional = true }
+serde = { workspace = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:enum2schema"]
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+]

@@ -1,0 +1,57 @@
+-- Ten thousand things that move, so the cost of one frame can be measured.
+-- The readout is the number of steps the machine takes in a frame, the bytes
+-- it writes into the columns, and the commands it applies at the boundaries.
+
+use "turns.ns"
+
+runs "readout.ns"
+   Sign.anchor = (0.5, 0.06)
+
+runs "daylight.ns"
+   Daylight.angle = (-0.9, 0.55, 0)
+   Daylight.shadows = false
+
+module swarm
+
+component Drift number
+component Rate number
+
+config World
+   cameraEye = (0, 46, 96)
+   swarm
+      side number = 100
+      spread number = 1.1
+      size number = 0.45
+
+system world.build
+   once
+   in World
+   creates entities
+
+   let side := World.swarm.side
+   let half := side * World.swarm.spread / 2
+   for each index in 0 .. side * side
+      let across := remainder(index, side)
+      let along := quotient(index, side)
+      let phase := (across + along) / 8
+      spawn Mesh "Cube",
+            Transform (across * World.swarm.spread - half, 0, along * World.swarm.spread - half),
+            Scale (World.swarm.size, World.swarm.size, World.swarm.size),
+            Color (across / side, 0.45, along / side),
+            Drift phase,
+            Rate 2.4
+
+system swarm.move
+   in Time, Turn
+   over things: in Rate, out Drift, out Transform
+
+   Drift += Rate * Time.dt
+   Transform.y := sin(Drift) * 1.6
+   when Drift > Turn.full
+      Drift := Drift - Turn.full
+
+system hud.show
+   in Cost
+   any order over lines: out Label with Readout
+
+   Label := floor(Cost.steps) + " steps   " + floor(Cost.bytes) + " bytes   " + floor(Cost.commands) + " commands"

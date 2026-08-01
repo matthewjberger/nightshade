@@ -1,0 +1,17 @@
+[package]
+name = "nightshade-state"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = ["contract", "dep:nightshade"]
+
+[dependencies]
+nightshade = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,102 @@
+#version 460
+#extension GL_EXT_mesh_shader : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "scene_common.glsl"
+
+#define MESHLET_MAX_VERTICES 64
+#define MESHLET_MAX_TRIANGLES 124
+
+layout(local_size_x = 64) in;
+layout(triangles, max_vertices = MESHLET_MAX_VERTICES, max_primitives = MESHLET_MAX_TRIANGLES) out;
+
+struct TaskPayload {
+    uint object;
+    uint meshlets[TASK_BATCH];
+};
+
+taskPayloadSharedEXT TaskPayload payload;
+
+layout(push_constant) uniform ListPush {
+    uint list;
+} push;
+
+layout(location = 0) out VertexOutput {
+    vec3 normal;
+    vec3 world_position;
+    vec3 previous_world_position;
+    vec2 tex_coords;
+    vec2 tex_coords_1;
+    vec4 tangent;
+    vec4 color;
+} vertex_output[];
+
+layout(location = 7) perprimitiveEXT out flat uint material_index[];
+layout(location = 8) perprimitiveEXT out flat uint object_index[];
+layout(location = 9) noperspective out vec2 tex_coords_affine[];
+
+void main() {
+    uint drawn = payload.object;
+    Object object = objects[drawn];
+    MeshRange range = mesh_ranges[object.mesh_slot];
+    Meshlet meshlet = meshlets[range.meshlet_offset + payload.meshlets[gl_WorkGroupID.x]];
+
+    SetMeshOutputsEXT(meshlet.vertex_count, meshlet.triangle_count);
+
+    bool skinned = (object.flags & OBJECT_SKINNED) != 0u;
+    uint vertex_base = skinned ? object.vertex_offset : range.vertex_offset;
+
+    for (uint slot = gl_LocalInvocationIndex; slot < meshlet.vertex_count; slot += 64u) {
+        uint local = meshlet_vertices[meshlet.vertex_offset + slot];
+        Vertex vertex = vertices[vertex_base + local];
+        for (uint target = 0u; target < range.morph_target_count; ++target) {
+            float weight = object.morph_weights[target >> 2u][target & 3u];
+            if (abs(weight) <= 1.0e-4) {
+                continue;
+            }
+            MorphDisplacement shift = morph_displacements[
+                range.morph_offset + target * range.vertex_count + local
+            ];
+            vertex.position += shift.position * weight;
+            vertex.normal += shift.normal * weight;
+            vertex.tangent.xyz += shift.tangent * weight;
+        }
+        vec4 world = skinned
+            ? vec4(vertex.position, 1.0)
+            : object.transform * vec4(vertex.position, 1.0);
+        vec4 clip = view_projection_of(view_of(push.list)) * world;
+        if (frame.style.z != 0.0) {
+            vec2 grid = max(frame.style.xy, vec2(1.0));
+            clip.xy = round(clip.xy * grid / clip.w) * clip.w / grid;
+        }
+        gl_MeshVerticesEXT[slot].gl_Position = clip;
+        vertex_output[slot].normal = skinned
+            ? normalize(vertex.normal)
+            : normalize(mat3(object.normal_transform) * vertex.normal);
+        vertex_output[slot].world_position = world.xyz;
+        vertex_output[slot].previous_world_position = skinned
+            ? vertices[object.previous_vertex_offset + local].position
+            : (object.previous_transform * vec4(vertex.position, 1.0)).xyz;
+        vertex_output[slot].tex_coords = vertex.tex_coords;
+        vertex_output[slot].tex_coords_1 = vertex.tex_coords_1;
+        tex_coords_affine[slot] = vertex.tex_coords;
+        vertex_output[slot].tangent = vec4(
+            skinned
+                ? normalize(vertex.tangent.xyz)
+                : normalize(mat3(object.transform) * vertex.tangent.xyz),
+            vertex.tangent.w
+        );
+        vertex_output[slot].color = vertex.color * object.tint;
+    }
+
+    for (uint slot = gl_LocalInvocationIndex; slot < meshlet.triangle_count; slot += 64u) {
+        uint base = meshlet.triangle_offset + slot * 3u;
+        gl_PrimitiveTriangleIndicesEXT[slot] = uvec3(
+            triangle_index(base),
+            triangle_index(base + 1u),
+            triangle_index(base + 2u)
+        );
+        material_index[slot] = object.material_index;
+        object_index[slot] = drawn;
+    }
+}

@@ -1,13 +1,4 @@
-//! Standalone use of the archetype ECS: register components, spawn a batch, run
-//! a mutable tuple query and a read-only query, and filter by a marker tag. No
-//! engine and no renderer, just `nightshade-ecs`.
-//!
-//! ```sh
-//! cargo run --example basic
-//! ```
-
-use nightshade_ecs::dynamic::DynWorld;
-
+use nightshade_ecs::World;
 #[derive(Default, Clone, Debug)]
 struct Position {
     x: f32,
@@ -27,10 +18,8 @@ struct Health {
 
 struct Player;
 
-nightshade_ecs::impl_component!(Position, Velocity, Health);
-
 fn main() {
-    let mut world = DynWorld::new();
+    let mut world = World::new();
 
     let player = world.spawn((
         Position::default(),
@@ -50,7 +39,6 @@ fn main() {
         ));
     }
 
-    // Borrow mutability comes from the tuple, so only Position is written.
     world
         .query::<(&mut Position, &Velocity)>()
         .for_each(|_entity, (position, velocity)| {
@@ -58,12 +46,10 @@ fn main() {
             position.y += velocity.y;
         });
 
-    // A read-only query on &world is a real iterator.
     for (entity, position) in world.query_ref::<&Position>().iter() {
         println!("{entity:?} moved to ({:.1}, {:.1})", position.x, position.y);
     }
 
-    // Tags filter a query without fragmenting archetypes.
     let players = world
         .query_ref::<&Health>()
         .with_tag_type::<Player>()

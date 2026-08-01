@@ -1,0 +1,58 @@
+-- A land made of blocks. The description says how the ground is shaped, and
+-- the app digs it column by column around the camera. A thing that carries
+-- Block puts one block where it stands, and a thing that carries Dig takes one
+-- away, so the two things below write a ribbon over the hills and cut a tunnel
+-- through them.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.angle = (-0.85, 0.5, 0)
+   Daylight.strength = 2.2
+
+module voxels
+
+component Plough
+component Borer
+
+config World
+   cameraEye = (0, 26, 46)
+
+system world.ground
+   once
+   out Land
+
+   Land.seed := 7
+   Land.hills := 9
+   Land.shore := 0
+   Land.reach := 8
+
+system world.build
+   once
+   creates entities
+
+   spawn Mesh "Cube", Color (0.96, 0.55, 0.2), Scale (1.4, 1.4, 1.4),
+         Transform (14, 7, 0), Block "rock", Plough 1
+   spawn Mesh "Sphere", Color (0.35, 0.8, 1.0), Scale (1.8, 1.8, 1.8),
+         Transform (0, 0, 11), Dig 1, Borer 1
+
+system plough.move
+   in Time
+   over ploughs: in Plough, out Transform
+
+   Transform.x := cos(Time.uptime * 0.45) * 14
+   Transform.z := sin(Time.uptime * 0.45) * 14
+   Transform.y := 7
+
+system borer.move
+   in Time
+   over borers: in Borer, out Transform
+
+   Transform.x := sin(Time.uptime * 0.35) * 11
+   Transform.z := cos(Time.uptime * 0.35) * 11
+   Transform.y := 0
+
+system hud.show
+   any order over lines: out Label with Readout
+
+   Label := "one land of blocks, one thing that builds and one that digs"

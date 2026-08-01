@@ -1,0 +1,29 @@
+﻿[package]
+name = "nightshade-physics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-camera-controller = { path = "../../domain/nightshade-camera-controller", default-features = false, features = ["contract"] }
+bitflags = { workspace = true, optional = true }
+enum2schema = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-ecs = { workspace = true, optional = true }
+nightshade-input = { path = "../../domain/nightshade-input", default-features = false, features = ["contract"], optional = true }
+nightshade-picking = { path = "../../domain/nightshade-picking", default-features = false, optional = true }
+rapier3d = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
+tracing = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:bitflags", "dep:enum2schema", "dep:nalgebra-glm", "dep:nightshade-ecs", "nightshade-picking/contract", "dep:serde"]
+plugin = ["contract", "dep:nightshade", "dep:nightshade-input", "dep:rapier3d", "dep:tracing"]

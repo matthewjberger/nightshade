@@ -1,0 +1,17 @@
+-- A camera that follows. This module knows no game. Anything that
+-- carries Follow pulls the camera after it, by the offset it holds.
+
+module camera
+
+shows Follow
+
+component Follow
+
+resource Camera
+   eye = (0, 0, 30)
+
+system camera.follow
+   out Camera
+   over followed: in Transform, in Follow
+
+   Camera.eye := (Transform.x + Follow.x, Follow.y, Follow.z)

@@ -1,0 +1,11 @@
+[package]
+name = "blocker-screen"
+description = "The words every part of blocker speaks: the screen a player is on and the notice a part posts"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm.workspace = true
+

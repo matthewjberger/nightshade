@@ -1,0 +1,44 @@
+[package]
+name = "voxels"
+description = "A small voxel world: dig and place blocks with tools, drop and pick up items drawn as extruded pixel art, over a block atlas"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "voxels-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-random = { workspace = true }
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-save.workspace = true
+serde.workspace = true
+nightshade-sprite.workspace = true
+nightshade-text.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-voxels.workspace = true
+nightshade-window.workspace = true
+nightshade-worker.workspace = true
+noise.workspace = true
+

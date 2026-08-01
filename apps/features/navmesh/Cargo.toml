@@ -1,0 +1,43 @@
+﻿[package]
+name = "navmesh"
+description = "Navigation mesh pathfinding with A* search, funnel smoothing, and agent avoidance"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "navmesh-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-scene.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-physics.workspace = true
+nightshade-animation.workspace = true
+nightshade-load = { workspace = true }
+nightshade-gltf.workspace = true
+nightshade-prefab.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-picking.workspace = true
+nightshade-ui.workspace = true
+nightshade-navmesh.workspace = true
+nightshade-text.workspace = true
+nalgebra-glm = { workspace = true }
+noise = { workspace = true }
+rand = "0.9"
+serde = { workspace = true }
+tracing = { workspace = true }

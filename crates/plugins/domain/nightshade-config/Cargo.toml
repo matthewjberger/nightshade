@@ -1,0 +1,29 @@
+[package]
+name = "nightshade-config"
+description = "Settings an app declares once as an enum, reads as values, and keeps between runs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true, optional = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = [
+    "contract",
+], optional = true }
+nightshade-store = { path = "../../../support/nightshade-store", optional = true }
+toml = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-platform",
+    "dep:nightshade-store",
+    "dep:toml",
+]
+
+[lints]
+workspace = true

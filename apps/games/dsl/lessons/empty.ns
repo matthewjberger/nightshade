@@ -1,0 +1,8 @@
+-- An empty page with two shapes, ready for you to build on.
+
+assets Shapes from builtin
+   block mesh "Cube"
+   ball mesh "Sphere"
+
+config Game
+   viewHeight number = 13.5

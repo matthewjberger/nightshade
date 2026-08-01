@@ -1,0 +1,44 @@
+[package]
+name = "shadergraph"
+description = "A node graph that compiles to a shader, with the picture it makes behind the editor"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "shadergraph-run"
+path = "src/main.rs"
+
+[dependencies]
+bytemuck = { workspace = true }
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-camera = { workspace = true }
+nightshade-cli = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-input = { workspace = true }
+nightshade-log = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+nightshade-ui = { workspace = true }
+nightshade-ui-nodegraph = { workspace = true }
+nightshade-wgpu = { workspace = true }
+nightshade-window = { workspace = true }
+tracing = { workspace = true }
+
+# rfd carries a backend for each desktop and one for the web, and none for
+# android, so naming it there fails to compile inside rfd itself.
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+rfd = { workspace = true }
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]

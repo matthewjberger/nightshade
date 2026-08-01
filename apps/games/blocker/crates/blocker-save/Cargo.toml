@@ -1,0 +1,23 @@
+[package]
+name = "blocker-save"
+description = "What blocker keeps between runs: the seed, the player, the pocket, the chests, the edits, the crops and the boats"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-farm = { path = "../blocker-farm" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-world = { path = "../blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-health.workspace = true
+nightshade-platform.workspace = true
+nightshade-save.workspace = true
+nightshade-scene.workspace = true
+nightshade.workspace = true
+serde.workspace = true

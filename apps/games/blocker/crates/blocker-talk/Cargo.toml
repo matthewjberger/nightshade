@@ -1,0 +1,25 @@
+[package]
+name = "blocker-talk"
+description = "What a villager says when a player stands near: the quest offered, the goods shown and the mark over a head"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-beasts = { path = "../blocker-beasts" }
+blocker-crew = { path = "../blocker-crew" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-quests = { path = "../blocker-quests" }
+nalgebra-glm.workspace = true
+nightshade-dialogue.workspace = true
+nightshade-input.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-text.workspace = true
+nightshade.workspace = true

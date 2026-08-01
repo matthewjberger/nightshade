@@ -1,0 +1,26 @@
+﻿[package]
+name = "nightshade-graphics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+image = { workspace = true }
+nalgebra = { workspace = true }
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true, optional = true }
+nightshade-ecs = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-render = { workspace = true }
+nightshade-worker = { workspace = true }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["plugin"] }
+tracing = { workspace = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = ["contract", "dep:nightshade"]
+
+[package.metadata.cargo-machete]
+ignored = ["nalgebra"]

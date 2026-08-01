@@ -1,0 +1,38 @@
+[package]
+name = "cobble"
+description = "A bare voxel world on the blocker crates: terrain to walk, blocks to dig and place, and nothing else"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "cobble-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+blocker-blocks = { path = "../blocker/crates/blocker-blocks" }
+blocker-screen = { path = "../blocker/crates/blocker-screen" }
+blocker-figure = { path = "../blocker/crates/blocker-figure" }
+blocker-player = { path = "../blocker/crates/blocker-player" }
+blocker-pocket = { path = "../blocker/crates/blocker-pocket" }
+blocker-weather = { path = "../blocker/crates/blocker-weather" }
+blocker-world = { path = "../blocker/crates/blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-health.workspace = true
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade-camera.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-sprite.workspace = true
+nightshade-state.workspace = true
+nightshade.workspace = true

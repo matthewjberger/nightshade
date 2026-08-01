@@ -1,0 +1,20 @@
+[package]
+name = "blocker-world"
+description = "The ground blocker digs: the biomes, the schematics and the node graph that raises a village out of a seed"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+fastrand.workspace = true
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-screen = { path = "../blocker-screen" }
+nalgebra-glm.workspace = true
+nightshade-graphics.workspace = true
+nightshade-particles.workspace = true
+nightshade-render.workspace = true
+nightshade-text.workspace = true
+nightshade-voxels.workspace = true
+nightshade.workspace = true
+noise.workspace = true

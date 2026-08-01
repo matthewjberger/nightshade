@@ -1,0 +1,26 @@
+[package]
+name = "nightshade-platformer"
+description = "The short mercy a jump keeps after the ledge and before the ground"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-platform = { path = "../../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"] }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+
+[lints]
+workspace = true

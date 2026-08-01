@@ -1,0 +1,27 @@
+[package]
+name = "blocker-beasts"
+description = "What roams the hills of blocker: the kinds, how they wake, how they lunge and what they leave behind"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-screen = { path = "../blocker-screen" }
+nalgebra-glm.workspace = true
+nightshade-config.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-health.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-text.workspace = true
+nightshade.workspace = true

@@ -1,0 +1,8 @@
+# Games that still read a key or a pad button by name rather than an action
+# from nightshade-input, because the sweep has not reached them or because the
+# read has no shape in the layer: dsl binds keys a script declares at run time,
+# and iam wakes on any key. Drop a line when the app is clean. The list only
+# ever shrinks, and dag-check fails on a line that names an app which is
+# already clean.
+dsl
+iam

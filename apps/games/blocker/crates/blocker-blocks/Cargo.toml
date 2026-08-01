@@ -1,0 +1,16 @@
+[package]
+name = "blocker-blocks"
+description = "What the world is made of: the blocks, the tools, the items, the crops, the atlas they are drawn from and the meshes cut out of it"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render.workspace = true
+nightshade-sprite.workspace = true
+nightshade-voxels.workspace = true
+nightshade.workspace = true
+serde.workspace = true

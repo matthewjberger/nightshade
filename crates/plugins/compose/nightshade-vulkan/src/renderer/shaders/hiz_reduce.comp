@@ -1,0 +1,29 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 1, r32f) uniform readonly image2D source;
+layout(set = 0, binding = 2, r32f) uniform writeonly image2D destination;
+
+layout(push_constant) uniform Push {
+    uvec2 destination_size;
+    uvec2 source_size;
+} push;
+
+void main() {
+    uvec2 texel = gl_GlobalInvocationID.xy;
+    if (texel.x >= push.destination_size.x || texel.y >= push.destination_size.y) {
+        return;
+    }
+    ivec2 base = ivec2(texel) * 2;
+    ivec2 limit = ivec2(push.source_size) - ivec2(1);
+    float first = imageLoad(source, min(base, limit)).r;
+    float second = imageLoad(source, min(base + ivec2(1, 0), limit)).r;
+    float third = imageLoad(source, min(base + ivec2(0, 1), limit)).r;
+    float fourth = imageLoad(source, min(base + ivec2(1, 1), limit)).r;
+    imageStore(
+        destination,
+        ivec2(texel),
+        vec4(min(min(first, second), min(third, fourth)))
+    );
+}

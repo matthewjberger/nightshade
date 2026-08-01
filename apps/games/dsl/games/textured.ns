@@ -1,0 +1,45 @@
+-- A thing can wear a picture. The description names the picture and how many
+-- times it repeats across a face. The app makes the pictures at startup, so
+-- there is no image file to carry beside the description.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.strength = 2.4
+
+module textured
+
+assets Skin from builtin
+   stone texture "tile"
+   lines texture "grid"
+
+component Spin
+
+config World
+   cameraEye = (0, 6, 15)
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color (0.82, 0.84, 0.9),
+         Texture Skin.stone, Repeat 8,
+         Transform (0, -0.5, 0), Scale (16, 1, 16)
+   spawn Mesh "Cube", Color (0.96, 0.74, 0.46),
+         Texture Skin.stone, Repeat 2,
+         Transform (-3, 1, 0), Scale (2, 2, 2), Spin 0.6
+   spawn Mesh "Sphere", Color (0.6, 0.82, 1.0),
+         Texture Skin.lines, Repeat 3,
+         Transform (3, 1, 0), Scale (2, 2, 2), Spin -0.9
+
+system things.turn
+   in Time
+   over turners: in Spin, out Rotation
+
+   Rotation := (0, Rotation.y + Spin * Time.dt, 0)
+
+system hud.show
+   any order over lines: out Label with Readout
+
+   Label := "a picture on a thing, repeated across its faces"

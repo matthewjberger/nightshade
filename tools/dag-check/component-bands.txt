@@ -1,0 +1,6 @@
+# The types used as a component that are declared outside the components band,
+# one per line as "crate Type (declared in band)". Per-entity data lives in
+# components, and nothing is recorded here.
+#
+# This list only shrinks. The check fails on a line whose type is gone or
+# already in its band.

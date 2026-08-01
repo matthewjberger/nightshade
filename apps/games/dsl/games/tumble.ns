@@ -1,0 +1,58 @@
+-- Blocks that fall. The description says what is solid and the engine moves it,
+-- so the transform of a falling thing is read back rather than written out.
+
+runs "readout.ns"
+   Sign.anchor = (0.5, 0.07)
+   Sign.color = (0.88, 0.92, 1.0)
+
+runs "daylight.ns"
+   Daylight.angle = (-0.9, 0.55, 0)
+   Daylight.strength = 2.2
+
+module tumble
+
+component Faller
+
+config World
+   cameraEye = (0, 9, 18)
+   ground
+      reach number = 9
+      color = (0.11, 0.13, 0.18)
+   block
+      count number = 14
+      size number = 0.9
+      bounce number = 0.45
+      color = (0.86, 0.60, 0.35)
+
+resource Run
+   dropped number = 0
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color World.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (World.ground.reach * 2, 1, World.ground.reach * 2),
+         Body "static"
+
+system blocks.drop
+   once
+   in World, Run
+   out Run
+   creates entities
+
+   for each index in 0 .. World.block.count
+      spawn Mesh "Cube", Color World.block.color,
+            Transform (sin(index * 1.7) * 3, 4 + index * 1.4, cos(index * 2.3) * 3),
+            Scale (World.block.size, World.block.size, World.block.size),
+            Body "loose", Bounce World.block.bounce,
+            Faller 1
+   Run.dropped := World.block.count
+
+system hud.show
+   in Run
+   any order over lines: out Label with Readout
+
+   Label := floor(Run.dropped) + " blocks, and the engine moves them"

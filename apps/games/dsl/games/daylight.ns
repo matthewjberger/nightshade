@@ -1,0 +1,24 @@
+-- The daylight a description starts from. Say what you want changed in the
+-- use block and leave the rest alone.
+
+module daylight
+
+shows Daylight
+
+config Daylight
+   angle = (-0.9, 0.5, 0)
+   color = (1.0, 0.96, 0.9)
+   strength number = 2.0
+   shadows boolean = true
+   sky boolean = true
+
+system daylight.raise
+   once
+   in Daylight
+   out Sun, Sky
+
+   Sun.angle := Daylight.angle
+   Sun.color := Daylight.color
+   Sun.strength := Daylight.strength
+   Sun.shadows := Daylight.shadows
+   Sky.show := Daylight.sky

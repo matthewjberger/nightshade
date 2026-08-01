@@ -1,0 +1,34 @@
+﻿[package]
+name = "clear_coat"
+description = "A clear layer lying over a material, with a highlight of its own"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "clear_coat-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-pedestal.workspace = true
+nightshade-load = { workspace = true, features = ["fetch"] }
+nightshade-gltf = { workspace = true, features = ["fetch"] }
+nightshade-prefab = { workspace = true }
+nightshade-window.workspace = true
+tracing = { workspace = true }
+[features]
+default = ["wgpu"]
+vulkan = ["nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

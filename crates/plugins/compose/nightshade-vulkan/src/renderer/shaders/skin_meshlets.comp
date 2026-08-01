@@ -1,0 +1,56 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define POSED_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+shared vec3 gathered[64];
+shared float spread[64];
+
+void main() {
+    uint instance_index = gl_WorkGroupID.y;
+    if (instance_index >= frame.skin_counts.z) {
+        return;
+    }
+    SkinInstance instance = skin_instances[instance_index];
+    Object object = objects[instance.object_index];
+    MeshRange range = mesh_ranges[object.mesh_slot];
+    uint local = gl_WorkGroupID.x;
+    if (local >= range.meshlet_count) {
+        return;
+    }
+    Meshlet meshlet = meshlets[range.meshlet_offset + local];
+    uint lane = gl_LocalInvocationIndex;
+    bool held = lane < meshlet.vertex_count;
+    vec3 position = vec3(0.0);
+    if (held) {
+        uint vertex = meshlet_vertices[meshlet.vertex_offset + lane];
+        position = vertices[instance.posed_vertex_offset + vertex].position;
+    }
+
+    gathered[lane] = position;
+    barrier();
+    for (uint stride = 32u; stride > 0u; stride >>= 1u) {
+        if (lane < stride) {
+            gathered[lane] += gathered[lane + stride];
+        }
+        barrier();
+    }
+    vec3 middle = gathered[0] / float(max(meshlet.vertex_count, 1u));
+    barrier();
+
+    vec3 away = position - middle;
+    spread[lane] = held ? dot(away, away) : 0.0;
+    barrier();
+    for (uint stride = 32u; stride > 0u; stride >>= 1u) {
+        if (lane < stride) {
+            spread[lane] = max(spread[lane], spread[lane + stride]);
+        }
+        barrier();
+    }
+    if (lane == 0u) {
+        posed_meshlets[object.posed_meshlets + local] = vec4(middle, sqrt(spread[0]));
+    }
+}

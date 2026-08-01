@@ -1,0 +1,26 @@
+[package]
+name = "nightshade-cells"
+description = "The question a mechanic asks a discrete world about a cell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true }
+nightshade-ecs = { workspace = true }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+
+[lints]
+workspace = true

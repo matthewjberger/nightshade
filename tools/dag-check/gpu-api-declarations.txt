@@ -1,0 +1,12 @@
+# The crates allowed to declare a GPU API, one per line as "crate api".
+# A backend owns its API and re-exports it, so every other crate reaches it
+# through nightshade_wgpu::wgpu or nightshade_vulkan::ash rather than taking
+# the dependency itself.
+#
+# nightshade-openxr is the exception the runtime forces. OpenXR is handed the
+# Vulkan instance, device and image handles that wgpu created underneath, so
+# the crate must speak ash to build its session, and no re-export gives it the
+# raw handles.
+nightshade-wgpu wgpu
+nightshade-vulkan ash
+nightshade-openxr ash

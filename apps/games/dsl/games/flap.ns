@@ -1,0 +1,151 @@
+-- A flap and glide game. The bird flies right at a steady pace and
+-- the camera is a net that a module writes, so the track can be long.
+
+runs "camera.ns"
+
+module flap
+
+component Speed
+component Velocity
+component Half
+component Block
+component Points
+
+config Flap
+   viewHeight number = 16
+   court
+      roof number = 7
+      floorY number = -7
+      color = (0.101, 0.138, 0.241)
+      cameraZ number = 30
+      track
+         length number = 284
+         lead number = 4
+   bird
+      half number = 0.42
+      speed number = 9
+      gravity number = 26
+      lift number = 9.5
+      color = (0.890, 0.911, 1.0)
+   gates
+      start number = 12
+      spacing number = 11
+      count number = 24
+      gap
+         half number = 2.3
+         swing number = 3.2
+      post
+         width number = 1.4
+         length number = 14
+         color = (0.180, 0.520, 0.320)
+   tokens
+      half number = 0.3
+      color = (0.955, 0.638, 0.033)
+
+resource Run
+   score number = 0
+   best number = 0
+   falls number = 0
+   layWanted boolean = true
+
+query gapCenter(gate) = sin(gate * 1.1) * Flap.gates.gap.swing
+query gateX(gate) = gate * Flap.gates.spacing + Flap.gates.start
+
+system world.build
+   once
+   in Flap
+   creates entities
+
+   spawn Mesh "Cube", Color Flap.court.color,
+         Transform (Flap.court.track.length * 0.5, Flap.court.floorY - 0.6, 0 - 1.0),
+         Scale (Flap.court.track.length + 40, 1.2, 0.5)
+   spawn Mesh "Cube", Color Flap.court.color,
+         Transform (Flap.court.track.length * 0.5, Flap.court.roof + 0.6, 0 - 1.0),
+         Scale (Flap.court.track.length + 40, 1.2, 0.5)
+   spawn Mesh "Cube", Color Flap.bird.color,
+         Transform (0, 0),
+         Scale (Flap.bird.half * 2, Flap.bird.half * 2, 1),
+         Speed Flap.bird.speed,
+         Velocity (Flap.bird.speed, 0),
+         Half (Flap.bird.half, Flap.bird.half),
+         Follow (Flap.court.track.lead, 0, Flap.court.cameraZ)
+
+system gates.clear
+   enable Run.layWanted
+   over stale: in Half without Speed
+   removes entities
+
+   remove stale
+
+system gates.lay
+   enable Run.layWanted
+   in Flap
+   out Run
+   creates entities
+
+   for each gate in 0 .. Flap.gates.count
+      spawn Mesh "Cube", Color Flap.gates.post.color,
+            Transform (gateX(gate), gapCenter(gate) + Flap.gates.gap.half + Flap.gates.post.length * 0.5),
+            Scale (Flap.gates.post.width, Flap.gates.post.length, 1),
+            Half (Flap.gates.post.width * 0.5, Flap.gates.post.length * 0.5),
+            Block 1
+      spawn Mesh "Cube", Color Flap.gates.post.color,
+            Transform (gateX(gate), gapCenter(gate) - Flap.gates.gap.half - Flap.gates.post.length * 0.5),
+            Scale (Flap.gates.post.width, Flap.gates.post.length, 1),
+            Half (Flap.gates.post.width * 0.5, Flap.gates.post.length * 0.5),
+            Block 1
+      spawn Mesh "Cube", Color Flap.tokens.color,
+            Transform (gateX(gate), gapCenter(gate)),
+            Scale (Flap.tokens.half * 2, Flap.tokens.half * 2, 0.6),
+            Half (Flap.tokens.half, Flap.tokens.half),
+            Points 1
+   Run.layWanted := false
+
+order gates.clear before gates.lay
+
+system bird.fly
+   in Time, Input, Flap
+   out Run
+   over birds: in Half, in Speed, out Velocity, out Transform
+   uses posts: in Transform, in Half, in Block
+
+   Velocity := (Speed, Velocity.y - Flap.bird.gravity * Time.dt)
+   when Input.serve
+      Velocity := (Speed, Flap.bird.lift)
+   Transform := Transform + Velocity * Time.dt
+
+   let fallen := Transform.y < Flap.court.floorY or Transform.y > Flap.court.roof
+   let ended := Transform.x > Flap.court.track.length
+   let struck := false
+   for each post in posts
+      let touch := separation(Transform, Half.x, Transform(post), Half(post))
+      when touch is some
+         struck := true
+         break
+
+   when fallen or struck or ended
+      Transform := (0, 0)
+      Velocity := (Speed, 0)
+      Run.best := max(Run.best, Run.score)
+      Run.score := 0
+      Run.falls := Run.falls + 1
+      Run.layWanted := true
+
+system tokens.take
+   in Flap
+   out Run
+   over birds: in Half, in Transform with Speed
+   uses tokens: in Transform, in Half, in Points
+   removes entities
+
+   for each token in tokens
+      let touch := separation(Transform, Half.x, Transform(token), Half(token))
+      when touch is some
+         Run.score := Run.score + Points(token)
+         remove token
+
+system readout.show
+   in Run
+   out Window.title
+
+   Window.title := "Gates " + Run.score + "   Best " + Run.best + "   Falls " + Run.falls

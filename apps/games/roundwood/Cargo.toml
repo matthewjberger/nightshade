@@ -1,0 +1,35 @@
+[package]
+name = "roundwood"
+description = "An Animal Crossing style village on a turning cylinder world, drawn with HD-2D sprites over a block ground"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "roundwood-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-cli.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-texture.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-sprite.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true

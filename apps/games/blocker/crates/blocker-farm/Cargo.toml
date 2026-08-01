@@ -1,0 +1,21 @@
+[package]
+name = "blocker-farm"
+description = "What grows on tilled ground: a crop that takes water and time and turns into food"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-weather = { path = "../blocker-weather" }
+nalgebra-glm.workspace = true
+nightshade-input.workspace = true
+nightshade-platform.workspace = true
+nightshade-sprite.workspace = true
+nightshade-state.workspace = true
+nightshade.workspace = true

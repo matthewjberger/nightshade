@@ -1,0 +1,15 @@
+# Check every text file out with LF on every platform, so the working tree does
+# not depend on each machine's core.autocrlf and rustfmt formats the same way
+# everywhere.
+* text=auto eol=lf
+
+*.png binary
+*.glb binary
+*.bin binary
+*.hdr binary
+*.ogg binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.wasm binary

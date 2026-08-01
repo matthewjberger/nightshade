@@ -1,0 +1,42 @@
+﻿[package]
+name = "boids_cpu"
+description = "A 3D flock whose steering rules run as one parallel batch"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "boids_cpu-run"
+path = "src/main.rs"
+
+[features]
+default = ["parallel"]
+parallel = ["nightshade-ecs/parallel", "nightshade-app/parallel"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-ui.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-ecs.workspace = true
+nalgebra-glm.workspace = true
+tracing = { workspace = true }
+
+[package.metadata.cargo-machete]
+ignored = ["nightshade-ecs"]

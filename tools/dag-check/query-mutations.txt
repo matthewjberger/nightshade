@@ -1,0 +1,7 @@
+# The queries that still take something they can change, one per line as
+# "path name". A query only reports. A function that takes &mut, ResMut,
+# Commands or EventWriter changes the world, so it belongs in commands.
+#
+# This list only shrinks. The check fails on a line whose function is gone or
+# already clean, so a fix cannot be quietly undone, and a new query that
+# changes something fails rather than joining the list.

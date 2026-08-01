@@ -1,0 +1,40 @@
+-- Shapes that melt into one another. A thing that carries a Field is not drawn
+-- as a shape of its own. It joins one field that the app draws, and a thing
+-- that carves takes its own shape back out of that field.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+
+module fields
+
+component Drifter
+
+config World
+   cameraEye = (0, 16, 34)
+
+system world.build
+   once
+   creates entities
+
+   spawn Field "cube", Color (0.5, 0.52, 0.56),
+         Transform (0, -1.2, 0), Scale (30, 2, 30), Blend 0.5
+   spawn Field "sphere", Color (0.95, 0.6, 0.3),
+         Transform (0 - 3, 1.6, 0), Scale (4, 4, 4), Blend 1.4, Drifter 1
+   spawn Field "sphere", Color (0.4, 0.75, 1.0),
+         Transform (3, 1.6, 0), Scale (4, 4, 4), Blend 1.4, Drifter 2
+   spawn Field "torus", Color (0.72, 0.9, 0.5),
+         Transform (0, 3.6, 0), Scale (7, 2.4, 7), Blend 1.0
+   spawn Field "sphere", Color (0.5, 0.5, 0.5),
+         Transform (0, 1.4, 3.4), Scale (4.4, 4.4, 4.4), Carve 1, Blend 0.9
+
+system blobs.drift
+   in Time
+   over blobs: in Drifter, out Transform
+
+   Transform.x := sin(Time.uptime * 0.6 + Drifter * 2) * 4.5
+
+system hud.show
+   any order over lines: out Label with Readout
+
+   Label := "one field, five shapes, one of them taken back out"

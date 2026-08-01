@@ -1,0 +1,25 @@
+[package]
+name = "blocker-barrow"
+description = "The barrow outside each capital: the dead that hold it, the wight in the deep chamber and the one keeper who kept his wits"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-beasts = { path = "../blocker-beasts" }
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-crew = { path = "../blocker-crew" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-world = { path = "../blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-health.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-text.workspace = true
+nightshade.workspace = true

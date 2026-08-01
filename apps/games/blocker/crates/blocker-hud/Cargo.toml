@@ -1,0 +1,33 @@
+[package]
+name = "blocker-hud"
+description = "The head-up display blocker draws while a player plays: the hotbar, the vitals, the chat, the compass and the toast"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-beasts = { path = "../blocker-beasts" }
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-chat = { path = "../blocker-chat" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-world = { path = "../blocker-world" }
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade-config.workspace = true
+nightshade-input.workspace = true
+nightshade-kit.workspace = true
+nightshade-health.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-toast.workspace = true
+nightshade-ui.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade.workspace = true

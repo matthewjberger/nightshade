@@ -1,0 +1,14 @@
+[package]
+name = "shader-check"
+version.workspace = true
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "shader-check"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-wgpu = { workspace = true, features = ["debug_render"] }
+naga_oil = { workspace = true }
+wgpu = { workspace = true }

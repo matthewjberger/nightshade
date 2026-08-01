@@ -1,0 +1,30 @@
+[package]
+name = "nightshade-log"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+tracing-subscriber = { workspace = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+tracing-android = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { workspace = true, optional = true }
+tracing-appender = { workspace = true, optional = true }
+tracing-chrome = { workspace = true, optional = true }
+tracing-tracy = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = { workspace = true }
+tracing-web = { workspace = true }
+
+[features]
+default = []
+tracing = ["dep:tracing-appender", "dep:chrono"]
+tracy = ["tracing", "dep:tracing-tracy"]
+chrome = ["tracing", "dep:tracing-chrome"]

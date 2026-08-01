@@ -1,40 +1,38 @@
 # nightshade-ecs
 
-An archetype-based Entity Component System with runtime component registration.
-Entities that share a component set live together in contiguous, struct-of-arrays
-storage, so iteration stays cache-coherent and parallelizes across cores on native
-targets. Component types register at runtime rather than through generic
-parameters, so a program composes its schema at startup instead of baking it into
-types, and zero `unsafe` unless the `raw_storage` backend is turned on.
+An archetype-based Entity Component System in which a component is never
+declared. Any `Send + Sync + Default + 'static` type is a component, and the
+first write of one appends it to the world's schema and takes the next mask
+slot, so a program never registers, marks, or lists its component types.
+Entities that share a component set live together in contiguous,
+struct-of-arrays storage, so iteration stays cache-coherent. Each table owns
+one arena and each column is a typed span of it, so a row write is a store to
+a known offset rather than a dispatch through a boxed vector.
 
-This is the ECS behind the [nightshade](https://crates.io/crates/nightshade)
+This is the ECS behind the [nightshade](../nightshade)
 engine, usable on its own.
 
 ```toml
 [dependencies]
-nightshade-ecs = "0.56.0"
+nightshade-ecs = "0.1.0"
 ```
 
-## The dynamic world
+## The world
 
-`DynWorld` registers component types at runtime and keeps contiguous `Vec<T>`
-columns per archetype, `u64` component masks, sparse-set tags, event channels,
-and generational-handle liveness. Types register lazily on first use, so most
-programs never register anything by hand. A type marked once with
-`impl_component!` is a bundle, so components, tuples, and `bundle!` structs nest
-and flatten into a single spawn.
+`World` holds every component: contiguous `Vec<T>` columns per archetype, a
+256-slot archetype mask, sparse-set tags, event channels, and
+generational-handle liveness. A bundle is a flat set: a tuple of component
+types, or a `bundle!` struct.
 
 ```rust
-use nightshade_ecs::dynamic::DynWorld;
+use nightshade_ecs::World;
 
 #[derive(Default, Clone)]
 struct Position { x: f32, y: f32 }
 #[derive(Default, Clone)]
 struct Velocity { x: f32, y: f32 }
 
-nightshade_ecs::impl_component!(Position, Velocity);
-
-let mut world = DynWorld::new();
+let mut world = World::new();
 world.spawn((Position::default(), Velocity { x: 1.0, y: 0.0 }));
 
 world.query::<(&mut Position, &Velocity)>().for_each(|_entity, (position, velocity)| {
@@ -54,47 +52,10 @@ are singletons read with `res` / `res_mut`, and tags are generation-checked
 markers stored in sparse sets, so adding or removing one never migrates an
 archetype.
 
-## Grouped worlds
-
-`DynEcs` groups several `DynWorld` members over one shared entity allocator. It
-is the way past the 64-component ceiling of a single mask: each member carries
-its own registry and full mask space, one entity can hold rows in any
-combination of members, and despawning retires it everywhere behind the same
-generation broadcast, so a stale handle is refused in every member. Declare the
-members once with `dynamic_worlds!`, which emits the index constants and the
-build function, and extend a built group with `add_world_at`.
-
-```rust
-use nightshade_ecs::dynamic::DynEcs;
-
-nightshade_ecs::dynamic_schema! {
-    pub fn register_core {
-        position: Position => POSITION,
-        velocity: Velocity => VELOCITY,
-    }
-}
-
-let mut ecs = DynEcs::new();
-ecs.add_world_at(0, register_core());
-ecs.spawn_with((Position::default(), Velocity { x: 1.0, y: 0.0 }));
-```
-
-A component type lives in exactly one member, so the group routes typed access
-itself: `ecs.get::<T>()`, `set`, `query`, and `query_ref` resolve the owning
-member per type, and `ecs.spawn_with(bundle)` routes each component of a bundle
-to its member, so one bundle can span members. Tuples whose components live in
-different members run through `ecs.query_join`: the member holding every mutable
-element drives at slice speed, the others resolve per entity read-only. The
-group carries its own resource map and event channels for state that crosses
-member boundaries, marker tags that spend no member's mask bits
-(`ecs.add_tag_type::<Selected>()`, `tag_set_type` to filter a member query), and
-`ecs.step()` expires group events and steps every member in one call.
-
 ## What it provides
 
-- Runtime component registration, with the archetype derived from the bundle at
-  the spawn site
-- Parallel iteration over Rayon on native targets (`par_for_each`)
+- No declaration of any kind: the archetype comes from the bundle at the spawn
+  site and a new type takes the next of 256 mask slots on its first write
 - Sparse-set tags that mark entities without fragmenting archetypes, checked
   against a stale handle by generation
 - Change detection, opt-in per world so a world that never diffs by tick pays
@@ -104,34 +65,30 @@ member boundaries, marker tags that spend no member's mask bits
   moves, and tag flips, so an incremental system like a render sync consumes
   only what moved this frame
 - Sequence-numbered event channels with two-frame lifetime and exactly-once
-  cursor consumption, at both the world and group level
+  cursor consumption
 - A maintained hierarchy index over `ChildOf` links for descendant queries and
   cycle-tolerant recursive despawn
 - Command buffers for structural changes queued during iteration
-- Serializable snapshots and incremental deltas of a world or a whole group,
-  behind the `snapshot` feature
-- `Res` / `ResMut` / `Query` system parameters and a `Schedule` / `Stages`
-  runner that composes systems from independent parts
-- A `Time` clock resource
+- `Res` / `ResMut` / `Query` / `Commands` / `EventReader` / `EventWriter`
+  system parameters and a `Schedule` / `Stages` runner that reads the access a
+  signature gives and batches the systems that cannot observe each other
 
 ## Features
 
-`default = ["serde", "dynamic"]`
+`default = ["serde", "parallel"]`
 
 | Feature | What it adds |
 |---------|--------------|
-| `dynamic` | The dynamic world API: `DynWorld`, `DynEcs`, runtime registration, and the query and schema macros. Default |
 | `serde` | Serde derives on the built-in types. Default |
-| `snapshot` | Serialize a world or group and stream incremental deltas. Implies `dynamic` and `serde` |
-| `state` | A state-machine layer over the scheduler, gating systems by a current-and-next value |
-| `raw_storage` | A contiguous-byte column backend behind an identical public API, for the tightest per-table loops |
+| `parallel` | Runs the systems of a schedule that cannot observe each other on a rayon scope, one batch at a time. A system that reaches the whole world reports exclusive access and runs alone. Native only. Default |
+| `profiling` | A tracing span around each system a schedule runs |
 
 ## Examples
 
 ```sh
 cargo run --example basic     # queries, mutation, and marker tags
 cargo run --example systems   # Res / ResMut / Query systems on a Schedule
-cargo run --example group     # a DynEcs group with a cross-world join
+cargo run --release --example parallel   # what a schedule groups into a batch
 ```
 
 ## License

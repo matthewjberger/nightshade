@@ -1,0 +1,211 @@
+-- The skeleton app written as a description. Screens are a value, a menu is a
+-- panel with buttons on it, and the round trip of a request and its answer is
+-- one system sending and another announcing.
+
+runs "daylight.ns"
+
+component Spinner
+component Readout
+component Gauge
+component Play
+component Resume
+component Back
+component Leave
+component OnTitle
+component OnPause
+
+type Screen = Title | Playing | Paused
+
+action pause = "escape"
+action ask = "p"
+action leave = "q"
+
+config World
+   cameraEye = (0, 3, 8)
+   ground
+      reach number = 8
+      color = (0.10, 0.12, 0.17)
+   cube
+      rate number = 1.0
+      color = (0.85, 0.87, 0.95)
+   menu
+      panel = (0.30, 0.30)
+      face = (0.07, 0.08, 0.12)
+      button = (0.22, 0.06)
+      key = (0.17, 0.21, 0.31)
+      text = (0.88, 0.92, 1.0)
+
+resource Stage
+   at = Title
+
+resource Tally
+   pings number = 0
+   pongs number = 0
+   seconds number = 0
+   frames number = 0
+
+assets Noise from folder "apps/features/loading/assets"
+   step sound "footstep.ogg"
+
+command Ping
+   message
+
+event Pong
+   message
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color World.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (World.ground.reach * 2, 1, World.ground.reach * 2)
+   spawn Mesh "Cube", Color World.cube.color,
+         Transform (0, 0.5, 0),
+         Spinner World.cube.rate
+   spawn Burst "fire", Transform (-3.2, 0.3, 1.5), Color (1.0, 0.62, 0.25)
+   spawn Label "", Anchor (0.5, 0.06), Size 22, Color World.menu.text, Readout 1
+   spawn Label "", Anchor (0.5, 0.11), Size 15, Color (0.55, 0.62, 0.78), Gauge 1
+
+system menu.build
+   once
+   in World
+   creates entities
+
+   spawn Panel World.menu.panel, Anchor (0.5, 0.45),
+         Color World.menu.face, Visible true, OnTitle 1
+   spawn Panel World.menu.button, Anchor (0.5, 0.42),
+         Color World.menu.key, Button 1, Play 1, Visible true, OnTitle 1,
+         Label "Play", Size 20, Justify "center"
+   spawn Panel World.menu.button, Anchor (0.5, 0.53),
+         Color World.menu.key, Button 1, Leave 1, Visible true, OnTitle 1,
+         Label "Quit", Size 20, Justify "center"
+   spawn Label "Template", Anchor (0.5, 0.33), Size 30,
+         Color World.menu.text, Visible true, OnTitle 1
+
+   spawn Panel World.menu.panel, Anchor (0.5, 0.45),
+         Color World.menu.face, Visible true, OnPause 1
+   spawn Panel World.menu.button, Anchor (0.5, 0.42),
+         Color World.menu.key, Button 1, Resume 1, Visible true, OnPause 1,
+         Label "Resume", Size 20, Justify "center"
+   spawn Panel World.menu.button, Anchor (0.5, 0.53),
+         Color World.menu.key, Button 1, Back 1, Visible true, OnPause 1,
+         Label "Quit to title", Size 20, Justify "center"
+   spawn Label "Paused", Anchor (0.5, 0.33), Size 30,
+         Color World.menu.text, Visible true, OnPause 1
+
+system menu.title
+   in Stage
+   any order over held: in Anchor, out Visible with OnTitle
+
+   Visible := Stage.at = Title
+
+system menu.paused
+   in Stage
+   any order over held: in Anchor, out Visible with OnPause
+
+   Visible := Stage.at = Paused
+
+system menu.click
+   in Stage
+   out Stage, Window
+   uses played: in Clicked with Play
+   uses resumed: in Clicked with Resume
+   uses backed: in Clicked with Back
+   uses left: in Clicked with Leave
+
+   when count(played) > 0 or count(resumed) > 0
+      Stage.at := Playing
+   when count(backed) > 0
+      Stage.at := Title
+   when count(left) > 0
+      Window.close := true
+
+system stage.keys
+   in Input, Stage
+   out Stage, Window
+
+   let now := Stage.at
+   when Input.pause
+      when now = Playing
+         Stage.at := Paused
+      else
+         when now = Paused
+            Stage.at := Playing
+   when Input.leave
+      Window.close := true
+
+system cube.spin
+   enable Stage.at = Playing
+   in Time, Stage
+   any order over blocks: in Spinner, out Rotation
+
+   Rotation += (0, Spinner * Time.dt, 0)
+
+system tally.recall
+   once
+   in Tally
+   out Tally
+
+   recall Tally
+
+system tally.count
+   in Tally
+   out Tally
+
+   Tally.frames += 1
+
+system tally.keep
+   enable remainder(Tally.frames, 60) < 1
+   in Tally
+   out Tally
+
+   keep Tally
+
+system play.clock
+   enable Stage.at = Playing
+   in Time, Stage, Tally
+   out Tally
+
+   Tally.seconds += Time.dt
+
+system play.ping
+   enable Stage.at = Playing
+   in Input, Stage, Tally, Noise
+   out Ping, Tally
+   creates entities
+
+   when Input.ask
+      send Ping { message "press " + Tally.pings }
+      spawn Sound Noise.step, Volume 0.7
+      Tally.pings += 1
+
+system play.answer
+   pure
+   in Ping
+   out Pong
+
+   for each request in Ping
+      emit Pong { message request.message }
+
+system play.count
+   in Pong, Tally
+   out Tally
+
+   for each answer in Pong
+      Tally.pongs += 1
+
+system hud.show
+   in Stage, Tally
+   any order over lines: out Label with Readout
+
+   Label := Stage.at + "   " + floor(Tally.seconds) + " s   pings " + Tally.pings +
+            "   pongs " + Tally.pongs
+
+system gauge.show
+   in Window
+   any order over lines: out Label with Gauge
+
+   Label := floor(Window.rate) + " fps   " + floor(Window.gpu * 10) / 10 + " ms   " +
+            floor(Window.size.x) + " by " + floor(Window.size.y)

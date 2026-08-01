@@ -1,3 +1,0 @@
-# Open the window and render the starter scene.
-run:
-    cargo run --release

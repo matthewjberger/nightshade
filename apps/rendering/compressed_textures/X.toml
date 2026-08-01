@@ -1,0 +1,6 @@
+[package]
+name = "compressed_textures"
+
+[android]
+min_sdk_version = 24
+target_sdk_version = 33

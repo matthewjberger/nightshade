@@ -1,0 +1,34 @@
+[package]
+name = "iam"
+description = "A psychological horror chat game played entirely in an instant messenger"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "iam-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+bytemuck.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-input.workspace = true
+nightshade-audio.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-text.workspace = true
+nightshade-ui.workspace = true
+nightshade-wgpu = { workspace = true, features = ["default-plugins"] }
+nightshade-window.workspace = true
+
+[features]
+default = ["tracing"]
+tracing = ["nightshade-log/tracing"]

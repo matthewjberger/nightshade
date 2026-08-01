@@ -1,0 +1,60 @@
+#version 460
+#extension GL_EXT_mesh_shader : require
+
+#define BOIDS_PER_TASK 32u
+#define BOIDS_PER_MESH 4u
+
+layout(local_size_x = 32) in;
+
+layout(set = 0, binding = 0) readonly buffer Positions { vec4 positions[]; };
+
+layout(set = 0, binding = 2) uniform DrawUniforms {
+    mat4 view_projection;
+    vec4 sun;
+    vec4 scale;
+    vec4 planes[6];
+} uniforms;
+
+struct TaskPayload {
+    uint count;
+    uint indices[BOIDS_PER_TASK];
+};
+
+taskPayloadSharedEXT TaskPayload payload;
+
+shared uint survivor_count;
+
+bool inside_frustum(vec3 center, float radius) {
+    for (int plane = 0; plane < 6; plane++) {
+        vec4 values = uniforms.planes[plane];
+        if (dot(values.xyz, center) + values.w < -radius) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void main() {
+    if (gl_LocalInvocationIndex == 0u) {
+        survivor_count = 0u;
+    }
+    barrier();
+
+    uint count = uint(uniforms.scale.w);
+    uint index = gl_WorkGroupID.x * BOIDS_PER_TASK + gl_LocalInvocationIndex;
+    float radius = uniforms.scale.z;
+
+    if (index < count && inside_frustum(positions[index].xyz, radius)) {
+        uint slot = atomicAdd(survivor_count, 1u);
+        payload.indices[slot] = index;
+    }
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0u) {
+        payload.count = survivor_count;
+    }
+    barrier();
+
+    uint groups = (survivor_count + BOIDS_PER_MESH - 1u) / BOIDS_PER_MESH;
+    EmitMeshTasksEXT(groups, 1u, 1u);
+}

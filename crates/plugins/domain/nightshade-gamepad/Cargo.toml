@@ -1,0 +1,28 @@
+﻿[package]
+name = "nightshade-gamepad"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true, optional = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nalgebra-glm = { workspace = true, optional = true }
+serde = { workspace = true }
+
+# gilrs has no android backend: on android it compiles to a stub whose
+# `Gilrs::new` always fails, so the android pad comes from the input queue
+# instead, through `nightshade-platform`.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+gilrs = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nalgebra-glm",
+    "dep:gilrs",
+]

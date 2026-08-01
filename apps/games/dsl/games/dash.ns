@@ -1,0 +1,177 @@
+-- A side view runner. The track is far wider than the frame,
+-- so the camera is a net that a module writes each turn.
+-- Every stretch holds a low coin that is free, and a high coin
+-- that is worth a jump. Half of the stretches put a hazard below
+-- the high coin, so that jump is not a choice.
+
+runs "camera.ns"
+
+module dash
+
+component Speed
+component Velocity
+component Half
+component Block
+component Points
+
+config Dash
+   viewHeight number = 16
+   ground
+      y number = -5
+      color = (0.101, 0.138, 0.241)
+      tiles
+         width number = 4
+         height number = 1.2
+         count number = 62
+      posts
+         spacing number = 9
+         count number = 27
+         start number = 6
+         color = (0.180, 0.241, 0.420)
+   runner
+      half number = 0.55
+      speed number = 11
+      gravity number = 42
+      jump number = 15
+      color = (0.890, 0.911, 1.0)
+   track
+      length number = 236
+      lead number = 5
+      stretch
+         size number = 18
+         count number = 13
+         start number = 10
+         rise number = 6
+      camera
+         y number = -3.5
+         z number = 30
+      hazards
+         half number = 0.7
+         color = (0.860, 0.180, 0.140)
+   coins
+      lift number = 2.2
+      half number = 0.32
+      low
+         points number = 1
+         color = (0.051, 0.740, 0.480)
+      high
+         points number = 3
+         color = (0.955, 0.638, 0.033)
+
+resource Run
+   score number = 0
+   best number = 0
+   distance number = 0
+   falls number = 0
+   layWanted boolean = true
+
+query postHeight(post) = 1.4 + abs(sin(post * 1.7)) * 4.5
+query stretchX(index) = index * Dash.track.stretch.size + Dash.track.stretch.start
+
+system world.build
+   once
+   in Dash
+   creates entities
+
+   for each tile in 0 .. Dash.ground.tiles.count
+      spawn Mesh "Cube", Color Dash.ground.color,
+            Transform (tile * Dash.ground.tiles.width, Dash.ground.y - Dash.ground.tiles.height * 0.5, 0 - 1.0),
+            Scale (Dash.ground.tiles.width * 0.94, Dash.ground.tiles.height, 0.5)
+   for each post in 0 .. Dash.ground.posts.count
+      spawn Mesh "Cube", Color Dash.ground.posts.color,
+            Transform (post * Dash.ground.posts.spacing + Dash.ground.posts.start,
+                       Dash.ground.y - 0.6 - postHeight(post) * 0.5, 0 - 1.8),
+            Scale (1.1, postHeight(post), 0.5)
+   spawn Mesh "Cube", Color Dash.runner.color,
+         Transform (0, Dash.ground.y + Dash.runner.half),
+         Scale (Dash.runner.half * 2, Dash.runner.half * 2, 1),
+         Speed Dash.runner.speed,
+         Velocity (Dash.runner.speed, 0),
+         Half (Dash.runner.half, Dash.runner.half),
+         Follow (Dash.track.lead, Dash.track.camera.y, Dash.track.camera.z)
+
+system track.clear
+   enable Run.layWanted
+   over stale: in Half without Speed
+   removes entities
+
+   remove stale
+
+system track.lay
+   enable Run.layWanted
+   in Dash
+   out Run
+   creates entities
+
+   for each index in 0 .. Dash.track.stretch.count
+      let x := stretchX(index)
+      spawn Mesh "Cube", Color Dash.coins.low.color,
+            Transform (x, Dash.ground.y + Dash.runner.half),
+            Scale (Dash.coins.half * 2, Dash.coins.half * 2, 0.6),
+            Half (Dash.coins.half, Dash.coins.half),
+            Points Dash.coins.low.points
+      spawn Mesh "Cube", Color Dash.coins.high.color,
+            Transform (x + Dash.track.stretch.rise,
+                       Dash.ground.y + Dash.runner.half + Dash.coins.lift),
+            Scale (Dash.coins.half * 2, Dash.coins.half * 2, 0.6),
+            Half (Dash.coins.half, Dash.coins.half),
+            Points Dash.coins.high.points
+      when sin(index * 1.7) > 0
+         spawn Mesh "Cube", Color Dash.track.hazards.color,
+               Transform (x + Dash.track.stretch.rise, Dash.ground.y + Dash.track.hazards.half),
+               Scale (Dash.track.hazards.half * 2, Dash.track.hazards.half * 2, 1),
+               Half (Dash.track.hazards.half, Dash.track.hazards.half),
+               Block 1
+   Run.layWanted := false
+
+order track.clear before track.lay
+
+system runner.move
+   in Time, Input, Dash
+   out Run
+   over runners: in Speed, in Half, out Velocity, out Transform
+   uses hazards: in Transform, in Half, in Block
+
+   let base := Dash.ground.y + Half.y
+   Velocity := (Speed, Velocity.y - Dash.runner.gravity * Time.dt)
+   when Input.serve and Transform.y <= base + 0.02
+      Velocity := (Speed, Dash.runner.jump)
+   Transform := Transform + Velocity * Time.dt
+   when Transform.y < base
+      Transform := (Transform.x, base)
+      Velocity := (Speed, 0)
+   Run.distance := Transform.x
+
+   let struck := false
+   for each hazard in hazards
+      let touch := separation(Transform, Half.x, Transform(hazard), Half(hazard))
+      when touch is some
+         struck := true
+         break
+
+   when struck or Transform.x > Dash.track.length
+      Transform := (0, base)
+      Velocity := (Speed, 0)
+      Run.best := max(Run.best, Run.score)
+      Run.score := 0
+      Run.falls := Run.falls + 1
+      Run.layWanted := true
+
+system coins.take
+   in Dash
+   out Run
+   over runners: in Half, in Transform with Speed
+   uses coins: in Transform, in Half, in Points
+   removes entities
+
+   for each coin in coins
+      let touch := separation(Transform, Half.x, Transform(coin), Half(coin))
+      when touch is some
+         Run.score := Run.score + Points(coin)
+         remove coin
+
+system readout.show
+   in Run
+   out Window.title
+
+   Window.title := "Coins " + Run.score + "   Best " + Run.best + "   Distance " + floor(Run.distance) + "   Falls " + Run.falls

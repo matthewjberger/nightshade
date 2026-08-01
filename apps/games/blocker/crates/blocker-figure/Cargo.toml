@@ -1,0 +1,20 @@
+[package]
+name = "blocker-figure"
+description = "A walking figure: the models it wears, the limbs that swing with a stride, the head that turns to a watcher, the name plate above it, the eye it looks out of and the home it keeps"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-screen = { path = "../blocker-screen" }
+nalgebra-glm.workspace = true
+nightshade-camera.workspace = true
+nightshade-gltf.workspace = true
+nightshade-load.workspace = true
+nightshade-platform.workspace = true
+nightshade-prefab.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-text.workspace = true
+nightshade.workspace = true

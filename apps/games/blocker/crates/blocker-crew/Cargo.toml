@@ -1,0 +1,24 @@
+[package]
+name = "blocker-crew"
+description = "The villagers of blocker: who they are, where they live, the day they walk and what they say when a player stands near"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-world = { path = "../blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-config.workspace = true
+nightshade-graphics.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-text.workspace = true
+nightshade.workspace = true

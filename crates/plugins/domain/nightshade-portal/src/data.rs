@@ -1,0 +1,12 @@
+pub const FIELD_OF_VIEW: f32 = 1.2;
+pub const NEAR_PLANE: f32 = 0.05;
+pub const FAR_PLANE: f32 = 400.0;
+pub const PLANE_BIAS: f32 = 0.05;
+pub const TARGET_MAX: u32 = 1400;
+pub const FALLBACK_WIDTH: u32 = 1280;
+pub const FALLBACK_HEIGHT: u32 = 720;
+pub const EYE_NAME: &str = "Portal Eye";
+pub const SMALLEST_AXIS: f32 = 1.0e-4;
+pub const DEPTH: u32 = 1;
+pub const MAX_DEPTH: u32 = 8;
+pub const MAX_DISTANCE: f32 = 0.0;

@@ -1,0 +1,60 @@
+[package]
+name = "crystalbound"
+description = "A turn-based monster hunt with jobs, towns, dungeons, and a sword on the overworld"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "crystalbound-run"
+path = "src/main.rs"
+required-features = ["plugin"]
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", optional = true }
+fastrand = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-camera = { workspace = true, optional = true }
+nightshade-cli = { workspace = true, optional = true }
+nightshade-graphics = { workspace = true, optional = true }
+nightshade-input = { workspace = true, optional = true }
+nightshade-log = { workspace = true, optional = true }
+nightshade-platform = { workspace = true, optional = true }
+nightshade-ui-menu = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { workspace = true, optional = true }
+nightshade-state = { workspace = true, optional = true }
+nightshade-sprite = { workspace = true, optional = true }
+nightshade-text = { workspace = true, optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-window = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "dep:nightshade-app",
+    "contract",
+    "dep:nalgebra-glm",
+    "dep:fastrand",
+    "dep:nightshade",
+    "dep:nightshade-camera",
+    "dep:nightshade-cli",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-log",
+    "dep:nightshade-platform",
+    "dep:nightshade-ui-menu",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+    "dep:nightshade-state",
+    "dep:nightshade-sprite",
+    "dep:nightshade-text",
+    "dep:nightshade-ui",
+    "dep:nightshade-window",
+]

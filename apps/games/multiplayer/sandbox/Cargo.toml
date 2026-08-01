@@ -1,0 +1,47 @@
+[package]
+name = "multiplayer_sandbox"
+description = "A shared sandbox where every player that connects drives a character over TCP"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "multiplayer_sandbox-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+nalgebra-glm.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade.workspace = true
+nightshade-animation.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-gltf.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-load.workspace = true
+nightshade-log.workspace = true
+nightshade-net.workspace = true
+nightshade-physics.workspace = true
+nightshade-platform.workspace = true
+nightshade-prefab.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-text.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true
+serde.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "macros"] }

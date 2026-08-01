@@ -1,0 +1,24 @@
+[package]
+name = "nightshade-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["plugin"] }
+nightshade-input = { path = "../../domain/nightshade-input", default-features = false, features = ["contract"] }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["plugin"] }
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade-text = { path = "../../describe/nightshade-text", default-features = false, features = ["contract", "plugin"] }
+nightshade.workspace = true
+nightshade-render = { workspace = true }
+nightshade-paint = { path = "../../describe/nightshade-paint" }
+serde.workspace = true
+taffy.workspace = true
+[dev-dependencies]
+nightshade-wgpu.workspace = true
+nightshade-wgpu-paint.workspace = true
+nightshade-window.workspace = true
+pollster.workspace = true

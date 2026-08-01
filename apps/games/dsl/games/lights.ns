@@ -1,0 +1,81 @@
+-- A night field, a ring of turning blocks, and three lamps that circle above them.
+
+use "turns.ns"
+
+runs "readout.ns"
+   Sign.anchor = (0.5, 0.06)
+   Sign.size = 20
+   Sign.color = (0.8, 0.85, 1.0)
+
+component Lamp
+component Phase
+component Spin
+
+config Night
+   cameraEye = (0, 13, 21)
+   ground
+      reach number = 18
+      color = (0.06, 0.07, 0.10)
+   ring
+      count number = 12
+      radius number = 8
+      size number = 1.3
+      color = (0.62, 0.65, 0.74)
+   lamp
+      count number = 3
+      radius number = 9
+      height number = 4.5
+      rate number = 0.5
+      strength number = 130
+
+query lampColor(index) = (0.2 + index * 0.4, 0.9 - index * 0.35, 1.0 - index * 0.2)
+
+system night.light
+   once
+   out Sun, Sky
+
+   Sun.strength := 0.12
+   Sun.color := (0.5, 0.6, 0.9)
+   Sky.show := false
+   Sky.ground := (0.010, 0.012, 0.020)
+
+system world.build
+   once
+   in Night, Turn
+   creates entities
+
+   spawn Mesh "Cube", Color Night.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (Night.ground.reach * 2, 1, Night.ground.reach * 2)
+   for each index in 0 .. Night.ring.count
+      spawn Mesh "Cube", Color Night.ring.color,
+            Transform ringSpot(index, Night.ring.count, Night.ring.radius) + (0, 0.7, 0),
+            Scale (Night.ring.size, Night.ring.size, Night.ring.size),
+            Spin index * 0.3
+   for each index in 0 .. Night.lamp.count
+      spawn Light "point",
+            Color lampColor(index),
+            Strength Night.lamp.strength,
+            Reach 30,
+            Phase index * Turn.full / Night.lamp.count
+
+system lamps.circle
+   in Time, Night
+   any order over lamps: in Phase, out Transform without Spin
+
+   let turn := Time.uptime * Night.lamp.rate + Phase
+   Transform := (sin(turn) * Night.lamp.radius,
+                 Night.lamp.height,
+                 cos(turn) * Night.lamp.radius)
+
+system blocks.turn
+   in Time
+   any order over blocks: in Spin, out Rotation
+
+   Rotation := (0, Time.uptime * 0.6 + Spin, 0)
+
+system hud.show
+   in Time
+   any order over lines: out Label with Readout
+
+   Label := "three lamps, " + floor(Time.uptime) + " seconds"

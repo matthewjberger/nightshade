@@ -1,0 +1,46 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#include "environment_common.glsl"
+#include "sky_common.glsl"
+#include "sky_paint.glsl"
+
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2DArray faces;
+
+layout(push_constant) uniform Params {
+    uint size;
+    uint atmosphere;
+    float seconds;
+    float hour;
+} params;
+
+void main() {
+    uvec2 coords = gl_GlobalInvocationID.xy;
+    uint face = gl_GlobalInvocationID.z;
+    if (coords.x >= params.size || coords.y >= params.size || face >= 6u) {
+        return;
+    }
+    vec2 uv = (vec2(coords) + 0.5) / float(params.size);
+    vec3 direction = cube_direction(face, uv);
+
+    vec3 color;
+    if (params.atmosphere == ATMOSPHERE_NONE) {
+        color = vec3(0.0);
+    } else if (params.atmosphere == ATMOSPHERE_CLOUDY) {
+        color = cloudy_sky(direction, params.seconds);
+    } else if (params.atmosphere == ATMOSPHERE_SPACE) {
+        color = space_sky(direction, params.seconds);
+    } else if (params.atmosphere == ATMOSPHERE_NEBULA) {
+        color = nebula_sky(direction, params.seconds);
+    } else if (params.atmosphere == ATMOSPHERE_SUNSET) {
+        color = sunset_sky(direction, params.seconds);
+    } else if (params.atmosphere == ATMOSPHERE_DAY_NIGHT) {
+        color = day_night_sky(direction, params.seconds, params.hour);
+    } else {
+        color = sky_gradient(direction);
+    }
+
+    imageStore(faces, ivec3(ivec2(coords), int(face)), vec4(max(color, vec3(0.0)), 1.0));
+}

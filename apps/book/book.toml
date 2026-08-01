@@ -1,0 +1,15 @@
+[book]
+title = "The Nightshade Book"
+description = "A guided tour of the Nightshade engine"
+authors = ["Matthew Berger"]
+language = "en"
+src = "book"
+
+[build]
+build-dir = "book-html"
+create-missing = false
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+no-section-label = false

@@ -1,0 +1,14 @@
+[package]
+name = "example-check"
+version.workspace = true
+edition = "2024"
+publish = false
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full", "visit", "extra-traits", "parsing"] }
+
+[[bin]]
+name = "example-check"
+path = "src/main.rs"

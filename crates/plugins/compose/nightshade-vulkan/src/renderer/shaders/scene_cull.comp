@@ -1,0 +1,131 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define CULL_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant) uniform ListPush {
+    uint list;
+    uint phase;
+} push;
+
+bool two_phase(uint list) {
+    return frame.pyramid.w != 0.0
+        && (list == LIST_OPAQUE || list == LIST_DOUBLE_SIDED);
+}
+
+void emit_run(uint first_object, uint run, MeshRange range) {
+    uint capacity = frame.counts.z;
+    uint slot = atomicAdd(run_counts[push.list], 1u);
+    if (slot >= capacity) {
+        return;
+    }
+    run_draws[push.list * capacity + slot] = RunDraw(
+        range.index_count,
+        run,
+        range.index_offset,
+        int(range.vertex_offset),
+        first_object
+    );
+}
+
+void emit(uint first_object, uint run, MeshRange range) {
+    if (run > 1u) {
+        emit_run(first_object, run, range);
+        return;
+    }
+    uint meshlet_count = range.meshlet_count;
+    uint batches = (meshlet_count + TASK_BATCH - 1u) / TASK_BATCH;
+    if (meshlet_count == 0u) {
+        return;
+    }
+    uint capacity = frame.counts.w;
+    uint base = atomicAdd(draw_commands[push.list].w, batches);
+    if (base + batches > capacity) {
+        return;
+    }
+    uint total = base + batches;
+    atomicMax(draw_commands[push.list].x, min(total, TASK_WIDTH));
+    atomicMax(draw_commands[push.list].y, (total + TASK_WIDTH - 1u) / TASK_WIDTH);
+    uint region = push.list * capacity;
+    for (uint batch = 0u; batch < batches; ++batch) {
+        work_items[region + base + batch] = uvec2(first_object, batch);
+    }
+}
+
+bool large_enough(uint view, vec3 center, float radius) {
+    float least = frame.screen.z;
+    if (least <= 0.0 || view != VIEW_CAMERA) {
+        return true;
+    }
+    vec4 at = frame.view_projection * vec4(center, 1.0);
+    if (at.w <= 0.0) {
+        return true;
+    }
+    return radius * frame.projection[1][1] * frame.screen.y / at.w >= least;
+}
+
+void main() {
+    uint head_index = gl_GlobalInvocationID.x;
+    if (head_index >= frame.counts.x) {
+        return;
+    }
+
+    bool split = two_phase(push.list);
+    if (!split && push.phase == PHASE_LATE) {
+        return;
+    }
+
+    Object object = objects[head_index];
+    if (run_position_of(object) != 0u) {
+        return;
+    }
+    uint run = run_length_of(object);
+    if ((object.flags & OBJECT_VISIBLE) == 0u) {
+        return;
+    }
+    if ((object.culling_mask & frame.masks.x) == 0u) {
+        return;
+    }
+
+    uint list = list_of_object(object);
+    if (push.list < LIST_CASCADE_BASE) {
+        if (list != push.list) {
+            return;
+        }
+    } else if (list == LIST_TRANSPARENT
+        || list_is_overlay(list)
+        || (object.flags & OBJECT_SHADOW_CASTER) == 0u) {
+        return;
+    }
+
+    MeshRange range = mesh_ranges[object.mesh_slot];
+    vec4 bounds = run > 1u ? object.bounds : world_bounds(object);
+    if (!split) {
+        uint view = view_of(push.list);
+        if (sphere_visible(view, bounds.xyz, bounds.w)
+            && within_reach(view, bounds.xyz, bounds.w)
+            && large_enough(view, bounds.xyz, bounds.w)) {
+            emit(head_index, run, range);
+        }
+        return;
+    }
+
+    uint drawn_early = object_visible[head_index];
+    if (push.phase == PHASE_EARLY) {
+        if (drawn_early != 0u) {
+            emit(head_index, run, range);
+        }
+        return;
+    }
+
+    bool visible = sphere_visible(VIEW_CAMERA, bounds.xyz, bounds.w)
+        && large_enough(VIEW_CAMERA, bounds.xyz, bounds.w)
+        && !sphere_occluded(bounds.xyz, bounds.w);
+    object_visible[head_index] = visible ? 1u : 0u;
+    if (visible && drawn_early == 0u) {
+        emit(head_index, run, range);
+    }
+}

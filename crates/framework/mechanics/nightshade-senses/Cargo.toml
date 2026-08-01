@@ -1,0 +1,30 @@
+[package]
+name = "nightshade-senses"
+description = "What a listener hears and sees, and how visible the one who hides has made itself"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-arc = { workspace = true }
+nightshade-plane = { workspace = true }
+nightshade-platform = { path = "../../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-scene = { path = "../../../plugins/describe/nightshade-scene", default-features = false, features = ["contract"] }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+nightshade-readout = { workspace = true }
+
+[lints]
+workspace = true

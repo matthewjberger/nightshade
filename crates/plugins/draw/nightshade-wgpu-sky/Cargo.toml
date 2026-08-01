@@ -1,0 +1,19 @@
+[package]
+name = "nightshade-wgpu-sky"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-wgpu = { workspace = true }
+nightshade-render = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"] }
+half = { workspace = true }
+image = { workspace = true }
+nalgebra-glm = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

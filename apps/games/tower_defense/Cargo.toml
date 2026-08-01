@@ -1,0 +1,38 @@
+[package]
+name = "tower_defense"
+description = "Tower defense game with multiple tower types and enemy waves"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "tower_defense-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-scene.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-picking.workspace = true
+nightshade-ui.workspace = true
+nightshade-text.workspace = true
+nightshade-particles.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-render = { workspace = true }
+nalgebra-glm.workspace = true
+rand = "0.9"

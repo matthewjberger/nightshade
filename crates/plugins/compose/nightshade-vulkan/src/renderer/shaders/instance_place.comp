@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define OBJECT_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant) uniform BatchPush {
+    uint first_batch;
+    uint unused;
+} push;
+
+void main() {
+    InstanceBatch batch = instance_batches[push.first_batch + gl_WorkGroupID.y];
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= batch.count) {
+        return;
+    }
+    mat4 world = batch.parent * instance_locals[batch.first_local + index];
+    mat3 upper = mat3(world);
+
+    uint slot = batch.first_object + index;
+    objects[slot].transform = world;
+    objects[slot].previous_transform = world;
+    objects[slot].normal_transform = mat4(transpose(inverse(upper)));
+    if (determinant(upper) < 0.0) {
+        objects[slot].flags |= OBJECT_DOUBLE_SIDED;
+    }
+}

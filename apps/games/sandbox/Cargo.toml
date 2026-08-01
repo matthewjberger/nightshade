@@ -1,0 +1,52 @@
+﻿[package]
+name = "sandbox"
+description = "A third-person character sandbox with a pose system, foot IK, and a ragdoll"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "sandbox-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-scene.workspace = true
+nightshade-ease = { workspace = true }
+nightshade-state.workspace = true
+nightshade-shell.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-physics.workspace = true
+nightshade-animation.workspace = true
+nightshade-load = { workspace = true }
+nightshade-gltf.workspace = true
+nightshade-prefab.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-picking.workspace = true
+nightshade-ui.workspace = true
+nightshade-text.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-input.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nalgebra-glm.workspace = true
+serde.workspace = true
+tracing = { workspace = true }
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

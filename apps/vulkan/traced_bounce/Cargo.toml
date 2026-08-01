@@ -1,0 +1,23 @@
+[package]
+name = "traced_bounce"
+description = "A grid of probes sends rays into the room and carries the light that came off the walls"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-window.workspace = true
+nalgebra-glm.workspace = true
+
+[features]
+default = ["vulkan"]
+vulkan = ["nightshade-app/vulkan"]

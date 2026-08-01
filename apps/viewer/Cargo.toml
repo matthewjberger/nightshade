@@ -1,0 +1,67 @@
+[package]
+name = "viewer"
+description = "A glTF viewer with a retained UI over the scene tree, the inspector, and an asset library"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "viewer-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade-scene.workspace = true
+nightshade-store.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-animation.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-picking.workspace = true
+nightshade-load = { workspace = true, features = ["fetch"] }
+nightshade-gltf = { workspace = true, features = ["fetch"] }
+nightshade-prefab.workspace = true
+nightshade-text.workspace = true
+nightshade-ui.workspace = true
+nalgebra-glm.workspace = true
+tracing.workspace = true
+ehttp.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+image.workspace = true
+toml.workspace = true
+zip.workspace = true
+fastrand.workspace = true
+percent-encoding = "2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tiny_http.workspace = true
+enum2schema.workspace = true
+
+# rfd carries a backend for each desktop and one for the web, and none for
+# android, so naming it there fails to compile inside rfd itself.
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+rfd = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+rfd = { workspace = true }
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

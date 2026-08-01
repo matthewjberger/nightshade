@@ -1,0 +1,81 @@
+-- A helmet you steer from behind. The model is a file on disk, named here and read by the app.
+
+runs "readout.ns"
+   Sign.anchor = (0.5, 0.06)
+   Sign.size = 20
+   Sign.color = (0.85, 0.89, 1.0)
+
+runs "daylight.ns"
+   Daylight.angle = (-0.9, 0.6, 0)
+   Daylight.strength = 2.2
+
+assets Art from folder "assets/gltf"
+   helmet model "DamagedHelmet.glb"
+
+component Speed
+component Heading
+component Rider
+
+config World
+   cameraEye = (0, 6, 12)
+   ground
+      reach number = 60
+      color = (0.09, 0.11, 0.14)
+   hero
+      speed number = 9
+      turn number = 2.4
+      lift number = 1.2
+      tilt number = 1.5708
+      face number = 3.14159
+   camera
+      back number = 10
+      height number = 3.2
+      aim number = 1.3
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Light "point", Color (0.4, 0.7, 1.0), Strength 90, Reach 26,
+         Transform (10, 7, 10)
+   spawn Mesh "Cube", Color World.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (World.ground.reach * 2, 1, World.ground.reach * 2)
+   spawn Model Art.helmet,
+         Transform (0, World.hero.lift, 0),
+         Rotation (World.hero.tilt, World.hero.face, 0),
+         Speed World.hero.speed,
+         Heading 0,
+         Rider 1
+
+system hero.steer
+   in Time, Input, World
+   over heroes: in Speed, out Heading, out Transform, out Rotation with Rider
+
+   Heading := Heading - Input.steering * World.hero.turn * Time.dt
+   let step := 0 - Input.forward * Speed * Time.dt
+   Transform := (Transform.x + sin(Heading) * step,
+                 Transform.y,
+                 Transform.z + cos(Heading) * step)
+   Transform.x := clamp(Transform.x, 0 - World.ground.reach, World.ground.reach)
+   Transform.z := clamp(Transform.z, 0 - World.ground.reach, World.ground.reach)
+   Rotation := (World.hero.tilt, Heading + World.hero.face, 0)
+
+system camera.trail
+   in World
+   out Camera
+   one hero: in Transform, in Heading with Rider
+
+   Camera.eye := (Transform(hero).x - sin(Heading(hero)) * World.camera.back,
+                  Transform(hero).y + World.camera.height,
+                  Transform(hero).z - cos(Heading(hero)) * World.camera.back)
+   Camera.at := (Transform(hero).x,
+                 Transform(hero).y + World.camera.aim,
+                 Transform(hero).z)
+
+system hud.show
+   over lines: out Label with Readout
+   one hero: in Transform with Rider
+
+   Label := "x " + floor(Transform(hero).x) + "   z " + floor(Transform(hero).z)

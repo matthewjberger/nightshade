@@ -1,0 +1,79 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "particle_common.glsl"
+#include "particle_compute.glsl"
+
+layout(local_size_x = 256) in;
+
+void main() {
+    uint emitter_index = gl_WorkGroupID.x;
+    uint spawn_index = gl_LocalInvocationID.x;
+
+    EmitterData emitter = emitters[emitter_index];
+    if (spawn_index >= emitter.spawn_count) {
+        return;
+    }
+
+    uint remaining = atomicAdd(free_count, -1u);
+    if (remaining == 0u) {
+        atomicAdd(free_count, 1u);
+        return;
+    }
+    uint particle_index = free_indices[remaining - 1u];
+
+    uint seed = hash(
+        particle_index * 1973u
+            + uint(simulation.time * 10000.0)
+            + spawn_index * 7919u
+            + emitter_index * 6997u
+    );
+
+    vec3 offset = vec3(0.0);
+    vec3 direction = emitter.direction.xyz;
+    if (emitter.shape_type == SHAPE_SPHERE) {
+        offset = random_unit_sphere(seed) * emitter.shape_params.x * random_float(seed);
+        direction = random_unit_sphere(seed);
+    } else if (emitter.shape_type == SHAPE_CONE) {
+        direction = random_cone_direction(seed, emitter.direction.xyz, emitter.shape_params.x);
+        offset = emitter.direction.xyz * random_float(seed) * emitter.shape_params.y;
+    } else if (emitter.shape_type == SHAPE_BOX) {
+        vec3 half_extents = emitter.shape_params.xyz;
+        offset = vec3(
+            random_range(seed, -half_extents.x, half_extents.x),
+            random_range(seed, -half_extents.y, half_extents.y),
+            random_range(seed, -half_extents.z, half_extents.z)
+        );
+    }
+
+    float spread = emitter.velocity_range.z;
+    if (spread > 0.0) {
+        direction = random_cone_direction(seed, direction, spread);
+    }
+
+    float speed = random_range(seed, emitter.velocity_range.x, emitter.velocity_range.y);
+    float lifetime = random_range(seed, emitter.lifetime_range.x, emitter.lifetime_range.y);
+    vec4 color_start = sample_gradient(emitter, 0.15);
+    vec4 color_end = sample_gradient(emitter, 0.9);
+
+    Particle particle;
+    particle.position = vec4(emitter.position.xyz + offset, 1.0);
+    particle.velocity = vec4(direction * speed, float(emitter_index));
+    particle.color = color_start;
+    particle.size_lifetime = vec4(emitter.size_range.x, emitter.size_range.y, 0.0, lifetime);
+    particle.emitter_data = vec4(
+        float(emitter.texture_index),
+        emitter.size_range.x,
+        emitter.emissive_strength,
+        float(emitter.emitter_type)
+    );
+    particle.physics = vec4(
+        emitter.gravity.y,
+        emitter.drag,
+        emitter.turbulence.x,
+        emitter.turbulence.y
+    );
+    particle.color_start = color_start;
+    particle.color_end = color_end;
+    particles[particle_index] = particle;
+}

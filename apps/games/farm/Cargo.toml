@@ -1,0 +1,44 @@
+﻿[package]
+name = "farm"
+description = "An HD-2D farm village: upright sprites on a block world under a tilted camera, with a day and night cycle, weather, tools, crops, animals, shops, errands, and ten villagers who keep their hours"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "farm-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-save.workspace = true
+nightshade-texture.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-sprite.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true
+serde.workspace = true
+
+[features]
+default = ["wgpu"]
+vulkan = ["nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

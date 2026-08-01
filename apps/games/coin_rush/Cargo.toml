@@ -1,0 +1,39 @@
+[package]
+name = "coin_rush"
+description = "A top-down coin chase on an orthographic camera"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "coin_rush-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+nightshade-window.workspace = true
+nightshade-random.workspace = true
+nightshade-topdown.workspace = true
+nightshade-countdown.workspace = true
+nightshade-hover.workspace = true
+nightshade-pen.workspace = true
+nightshade-pickup.workspace = true
+nightshade-scene.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-camera.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-text.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-ui-banner.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-input.workspace = true

@@ -1,0 +1,53 @@
+# The plugin-feature edges that are allowed, one per line as
+# "consumer -> dependency". A composition root takes another plugin whole,
+# with features = ["plugin"], so it can register that plugin's systems and
+# reach its behavior. The window composes the platform and the scene, the
+# interface reaches platform and scene behavior, graphics propagates transforms
+# through the scene, and prefab spawns through the scene and graphics.
+#
+# A call to add_plugin on another crate's plugin counts the same way, because
+# composing a plugin drives that capability whether or not a feature edge says
+# so. nightshade-openxr stands in for the window and composes the wgpu backend
+# itself, which is the one place a second composition root exists.
+#
+# Every other crate must take only the contract of what it names, with
+# default-features = false and features = ["contract"], so naming a type never
+# links the other capability. An edge that is not listed here fails the check.
+#
+# Keep this list short. A new entry means one more crate now links another
+# plugin's behavior, which is the thing the check exists to make deliberate.
+nightshade-graphics -> nightshade-scene
+nightshade-prefab -> nightshade-scene
+nightshade-ui -> nightshade-platform
+nightshade-ui -> nightshade-scene
+nightshade-ui -> nightshade-text
+nightshade-window -> nightshade-camera
+nightshade-window -> nightshade-platform
+nightshade-window -> nightshade-scene
+nightshade-window -> nightshade-graphics
+nightshade-wgpu -> nightshade-graphics
+nightshade-vulkan -> nightshade-graphics
+nightshade-pedestal -> nightshade-camera-controller
+nightshade-openxr -> nightshade-wgpu
+nightshade-window -> nightshade-cli
+nightshade-window -> nightshade-input
+nightshade-window -> nightshade-log
+nightshade-graphics -> nightshade-render
+nightshade-wgpu-paint -> nightshade-paint
+nightshade-vulkan -> nightshade-paint
+nightshade-app -> nightshade-wgpu-sprites
+nightshade-app -> nightshade-wgpu-particles
+nightshade-app -> nightshade-wgpu-decals
+nightshade-app -> nightshade-wgpu-portals
+nightshade-app -> nightshade-wgpu-sdf
+nightshade-app -> nightshade-wgpu-near
+nightshade-app -> nightshade-wgpu-acoustics
+nightshade-app -> nightshade-wgpu-paint
+nightshade-app -> nightshade-wgpu-screenspace
+nightshade-app -> nightshade-wgpu-geometry
+nightshade-app -> nightshade-wgpu-outline
+nightshade-app -> nightshade-wgpu-sky
+nightshade-app -> nightshade-wgpu-text
+nightshade-app -> nightshade-wgpu-debug
+nightshade-app -> nightshade-wgpu-shading
+nightshade-app -> nightshade-wgpu-shadow

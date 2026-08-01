@@ -1,0 +1,154 @@
+-- Breakout, with the juice. Nothing here changes the game.
+-- It reads the same events and adds modules beside it.
+
+runs "breakout"
+
+component Lean
+component Ghost
+component Drift
+component Fade
+component Trail
+
+config Juice
+   pop
+      time number = 0.3
+      grow number = 2.4
+      color = (1.0, 1.0, 1.0)
+   debris
+      count number = 7
+      life number = 0.7
+      spread number = 9
+      fall number = 26
+      color = (1.0, 0.85, 0.45)
+   trail
+      life number = 0.3
+      step number = 0.03
+      color = (0.55, 0.45, 0.15)
+   shake
+      hit number = 0.16
+      lost number = 0.8
+      fall number = 2.8
+      most number = 1.1
+   feel
+      squash number = 0.4
+      slow number = 0.25
+      flowBack number = 0.7
+      lean
+         push number = 0.3
+         spring number = 14
+
+resource Shake
+   amount number = 0
+   x number = 0
+   y number = 0
+
+resource Flow
+   scale number = 1
+
+system paddle.lean
+   in Time, Input, Juice
+   over paddles: in Speed, out Lean = 0, out Rotation = 0
+
+   Lean := Lean + (Input.steering * Juice.feel.lean.push - Lean) * Juice.feel.lean.spring * Time.dt
+   Rotation := 0 - Lean
+
+system ball.squash
+   in Game, Juice
+   over balls: in Radius, in Velocity, out Scale = 0
+
+   let rush := length(Velocity) / Game.ball.speed
+   Scale := (Radius * 2 * (1 + rush * Juice.feel.squash),
+             Radius * 2 * (1 - rush * Juice.feel.squash * 0.6),
+             Radius * 2)
+
+system ball.trail
+   enable not Round.serving
+   in Time, Juice
+   over balls: in Radius, in Transform, out Trail = Juice.trail.step
+   creates entities
+
+   Trail := Trail - Time.dt
+   when Trail <= 0
+      Trail := Juice.trail.step
+      spawn Mesh "Cube", Color Juice.trail.color,
+            Transform Transform,
+            Scale (0.3, 0.3, 0.3),
+            Fade Juice.trail.life
+
+system trail.fade
+   in Time, Juice
+   over marks: out Fade, out Scale = 0, out Color without Drift
+   removes entities
+
+   Fade := Fade - Time.dt
+   Scale := (Fade, Fade, 0.3)
+   Color := Juice.trail.color * (Fade / Juice.trail.life)
+   when Fade <= 0
+      remove marks
+
+system bricks.pop
+   in BrickBroken, Game, Juice
+   creates entities
+
+   for each broken in BrickBroken
+      spawn Mesh "Cube", Color Juice.pop.color,
+            Transform broken.at,
+            Scale (Game.bricks.size.halfWidth * 2, Game.bricks.size.halfHeight * 2, 1),
+            Ghost Juice.pop.time
+
+system ghosts.swell
+   in Time, Game, Juice
+   over ghosts: out Ghost, out Scale = 0, out Color
+   removes entities
+
+   Ghost := Ghost - Time.dt
+   Color := Juice.pop.color * (Ghost / Juice.pop.time)
+   let swell := 1 + (Juice.pop.time - Ghost) * Juice.pop.grow
+   Scale := (Game.bricks.size.halfWidth * 2 * swell, Game.bricks.size.halfHeight * 2 * swell, 0.3)
+   when Ghost <= 0
+      remove ghosts
+
+system debris.throw
+   in BrickBroken, Juice
+   out Random
+   creates entities
+
+   for each broken in BrickBroken
+      for each piece in 0 .. Juice.debris.count
+         spawn Mesh "Cube", Color Juice.debris.color,
+               Transform broken.at,
+               Scale (0.24, 0.24, 0.24),
+               Drift ((draw() * 2 - 1) * Juice.debris.spread, draw() * Juice.debris.spread),
+               Fade Juice.debris.life
+
+system debris.drift
+   in Time, Juice
+   over pieces: out Drift, out Transform, out Fade, out Color
+   removes entities
+
+   Color := Juice.debris.color * (Fade / Juice.debris.life)
+   Drift := (Drift.x, Drift.y - Juice.debris.fall * Time.dt)
+   Transform := Transform + Drift * Time.dt
+   Fade := Fade - Time.dt
+   when Fade <= 0
+      remove pieces
+
+system shake.feel
+   in Time, Shake, Juice, BrickBroken, BallLost
+   out Shake
+
+   for each broken in BrickBroken
+      Shake.amount := min(Shake.amount + Juice.shake.hit, Juice.shake.most)
+   for each lost in BallLost
+      Shake.amount := Juice.shake.lost
+   Shake.amount := max(Shake.amount - Juice.shake.fall * Time.dt, 0)
+   Shake.x := sin(Time.uptime * 71) * Shake.amount
+   Shake.y := cos(Time.uptime * 53) * Shake.amount
+
+system flow.dip
+   in Time, Flow, Juice, BallLost
+   out Flow
+
+   for each lost in BallLost
+      Flow.scale := Juice.feel.slow
+   Flow.scale := min(Flow.scale + Juice.feel.flowBack * Time.dt, 1)

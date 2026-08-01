@@ -1,0 +1,28 @@
+[package]
+name = "nightshade-input"
+description = "The actions a game names, the profiles that bind them, and what a person is asking for this frame"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true, optional = true }
+nightshade-gamepad = { path = "../../domain/nightshade-gamepad", default-features = false, features = [
+    "contract",
+] }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = [
+    "contract",
+] }
+nightshade-store = { path = "../../../support/nightshade-store", optional = true }
+serde = { workspace = true }
+toml = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = ["contract", "dep:nightshade", "dep:nightshade-store", "dep:toml"]
+
+[lints]
+workspace = true

@@ -8,26 +8,22 @@ license.workspace = true
 readme = "README.md"
 edition.workspace = true
 rust-version.workspace = true
-description = "Archetype-based dynamic ECS with runtime component registration, snapshots, and a state-machine scheduler."
-keywords = ["ecs", "gamedev", "archetype", "entity"]
-categories = ["game-engines", "data-structures"]
-
-[package.metadata.docs.rs]
-all-features = true
+publish = false
+description = "Archetype ECS in which a component is never declared, with a state-machine scheduler."
 
 [features]
-default = ["serde", "dynamic"]
+default = ["serde", "parallel"]
 serde = ["dep:serde"]
-dynamic = []
-snapshot = ["dynamic", "serde", "dep:postcard"]
-raw_storage = ["dynamic"]
-state = ["dynamic"]
+parallel = []
+profiling = []
 
 [dependencies]
 paste = { package = "pastey", version = "0.2" }
 serde = { workspace = true, optional = true }
-postcard = { version = "1.1", features = ["alloc"], optional = true }
-web-time = { workspace = true }
+tracing = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rayon = { workspace = true }
+
+[lints]
+workspace = true

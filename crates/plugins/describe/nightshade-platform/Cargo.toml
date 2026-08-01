@@ -1,0 +1,41 @@
+[package]
+name = "nightshade-platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+bitflags = { workspace = true }
+nalgebra-glm = { workspace = true, features = ["serde-serialize"] }
+nightshade-ecs = { workspace = true }
+nightshade = { workspace = true, optional = true }
+web-time = { workspace = true }
+winit = { workspace = true }
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = ["contract", "dep:nightshade"]
+
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+arboard = { workspace = true }
+webbrowser = { workspace = true }
+
+# android-activity owns the `android_main` entry point and fails to compile
+# unless one of its activity backends is selected, so winit's forwarding feature
+# has to be on for any android build.
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { workspace = true }
+tracing = { workspace = true }
+winit = { workspace = true, features = ["android-native-activity"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true }
+
+[package.metadata.cargo-machete]
+ignored = ["getrandom"]

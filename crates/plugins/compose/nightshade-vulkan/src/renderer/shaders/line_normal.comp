@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 64) in;
+
+#include "line_common.glsl"
+
+struct Normal {
+    mat4 transform;
+    vec4 position;
+    vec4 direction;
+    vec4 color;
+};
+
+layout(std430, set = 0, binding = 2) readonly buffer Normals { Normal normals[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= batch.count) {
+        return;
+    }
+    Normal normal = normals[index];
+    vec3 start = (normal.transform * vec4(normal.position.xyz, 1.0)).xyz;
+    vec3 facing = normalize(mat3(normal.transform) * normal.direction.xyz);
+    vec3 end = start + facing * normal.direction.w;
+
+    uint first = batch.first_end + index * 2u;
+    put_end(first, start, normal.color);
+    put_end(first + 1u, end, normal.color);
+}

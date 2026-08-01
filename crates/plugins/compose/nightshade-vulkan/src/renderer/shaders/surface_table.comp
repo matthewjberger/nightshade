@@ -1,0 +1,125 @@
+#version 460
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D surface_table;
+
+layout(push_constant) uniform Push {
+    uint size;
+    uint samples;
+} push;
+
+const float PI = 3.14159265358979323846;
+
+vec2 spread_point(uint index, uint count) {
+    uint bits = index;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return vec2(float(index) / float(count), float(bits) * 2.3283064365386963e-10);
+}
+
+void surface_axes(vec3 normal, out vec3 across, out vec3 along) {
+    vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    across = normalize(cross(up, normal));
+    along = normalize(cross(normal, across));
+}
+
+vec3 facet_toward_reflection(vec2 point, float roughness, vec3 normal) {
+    float alpha = roughness * roughness;
+    float turn = 2.0 * PI * point.x;
+    float up_part = sqrt((1.0 - point.y) / (1.0 + (alpha * alpha - 1.0) * point.y));
+    float out_part = sqrt(1.0 - up_part * up_part);
+    vec3 facet = vec3(out_part * cos(turn), out_part * sin(turn), up_part);
+    vec3 across;
+    vec3 along;
+    surface_axes(normal, across, along);
+    return normalize(across * facet.x + along * facet.y + normal * facet.z);
+}
+
+vec3 facet_toward_sheen(vec2 point, float roughness, vec3 normal) {
+    float alpha = roughness * roughness;
+    float turn = 2.0 * PI * point.x;
+    float out_part = pow(point.y, alpha / (2.0 * alpha + 1.0));
+    float up_part = sqrt(1.0 - out_part * out_part);
+    vec3 facet = vec3(out_part * cos(turn), out_part * sin(turn), up_part);
+    vec3 across;
+    vec3 along;
+    surface_axes(normal, across, along);
+    return normalize(across * facet.x + along * facet.y + normal * facet.z);
+}
+
+float unshadowed(float normal_light, float normal_view, float roughness) {
+    float half_alpha = (roughness * roughness) / 2.0;
+    float toward = normal_light / (normal_light * (1.0 - half_alpha) + half_alpha);
+    float away = normal_view / (normal_view * (1.0 - half_alpha) + half_alpha);
+    return toward * away;
+}
+
+float unshadowed_sheen(float normal_light, float normal_view) {
+    return clamp(
+        1.0 / (4.0 * (normal_light + normal_view - normal_light * normal_view)),
+        0.0,
+        1.0
+    );
+}
+
+float sheen_facets(float roughness, float normal_half) {
+    float settled = max(roughness * roughness, 1.0e-6);
+    float sharpness = 1.0 / settled;
+    float up = normal_half * normal_half;
+    return (2.0 + sharpness) * pow(max(1.0 - up, 0.0078125), sharpness * 0.5) / (2.0 * PI);
+}
+
+vec3 gather(float normal_view, float roughness, uint samples) {
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+    vec3 to_view = vec3(sqrt(1.0 - normal_view * normal_view), 0.0, normal_view);
+    vec3 total = vec3(0.0);
+
+    for (uint index = 0u; index < samples; ++index) {
+        vec2 point = spread_point(index, samples);
+        vec3 facet = facet_toward_reflection(point, roughness, normal);
+        vec3 to_light = 2.0 * dot(to_view, facet) * facet - to_view;
+
+        float normal_light = max(to_light.z, 0.0);
+        float view_facet = max(dot(to_view, facet), 0.0);
+        float normal_facet = max(facet.z, 1.0e-4);
+        if (normal_light > 0.0) {
+            float shadowing = unshadowed(normal_light, max(normal_view, 1.0e-4), roughness);
+            float weight = (shadowing * view_facet) / (normal_facet * max(normal_view, 1.0e-4));
+            float edge = pow(1.0 - view_facet, 5.0);
+            total.x += (1.0 - edge) * weight;
+            total.y += edge * weight;
+        }
+    }
+
+    for (uint index = 0u; index < samples; ++index) {
+        vec2 point = spread_point(index, samples);
+        vec3 facet = facet_toward_sheen(point, roughness, normal);
+        vec3 to_light = 2.0 * dot(to_view, facet) * facet - to_view;
+
+        float normal_light = max(to_light.z, 0.0);
+        float view_facet = max(dot(to_view, facet), 0.0);
+        float normal_facet = max(facet.z, 0.0);
+        if (normal_light > 0.0) {
+            total.z += unshadowed_sheen(normal_light, normal_view)
+                * sheen_facets(roughness, normal_facet)
+                * normal_light
+                * view_facet;
+        }
+    }
+
+    return total / float(samples);
+}
+
+void main() {
+    uvec2 at = gl_GlobalInvocationID.xy;
+    if (at.x >= push.size || at.y >= push.size) {
+        return;
+    }
+    float normal_view = (float(at.x) + 0.5) / float(push.size);
+    float roughness = (float(at.y) + 0.5) / float(push.size);
+    imageStore(surface_table, ivec2(at), vec4(gather(normal_view, roughness, push.samples), 1.0));
+}

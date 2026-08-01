@@ -1,8 +1,14 @@
 [package]
 name = "dag-check"
-version = "0.0.0"
+version.workspace = true
 edition = "2024"
 publish = false
+
+[dependencies]
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+syn = { version = "2", features = ["full", "visit", "extra-traits", "parsing"] }
+toml = { workspace = true }
 
 [[bin]]
 name = "dag-check"

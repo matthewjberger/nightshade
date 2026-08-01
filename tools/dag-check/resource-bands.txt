@@ -1,0 +1,15 @@
+# The types used as a resource that are declared outside the resources band,
+# one per line as "crate Type (declared in band)". Data shared across entities
+# lives in resources, so a type here is a deviation with a reason.
+#
+# nightshade-wgpu's resources band already names its renderer, so a resource
+# the renderer itself builds cannot live there without closing a module cycle.
+# AcousticsGpu holds the compute pipeline, its buffers and its bind group, so
+# it stays with the pass that makes them. NearGpu is the same shape, a grid
+# built and asked on the GPU, and it stays with its own pass for the same
+# reason.
+#
+# This list only shrinks. The check fails on a line whose type is gone or
+# already in its band.
+nightshade-wgpu AcousticsGpu (declared in renderer)
+nightshade-wgpu NearGpu (declared in renderer)

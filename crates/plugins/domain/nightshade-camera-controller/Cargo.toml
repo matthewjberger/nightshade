@@ -1,0 +1,27 @@
+[package]
+name = "nightshade-camera-controller"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-ecs = { workspace = true, optional = true }
+nightshade-input = { path = "../../domain/nightshade-input", default-features = false, features = ["contract"], optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+serde = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = [
+    "dep:nalgebra-glm",
+    "dep:nightshade-ecs",
+    "dep:serde",
+    "nightshade-camera/contract",
+]
+plugin = ["contract", "dep:nightshade", "dep:nightshade-input", "dep:nightshade-render"]

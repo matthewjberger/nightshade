@@ -1,0 +1,15 @@
+[package]
+name = "world-digest"
+version.workspace = true
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "world-digest"
+path = "src/main.rs"
+
+[dependencies]
+fnv.workspace = true
+hollowmere = { path = "../../apps/games/hollowmere" }
+nightshade-voxels.workspace = true
+voxels = { path = "../../apps/games/voxels" }

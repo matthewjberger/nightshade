@@ -1,5 +1,5 @@
 [package]
-name = "template_core"
+name = "template"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 edition = "2024"
@@ -9,40 +9,53 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [[bin]]
-name = "template"
+name = "template-run"
 path = "src/main.rs"
+required-features = ["plugin"]
 
 [dependencies]
-nightshade = { version = "0.56.0" }
+nightshade = { path = "../crates/nightshade", optional = true }
+nightshade-camera = { path = "../crates/plugins/domain/nightshade-camera", optional = true }
+nightshade-camera-controller = { path = "../crates/plugins/domain/nightshade-camera-controller", optional = true }
+nightshade-cli = { path = "../crates/plugins/domain/nightshade-cli", optional = true }
+nightshade-gamepad = { path = "../crates/plugins/domain/nightshade-gamepad", default-features = false, features = ["contract"], optional = true }
+nightshade-graphics = { path = "../crates/plugins/domain/nightshade-graphics", optional = true }
+nightshade-input = { path = "../crates/plugins/domain/nightshade-input", optional = true }
+nightshade-log = { path = "../crates/plugins/domain/nightshade-log", optional = true }
+nightshade-ui-menu = { path = "../crates/framework/interface/nightshade-ui-menu", optional = true }
+nightshade-openxr = { path = "../crates/plugins/compose/nightshade-openxr", optional = true }
+nightshade-platform = { path = "../crates/plugins/describe/nightshade-platform", optional = true }
+nightshade-render = { path = "../crates/plugins/describe/nightshade-render", optional = true }
+nightshade-scene = { path = "../crates/plugins/describe/nightshade-scene", optional = true }
+nightshade-state = { path = "../crates/plugins/describe/nightshade-state", optional = true }
+nightshade-ui = { path = "../crates/plugins/compose/nightshade-ui", optional = true }
+nightshade-wgpu = { path = "../crates/plugins/compose/nightshade-wgpu", features = ["default-plugins"], optional = true }
+nightshade-window = { path = "../crates/plugins/compose/nightshade-window", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 
 [features]
-default = ["tracing"]
-steam = ["nightshade/steam"]
-tracing = ["nightshade/tracing"]
-
-[profile.wasm-release]
-inherits = "release"
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = "symbols"
-
-# For very small final binary size,
-# uncomment the following release profile and build with it
-
-# [profile.release]
-# codegen-units = 1 # Reduce parallel code generation units
-# strip = true      # Automatically strip symbols from the binary.
-# opt-level = "z"   # Optimize for size
-# lto = true        # Link time optimization
-# panic = "abort"   # On panic, abort immediately rather than unwinding. Don't use this if you want backtraces.
-
-# Then compress the final executable further with:
-# upx --best --lzma ./target/release/app
-#
-# Or on windows,
-# upx --best --lzma ./target/release/app.exe
+default = ["plugin"]
+contract = []
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-camera",
+    "dep:nightshade-camera-controller",
+    "dep:nightshade-cli",
+    "dep:nightshade-gamepad",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-log",
+    "dep:nightshade-ui-menu",
+    "dep:nightshade-platform",
+    "dep:nightshade-state",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+    "dep:nightshade-ui",
+    "dep:nightshade-wgpu",
+    "dep:nightshade-window",
+]
+vr = ["plugin", "dep:nightshade-openxr"]

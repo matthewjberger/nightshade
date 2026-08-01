@@ -1,0 +1,52 @@
+[package]
+name = "nightshade-openxr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-window.workspace = true
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-wgpu.workspace = true
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true }
+nightshade-paint = { path = "../../describe/nightshade-paint", optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-ecs = { workspace = true, optional = true }
+ash = { workspace = true, optional = true }
+openxr = { workspace = true, optional = true }
+pollster = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+wgpu-hal = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:nalgebra-glm", "dep:nightshade-ecs"]
+plugin = [
+    "contract",
+    "dep:ash",
+    "dep:nightshade",
+    "dep:openxr",
+    "dep:nightshade-paint",
+    "dep:nightshade-ui",
+    "dep:pollster",
+    "dep:tracing",
+    "dep:wgpu-hal",
+]
+
+[dev-dependencies]
+nightshade-graphics = { path = "../../domain/nightshade-graphics", default-features = false, features = ["contract"] }
+nightshade-log.workspace = true
+nightshade-load = { workspace = true }
+nightshade-gltf = { path = "../../domain/nightshade-gltf" }
+nightshade-prefab.workspace = true
+nightshade.workspace = true
+nightshade-physics.workspace = true
+nightshade-camera.workspace = true
+nightshade-particles.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["pollster"]

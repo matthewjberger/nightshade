@@ -1,0 +1,102 @@
+#version 460
+#extension GL_EXT_mesh_shader : require
+#extension GL_GOOGLE_include_directive : require
+
+#define COUNT_WRITE
+
+#include "scene_common.glsl"
+
+layout(local_size_x = 32) in;
+
+float error_on_screen(vec4 group, float error, mat4 transform, float scale) {
+    if (error >= 1.0e29) {
+        return error;
+    }
+    vec3 center = (transform * vec4(group.xyz, 1.0)).xyz;
+    float radius = group.w * scale;
+    float away = max(length(center - frame.camera_position.xyz) - radius, 1.0e-4);
+    return error * scale * frame.projection[1][1] * frame.screen.y * 0.5 / away;
+}
+
+bool on_the_cut(Meshlet meshlet, mat4 transform, float scale) {
+    if (meshlet.errors.y >= 1.0e29) {
+        return true;
+    }
+    float own = error_on_screen(meshlet.group, meshlet.errors.x, transform, scale);
+    float above = error_on_screen(meshlet.parent, meshlet.errors.y, transform, scale);
+    return own <= DETAIL_ALLOWANCE && above > DETAIL_ALLOWANCE;
+}
+
+layout(push_constant) uniform ListPush {
+    uint list;
+    uint phase;
+} push;
+
+struct TaskPayload {
+    uint object;
+    uint meshlets[TASK_BATCH];
+};
+
+taskPayloadSharedEXT TaskPayload payload;
+
+shared uint survivors;
+shared uint kept_triangles;
+
+void main() {
+    uint view = view_of(push.list);
+    uint item = gl_WorkGroupID.y * TASK_WIDTH + gl_WorkGroupID.x;
+    if (item >= draw_commands[push.list].w) {
+        EmitMeshTasksEXT(0u, 0u, 0u);
+        return;
+    }
+    uvec2 work = work_items[push.list * frame.counts.w + item];
+    uint object_index = work.x;
+    Object object = objects[object_index];
+    MeshRange range = mesh_ranges[object.mesh_slot];
+
+    if (gl_LocalInvocationIndex == 0u) {
+        survivors = 0u;
+        kept_triangles = 0u;
+        payload.object = object_index;
+    }
+    barrier();
+
+    bool against_pyramid = push.phase == PHASE_LATE && view == VIEW_CAMERA;
+
+    uint local = work.y * TASK_BATCH + gl_LocalInvocationIndex;
+    if (local < range.meshlet_count) {
+        Meshlet meshlet = meshlets[range.meshlet_offset + local];
+        float scale = largest_scale(object.transform);
+        vec3 center;
+        float radius;
+        bool facing = true;
+        if ((object.flags & OBJECT_SKINNED) != 0u) {
+            vec4 posed = posed_meshlets[object.posed_meshlets + local];
+            center = posed.xyz;
+            radius = posed.w;
+        } else {
+            center = (object.transform * vec4(meshlet.bounds.xyz, 1.0)).xyz;
+            radius = meshlet.bounds.w * scale;
+            vec3 axis = mat3(object.normal_transform) * meshlet.cone.xyz;
+            facing = view != VIEW_CAMERA
+                || draws_both_faces(object)
+                || cone_visible(center, radius, axis, meshlet.cone.w);
+        }
+        bool keep = facing
+            && on_the_cut(meshlet, object.transform, scale)
+            && sphere_visible(view, center, radius)
+            && !(against_pyramid && sphere_occluded(center, radius));
+        if (keep) {
+            payload.meshlets[atomicAdd(survivors, 1u)] = local;
+            atomicAdd(kept_triangles, meshlet.triangle_count);
+        }
+    }
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0u && push.phase == PHASE_SHADE) {
+        atomicAdd(drawn_counts[0], survivors);
+        atomicAdd(drawn_counts[1], kept_triangles);
+    }
+
+    EmitMeshTasksEXT(survivors, 1u, 1u);
+}

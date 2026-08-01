@@ -1,0 +1,65 @@
+#version 460
+
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 1) buffer Settled {
+    float settled_log_luminance;
+    float measured_log_luminance;
+    uint measured;
+    uint padding;
+    uint histogram[256];
+} settled;
+
+layout(push_constant) uniform Push {
+    vec4 rate;
+} push;
+
+shared uint counts[256];
+
+const float DARK_SHARE = 0.05;
+const float BRIGHT_SHARE = 0.95;
+
+float brightness_of(uint bin) {
+    return push.rate.z + float(bin) / 255.0 * (push.rate.w - push.rate.z);
+}
+
+void main() {
+    uint slot = gl_LocalInvocationID.x;
+    counts[slot] = settled.histogram[slot];
+    settled.histogram[slot] = 0u;
+    barrier();
+
+    if (slot != 0u) {
+        return;
+    }
+    uint total = 0u;
+    for (uint bin = 0u; bin < 256u; ++bin) {
+        total += counts[bin];
+    }
+    if (total == 0u) {
+        return;
+    }
+    float first = float(total) * DARK_SHARE;
+    float last = float(total) * BRIGHT_SHARE;
+    float weighted = 0.0;
+    float weight = 0.0;
+    float seen = 0.0;
+    for (uint bin = 0u; bin < 256u; ++bin) {
+        float count = float(counts[bin]);
+        float from = max(seen, first);
+        float to = min(seen + count, last);
+        if (to > from) {
+            weighted += (to - from) * brightness_of(bin);
+            weight += to - from;
+        }
+        seen += count;
+    }
+    float measured = weight > 0.0 ? weighted / weight : settled.measured_log_luminance;
+    float follow = 1.0 - exp(-push.rate.x * push.rate.y);
+    float settled_now = settled.measured != 0u
+        ? settled.settled_log_luminance + (measured - settled.settled_log_luminance) * follow
+        : measured;
+    settled.measured_log_luminance = measured;
+    settled.settled_log_luminance = clamp(settled_now, push.rate.z, push.rate.w);
+    settled.measured = 1u;
+}

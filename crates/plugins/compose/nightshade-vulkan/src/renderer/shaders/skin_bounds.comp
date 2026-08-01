@@ -1,0 +1,34 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define OBJECT_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+const float SKIN_MARGIN = 1.5;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= frame.skin_counts.z) {
+        return;
+    }
+    SkinInstance instance = skin_instances[index];
+    if (instance.bone_count == 0u) {
+        return;
+    }
+
+    vec3 middle = vec3(0.0);
+    for (uint bone = 0u; bone < instance.bone_count; ++bone) {
+        middle += bone_transforms[instance.bone_offset + bone][3].xyz;
+    }
+    middle /= float(instance.bone_count);
+
+    float widest = 0.0;
+    for (uint bone = 0u; bone < instance.bone_count; ++bone) {
+        vec3 offset = bone_transforms[instance.bone_offset + bone][3].xyz - middle;
+        widest = max(widest, dot(offset, offset));
+    }
+
+    objects[instance.object_index].bounds = vec4(middle, sqrt(widest) + SKIN_MARGIN);
+}

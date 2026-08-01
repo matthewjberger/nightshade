@@ -1,0 +1,44 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define FOG_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+vec4 gathered_at(ivec3 cell) {
+    return fog_parity() == 0u ? imageLoad(fog_scatter_a, cell) : imageLoad(fog_scatter_b, cell);
+}
+
+void main() {
+    uvec2 column = gl_GlobalInvocationID.xy;
+    if (column.x >= FOG_X || column.y >= FOG_Y) {
+        return;
+    }
+    vec2 ndc = vec2(
+        (float(column.x) + 0.5) / float(FOG_X) * 2.0 - 1.0,
+        1.0 - (float(column.y) + 0.5) / float(FOG_Y) * 2.0
+    );
+    float along = length(vec3(
+        ndc.x / frame.projection[0][0],
+        ndc.y / frame.projection[1][1],
+        1.0
+    ));
+    vec3 reached = vec3(0.0);
+    float showing = 1.0;
+    float nearer = fog_depth_of(0.0);
+    for (uint slice = 0u; slice < FOG_Z; ++slice) {
+        float farther = fog_depth_of(float(slice) + 1.0);
+        float crossed = (farther - nearer) * along;
+        vec4 cell = gathered_at(ivec3(column, slice));
+        float extinction = max(cell.a, 0.0);
+        float through = exp(-extinction * crossed);
+        vec3 added = extinction > 1.0e-5
+            ? cell.rgb / extinction * (1.0 - through)
+            : cell.rgb * crossed;
+        reached += showing * added;
+        showing *= through;
+        imageStore(fog_marched, ivec3(column, slice), vec4(reached, showing));
+        nearer = farther;
+    }
+}

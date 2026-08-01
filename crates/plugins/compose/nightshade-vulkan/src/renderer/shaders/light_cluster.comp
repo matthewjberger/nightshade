@@ -1,0 +1,110 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define CLUSTER_WRITE
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+vec2 view_corner(vec2 ndc, float depth) {
+    return vec2(
+        ndc.x * depth / frame.projection[0][0],
+        ndc.y * depth / frame.projection[1][1]
+    );
+}
+
+bool reaches(Light light, vec3 lowest, vec3 highest) {
+    if (light.light_type == LIGHT_DIRECTIONAL) {
+        return false;
+    }
+    if (light.range <= 0.0) {
+        return true;
+    }
+    vec3 center = (frame.view * vec4(light.position.xyz, 1.0)).xyz;
+    vec3 offset = center - clamp(center, lowest, highest);
+    float reach = light.range + (light.light_type == LIGHT_AREA ? light.light_size : 0.0);
+    if (dot(offset, offset) > reach * reach) {
+        return false;
+    }
+    if (light.light_type != LIGHT_SPOT) {
+        return true;
+    }
+
+    vec3 direction = normalize((frame.view * vec4(normalize(light.direction.xyz), 0.0)).xyz);
+    vec3 cell_center = (lowest + highest) * 0.5;
+    float cell_radius = length((highest - lowest) * 0.5);
+    vec3 to_cell = cell_center - center;
+    float along = dot(to_cell, direction);
+    if (along < 0.0) {
+        return length(to_cell) <= cell_radius;
+    }
+    if (along > light.range + cell_radius) {
+        return false;
+    }
+    float cosine = clamp(light.outer_cone, 1.0e-4, 1.0);
+    float across = length(to_cell - direction * along);
+    float cone_radius = along * sqrt(1.0 - cosine * cosine) / cosine;
+    return across <= cone_radius + cell_radius;
+}
+
+void main() {
+    uint cell = gl_GlobalInvocationID.x;
+    if (cell >= CLUSTER_CELLS) {
+        return;
+    }
+
+    uint tile_x = cell % CLUSTER_X;
+    uint tile_y = (cell / CLUSTER_X) % CLUSTER_Y;
+    uint slice = cell / (CLUSTER_X * CLUSTER_Y);
+
+    float near = frame.cluster.z;
+    float far = frame.cluster.w;
+    float ratio = far / near;
+    float near_depth = near * pow(ratio, float(slice) / float(CLUSTER_Z));
+    float far_depth = near * pow(ratio, float(slice + 1u) / float(CLUSTER_Z));
+
+    vec2 low_ndc = vec2(
+        2.0 * float(tile_x) / float(CLUSTER_X) - 1.0,
+        1.0 - 2.0 * float(tile_y + 1u) / float(CLUSTER_Y)
+    );
+    vec2 high_ndc = vec2(
+        2.0 * float(tile_x + 1u) / float(CLUSTER_X) - 1.0,
+        1.0 - 2.0 * float(tile_y) / float(CLUSTER_Y)
+    );
+
+    vec2 low_near = view_corner(low_ndc, near_depth);
+    vec2 high_near = view_corner(high_ndc, near_depth);
+    vec2 low_far = view_corner(low_ndc, far_depth);
+    vec2 high_far = view_corner(high_ndc, far_depth);
+
+    vec3 lowest = vec3(min(min(low_near, high_near), min(low_far, high_far)), -far_depth);
+    vec3 highest = vec3(max(max(low_near, high_near), max(low_far, high_far)), -near_depth);
+
+    uint light_count = min(frame.counts.y, uint(lights.length()));
+    uint wanted = 0u;
+    for (uint index = 0u; index < light_count; ++index) {
+        if (reaches(lights[index], lowest, highest)) {
+            wanted += 1u;
+        }
+    }
+
+    uint offset = 0u;
+    uint kept = 0u;
+    if (wanted > 0u) {
+        offset = atomicAdd(cluster_lights[0], wanted);
+        if (offset + wanted <= CLUSTER_LIST_CAPACITY) {
+            for (uint index = 0u; index < light_count; ++index) {
+                if (reaches(lights[index], lowest, highest)) {
+                    cluster_lights[CLUSTER_LIST_BASE + offset + kept] = index;
+                    kept += 1u;
+                }
+            }
+        } else {
+            atomicAdd(cluster_lights[0], 0u - wanted);
+            offset = 0u;
+        }
+    }
+
+    cluster_lights[CLUSTER_GRID_BASE + cell * 2u] = offset;
+    cluster_lights[CLUSTER_GRID_BASE + cell * 2u + 1u] = kept;
+}

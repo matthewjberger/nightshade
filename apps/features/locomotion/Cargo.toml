@@ -1,0 +1,45 @@
+[package]
+name = "locomotion"
+description = "A Mixamo character driven by a blend space over its own locomotion clips"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "locomotion-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade.workspace = true
+nightshade-animation.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-gltf.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input = { workspace = true }
+nightshade-load.workspace = true
+nightshade-platform.workspace = true
+nightshade-prefab.workspace = true
+nightshade-noise.workspace = true
+nightshade-render = { workspace = true }
+nightshade-gamepad.workspace = true
+tracing.workspace = true
+nalgebra-glm.workspace = true
+nightshade-scene.workspace = true
+nightshade-ease = { workspace = true }
+nightshade-state.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

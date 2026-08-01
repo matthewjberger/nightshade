@@ -1,0 +1,84 @@
+[package]
+name = "blackmarrow"
+description = "A first-person horror station under the ice, where one pull drives every fixture"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "blackmarrow-run"
+path = "src/main.rs"
+required-features = ["plugin"]
+
+[dependencies]
+nightshade = { workspace = true, optional = true }
+nightshade-animation = { workspace = true, optional = true }
+nightshade-app = { workspace = true, optional = true }
+nightshade-camera = { workspace = true, optional = true }
+nightshade-camera-controller = { workspace = true, optional = true }
+nightshade-cli = { workspace = true, optional = true }
+nightshade-config = { workspace = true, optional = true }
+nightshade-flashlight = { workspace = true, optional = true }
+nightshade-flicker = { workspace = true, optional = true }
+nightshade-gltf = { workspace = true, optional = true }
+nightshade-graphics = { workspace = true, optional = true }
+nightshade-input = { workspace = true, optional = true }
+nightshade-load = { workspace = true, optional = true }
+nightshade-lofi = { workspace = true, optional = true }
+nightshade-log = { workspace = true, optional = true }
+nightshade-physics = { workspace = true, optional = true }
+nightshade-platform = { workspace = true, optional = true }
+nightshade-prefab = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { workspace = true, optional = true }
+nightshade-senses = { workspace = true, optional = true }
+nightshade-shell = { workspace = true, optional = true }
+nightshade-state = { workspace = true, optional = true }
+nightshade-text = { workspace = true, optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-ui-menu = { workspace = true, optional = true }
+nightshade-wgpu = { workspace = true, features = ["default-plugins"], optional = true }
+nightshade-window = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-animation",
+    "dep:nightshade-app",
+    "dep:nightshade-camera",
+    "dep:nightshade-camera-controller",
+    "dep:nightshade-cli",
+    "dep:nightshade-config",
+    "dep:nightshade-flashlight",
+    "dep:nightshade-flicker",
+    "dep:nightshade-gltf",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-load",
+    "dep:nightshade-lofi",
+    "dep:nightshade-log",
+    "dep:nightshade-physics",
+    "dep:nightshade-platform",
+    "dep:nightshade-prefab",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+    "dep:nightshade-senses",
+    "dep:nightshade-shell",
+    "dep:nightshade-state",
+    "dep:nightshade-text",
+    "dep:nightshade-ui",
+    "dep:nightshade-ui-menu",
+    "dep:nightshade-wgpu",
+    "dep:nightshade-window",
+]

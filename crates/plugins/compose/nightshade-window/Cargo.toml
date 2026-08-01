@@ -1,0 +1,62 @@
+[package]
+name = "nightshade-window"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+image = { workspace = true }
+futures = { version = "0.3" }
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["plugin"] }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["plugin"] }
+nightshade-cli = { path = "../../domain/nightshade-cli", optional = true }
+nightshade-input = { path = "../../domain/nightshade-input", default-features = false, features = ["plugin"] }
+nightshade-log = { path = "../../domain/nightshade-log", optional = true }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["plugin"], optional = true }
+pollster = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing = { workspace = true }
+web-time = { workspace = true }
+winit = { workspace = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.22" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Blob",
+    "BlobPropertyBag",
+    "DataTransfer",
+    "DataTransferItem",
+    "DataTransferItemList",
+    "DedicatedWorkerGlobalScope",
+    "Document",
+    "DragEvent",
+    "Element",
+    "Event",
+    "EventTarget",
+    "File",
+    "FileList",
+    "FileReader",
+    "FileSystemDirectoryEntry",
+    "FileSystemDirectoryReader",
+    "FileSystemEntry",
+    "FileSystemFileEntry",
+    "HtmlAnchorElement",
+    "HtmlCanvasElement",
+    "HtmlInputElement",
+    "ProgressEvent",
+    "Url",
+    "Window",
+] }
+
+[features]
+default-plugins = ["dep:nightshade-cli", "dep:nightshade-log", "dep:nightshade-camera"]

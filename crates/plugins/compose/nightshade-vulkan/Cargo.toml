@@ -1,0 +1,45 @@
+[package]
+name = "nightshade-vulkan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-ecs = { workspace = true }
+half.workspace = true
+image.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-decals = { path = "../../domain/nightshade-decals", default-features = false, features = ["contract"] }
+nightshade-paint = { path = "../../describe/nightshade-paint" }
+nightshade-particles = { path = "../../domain/nightshade-particles", default-features = false, features = ["contract"] }
+nightshade-sprite = { path = "../../domain/nightshade-sprite", default-features = false, features = ["contract"] }
+nightshade-text = { path = "../../describe/nightshade-text", default-features = false, features = ["contract"] }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-window = { path = "../../compose/nightshade-window" }
+ash = { workspace = true }
+ash-window = { workspace = true }
+gpu-allocator = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"] }
+nalgebra-glm = { workspace = true }
+rayon = { workspace = true }
+raw-window-handle = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+] }
+
+[features]
+profiling = ["nightshade-ecs/profiling"]
+parallel = ["nightshade-ecs/parallel"]
+default-plugins = ["nightshade-window/default-plugins"]
+
+[package.metadata.cargo-machete]
+ignored = ["nightshade-ecs"]

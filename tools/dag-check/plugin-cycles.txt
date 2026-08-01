@@ -1,0 +1,11 @@
+# Module cycles inside one plugin crate that are accepted, as
+# "crate: module, module, ..." with the modules sorted. A cycle not listed
+# here fails the check.
+#
+# Cargo keeps one crate from depending on another in both directions. This is
+# the same rule one level down, inside one crate, where a plugin large enough
+# to have its own module tree can tangle without any of that showing from
+# outside.
+#
+# Nothing is recorded. Every plugin crate is a DAG inside, and the point of
+# this file is that it stays empty.

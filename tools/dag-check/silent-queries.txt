@@ -1,0 +1,6 @@
+# The queries that report nothing, one per line as "path name". A query with
+# no return type cannot be reporting, so it is a command or a system filed in
+# the wrong band.
+#
+# This list only shrinks. The check fails on a line whose function is gone or
+# already clean.

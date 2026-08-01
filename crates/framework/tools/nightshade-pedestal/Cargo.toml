@@ -1,0 +1,23 @@
+[package]
+name = "nightshade-pedestal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-camera = { path = "../../../plugins/domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-camera-controller = { workspace = true }
+nightshade-gltf = { workspace = true, features = ["fetch"] }
+nightshade-graphics = { path = "../../../plugins/domain/nightshade-graphics", default-features = false, features = ["contract"] }
+nightshade-load = { workspace = true, features = ["fetch"] }
+nightshade-platform = { path = "../../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-prefab = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-graphics = { workspace = true }

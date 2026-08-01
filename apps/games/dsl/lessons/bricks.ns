@@ -1,0 +1,169 @@
+-- Lesson 5. A wall of bricks that the ball takes apart, and that builds itself again.
+
+assets Shapes from builtin
+   block mesh "Cube"
+   ball mesh "Sphere"
+
+component HalfExtent
+component Speed
+component Velocity
+component Radius
+component Points
+
+config Game
+   viewHeight number = 13.5
+   court
+      halfWidth number = 16
+      halfHeight number = 12
+      wallHalf number = 0.5
+      color = (0.147, 0.179, 0.296)
+      inner
+         halfWidth number = Game.court.halfWidth - Game.court.wallHalf
+         top number = Game.court.halfHeight - Game.court.wallHalf
+         floorY number = 0 - Game.court.halfHeight - 1
+   paddle
+      y number = -9.5
+      halfWidth number = 2.5
+      halfHeight number = 0.4
+      speed number = 26
+      color = (0.890, 0.911, 1.0)
+   ball
+      radius number = 0.35
+      speed number = 20
+      color = (1.0, 0.749, 0.100)
+      serve
+         height number = 0.85
+         step number = 0.15
+         fan number = 1.0472
+   bricks
+      colors = [(0.808, 0.040, 0.068), (0.911, 0.233, 0.022), (0.955, 0.638, 0.033), (0.051, 0.571, 0.119), (0.051, 0.263, 0.890)]
+      grid
+         columns number = 8
+         rows number = 5
+         top number = 9.5
+      size
+         halfWidth number = 1.6
+         halfHeight number = 0.55
+      spacing
+         x number = 3.6
+         y number = 1.6
+
+resource Round
+   serving boolean = true
+   standing number = 0
+   rebuildWanted boolean = true
+
+query brickCenter(column, row) = (column * Game.bricks.spacing.x - (Game.bricks.grid.columns - 1) * Game.bricks.spacing.x * 0.5, Game.bricks.grid.top - row * Game.bricks.spacing.y)
+query bounce(offset) = (sin(clamp(offset, -1, 1) * Game.ball.serve.fan), cos(clamp(offset, -1, 1) * Game.ball.serve.fan))
+query serveSpot(x) = (x, Game.paddle.y + Game.ball.serve.height)
+
+system setup.build
+   once
+   in Game
+   creates entities
+
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (0 - Game.court.halfWidth, 0),
+         Scale (Game.court.wallHalf * 2, (Game.court.halfHeight + Game.court.wallHalf) * 2, 1)
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (Game.court.halfWidth, 0),
+         Scale (Game.court.wallHalf * 2, (Game.court.halfHeight + Game.court.wallHalf) * 2, 1)
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (0, Game.court.halfHeight),
+         Scale ((Game.court.halfWidth + Game.court.wallHalf) * 2, Game.court.wallHalf * 2, 1)
+   spawn Mesh Shapes.block, Color Game.paddle.color,
+         Transform (0, Game.paddle.y),
+         Scale (Game.paddle.halfWidth * 2, Game.paddle.halfHeight * 2, 1),
+         HalfExtent (Game.paddle.halfWidth, Game.paddle.halfHeight),
+         Speed Game.paddle.speed
+   spawn Mesh Shapes.ball, Color Game.ball.color,
+         Transform (0, Game.paddle.y + Game.ball.serve.height),
+         Scale (Game.ball.radius * 2, Game.ball.radius * 2, Game.ball.radius * 2),
+         Radius Game.ball.radius,
+         Velocity (0, 0)
+
+system round.clear
+   enable Round.rebuildWanted
+   over bricks: in Points
+   removes entities
+
+   remove bricks
+
+system round.rebuild
+   enable Round.rebuildWanted
+   in Game
+   out Round
+   creates entities
+
+   for each row in 0 .. Game.bricks.grid.rows
+      for each column in 0 .. Game.bricks.grid.columns
+         spawn Mesh Shapes.block,
+               Color Game.bricks.colors[row],
+               Transform brickCenter(column, row),
+               Scale (Game.bricks.size.halfWidth * 2, Game.bricks.size.halfHeight * 2, 1),
+               HalfExtent (Game.bricks.size.halfWidth, Game.bricks.size.halfHeight),
+               Points 10
+   Round.standing := Game.bricks.grid.columns * Game.bricks.grid.rows
+   Round.rebuildWanted := false
+
+system paddle.drive
+   in Time, Input, Game
+   over paddles: in Speed, in HalfExtent, out Transform without Velocity
+
+   let limit := Game.court.inner.halfWidth - HalfExtent.x
+   Transform.x := clamp(Transform.x + Input.steering * Speed * Time.dt, 0 - limit, limit)
+
+system ball.advance
+   in Time, Input, Game
+   out Round
+   over balls: in Radius, out Velocity, out Transform without Speed
+   one paddle: in Transform, in HalfExtent with Speed
+   uses bricks: in Transform, in HalfExtent, in Points
+   removes entities
+
+   when Round.serving
+      Transform := serveSpot(Transform(paddle).x)
+      Velocity := (0, 0)
+      when Input.serve
+         Round.serving := false
+         Velocity := bounce(sin(Time.uptime * 7) * 0.6) * Game.ball.speed
+      stop
+
+   let steps := max(1, ceil(length(Velocity) * Time.dt / Game.ball.serve.step))
+   let side := Game.court.inner.halfWidth - Radius
+   let roof := Game.court.inner.top - Radius
+
+   for each step in 0 .. steps
+      Transform := Transform + Velocity * (Time.dt / steps)
+      when Transform.x < 0 - side
+         Transform := (0 - side, Transform.y)
+         Velocity := (abs(Velocity.x), Velocity.y)
+      when Transform.x > side
+         Transform := (side, Transform.y)
+         Velocity := (0 - abs(Velocity.x), Velocity.y)
+      when Transform.y > roof
+         Transform := (Transform.x, roof)
+         Velocity := (Velocity.x, 0 - abs(Velocity.y))
+      when Velocity.y < 0
+         let met := separation(Transform, Radius, Transform(paddle), HalfExtent(paddle))
+         when met is some
+            Velocity := bounce((Transform.x - Transform(paddle).x) / HalfExtent(paddle).x) * Game.ball.speed
+            Transform := (Transform.x, Transform(paddle).y + HalfExtent(paddle).y + Radius)
+      for each brick in bricks
+         let touch := separation(Transform, Radius, Transform(brick), HalfExtent(brick))
+         when touch is some
+            when abs(touch.x) >= abs(touch.y)
+               Velocity := (sign(touch.x) * abs(Velocity.x), Velocity.y)
+            else
+               Velocity := (Velocity.x, sign(touch.y) * abs(Velocity.y))
+            remove brick
+            Round.standing := Round.standing - 1
+            when Round.standing <= 0
+               Round.serving := true
+               Round.rebuildWanted := true
+            break
+      when Transform.y < Game.court.inner.floorY
+         Round.serving := true
+         break
+
+order round.clear before round.rebuild

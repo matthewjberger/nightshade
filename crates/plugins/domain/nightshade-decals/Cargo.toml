@@ -1,0 +1,28 @@
+[package]
+name = "nightshade-decals"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+bytemuck = { workspace = true, optional = true }
+enum2schema = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:enum2schema", "dep:nalgebra-glm", "dep:serde"]
+plugin = [
+    "contract",
+    "dep:bytemuck",
+    "dep:nightshade",
+    "dep:tracing",
+]
+
+[package.metadata.cargo-machete]
+ignored = ["bytemuck", "tracing"]

@@ -1,0 +1,24 @@
+[package]
+name = "nightshade-save"
+description = "A slot, a header and a version around whatever a game must still have the next time it starts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = ["plugin"]
+plugin = ["dep:nightshade", "dep:nightshade-platform"]
+
+[dependencies]
+bincode = { workspace = true }
+nightshade = { workspace = true, optional = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = [
+    "contract",
+], optional = true }
+nightshade-store = { path = "../../../support/nightshade-store" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

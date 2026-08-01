@@ -1,0 +1,52 @@
+[package]
+name = "hollowmere"
+description = "An offline fantasy MMO on a block world, where every other player on the road is a simulation"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "hollowmere-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-random = { workspace = true }
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-animation.workspace = true
+nightshade-audio.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-kit = { workspace = true }
+nightshade-load = { workspace = true }
+nightshade-gamepad.workspace = true
+nightshade-gltf.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-particles.workspace = true
+nightshade-picking.workspace = true
+nightshade-platform.workspace = true
+nightshade-prefab.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-save.workspace = true
+serde.workspace = true
+nightshade-sprite.workspace = true
+nightshade-text.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-voxels.workspace = true
+nightshade-window.workspace = true
+nightshade-worker.workspace = true
+noise.workspace = true
+

@@ -1,0 +1,66 @@
+pub mod viewport_shading;
+
+pub use viewport_shading::*;
+
+mod orthographic;
+
+mod perspective;
+
+mod projection_override;
+
+mod render_target;
+
+mod smoothing;
+
+pub use orthographic::*;
+
+pub use perspective::*;
+
+pub use projection_override::*;
+
+pub use render_target::*;
+
+pub use smoothing::*;
+
+use nalgebra_glm::Mat4;
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
+pub struct Camera {
+    pub projection: Projection,
+    pub smoothing: Option<Smoothing>,
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            projection: Projection::Perspective(PerspectiveCamera::default()),
+            smoothing: Some(Smoothing::default()),
+        }
+    }
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, enum2schema::Schema,
+)]
+pub enum Projection {
+    Perspective(PerspectiveCamera),
+    Orthographic(OrthographicCamera),
+}
+
+impl Projection {
+    pub fn matrix(&self) -> Mat4 {
+        match self {
+            Projection::Perspective(camera) => camera.matrix(),
+            Projection::Orthographic(camera) => camera.matrix(),
+        }
+    }
+
+    pub fn matrix_with_aspect(&self, aspect_ratio: f32) -> Mat4 {
+        match self {
+            Projection::Perspective(camera) => camera.matrix_with_aspect(aspect_ratio),
+            Projection::Orthographic(camera) => camera.matrix_with_aspect(aspect_ratio),
+        }
+    }
+}

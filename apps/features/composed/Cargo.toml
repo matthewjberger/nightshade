@@ -1,0 +1,43 @@
+[package]
+name = "composed"
+description = "A meadow built by composing mechanic crates, where the game holds only its own rules"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "composed-run"
+path = "src/main.rs"
+
+[dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-cooldown = { workspace = true }
+nightshade-daynight = { workspace = true }
+nightshade-follow = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-ground = { workspace = true }
+nightshade-plane = { workspace = true }
+nightshade-grounded = { workspace = true }
+nightshade-health = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-random = { workspace = true }
+nightshade-scene = { workspace = true }
+nightshade-shake = { workspace = true }
+nightshade-toast = { workspace = true }
+nightshade-ui = { workspace = true }
+nightshade-ui-toast = { workspace = true }
+nightshade-wander = { workspace = true }
+nightshade-weather = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,40 @@
+# The plugin crate modules that sit outside the bands of template/, one per
+# line as "crate: module". The bands are commands, components, contract, data,
+# plugin, prelude, queries, resources and systems, and a crate that declares
+# anything else fails unless it is listed here.
+#
+# What is here is the render graph plumbing, the winit runner, and the two
+# crates that hold no ECS at all. nightshade-net is a topic broker over TCP and
+# nightshade-store is one pair of calls over a platform file, so neither has
+# entities to band.
+#
+# This list only shrinks. The check fails on a line whose module is gone.
+nightshade-net: arena
+nightshade-net: batch
+nightshade-net: bridge
+nightshade-net: broker
+nightshade-net: bus
+nightshade-net: client
+nightshade-net: lifecycle
+nightshade-net: reliability
+nightshade-net: thread
+nightshade-net: udp
+nightshade-net: udp_client
+nightshade-net: wire
+nightshade-openxr: gpu
+nightshade-openxr: runner
+nightshade-paint: instances
+nightshade-platform: android
+nightshade-vulkan: default_plugins
+nightshade-vulkan: pre_render
+nightshade-vulkan: renderer
+nightshade-wgpu: default_plugins
+nightshade-wgpu: pre_render
+nightshade-wgpu: renderer
+nightshade-window: default_plugins
+nightshade-window: host
+nightshade-window: pacing
+nightshade-window: platform
+nightshade-window: pre_render
+nightshade-window: renderer
+nightshade-window: run

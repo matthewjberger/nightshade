@@ -1,0 +1,62 @@
+[package]
+name = "hairpin"
+description = "An arcade rally where you hold the drift and beat your best lap"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "hairpin-run"
+path = "src/main.rs"
+required-features = ["plugin"]
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-camera = { workspace = true, optional = true }
+nightshade-cli = { workspace = true, optional = true }
+nightshade-gamepad = { workspace = true, optional = true }
+nightshade-graphics = { workspace = true, optional = true }
+nightshade-input = { workspace = true, optional = true }
+nightshade-log = { workspace = true, optional = true }
+nightshade-platform = { workspace = true, optional = true }
+nightshade-load = { workspace = true }
+nightshade-gltf = { workspace = true, optional = true }
+nightshade-prefab = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { workspace = true, optional = true }
+nightshade-ui-menu = { workspace = true, optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-window = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "dep:nightshade-app",
+    "contract",
+    "dep:nightshade",
+    "dep:nightshade-camera",
+    "dep:nightshade-cli",
+    "dep:nightshade-gamepad",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-log",
+    "dep:nightshade-platform",
+    "dep:nightshade-gltf",
+    "dep:nightshade-gltf",
+    "dep:nightshade-prefab",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+    "dep:nightshade-ui-menu",
+    "dep:nightshade-ui",
+    "dep:nightshade-window",
+]

@@ -1,0 +1,45 @@
+[package]
+name = "nightshade-app"
+description = "The composition every program repeats before it adds anything of its own"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-cli = { workspace = true }
+nightshade-log = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = [
+    "contract",
+] }
+nightshade-window = { workspace = true }
+nightshade-vulkan = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-wgpu = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-wgpu-geometry = { workspace = true, optional = true }
+nightshade-wgpu-outline = { workspace = true, optional = true }
+nightshade-wgpu-shading = { workspace = true, optional = true }
+nightshade-wgpu-shadow = { workspace = true, optional = true }
+nightshade-wgpu-sky = { workspace = true, optional = true }
+nightshade-wgpu-text = { workspace = true, optional = true }
+nightshade-wgpu-debug = { workspace = true, optional = true }
+nightshade-wgpu-sprites = { workspace = true, optional = true }
+nightshade-wgpu-screenspace = { workspace = true, optional = true }
+nightshade-wgpu-paint = { workspace = true, optional = true }
+nightshade-wgpu-acoustics = { workspace = true, optional = true }
+nightshade-wgpu-near = { workspace = true, optional = true }
+nightshade-wgpu-sdf = { workspace = true, optional = true }
+nightshade-wgpu-portals = { workspace = true, optional = true }
+nightshade-wgpu-decals = { workspace = true, optional = true }
+nightshade-wgpu-particles = { workspace = true, optional = true }
+
+[features]
+default = ["wgpu"]
+vulkan = ["dep:nightshade-vulkan"]
+parallel = ["nightshade-wgpu?/parallel", "nightshade-vulkan?/parallel"]
+profiling = ["nightshade-wgpu?/profiling"]
+debug_render = ["nightshade-wgpu?/debug_render"]
+wgpu = ["dep:nightshade-wgpu", "dep:nightshade-wgpu-geometry", "dep:nightshade-wgpu-outline", "dep:nightshade-wgpu-shading", "dep:nightshade-wgpu-shadow", "dep:nightshade-wgpu-sky", "dep:nightshade-wgpu-text", "dep:nightshade-wgpu-debug", "dep:nightshade-wgpu-sprites", "dep:nightshade-wgpu-screenspace", "dep:nightshade-wgpu-paint", "dep:nightshade-wgpu-acoustics", "dep:nightshade-wgpu-near", "dep:nightshade-wgpu-sdf", "dep:nightshade-wgpu-portals", "dep:nightshade-wgpu-decals", "dep:nightshade-wgpu-particles"]
+
+[lints]
+workspace = true

@@ -1,0 +1,20 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0) uniform sampler2D scene_depth;
+layout(set = 0, binding = 2, r32f) uniform writeonly image2D destination;
+
+layout(push_constant) uniform Push {
+    uvec2 destination_size;
+    uvec2 source_size;
+} push;
+
+void main() {
+    uvec2 texel = gl_GlobalInvocationID.xy;
+    if (texel.x >= push.destination_size.x || texel.y >= push.destination_size.y) {
+        return;
+    }
+    vec2 uv = (vec2(texel) + 0.5) / vec2(push.destination_size);
+    imageStore(destination, ivec2(texel), vec4(texture(scene_depth, uv).r));
+}

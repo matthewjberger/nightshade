@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520">
+  <defs>
+    <!-- Petal gradients with more depth -->
+    <radialGradient id="petalGradient" cx="50%" cy="30%">
+      <stop offset="0%" style="stop-color:#D4D1FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#A8A3E8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6B5CB0;stop-opacity:1" />
+    </radialGradient>
+    
+    <radialGradient id="petalGradient2" cx="50%" cy="30%">
+      <stop offset="0%" style="stop-color:#C8C4FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9D96E0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5D4D98;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Center gradients -->
+    <radialGradient id="centerGradient" cx="50%" cy="40%">
+      <stop offset="0%" style="stop-color:#FFFACD;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#FFD93D;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#FFB84D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF9F1C;stop-opacity:1" />
+    </radialGradient>
+    
+    <linearGradient id="stamenGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE066;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF9F1C;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Text gradient -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6BCF7F;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7FE89A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6BCF7F;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="subtleGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="dropShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Dark background circle for contrast -->
+  <circle cx="300" cy="255" r="120" fill="#0D0F1F" opacity="0.3"/>
+
+  <!-- Main flower group -->
+  <g transform="translate(300, 255)">
+    <!-- Back petals (darker) -->
+    <g opacity="0.85">
+      <path d="M 0,-95 Q -22,-85 -35,-50 Q -40,-25 -28,-5 Q -15,8 0,10 Q 15,8 28,-5 Q 40,-25 35,-50 Q 22,-85 0,-95 Z" 
+            fill="url(#petalGradient2)" filter="url(#softGlow)" transform="rotate(36)"/>
+      <path d="M 0,-95 Q -22,-85 -35,-50 Q -40,-25 -28,-5 Q -15,8 0,10 Q 15,8 28,-5 Q 40,-25 35,-50 Q 22,-85 0,-95 Z" 
+            fill="url(#petalGradient2)" filter="url(#softGlow)" transform="rotate(108)"/>
+      <path d="M 0,-95 Q -22,-85 -35,-50 Q -40,-25 -28,-5 Q -15,8 0,10 Q 15,8 28,-5 Q 40,-25 35,-50 Q 22,-85 0,-95 Z" 
+            fill="url(#petalGradient2)" filter="url(#softGlow)" transform="rotate(180)"/>
+      <path d="M 0,-95 Q -22,-85 -35,-50 Q -40,-25 -28,-5 Q -15,8 0,10 Q 15,8 28,-5 Q 40,-25 35,-50 Q 22,-85 0,-95 Z" 
+            fill="url(#petalGradient2)" filter="url(#softGlow)" transform="rotate(252)"/>
+      <path d="M 0,-95 Q -22,-85 -35,-50 Q -40,-25 -28,-5 Q -15,8 0,10 Q 15,8 28,-5 Q 40,-25 35,-50 Q 22,-85 0,-95 Z" 
+            fill="url(#petalGradient2)" filter="url(#softGlow)" transform="rotate(324)"/>
+    </g>
+    
+    <!-- Front petals (lighter) with veining -->
+    <g>
+      <g transform="rotate(0)">
+        <path d="M 0,-100 Q -24,-88 -38,-48 Q -42,-22 -30,-2 Q -16,10 0,12 Q 16,10 30,-2 Q 42,-22 38,-48 Q 24,-88 0,-100 Z" 
+              fill="url(#petalGradient)" filter="url(#softGlow)"/>
+        <path d="M 0,-100 Q -2,-60 0,8" stroke="#7A6DB8" stroke-width="1.5" opacity="0.25" fill="none"/>
+        <path d="M -8,-85 Q -12,-55 -15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M 8,-85 Q 12,-55 15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M -16,-70 Q -20,-50 -22,-30" stroke="#7A6DB8" stroke-width="0.8" opacity="0.15" fill="none"/>
+        <path d="M 16,-70 Q 20,-50 22,-30" stroke="#7A6DB8" stroke-width="0.8" opacity="0.15" fill="none"/>
+      </g>
+      
+      <g transform="rotate(72)">
+        <path d="M 0,-100 Q -24,-88 -38,-48 Q -42,-22 -30,-2 Q -16,10 0,12 Q 16,10 30,-2 Q 42,-22 38,-48 Q 24,-88 0,-100 Z" 
+              fill="url(#petalGradient)" filter="url(#softGlow)"/>
+        <path d="M 0,-100 Q -2,-60 0,8" stroke="#7A6DB8" stroke-width="1.5" opacity="0.25" fill="none"/>
+        <path d="M -8,-85 Q -12,-55 -15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M 8,-85 Q 12,-55 15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+      </g>
+      
+      <g transform="rotate(144)">
+        <path d="M 0,-100 Q -24,-88 -38,-48 Q -42,-22 -30,-2 Q -16,10 0,12 Q 16,10 30,-2 Q 42,-22 38,-48 Q 24,-88 0,-100 Z" 
+              fill="url(#petalGradient)" filter="url(#softGlow)"/>
+        <path d="M 0,-100 Q -2,-60 0,8" stroke="#7A6DB8" stroke-width="1.5" opacity="0.25" fill="none"/>
+        <path d="M -8,-85 Q -12,-55 -15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M 8,-85 Q 12,-55 15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+      </g>
+      
+      <g transform="rotate(216)">
+        <path d="M 0,-100 Q -24,-88 -38,-48 Q -42,-22 -30,-2 Q -16,10 0,12 Q 16,10 30,-2 Q 42,-22 38,-48 Q 24,-88 0,-100 Z" 
+              fill="url(#petalGradient)" filter="url(#softGlow)"/>
+        <path d="M 0,-100 Q -2,-60 0,8" stroke="#7A6DB8" stroke-width="1.5" opacity="0.25" fill="none"/>
+        <path d="M -8,-85 Q -12,-55 -15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M 8,-85 Q 12,-55 15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+      </g>
+      
+      <g transform="rotate(288)">
+        <path d="M 0,-100 Q -24,-88 -38,-48 Q -42,-22 -30,-2 Q -16,10 0,12 Q 16,10 30,-2 Q 42,-22 38,-48 Q 24,-88 0,-100 Z" 
+              fill="url(#petalGradient)" filter="url(#softGlow)"/>
+        <path d="M 0,-100 Q -2,-60 0,8" stroke="#7A6DB8" stroke-width="1.5" opacity="0.25" fill="none"/>
+        <path d="M -8,-85 Q -12,-55 -15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+        <path d="M 8,-85 Q 12,-55 15,-25" stroke="#7A6DB8" stroke-width="1" opacity="0.2" fill="none"/>
+      </g>
+    </g>
+    
+    <!-- Stamen structure -->
+    <g filter="url(#subtleGlow)">
+      <!-- 5 prominent stamens -->
+      <g transform="rotate(0)">
+        <ellipse cx="0" cy="-18" rx="4" ry="20" fill="url(#stamenGradient)" opacity="0.95"/>
+        <circle cx="0" cy="-20" r="5" fill="#FFD93D"/>
+      </g>
+      <g transform="rotate(72)">
+        <ellipse cx="0" cy="-18" rx="4" ry="20" fill="url(#stamenGradient)" opacity="0.95"/>
+        <circle cx="0" cy="-20" r="5" fill="#FFD93D"/>
+      </g>
+      <g transform="rotate(144)">
+        <ellipse cx="0" cy="-18" rx="4" ry="20" fill="url(#stamenGradient)" opacity="0.95"/>
+        <circle cx="0" cy="-20" r="5" fill="#FFD93D"/>
+      </g>
+      <g transform="rotate(216)">
+        <ellipse cx="0" cy="-18" rx="4" ry="20" fill="url(#stamenGradient)" opacity="0.95"/>
+        <circle cx="0" cy="-20" r="5" fill="#FFD93D"/>
+      </g>
+      <g transform="rotate(288)">
+        <ellipse cx="0" cy="-18" rx="4" ry="20" fill="url(#stamenGradient)" opacity="0.95"/>
+        <circle cx="0" cy="-20" r="5" fill="#FFD93D"/>
+      </g>
+      
+      <!-- Central structure -->
+      <circle cx="0" cy="0" r="12" fill="url(#centerGradient)"/>
+      <ellipse cx="0" cy="1" rx="4" ry="8" fill="#A8D5BA" opacity="0.9"/>
+      <ellipse cx="0" cy="-1" rx="3" ry="5" fill="#C8E6C9"/>
+    </g>
+  </g>
+  
+  <!-- Geometric frame elements -->
+  <path d="M 140 325 L 160 325 L 160 305" stroke="#8B7FD9" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M 460 325 L 440 325 L 440 305" stroke="#8B7FD9" stroke-width="2" fill="none" opacity="0.4"/>
+
+  <!-- Main text -->
+  <text x="300" y="385" font-family="'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="700"
+        fill="url(#textGradient)" text-anchor="middle" letter-spacing="6" filter="url(#dropShadow)">
+    NIGHTSHADE
+  </text>
+
+  <!-- Subtitle with refined styling -->
+  <text x="300" y="425" font-family="'Helvetica Neue', Arial, sans-serif" font-size="15" font-weight="300"
+        fill="#6BCF7F" text-anchor="middle" letter-spacing="12" opacity="0.8">
+    GAME ENGINE
+  </text>
+
+  <!-- Accent lines with gradient -->
+  <line x1="150" y1="445" x2="220" y2="445" stroke="#FFB84D" stroke-width="2" opacity="0.6">
+    <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3s" repeatCount="indefinite"/>
+  </line>
+  <line x1="380" y1="445" x2="450" y2="445" stroke="#FFB84D" stroke-width="2" opacity="0.6">
+    <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- Small decorative dots -->
+  <circle cx="235" cy="445" r="2" fill="#FFB84D" opacity="0.7"/>
+  <circle cx="365" cy="445" r="2" fill="#FFB84D" opacity="0.7"/>
+</svg>

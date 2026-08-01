@@ -1,0 +1,64 @@
+-- A thing you can point at. A thing that carries a Pick can be picked, and on
+-- the turn a person points at it its Picked reads one, which is gone again by
+-- the next turn.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.angle = (-0.9, 0.55, 0)
+
+module picking
+
+component Lifted
+component Tally
+
+config World
+   cameraEye = (0, 13, 17)
+   field
+      side number = 6
+      step number = 2.0
+
+resource Count
+   picks number = 0
+
+system world.build
+   once
+   in World
+   creates entities
+
+   let side := World.field.side
+   let half := side * World.field.step / 2
+   spawn Mesh "Cube", Color (0.16, 0.18, 0.22),
+         Transform (0, -0.5, 0),
+         Scale (side * World.field.step + 4, 1, side * World.field.step + 4)
+   for each index in 0 .. side * side
+      let across := remainder(index, side)
+      let along := quotient(index, side)
+      spawn Mesh "Cube", Color (0.34, 0.46, 0.72),
+            Transform (across * World.field.step - half, 0.5, along * World.field.step - half),
+            Scale (1.4, 1, 1.4),
+            Pick 1, Lifted 0
+
+system blocks.answer
+   in Count
+   out Count
+   over hits: in Picked, out Lifted, out Color
+
+   Lifted := 1 - Lifted
+   when Lifted > 0
+      Color := (0.95, 0.72, 0.28)
+   else
+      Color := (0.34, 0.46, 0.72)
+   Count.picks += 1
+
+system blocks.rise
+   in Time
+   over blocks: in Lifted, out Transform
+
+   Transform.y := Transform.y + (0.5 + Lifted * 1.4 - Transform.y) * min(1, Time.dt * 9)
+
+system hud.show
+   in Count
+   any order over lines: out Label with Readout
+
+   Label := "point at a block   " + floor(Count.picks) + " picked"

@@ -1,0 +1,12 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "particle_common.glsl"
+#include "particle_compute.glsl"
+
+layout(local_size_x = 1) in;
+
+void main() {
+    alive_count = 0u;
+    draw_command.instance_count = 0u;
+}

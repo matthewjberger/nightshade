@@ -1,37 +1,45 @@
 use crate::components::Spin;
+use crate::contract::{TemplateCommands, TemplateEvent};
+use crate::data::Ask;
 use crate::resources::TemplateResources;
 use nightshade::prelude::*;
+use nightshade_input::Actions;
+use nightshade_platform::prelude::*;
+use nightshade_scene::prelude::*;
 
-/// Example per-frame system: advances the demo counters, spins every entity
-/// carrying a [`Spin`] about the Y axis, then exits on Q. The resources it
-/// reads and writes come in as `Res`/`ResMut` params; the world is for entity
-/// and component access, here `query_ref` to find the spinners and `get_mut`
-/// to turn them. Add more files in `src/systems/` and register them in
-/// `src/systems.rs` to grow your game.
 pub fn tick(
     mut template_resources: ResMut<TemplateResources>,
+    mut template_commands: ResMut<TemplateCommands>,
     time: Res<Time>,
-    input: Res<Input>,
+    actions: Res<Actions<Ask>>,
     mut window: ResMut<Window>,
-    world: &mut World,
+    events: EventReader<TemplateEvent>,
+    spinners: Query<(&Spin, &mut LocalTransform)>,
 ) {
     let example = &mut template_resources.example;
     example.frame_count = example.frame_count.saturating_add(1);
     example.elapsed_seconds += time.delta_time;
 
-    let spinners: Vec<(Entity, f32)> = world
-        .query_ref::<&Spin>()
-        .iter()
-        .map(|(entity, spin)| (entity, spin.speed))
-        .collect();
-    for (entity, speed) in spinners {
-        if let Some(transform) = world.get_mut::<LocalTransform>(entity) {
-            let rotation = nalgebra_glm::quat_angle_axis(speed * time.delta_time, &Vec3::y());
-            transform.rotation = rotation * transform.rotation;
+    let delta_time = time.delta_time;
+    spinners.for_each(|_entity, (spin, transform)| {
+        let rotation = nalgebra_glm::quat_angle_axis(spin.speed * delta_time, &Vec3::y());
+        transform.rotation = rotation * transform.rotation;
+    });
+
+    if actions.just_pressed(Ask::Ping) {
+        crate::commands::send_ping(
+            &mut template_commands,
+            format!("frame {}", example.frame_count),
+        );
+    }
+
+    for event in &events {
+        match event {
+            TemplateEvent::Pong { .. } => example.pong_count += 1,
         }
     }
 
-    if input.keyboard.just_pressed(KeyCode::KeyQ) {
+    if actions.just_pressed(Ask::Quit) {
         window.should_exit = true;
     }
 }

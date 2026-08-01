@@ -1,0 +1,63 @@
+# Items the mesh shaders declare more than once with different bodies, that are
+# accepted for now. Anything not listed here fails the check.
+#
+# The four mesh shaders forked from each other and drifted, because nothing
+# compared them against each other. Every one of those differences is closed:
+# all four now light a surface the same way and tint a light by the picture it
+# shines through. What is left is per-pipeline by construction rather than
+# drift.
+#
+# Entry points are exempt automatically. A vertex or fragment entry is per
+# shader by nature: the skinned paths skin, and the transparency paths write
+# accumulation and revealage instead of one color.
+#
+# Uniforms was listed here and is closed. The four declared the block four
+# ways, two of them putting the size of the sun at a different offset from the
+# other two, and each pipeline padded over the fields it did not read. They
+# now import one declaration from mesh_common.wgsl, and the static pass and
+# the skinned pass write one struct.
+
+VertexOutput
+    The transparency paths carry the extra interpolants their accumulation
+    needs, and the opaque paths carry a shadow position the transparency ones
+    resolve differently. This one cannot be closed: the static shader already
+    carries fifteen interpolants beside the position, which is the sixteen a
+    stage is given, so a struct that held what all four need would not fit.
+
+# The second half of this file records how far the fragment entries of a
+# sibling pair have drifted, as a count of lines they do not share. The named
+# items above are helpers, and an entry point is exempt from that rule because
+# a vertex entry skins and a transparency entry writes two targets. A fragment
+# entry is not exempt in the same way: the static and the skinned shader light
+# the same material from the same table, so their fragment bodies are meant to
+# read the same apart from the lines skinning forces. Recording a count rather
+# than the lines means renaming a local in both costs nothing, while a new
+# difference in either raises the number and fails.
+#
+# Both pairs now read the same line for line. What the numbers held before, and
+# how each was settled:
+#
+# - The skinned pair filled its output struct at each return and carried the
+#   velocity in a local. It now fills one struct declared at the top.
+# - The specular lobe differed. Both pairs now use the height correlated
+#   visibility term, so a skinned surface and a static one with the same
+#   material shade alike at grazing angles.
+# - The specular strength of KHR_materials_specular now reaches the dielectric
+#   F0 in all four, which is where the extension puts it, so it reaches the
+#   light that shines on a surface as well as the light around it.
+# - Iridescence converts the fresnel back to an F0 in all four rather than
+#   standing in for one, which would apply the fresnel twice.
+# - An area light with a shadow index now casts one in both pairs.
+# - Occlusion reaches the diffuse and the specular ambient by its own measure
+#   in all four, because a rough surface hides less of the light around it.
+# - Transmitted light is weighed by what the surface did not reflect in all
+#   four, which is what the Vulkan backend does and what keeps the energy.
+# - A masked transparent surface is cut out by its alpha whether it is skinned
+#   or not, and what forces such a surface fully solid is the transmission it
+#   actually shows rather than the value its material was given.
+#
+# Raising either number again means a new difference, and the reason it stands
+# belongs here beside it.
+
+fs_main mesh.wgsl skinned_mesh.wgsl 0
+fs_main mesh_oit.wgsl skinned_mesh_oit.wgsl 0

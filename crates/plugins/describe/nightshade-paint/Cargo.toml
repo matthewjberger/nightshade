@@ -1,0 +1,13 @@
+[package]
+name = "nightshade-paint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+bytemuck = { workspace = true, features = ["derive"] }
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+serde = { workspace = true }
+nightshade-text = { path = "../../describe/nightshade-text", default-features = false, features = ["contract"] }

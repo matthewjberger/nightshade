@@ -1,0 +1,215 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_ray_query : require
+
+#define FOG_WRITE
+#include "scene_common.glsl"
+#include "scene_rays.glsl"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+
+layout(set = 2, binding = 0) uniform sampler2DShadow shadow_atlas;
+layout(set = 2, binding = 1) uniform sampler2DShadow local_shadow_atlas;
+layout(set = 3, binding = 0) uniform samplerCube environment_irradiance;
+layout(set = 3, binding = 6) uniform samplerCube environment_irradiance_other;
+
+const float PI = 3.14159265358979;
+
+const float HISTORY_WEIGHT = 0.95;
+
+const float LIGHT_WIDTH = 0.5;
+
+vec4 picture_sample(uint slot, vec2 uv) {
+    return sample_slot_flat(slot, uv);
+}
+
+#include "scene_local_lights.glsl"
+#include "area_shape.glsl"
+
+vec3 world_at(vec3 place, out float depth) {
+    vec2 fragment = place.xy / vec2(FOG_X, FOG_Y) * frame.screen.xy;
+    depth = fog_depth_of(place.z);
+    vec2 ndc = vec2(
+        fragment.x / frame.screen.x * 2.0 - 1.0,
+        1.0 - fragment.y / frame.screen.y * 2.0
+    );
+    vec3 view_position = vec3(
+        ndc.x * depth / frame.projection[0][0],
+        ndc.y * depth / frame.projection[1][1],
+        -depth
+    );
+    return frame.camera_position.xyz + transpose(mat3(frame.view)) * view_position;
+}
+
+vec3 jitter_of(uint frame_number) {
+    const vec3 STRIDE = vec3(0.8191725134, 0.6710436067, 0.5497004779);
+    return fract(STRIDE * float(frame_number)) - 0.5;
+}
+
+float sun_reaches(vec3 world_position, float view_depth, vec3 to_sun) {
+    if (frame.shadow_settings.z == 0.0) {
+        return 1.0;
+    }
+    if (frame.sun_shadow.w > 0.0) {
+        float step_off = max(
+            length(frame.camera_position.xyz - world_position) * frame.sun_shadow.y,
+            1.0e-5
+        );
+        return sun_is_blocked(world_position, to_sun, step_off) ? 0.0 : 1.0;
+    }
+    float shadow_far = frame.cascade_splits[CASCADE_COUNT - 1];
+    if (view_depth > shadow_far) {
+        return 1.0;
+    }
+    int cascade = CASCADE_COUNT - 1;
+    for (int candidate = 0; candidate < CASCADE_COUNT; ++candidate) {
+        if (view_depth < frame.cascade_splits[candidate]) {
+            cascade = candidate;
+            break;
+        }
+    }
+    vec3 pushed = world_position
+        + to_sun * frame.shadow_settings.x * frame.cascade_texel_sizes[cascade];
+    vec4 in_light = frame.cascade_view_projections[cascade] * vec4(pushed, 1.0);
+    vec3 ndc = in_light.xyz / in_light.w;
+    if (ndc.z <= 0.0 || ndc.z >= 1.0) {
+        return 1.0;
+    }
+    vec2 slot = vec2(float(cascade % 2), float(cascade / 2)) * 0.5;
+    vec2 texel = vec2(1.0 / frame.shadow_settings.w);
+    vec2 uv = clamp(
+        (ndc.xy * 0.5 + 0.5) * 0.5 + slot,
+        slot + texel,
+        slot + vec2(0.5) - texel
+    );
+    return texture(shadow_atlas, vec3(uv, ndc.z));
+}
+
+float phase(float cosine, float anisotropy) {
+    float squared = anisotropy * anisotropy;
+    return (1.0 - squared)
+        / (4.0 * PI * pow(max(1.0 + squared - 2.0 * anisotropy * cosine, 1.0e-4), 1.5));
+}
+
+vec3 arriving_everywhere() {
+    const vec3 WAYS[6] = vec3[6](
+        vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0), vec3(0.0, -1.0, 0.0),
+        vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0)
+    );
+    vec3 total = vec3(0.0);
+    for (int way = 0; way < 6; ++way) {
+        total += mix(
+            textureLod(environment_irradiance, WAYS[way], 0.0).rgb,
+            textureLod(environment_irradiance_other, WAYS[way], 0.0).rgb,
+            frame.environment.x
+        );
+    }
+    return total / 6.0;
+}
+
+bool found_before(vec3 world_center, out vec4 history) {
+    uint frame_number = fog_frame();
+    if (frame_number == 0u) {
+        return false;
+    }
+    vec4 previous = frame.previous_view_projection * vec4(world_center, 1.0);
+    if (previous.w <= 0.0) {
+        return false;
+    }
+    vec3 ndc = previous.xyz / previous.w;
+    vec2 uv = vec2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+    float slice = fog_slice_of(previous.w) / float(FOG_Z);
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))
+        || slice <= 0.0 || slice >= 1.0) {
+        return false;
+    }
+    vec3 at = vec3(uv, slice);
+    history = fog_parity() == 0u ? texture(fog_history_b, at) : texture(fog_history_a, at);
+    return true;
+}
+
+void main() {
+    uvec3 cell = gl_GlobalInvocationID;
+    if (cell.x >= FOG_X || cell.y >= FOG_Y || cell.z >= FOG_Z) {
+        return;
+    }
+    vec3 center = vec3(cell) + 0.5;
+    vec3 place = center + jitter_of(fog_frame());
+    vec2 fragment = place.xy / vec2(FOG_X, FOG_Y) * frame.screen.xy;
+    float depth;
+    vec3 world_position = world_at(place, depth);
+
+    float density = frame.fog_air.x > 0.0
+        ? frame.fog_air.x
+        : 3.0 / max(frame.fog.y - frame.fog.x, 0.001);
+    float above = max(world_position.y - frame.fog_air.w, 0.0);
+    density *= exp(-above * frame.fog_air.z);
+    float starts = frame.fog.x;
+    float extinction = density
+        * (starts <= 0.0 ? 1.0 : smoothstep(starts * 0.8, starts, depth));
+    float anisotropy = frame.fog_air.y;
+    vec3 to_view = normalize(frame.camera_position.xyz - world_position);
+
+    vec3 gathered = arriving_everywhere();
+    uint directional_count = min(frame.masks.y, uint(lights.length()));
+    for (uint index = 0u; index < directional_count; ++index) {
+        Light light = lights[index];
+        vec3 to_sun = normalize(-light.direction.xyz);
+        float reaching = index == 0u ? sun_reaches(world_position, depth, to_sun) : 1.0;
+        gathered += light.color.rgb * light.color.a
+            * reaching
+            * phase(-dot(to_sun, to_view), anisotropy);
+    }
+    uint cluster = cluster_cell(fragment, depth);
+    uint offset = cluster_offset(cluster);
+    uint count = cluster_count(cluster);
+    for (uint slot = 0u; slot < count; ++slot) {
+        Light light = lights[cluster_light(offset, slot)];
+        if (light.light_type == LIGHT_AREA) {
+            vec3 toward;
+            vec3 arriving = area_light_in_air(
+                light,
+                area_lights[uint(light.shadow_index)],
+                world_position,
+                toward
+            );
+            gathered += arriving * phase(-dot(toward, to_view), anisotropy);
+            continue;
+        }
+        vec3 to_light = light.position.xyz - world_position;
+        float distance_to_light = length(to_light);
+        to_light /= max(distance_to_light, 1.0e-4);
+        vec3 radiance = light.color.rgb * light.color.a
+            * range_attenuation(
+                sqrt(distance_to_light * distance_to_light + LIGHT_WIDTH * LIGHT_WIDTH),
+                light.range
+            );
+        if (light.light_type == LIGHT_SPOT) {
+            radiance *= spot_attenuation(
+                -to_light,
+                light.direction.xyz,
+                light.outer_cone,
+                light.inner_cone
+            ) * spot_picture(light, world_position);
+        } else {
+            radiance *= point_picture(light, world_position);
+        }
+        radiance *= local_reaches(light, world_position);
+        gathered += radiance * phase(-dot(to_light, to_view), anisotropy);
+    }
+
+    vec4 found = vec4(frame.fog_color.rgb * gathered * extinction, extinction);
+    float center_depth;
+    vec3 world_center = world_at(center, center_depth);
+    vec4 history;
+    if (found_before(world_center, history)) {
+        found = mix(found, history, HISTORY_WEIGHT);
+    }
+    if (fog_parity() == 0u) {
+        imageStore(fog_scatter_a, ivec3(cell), found);
+    } else {
+        imageStore(fog_scatter_b, ivec3(cell), found);
+    }
+}

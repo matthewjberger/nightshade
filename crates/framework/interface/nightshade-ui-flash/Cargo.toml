@@ -1,0 +1,29 @@
+[package]
+name = "nightshade-ui-flash"
+description = "The wash of color a screen takes when something lands, and how it fades"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-platform = { path = "../../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-ui = { workspace = true }
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-scene = { workspace = true }
+nightshade-ui = { workspace = true }
+nightshade-readout = { workspace = true }
+
+[lints]
+workspace = true

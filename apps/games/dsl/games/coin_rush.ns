@@ -1,0 +1,130 @@
+-- Coin Rush. The arena comes from another file.
+
+runs "readout.ns"
+   Sign.anchor = (0.5, 0.06)
+   Sign.color = (0.85, 0.89, 1.0)
+
+runs "arena.ns"
+
+component Banner
+
+type Screen = Title | Playing | Over
+
+resource Round
+   screen Screen = Title
+   round number = 1
+   goal number = Rush.firstGoal
+   score number = 0
+   time number = Rush.roundSeconds
+
+config Rush
+   roundSeconds number = 30
+   reach number = 1.1
+   bobRate number = 1.5
+   bobHeight number = 0.25
+   firstGoal number = 6
+
+system play.move
+   enable Round.screen = Playing
+   in Time, Input, Arena
+   over players: in Speed, out Transform without Home
+
+   let step := Speed * Time.dt
+   Transform.x := clamp(Transform.x + Input.steering * step, 0 - Arena.reach, Arena.reach)
+   Transform.z := clamp(Transform.z + Input.forward * step, 0 - Arena.reach, Arena.reach)
+
+system play.collect
+   enable Round.screen = Playing
+   in Rush
+   out Round, Random
+   over coins: out Home without Speed
+   one runner: in Transform with Speed
+
+   when abs(Home.x - Transform(runner).x) < Rush.reach and abs(Home.z - Transform(runner).z) < Rush.reach
+      Round.score := Round.score + 1
+      Home := spot()
+
+system round.next
+   enable Round.score >= Round.goal
+   in Rush
+   out Round
+
+   Round.round := Round.round + 1
+   Round.score := 0
+   Round.goal := 4 + Round.round * 2
+   Round.time := Rush.roundSeconds
+
+system coins.scatter
+   enable Round.score >= Round.goal
+   out Random
+   over coins: out Home without Speed
+
+   Home := spot()
+
+system round.clock
+   enable Round.screen = Playing
+   in Time
+   out Round
+
+   Round.time := max(Round.time - Time.dt, 0)
+
+system round.finish
+   enable Round.time <= 0 and Round.screen = Playing
+   out Round
+
+   Round.screen := Over
+
+system play.begin
+   enable Input.serve and Round.screen != Playing
+   in Rush
+   out Round
+
+   Round.screen := Playing
+   Round.round := 1
+   Round.score := 0
+   Round.goal := Rush.firstGoal
+   Round.time := Rush.roundSeconds
+
+system coins.reset
+   enable Input.serve and Round.screen != Playing
+   out Random
+   over coins: out Home without Speed
+
+   Home := spot()
+
+system coins.animate
+   in Time, Rush
+   over coins: in Home, in Phase, out Transform without Speed
+
+   Transform := (Home.x, Home.y + sin(Time.uptime * Rush.bobRate + Phase) * Rush.bobHeight, Home.z)
+
+system hud.build
+   once
+   creates entities
+
+   spawn Label "", Anchor (0.5, 0.40), Size 44,
+         Color (1.0, 0.85, 0.2), Banner 1
+
+system hud.count
+   in Round
+   over lines: out Label with Readout
+
+   Label := "Round " + Round.round + "   " + Round.score + "/" + Round.goal + "   Time " + ceil(Round.time)
+
+system hud.call
+   in Round
+   over banners: out Label with Banner
+
+   when Round.screen = Title
+      Label := "Coin Rush"
+   else
+      when Round.screen = Over
+         Label := "Time up"
+      else
+         Label := ""
+
+system readout.show
+   in Round
+   out Window.title
+
+   Window.title := "Round " + Round.round + "   " + Round.score + "/" + Round.goal + "   Time " + ceil(Round.time) + "   " + Round.screen

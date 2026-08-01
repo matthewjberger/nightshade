@@ -1,0 +1,29 @@
+[package]
+name = "nightshade-gltf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = []
+fetch = ["nightshade-load/fetch"]
+
+[dependencies]
+nightshade-load = { workspace = true }
+nightshade-prefab = { path = "../../domain/nightshade-prefab" }
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-animation = { path = "../../domain/nightshade-animation", default-features = false, features = ["contract"] }
+base64 = "0.22"
+bevy_mikktspace = { version = "1.0" }
+gltf = { workspace = true }
+image = { workspace = true }
+nalgebra-glm = { workspace = true, features = ["serde-serialize"] }
+nightshade = { workspace = true }
+nightshade-graphics = { path = "../../domain/nightshade-graphics", default-features = false, features = ["contract"] }
+nightshade-render = { workspace = true }
+nightshade-worker.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

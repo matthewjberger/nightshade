@@ -1,0 +1,36 @@
+﻿[package]
+name = "sprites"
+description = "A tiny farm of pixel-art sprites, tilemaps, and flipbooks under an orthographic camera, with a lit cube half buried in it"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "sprites-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-texture.workspace = true
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-sprite.workspace = true
+nightshade-window.workspace = true
+
+[features]
+default = ["wgpu"]
+vulkan = ["nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

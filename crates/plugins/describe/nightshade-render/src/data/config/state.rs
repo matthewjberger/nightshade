@@ -1,0 +1,71 @@
+use super::*;
+
+#[derive(Clone)]
+pub struct RendererState {
+    pub taa_jitter: [f32; 2],
+    pub view_projection: [[f32; 4]; 4],
+    pub prev_view_projection: [[f32; 4]; 4],
+    pub gpu_culling_enabled: bool,
+    pub occlusion_culling_enabled: bool,
+    pub gpu_batching_enabled: bool,
+    pub min_screen_pixel_size: f32,
+    pub letterbox_amount: f32,
+    pub letterbox_target: f32,
+    pub day_night: DayNightState,
+    pub active_view: EffectiveShading,
+    pub render_view: Option<RenderView>,
+    pub render_skinned_dynamic_state:
+        std::collections::HashMap<nightshade::ecs::Entity, DynamicRenderState>,
+    pub render_materials: RenderMaterials,
+    pub render_skinned_mesh_names: std::collections::HashMap<nightshade::ecs::Entity, String>,
+    pub outline_color: [f32; 4],
+    pub render_shadow_casters: RenderShadowCasters,
+    pub render_skinned_meshes: Vec<nightshade::ecs::Entity>,
+    pub culling_camera_view_projection: Option<nalgebra_glm::Mat4>,
+    pub render_skinning: RenderSkinning,
+    pub render_animation: SkinnedAnimationSnapshot,
+    pub render_lighting: Option<RenderLighting>,
+    pub skinned_generation: u64,
+    pub poses_on_gpu: bool,
+    pub settings_version: u64,
+    pub focus_policy: ViewportFocusPolicy,
+    pub adaptive_sampling: AdaptiveSamplingState,
+    pub gpu_profile: Option<GpuProfile>,
+    pub gpu_frame_time_ms: f32,
+}
+
+impl Default for RendererState {
+    fn default() -> Self {
+        Self {
+            taa_jitter: [0.0, 0.0],
+            view_projection: nalgebra_glm::Mat4::identity().into(),
+            prev_view_projection: nalgebra_glm::Mat4::identity().into(),
+            gpu_culling_enabled: true,
+            occlusion_culling_enabled: true,
+            gpu_batching_enabled: true,
+            min_screen_pixel_size: 0.0,
+            letterbox_amount: 0.0,
+            letterbox_target: 0.0,
+            day_night: DayNightState::default(),
+            active_view: EffectiveShading::default(),
+            render_view: None,
+            render_skinned_dynamic_state: std::collections::HashMap::new(),
+            render_materials: RenderMaterials::default(),
+            render_skinned_mesh_names: std::collections::HashMap::new(),
+            outline_color: [1.0, 0.45, 0.0, 1.0],
+            render_shadow_casters: RenderShadowCasters::default(),
+            render_skinned_meshes: Vec::new(),
+            culling_camera_view_projection: None,
+            render_skinning: RenderSkinning::default(),
+            render_animation: SkinnedAnimationSnapshot::default(),
+            render_lighting: None,
+            skinned_generation: 0,
+            poses_on_gpu: false,
+            settings_version: 0,
+            focus_policy: ViewportFocusPolicy::default(),
+            adaptive_sampling: AdaptiveSamplingState::default(),
+            gpu_profile: None,
+            gpu_frame_time_ms: 0.0,
+        }
+    }
+}

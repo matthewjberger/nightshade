@@ -1,0 +1,52 @@
+-- Pictures cut from one sheet. A thing that carries a Sprite is drawn as a
+-- picture rather than a mesh, and a Tile picks one cell out of the sheet.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+   Daylight.angle = (-0.9, 0.55, 0)
+   Daylight.shadows = false
+   Daylight.sky = false
+
+module sprites
+
+assets Sheet from builtin
+   ground sheet "tiles"
+   face sheet "face"
+
+component Walker
+
+config World
+   cameraEye = (0, 0, 20)
+   map
+      side number = 14
+      step number = 1.0
+
+system world.build
+   once
+   in World
+   creates entities
+
+   let side := World.map.side
+   let half := side * World.map.step / 2
+   for each index in 0 .. side * side
+      let across := remainder(index, side)
+      let along := quotient(index, side)
+      spawn Sprite Sheet.ground,
+            Tile remainder(across + along * 3, 16),
+            Color (1, 1, 1),
+            Transform (across * World.map.step - half, along * World.map.step - half, 0),
+            Scale (World.map.step, World.map.step, 1)
+   spawn Sprite Sheet.face, Color (1, 1, 1),
+         Transform (0, 0, 1), Scale (2.4, 2.4, 1), Walker 1
+
+system walker.move
+   in Time
+   over walkers: in Walker, out Transform
+
+   Transform := (sin(Time.uptime) * 5, cos(Time.uptime * 0.7) * 4, 1)
+
+system hud.show
+   any order over lines: out Label with Readout
+
+   Label := "one sheet, many pictures"

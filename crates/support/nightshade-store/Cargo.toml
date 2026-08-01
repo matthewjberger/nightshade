@@ -1,0 +1,18 @@
+[package]
+name = "nightshade-store"
+description = "A small key and value store over whatever the platform keeps files in"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+dirs = { workspace = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+nightshade-platform = { path = "../../plugins/describe/nightshade-platform", default-features = false, features = ["contract"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { workspace = true, features = ["Storage", "Window"] }

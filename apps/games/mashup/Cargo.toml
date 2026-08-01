@@ -1,0 +1,70 @@
+[package]
+name = "mashup"
+description = "Two worlds joined by a portal you can see through and dive into"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "mashup-run"
+path = "src/main.rs"
+required-features = ["plugin"]
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", optional = true }
+bytemuck = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-camera = { workspace = true, optional = true }
+nightshade-cli = { workspace = true, optional = true }
+nightshade-gamepad = { workspace = true, optional = true }
+nightshade-graphics = { workspace = true, optional = true }
+nightshade-input = { workspace = true, optional = true }
+nightshade-log = { workspace = true, optional = true }
+nightshade-particles = { workspace = true, optional = true }
+nightshade-platform = { workspace = true, optional = true }
+nightshade-portal = { workspace = true, optional = true }
+nightshade-ui-menu.workspace = true
+nightshade-state.workspace = true
+nightshade-render = { workspace = true, optional = true }
+nightshade-scene = { workspace = true, optional = true }
+nightshade-sprite = { workspace = true, optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-wgpu = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-window = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "dep:nightshade-app",
+    "contract",
+    "dep:bytemuck",
+    "dep:nalgebra-glm",
+    "dep:nightshade",
+    "dep:nightshade-camera",
+    "dep:nightshade-cli",
+    "dep:nightshade-gamepad",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-log",
+    "dep:nightshade-particles",
+    "dep:nightshade-platform",
+    "dep:nightshade-portal",
+    "dep:nightshade-render",
+    "dep:nightshade-scene",
+    "dep:nightshade-sprite",
+    "dep:nightshade-ui",
+    "dep:nightshade-wgpu",
+    "dep:nightshade-window",
+    "dep:tracing",
+]

@@ -1,0 +1,25 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+void main() {
+    uint output_index = gl_GlobalInvocationID.x;
+    if (output_index >= frame.skin_counts.x) {
+        return;
+    }
+
+    for (uint skin = 0u; skin < frame.skin_counts.y; ++skin) {
+        SkinData data = skin_data[skin];
+        uint end = data.base_output_index + data.joint_count;
+        if (output_index >= data.base_output_index && output_index < end) {
+            uint local = output_index - data.base_output_index;
+            joint_matrices[output_index] =
+                bone_transforms[data.base_bone_index + local]
+                * inverse_binds[data.base_ibm_index + local];
+            return;
+        }
+    }
+}

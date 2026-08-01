@@ -1,0 +1,173 @@
+-- Snake. The body is a list that the game writes, so the length of the
+-- snake is data rather than a set of entities that know about each other.
+
+component Index
+component Bite
+
+pulse Eaten
+
+config Snake
+   viewHeight number = 19
+   biteColor = (0.955, 0.638, 0.033)
+   grid
+      cell number = 0.8
+      half number = 11
+      color = (0.147, 0.179, 0.296)
+   snake
+      start number = 4
+      step number = 0.11
+      head = (0.890, 0.911, 1.0)
+      body = (0.051, 0.740, 0.480)
+
+resource Run
+   score number = 0
+   best number = 0
+   timer number = 0
+   stepX number = 1
+   stepY number = 0
+   growWanted boolean = false
+   biteWanted boolean = true
+   startWanted boolean = true
+
+resource Body
+   cells = []
+
+query spot(cell) = (cell.x * Snake.grid.cell, cell.y * Snake.grid.cell)
+
+system world.build
+   once
+   in Snake
+   creates entities
+
+   spawn Mesh "Cube", Color Snake.grid.color,
+         Transform (0, 0, 0 - 0.6),
+         Scale ((Snake.grid.half * 2 + 1) * Snake.grid.cell,
+                (Snake.grid.half * 2 + 1) * Snake.grid.cell, 0.2)
+   spawn Mesh "Cube", Color Snake.biteColor,
+         Transform (0, 0),
+         Scale (Snake.grid.cell * 0.7, Snake.grid.cell * 0.7, 0.7),
+         Bite 1
+
+system snake.start
+   enable Run.startWanted
+   in Snake
+   out Run, Body
+
+   Body.cells := []
+   for each step in 0 .. Snake.snake.start
+      add (step - Snake.snake.start, 0) to Body.cells
+   Run.stepX := 1
+   Run.stepY := 0
+   Run.score := 0
+   Run.timer := 0
+   Run.startWanted := false
+   Run.growWanted := true
+   Run.biteWanted := true
+
+system snake.steer
+   in Input, Run
+   out Run
+
+   when Input.steering != 0 and Run.stepX = 0
+      Run.stepX := sign(Input.steering)
+      Run.stepY := 0
+   when Input.forward != 0 and Run.stepY = 0
+      Run.stepX := 0
+      Run.stepY := 0 - sign(Input.forward)
+
+system snake.step
+   in Time, Snake, Run, Body
+   out Run, Body, Random, Eaten
+   one bite: in Transform with Bite
+
+   Run.timer := Run.timer + Time.dt
+   when Run.timer < Snake.snake.step
+      stop
+   Run.timer := 0
+
+   let last := count(Body.cells) - 1
+   let head := Body.cells[last]
+   let next := (head.x + Run.stepX, head.y + Run.stepY)
+
+   when abs(next.x) > Snake.grid.half or abs(next.y) > Snake.grid.half
+      Run.best := max(Run.best, Run.score)
+      Run.startWanted := true
+      stop
+
+   for each cell in Body.cells
+      when cell.x = next.x and cell.y = next.y
+         Run.best := max(Run.best, Run.score)
+         Run.startWanted := true
+         stop
+
+   let near := abs(next.x * Snake.grid.cell - Transform(bite).x)
+   let along := abs(next.y * Snake.grid.cell - Transform(bite).y)
+   let ate := near < Snake.grid.cell * 0.5 and along < Snake.grid.cell * 0.5
+
+   when not ate
+      let kept := []
+      for each index in 1 .. count(Body.cells)
+         add Body.cells[index] to kept
+      Body.cells := kept
+
+   add next to Body.cells
+
+   when ate
+      Run.score := Run.score + 1
+      Run.growWanted := true
+      Run.biteWanted := true
+      Eaten(bite) := 1
+
+system bite.place
+   enable Run.biteWanted
+   in Snake, Random
+   out Run
+   over bites: out Transform with Bite
+
+   let across := floor(draw() * (Snake.grid.half * 2 + 1)) - Snake.grid.half
+   let along := floor(draw() * (Snake.grid.half * 2 + 1)) - Snake.grid.half
+   Transform := (across * Snake.grid.cell, along * Snake.grid.cell)
+   Run.biteWanted := false
+
+system snake.grow
+   enable Run.growWanted
+   in Snake, Body
+   out Run
+   uses parts: in Index
+   creates entities
+
+   for each index in count(parts) .. count(Body.cells)
+      spawn Mesh "Cube", Color Snake.snake.body,
+            Transform (0, 0),
+            Scale (Snake.grid.cell * 0.86, Snake.grid.cell * 0.86, 0.8),
+            Index index
+   Run.growWanted := false
+
+system body.place
+   in Snake, Body
+   over parts: in Index, out Transform
+   removes entities
+
+   when Index >= count(Body.cells)
+      remove parts
+   else
+      Transform := spot(Body.cells[Index])
+
+system bite.tone
+   in Snake
+   over bites: out Color with Bite
+
+   Color := Snake.biteColor
+
+system bite.pop
+   in Snake
+   over flashes: in Eaten, out Color
+
+   Color := (1, 1, 1)
+
+order bite.tone before bite.pop
+
+system readout.show
+   in Run, Body
+
+   Window.title := "Length " + count(Body.cells) + "   Score " + Run.score + "   Best " + Run.best

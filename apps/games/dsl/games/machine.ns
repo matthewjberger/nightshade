@@ -1,0 +1,104 @@
+-- A bytecode machine written in the description language. The code is a list
+-- of numbers and the memory is a bank of numbers, so the running program is
+-- data that this description reads and writes one step at a time.
+
+runs "readout.ns"
+   Sign.size = 26
+   Sign.color = (0.88, 0.92, 1.0)
+
+runs "daylight.ns"
+
+component Ground
+
+config World
+   cameraEye = (0, 7, 15)
+   ground
+      reach number = 14
+      color = (0.10, 0.12, 0.17)
+
+resource Vm
+   code = [0, 0, 0,
+           0, 1, 1,
+           0, 2, 1,
+           0, 3, 13,
+           2, 4, 1, 1,
+           1, 0, 0, 4,
+           1, 1, 1, 2,
+           4, 12, 1, 3,
+           5]
+   memory = []
+   at number = 0
+   steps number = 0
+   done boolean = false
+
+resource Watch
+   frames number = 0
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color World.ground.color,
+         Transform (0, -0.5, 0),
+         Scale (World.ground.reach * 2, 1, World.ground.reach * 2),
+         Ground 1
+
+system vm.load
+   once
+   pure
+   in Vm
+   out Vm
+
+   Vm.memory := repeat(0, 16)
+   Vm.at := 0
+   Vm.steps := 0
+   Vm.done := false
+
+system vm.step
+   pure
+   in Vm
+   out Vm
+   provides machineStep
+
+   for each turn in 0 .. 64
+      when not Vm.done
+         let op := Vm.code[Vm.at]
+         let one := Vm.code[Vm.at + 1]
+         let two := Vm.code[Vm.at + 2]
+         let three := Vm.code[Vm.at + 3]
+         when op = 5
+            Vm.done := true
+         when op = 0
+            Vm.memory[one] := two
+            Vm.at += 3
+         when op = 1
+            Vm.memory[one] := Vm.memory[two] + Vm.memory[three]
+            Vm.at += 4
+         when op = 2
+            Vm.memory[one] := Vm.memory[two] * Vm.memory[three]
+            Vm.at += 4
+         when op = 3
+            Vm.memory[one] := Vm.memory[two] - Vm.memory[three]
+            Vm.at += 4
+         when op = 4
+            when Vm.memory[two] < Vm.memory[three]
+               Vm.at := one
+            else
+               Vm.at += 4
+         Vm.steps += 1
+
+system watch.count
+   phase report
+   in Watch
+   out Watch
+
+   Watch.frames += 1
+
+system hud.show
+   phase report
+   needs machineStep
+   in Vm, Watch
+   over lines: out Label with Readout
+
+   Label := "steps " + Vm.steps + "   sum " + Vm.memory[0] + "   at " + Vm.at + "   frames " + Watch.frames

@@ -1,0 +1,37 @@
+[package]
+name = "blocker-screens"
+description = "The screens blocker opens over the world: the title, the pockets, the chest, the map, the journal, the dialogue and the shop"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-beasts = { path = "../blocker-beasts" }
+blocker-hud = { path = "../blocker-hud" }
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-crew = { path = "../blocker-crew" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-figure = { path = "../blocker-figure" }
+blocker-player = { path = "../blocker-player" }
+blocker-pocket = { path = "../blocker-pocket" }
+blocker-quests = { path = "../blocker-quests" }
+blocker-save = { path = "../blocker-save" }
+blocker-talk = { path = "../blocker-talk" }
+blocker-weather = { path = "../blocker-weather" }
+blocker-world = { path = "../blocker-world" }
+nalgebra-glm.workspace = true
+nightshade-config.workspace = true
+nightshade-dialogue.workspace = true
+nightshade-input.workspace = true
+nightshade-health.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-toast.workspace = true
+nightshade-ui.workspace = true
+nightshade-ui-config.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-inventory.workspace = true
+nightshade.workspace = true

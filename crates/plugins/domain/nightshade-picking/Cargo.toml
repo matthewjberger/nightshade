@@ -1,0 +1,20 @@
+[package]
+name = "nightshade-picking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-render = { workspace = true }
+nightshade-platform = { path = "../../describe/nightshade-platform", default-features = false, features = ["contract"] }
+nightshade-ecs = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:nalgebra-glm", "dep:nightshade-ecs"]
+plugin = ["contract", "dep:nightshade"]

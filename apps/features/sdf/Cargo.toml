@@ -1,0 +1,34 @@
+[package]
+name = "sdf"
+description = "A world of signed distance fields cached in a clipmap of sparse bricks, with blobs that merge, a carver that digs, and a tunnel gun"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "sdf-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-config.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-physics.workspace = true
+nightshade-picking.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-sdf.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true

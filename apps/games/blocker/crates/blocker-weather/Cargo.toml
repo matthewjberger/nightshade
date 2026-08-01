@@ -1,0 +1,20 @@
+[package]
+name = "blocker-weather"
+description = "The sky over the world: the season, the temperature, the rain, the snow and the light they leave"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-screen = { path = "../blocker-screen" }
+nalgebra-glm.workspace = true
+nightshade-config.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-voxels.workspace = true
+nightshade-render.workspace = true
+nightshade-state.workspace = true
+nightshade.workspace = true

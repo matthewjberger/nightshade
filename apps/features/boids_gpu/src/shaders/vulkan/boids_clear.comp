@@ -1,0 +1,14 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 256) in;
+
+#include "boids_common.glsl"
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uniforms.counts.z) {
+        return;
+    }
+    atomicExchange(cell_counts[index], 0u);
+}

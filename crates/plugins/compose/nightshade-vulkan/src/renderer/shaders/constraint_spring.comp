@@ -1,0 +1,92 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 64) in;
+
+#include "constraint_common.glsl"
+
+struct SpringChain {
+    uint joint_start;
+    uint joint_count;
+    uint carried_start;
+    uint carried_count;
+    uint state_start;
+    uint restart;
+    uint enabled;
+    uint padding_first;
+    vec4 gravity;
+    float stiffness;
+    float damping;
+    float step_seconds;
+    float padding_second;
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer Chains { SpringChain chains[]; };
+layout(std430, set = 0, binding = 2) readonly buffer Joints { uint joints[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Carried { uint carried[]; };
+layout(std430, set = 0, binding = 4) readonly buffer RestAxes { vec4 rest_axes[]; };
+layout(std430, set = 0, binding = 5) readonly buffer BoneLengths { float bone_lengths[]; };
+layout(std430, set = 0, binding = 6) buffer SpringState { vec4 spring_state[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= chains.length()) {
+        return;
+    }
+    SpringChain chain = chains[index];
+    if (chain.enabled == 0u || chain.joint_count < 2u) {
+        return;
+    }
+
+    for (uint along = 1u; along < chain.joint_count; ++along) {
+        uint joint = joints[chain.joint_start + along];
+        uint parent = joints[chain.joint_start + along - 1u];
+        mat4 parent_standing = bone_transforms[parent];
+        vec3 parent_position = parent_standing[3].xyz;
+        float bone_length = bone_lengths[chain.joint_start + along];
+        vec3 rest_axis = rest_axes[chain.joint_start + along].xyz;
+
+        vec3 sideways = normalize(parent_standing[0].xyz);
+        vec3 upward = normalize(parent_standing[1].xyz);
+        vec3 forward = normalize(parent_standing[2].xyz);
+        vec3 rest_goal = parent_position
+            + (sideways * rest_axis.x + upward * rest_axis.y + forward * rest_axis.z)
+                * bone_length;
+
+        uint slot = 2u * (chain.state_start + along);
+        vec3 tip = spring_state[slot].xyz;
+        vec3 before = spring_state[slot + 1u].xyz;
+        vec3 joint_position = bone_transforms[joint][3].xyz;
+
+        if (chain.restart == 1u || distance(tip, rest_goal) > bone_length * 8.0 + 0.001) {
+            tip = rest_goal;
+            before = rest_goal;
+        } else {
+            vec3 carried_over = (tip - before) * (1.0 - chain.damping);
+            vec3 next = tip + carried_over + chain.gravity.xyz * chain.step_seconds;
+            next = next + (rest_goal - next) * chain.stiffness;
+            vec3 outward = next - parent_position;
+            float span = length(outward);
+            next = span > 1.0e-5
+                ? parent_position + outward / span * bone_length
+                : rest_goal;
+            before = tip;
+            tip = next;
+        }
+
+        spring_state[slot] = vec4(tip, 0.0);
+        spring_state[slot + 1u] = vec4(before, 0.0);
+
+        vec3 standing_direction = joint_position - parent_position;
+        vec3 wanted_direction = tip - parent_position;
+        if (length(standing_direction) > 1.0e-5 && length(wanted_direction) > 1.0e-5) {
+            vec4 turn = turn_from_to(standing_direction, wanted_direction);
+            for (uint after = along - 1u; after < chain.joint_count; ++after) {
+                turn_bone_about(joints[chain.joint_start + after], parent_position, turn);
+            }
+            for (uint dragged = 0u; dragged < chain.carried_count; ++dragged) {
+                turn_bone_about(carried[chain.carried_start + dragged], parent_position, turn);
+            }
+        }
+    }
+}

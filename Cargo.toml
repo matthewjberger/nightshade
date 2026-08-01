@@ -1,22 +1,49 @@
 [workspace]
-members = ["apps/*", "crates/*", "tools/*"]
-exclude = ["site", "template", "template_api", "template_leptos", "template_api_leptos", "docs", "apps/editor", "apps/self_assembling", "apps/playground"]
+members = [
+    "apps/book",
+    "apps/features/*",
+    "apps/games/*",
+    "apps/games/blocker/crates/*",
+    "apps/games/multiplayer/sandbox",
+    "apps/rendering/*",
+    "apps/ui/*",
+    "apps/viewer",
+    "apps/vulkan/*",
+    "crates/nightshade",
+    "crates/nightshade-ecs",
+    "crates/framework/*/*",
+    "crates/plugins/*/*",
+    "crates/support/*",
+    "template",
+    "tools/*",
+]
+exclude = ["apps/games/multiplayer"]
 resolver = "2"
 
 [workspace.package]
-version = "0.56.0"
+version = "0.1.0"
 authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
 homepage = "https://github.com/matthewjberger/nightshade"
 repository = "https://github.com/matthewjberger/nightshade"
 license = "MIT OR Apache-2.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 
 [workspace.dependencies]
+arc-swap = "1"
 bincode = { version = "2.0", features = ["serde"] }
+bytes = "1.4"
+clap = { version = "4.6", features = ["derive"] }
+enum2contract = "0.3"
+fast-surface-nets = "0.2"
+postcard = { version = "1.0.4", features = ["alloc", "use-std"] }
+smallvec = "1"
+socket2 = { version = "0.5", features = ["all"] }
+tokio = { version = "1", default-features = false }
+uuid = { version = "1" }
 rayon = "1"
-bitflags = { version = "2.10.0", features = ["serde"] }
-bytemuck = "1.25.0"
+bitflags = { version = "2.13.2", features = ["serde"] }
+bytemuck = "1.25.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
@@ -25,9 +52,9 @@ tracing-web = "0.1"
 tracing-tracy = "0.11"
 tracing-chrome = "0.7"
 arboard = "3"
-nightshade-ecs = { version = "0.56.0", path = "crates/nightshade-ecs", features = ["dynamic", "snapshot", "state"] }
+nightshade-ecs = { path = "crates/nightshade-ecs" }
 webbrowser = "1"
-gilrs = "0.11.0"
+gilrs = "0.11.2"
 gltf = { version = "1.4.1", features = [
     "KHR_lights_punctual",
     "KHR_materials_unlit",
@@ -43,6 +70,7 @@ gltf = { version = "1.4.1", features = [
     "import",
     "allow_empty_texture",
 ] }
+basis-universal = "0.3.1"
 cosmic-text = "0.19"
 half = "2.7.1"
 image = { version = "0.25", default-features = false, features = [
@@ -52,65 +80,168 @@ image = { version = "0.25", default-features = false, features = [
     "gif",
     "webp",
 ] }
-kira = "0.12.0"
+cpal = "0.18.2"
+kira = "0.12.4"
+ruzstd = "0.9.0"
 mint = "0.5"
-nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
+pollster = "0.4"
+nalgebra = { version = "0.34.2", features = ["serde-serialize"] }
 nalgebra-glm = { version = "0.20.0", features = ["convert-bytemuck"] }
-nightshade = { version = "0.56.0", path = "crates/nightshade" }
-nightshade-api = { version = "0.56.0", path = "crates/nightshade-api" }
-nightshade-renderer = { version = "0.56.0", path = "crates/nightshade-renderer", default-features = false }
-nightshade-openxr = { version = "0.56.0", path = "crates/nightshade-openxr" }
-nightshade-leptos = { version = "0.56.0", path = "crates/nightshade-leptos", default-features = false }
-nightshade-audio = { version = "0.56.0", path = "crates/nightshade-audio", default-features = false }
-nightshade-navmesh = { version = "0.56.0", path = "crates/nightshade-navmesh", default-features = false }
-nightshade-gizmos = { version = "0.56.0", path = "crates/nightshade-gizmos" }
-nightshade-steam = { version = "0.56.0", path = "crates/nightshade-steam" }
-nightshade-platform = { version = "0.56.0", path = "crates/nightshade-platform" }
-nightshade-text = { version = "0.56.0", path = "crates/nightshade-text", default-features = false }
-nightshade-ui = { version = "0.56.0", path = "crates/nightshade-ui" }
-nightshade-paint = { version = "0.56.0", path = "crates/nightshade-paint" }
+nightshade = { path = "crates/nightshade" }
+nightshade-acoustics = { path = "crates/plugins/domain/nightshade-acoustics" }
+nightshade-animation = { path = "crates/plugins/domain/nightshade-animation" }
+nightshade-audio = { path = "crates/plugins/domain/nightshade-audio" }
+nightshade-camera = { path = "crates/plugins/domain/nightshade-camera" }
+nightshade-camera-controller = { path = "crates/plugins/domain/nightshade-camera-controller" }
+nightshade-cli = { path = "crates/plugins/domain/nightshade-cli" }
+nightshade-config = { path = "crates/plugins/domain/nightshade-config" }
+nightshade-ui-config = { path = "crates/framework/interface/nightshade-ui-config" }
+nightshade-ui-nodegraph = { path = "crates/framework/interface/nightshade-ui-nodegraph" }
+nightshade-decals = { path = "crates/plugins/domain/nightshade-decals" }
+nightshade-gamepad = { path = "crates/plugins/domain/nightshade-gamepad" }
+nightshade-gltf = { path = "crates/plugins/domain/nightshade-gltf" }
+nightshade-input = { path = "crates/plugins/domain/nightshade-input" }
+nightshade-prefab = { path = "crates/plugins/domain/nightshade-prefab" }
+nightshade-graphics = { path = "crates/plugins/domain/nightshade-graphics" }
+nightshade-render = { path = "crates/plugins/describe/nightshade-render" }
+nightshade-pedestal = { path = "crates/framework/tools/nightshade-pedestal" }
+nightshade-cells = { path = "crates/framework/base/nightshade-cells" }
+nightshade-near = { path = "crates/plugins/domain/nightshade-near" }
+nightshade-noise = { path = "crates/framework/base/nightshade-noise" }
+nightshade-plane = { path = "crates/framework/base/nightshade-plane" }
+nightshade-ui-dialogue = { path = "crates/framework/interface/nightshade-ui-dialogue" }
+nightshade-clock = { path = "crates/framework/base/nightshade-clock" }
+nightshade-pickup = { path = "crates/framework/mechanics/nightshade-pickup" }
+nightshade-dialogue = { path = "crates/framework/mechanics/nightshade-dialogue" }
+nightshade-ui-banner = { path = "crates/framework/interface/nightshade-ui-banner" }
+nightshade-ui-toast = { path = "crates/framework/interface/nightshade-ui-toast" }
+nightshade-toast = { path = "crates/framework/mechanics/nightshade-toast" }
+nightshade-weather = { path = "crates/framework/mechanics/nightshade-weather" }
+nightshade-daynight = { path = "crates/framework/mechanics/nightshade-daynight" }
+nightshade-follow = { path = "crates/framework/mechanics/nightshade-follow" }
+nightshade-platformer = { path = "crates/framework/mechanics/nightshade-platformer" }
+nightshade-topdown = { path = "crates/framework/mechanics/nightshade-topdown" }
+nightshade-grounded = { path = "crates/framework/mechanics/nightshade-grounded" }
+nightshade-inventory = { path = "crates/framework/base/nightshade-inventory" }
+nightshade-story = { path = "crates/framework/base/nightshade-story" }
+nightshade-ui-story = { path = "crates/framework/interface/nightshade-ui-story" }
+nightshade-waves = { path = "crates/framework/mechanics/nightshade-waves" }
+nightshade-arc = { path = "crates/framework/base/nightshade-arc" }
+nightshade-health = { path = "crates/framework/mechanics/nightshade-health" }
+nightshade-tiles = { path = "crates/framework/mechanics/nightshade-tiles" }
+nightshade-wander = { path = "crates/framework/mechanics/nightshade-wander" }
+nightshade-cooldown = { path = "crates/framework/mechanics/nightshade-cooldown" }
+nightshade-shake = { path = "crates/framework/mechanics/nightshade-shake" }
+nightshade-readout = { path = "crates/framework/interface/nightshade-readout" }
+nightshade-lofi = { path = "crates/framework/interface/nightshade-lofi" }
+nightshade-ui-flash = { path = "crates/framework/interface/nightshade-ui-flash" }
+nightshade-flashlight = { path = "crates/framework/mechanics/nightshade-flashlight" }
+nightshade-flicker = { path = "crates/framework/mechanics/nightshade-flicker" }
+nightshade-senses = { path = "crates/framework/mechanics/nightshade-senses" }
+nightshade-phase = { path = "crates/framework/mechanics/nightshade-phase" }
+nightshade-ease = { path = "crates/framework/base/nightshade-ease" }
+nightshade-countdown = { path = "crates/framework/mechanics/nightshade-countdown" }
+nightshade-ground = { path = "crates/framework/base/nightshade-ground" }
+nightshade-hover = { path = "crates/framework/mechanics/nightshade-hover" }
+nightshade-pen = { path = "crates/framework/mechanics/nightshade-pen" }
+nightshade-kit = { path = "crates/framework/base/nightshade-kit" }
+nightshade-random = { path = "crates/framework/base/nightshade-random" }
+nightshade-app = { path = "crates/plugins/draw/nightshade-app" }
+nightshade-wgpu-shading = { path = "crates/plugins/draw/nightshade-wgpu-shading" }
+nightshade-wgpu-shadow = { path = "crates/plugins/draw/nightshade-wgpu-shadow" }
+nightshade-wgpu-sky = { path = "crates/plugins/draw/nightshade-wgpu-sky" }
+nightshade-wgpu-text = { path = "crates/plugins/draw/nightshade-wgpu-text" }
+nightshade-wgpu-sprites = { path = "crates/plugins/draw/nightshade-wgpu-sprites" }
+nightshade-wgpu-geometry = { path = "crates/plugins/draw/nightshade-wgpu-geometry" }
+nightshade-wgpu-screenspace = { path = "crates/plugins/draw/nightshade-wgpu-screenspace" }
+nightshade-wgpu-outline = { path = "crates/plugins/draw/nightshade-wgpu-outline" }
+nightshade-wgpu-paint = { path = "crates/plugins/draw/nightshade-wgpu-paint" }
+nightshade-wgpu-acoustics = { path = "crates/plugins/draw/nightshade-wgpu-acoustics" }
+nightshade-wgpu-near = { path = "crates/plugins/draw/nightshade-wgpu-near" }
+nightshade-wgpu-sdf = { path = "crates/plugins/draw/nightshade-wgpu-sdf" }
+nightshade-wgpu-portals = { path = "crates/plugins/draw/nightshade-wgpu-portals" }
+nightshade-wgpu-debug = { path = "crates/plugins/draw/nightshade-wgpu-debug" }
+nightshade-wgpu-decals = { path = "crates/plugins/draw/nightshade-wgpu-decals" }
+nightshade-wgpu-particles = { path = "crates/plugins/draw/nightshade-wgpu-particles" }
+nightshade-save = { path = "crates/plugins/domain/nightshade-save" }
+nightshade-load = { path = "crates/support/nightshade-load" }
+nightshade-log = { path = "crates/plugins/domain/nightshade-log" }
+nightshade-ui-menu = { path = "crates/framework/interface/nightshade-ui-menu" }
+nightshade-navmesh = { path = "crates/plugins/domain/nightshade-navmesh" }
+nightshade-net = { path = "crates/plugins/domain/nightshade-net" }
+nightshade-openxr = { path = "crates/plugins/compose/nightshade-openxr" }
+nightshade-paint = { path = "crates/plugins/describe/nightshade-paint" }
+nightshade-particles = { path = "crates/plugins/domain/nightshade-particles" }
+nightshade-physics = { path = "crates/plugins/domain/nightshade-physics" }
+nightshade-picking = { path = "crates/plugins/domain/nightshade-picking" }
+nightshade-portal = { path = "crates/plugins/domain/nightshade-portal" }
+nightshade-voxels = { path = "crates/plugins/domain/nightshade-voxels" }
+nightshade-wgpu = { path = "crates/plugins/compose/nightshade-wgpu" }
+nightshade-platform = { path = "crates/plugins/describe/nightshade-platform" }
+nightshade-scene = { path = "crates/plugins/describe/nightshade-scene" }
+nightshade-sdf = { path = "crates/plugins/domain/nightshade-sdf" }
+nightshade-shell = { path = "crates/framework/tools/nightshade-shell" }
+nightshade-sprite = { path = "crates/plugins/domain/nightshade-sprite" }
+nightshade-store = { path = "crates/support/nightshade-store" }
+nightshade-state = { path = "crates/plugins/describe/nightshade-state" }
+nightshade-steam = { path = "crates/plugins/describe/nightshade-steam" }
+nightshade-text = { path = "crates/plugins/describe/nightshade-text" }
+nightshade-texture = { path = "crates/support/nightshade-texture" }
+nightshade-ui = { path = "crates/plugins/compose/nightshade-ui" }
+nightshade-vulkan = { path = "crates/plugins/compose/nightshade-vulkan" }
+nightshade-window = { path = "crates/plugins/compose/nightshade-window" }
+nightshade-worker = { path = "crates/support/nightshade-worker" }
+nightshade-ui-test = { path = "crates/framework/tools/nightshade-ui-test" }
+pulldown-cmark = { version = "0.13", default-features = false }
 petgraph = { version = "0.8", features = ["serde-1"] }
 rapier3d = { version = "0.30", features = ["debug-render", "serde-serialize"] }
+rerecast = { version = "0.2", default-features = false, features = ["std"] }
+glam = "0.30"
+ash = "0.38"
+ash-window = "0.13"
+gpu-allocator = { version = "0.28", default-features = false, features = ["vulkan", "std"] }
+meshopt = "0.4"
+openxr = { version = "0.21", features = ["static", "loaded"] }
+wgpu-hal = { version = "29", features = ["vulkan"] }
 raw-window-handle = "0.6.2"
 thiserror = "2.0"
-serde = { version = "1.0.228", features = ["derive"] }
+enum2schema = { version = "0.1.2", features = ["nalgebra-glm"] }
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0"
+toml = "0.9"
+dirs = "6"
+fastrand = "2"
+fnv = "1"
 web-time = "1.1.0"
 wgpu = { version = "29", default-features = false }
+android-activity = { version = "0.6", features = ["native-activity"] }
+tracing-android = "0.2"
 winit = { version = "0.30.13", features = ["serde"] }
-accesskit = "0.24"
-accesskit_winit = "0.33"
 naga_oil = { version = "0.22", default-features = false }
-egui = { version = "0.35", default-features = false, features = ["bytemuck", "default_fonts"] }
-egui_extras = { version = "0.35", default-features = false, features = ["all_loaders"] }
-egui-wgpu = { version = "0.35", default-features = false, features = ["winit"] }
-egui-winit = { version = "0.35", default-features = false, features = ["links"] }
 
-clap = { version = "4", features = ["derive"] }
 steamworks = "0.13"
 steamworks-sys = "0.13"
 noise = "0.9"
-notify = "7"
 ehttp = "0.7"
-# Held at 0.7: taffy 0.8 packed `Style` into a tagged `*const ()`, which made it
-# `!Send + !Sync`, and the UI's taffy tree is an ECS resource.
+tiny_http = "0.12"
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
+zip = { version = "8", default-features = false, features = ["deflate"] }
 taffy = "0.7"
-ropey = "1.6"
-wasm-bindgen = "0.2.114"
-wasm-bindgen-futures = "0.4.64"
+wasm-bindgen = "0.2.128"
+wasm-bindgen-futures = "0.4.78"
 js-sys = "0.3"
 web-sys = "0.3"
-leptos = { version = "0.7", features = ["csr"] }
-serde-wasm-bindgen = "0.6"
 console_error_panic_hook = "0.1"
 
 [profile.dev]
 opt-level = 1
 debug = false
-# debug = "line-tables-only" # use for a speedier build that still has source code lines in stack traces
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[workspace.lints.clippy]
+missing_safety_doc = "allow"
 
 [profile.wasm-release]
 inherits = "release"

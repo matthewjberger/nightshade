@@ -1,0 +1,13 @@
+-- Whole turns, and the places a ring puts its things. This module has no
+-- behavior, so a description that uses it runs nothing it did not write.
+
+module turns
+
+shows Turn, ringSpot
+
+config Turn
+   full number = 6.28318
+   half number = 3.14159
+   quarter number = 1.5708
+
+query ringSpot(index, count, radius) = (sin(index * Turn.full / count) * radius, 0, cos(index * Turn.full / count) * radius)

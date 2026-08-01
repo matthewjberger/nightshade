@@ -1,0 +1,45 @@
+[package]
+name = "srpg"
+description = "A tactics battle in the HD-2D style: two squads of upright sprites on a block hill, a charge time turn order, a tile cursor, height and facing in the damage, and a camera that turns around the map"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "srpg-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+fastrand.workspace = true
+image.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-audio.workspace = true
+nightshade-camera.workspace = true
+nightshade-cli.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-log.workspace = true
+nightshade-particles.workspace = true
+nightshade-picking.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-state.workspace = true
+nightshade-save.workspace = true
+nightshade-sprite.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-window.workspace = true
+serde.workspace = true
+
+[features]
+default = ["wgpu"]
+vulkan = ["nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

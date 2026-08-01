@@ -1,0 +1,31 @@
+[package]
+name = "jarvis"
+description = "A helmet heads-up display in a headset: reticle, telemetry, target brackets, and a hand-driven pointer"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "jarvis-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-window.workspace = true
+nightshade-log.workspace = true
+nightshade-camera.workspace = true
+nightshade-graphics.workspace = true
+nightshade-platform.workspace = true
+nightshade-render = { workspace = true }
+nightshade-scene.workspace = true
+nightshade-ui.workspace = true
+nightshade-openxr.workspace = true
+nightshade-particles.workspace = true

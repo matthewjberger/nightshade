@@ -1,0 +1,47 @@
+-- One thing drawn many times. A thing that carries Copies is put on the screen
+-- that many times, each one moved along by its Spread from the one before, and
+-- the whole row is one thing as far as the description is concerned.
+
+runs "readout.ns"
+
+runs "daylight.ns"
+
+module copies
+
+component Turner
+
+config World
+   cameraEye = (0, 11, 36)
+   wall
+      rows number = 9
+      across number = 26
+      step number = 1.1
+
+system world.build
+   once
+   in World
+   creates entities
+
+   spawn Mesh "Cube", Color (0.16, 0.18, 0.22),
+         Transform (0, -0.5, 0), Scale (40, 1, 20)
+   let half := World.wall.across * World.wall.step / 2
+   for each row in 0 .. World.wall.rows
+      spawn Mesh "Cube",
+            Color (0.3 + row / 16, 0.58, 0.9 - row / 14),
+            Transform (0 - half, 0.6 + row * 1.15, 0),
+            Scale (0.85, 0.85, 0.85),
+            Copies World.wall.across,
+            Spread (World.wall.step, 0, 0),
+            Turner row
+
+system wall.sway
+   in Time, World
+   over rows: in Turner, out Transform
+
+   Transform.z := sin(Time.uptime + Turner * 0.4) * 2.5
+
+system hud.show
+   in World
+   any order over lines: out Label with Readout
+
+   Label := floor(World.wall.rows) + " things, " + floor(World.wall.rows * World.wall.across) + " copies"

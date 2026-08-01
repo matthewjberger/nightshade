@@ -1,0 +1,6 @@
+# Apps whose components band still gathers several values under the name of a
+# thing, which docs/antipatterns.md refuses. Each line is an app that the sweep
+# has not reached yet. Drop the line when the app is swept. The list only ever
+# shrinks, and dag-check fails on a line that names an app which is already
+# clean.
+iam

@@ -1,0 +1,35 @@
+-- Lesson 1. A court made of shapes, and nothing that moves.
+
+assets Shapes from builtin
+   block mesh "Cube"
+
+config Game
+   viewHeight number = 13.5
+   court
+      halfWidth number = 16
+      halfHeight number = 12
+      wallHalf number = 0.5
+      color = (0.147, 0.179, 0.296)
+   paddle
+      y number = -9.5
+      halfWidth number = 2.5
+      halfHeight number = 0.4
+      color = (0.890, 0.911, 1.0)
+
+system setup.build
+   once
+   in Game
+   creates entities
+
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (0 - Game.court.halfWidth, 0),
+         Scale (Game.court.wallHalf * 2, (Game.court.halfHeight + Game.court.wallHalf) * 2, 1)
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (Game.court.halfWidth, 0),
+         Scale (Game.court.wallHalf * 2, (Game.court.halfHeight + Game.court.wallHalf) * 2, 1)
+   spawn Mesh Shapes.block, Color Game.court.color,
+         Transform (0, Game.court.halfHeight),
+         Scale ((Game.court.halfWidth + Game.court.wallHalf) * 2, Game.court.wallHalf * 2, 1)
+   spawn Mesh Shapes.block, Color Game.paddle.color,
+         Transform (0, Game.paddle.y),
+         Scale (Game.paddle.halfWidth * 2, Game.paddle.halfHeight * 2, 1)

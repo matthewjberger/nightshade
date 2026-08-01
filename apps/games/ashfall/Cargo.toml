@@ -1,0 +1,43 @@
+[package]
+name = "ashfall"
+description = "A fog-choked survival horror town in the style of the first PlayStation"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "ashfall-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+fastrand.workspace = true
+nightshade-window.workspace = true
+nightshade-cli.workspace = true
+nightshade-scene.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-physics.workspace = true
+nightshade-particles.workspace = true
+nightshade-decals.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-input.workspace = true
+nightshade-text.workspace = true
+nightshade-ui-menu.workspace = true
+nightshade-ui.workspace = true
+nightshade-lofi.workspace = true
+nightshade-ui-flash.workspace = true
+nightshade-flashlight.workspace = true
+nightshade-flicker.workspace = true
+nightshade-senses.workspace = true
+nightshade-phase.workspace = true
+nightshade-plane.workspace = true

@@ -1,0 +1,28 @@
+[package]
+name = "terrain"
+description = "Ground without an end, drawn as clusters at whatever detail each piece of it asks for"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[dependencies]
+fast-surface-nets = "0.2.1"
+fastrand.workspace = true
+nalgebra-glm.workspace = true
+nightshade.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-cli.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-vulkan = { workspace = true, optional = true }
+nightshade-window.workspace = true
+nightshade-worker.workspace = true
+noise.workspace = true
+
+[features]
+default = ["vulkan"]
+vulkan = ["dep:nightshade-vulkan"]

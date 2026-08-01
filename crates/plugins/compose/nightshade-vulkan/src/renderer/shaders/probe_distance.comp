@@ -1,0 +1,73 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define PROBE_WRITE
+
+#include "scene_common.glsl"
+#include "scene_probes.glsl"
+
+layout(
+    local_size_x = PROBE_DISTANCE_TILE,
+    local_size_y = PROBE_DISTANCE_TILE,
+    local_size_z = 1
+) in;
+
+layout(push_constant) uniform Push {
+    uvec2 counts;
+} push;
+
+shared vec2 gathered[PROBE_DISTANCE_TILE * PROBE_DISTANCE_TILE];
+
+#define PROBE_DISTANCE_SHARPNESS 50.0
+
+void main() {
+    uint probe = gl_WorkGroupID.x;
+    if (probe >= push.counts.y) {
+        return;
+    }
+    ivec2 tile = ivec2(gl_LocalInvocationID.xy);
+    uint seat = gl_LocalInvocationIndex;
+    bool inside = tile.x >= PROBE_BORDER
+        && tile.y >= PROBE_BORDER
+        && tile.x <= PROBE_DISTANCE_TEXELS
+        && tile.y <= PROBE_DISTANCE_TEXELS;
+    float reach = max(frame.probe_spacing.w, 0.01);
+
+    if (inside) {
+        ivec2 interior = tile - ivec2(PROBE_BORDER);
+        vec3 direction = octahedral_decode(
+            probe_texel_point(interior, PROBE_DISTANCE_TEXELS)
+        );
+        float mean = 0.0;
+        float squared = 0.0;
+        float total = 0.0;
+        for (uint ray = 0u; ray < uint(PROBE_RAYS); ++ray) {
+            uint slot = probe_ray_slot(probe, ray);
+            float weight = pow(
+                max(dot(direction, probe_rays[slot + 1u].xyz), 0.0),
+                PROBE_DISTANCE_SHARPNESS
+            );
+            if (weight <= 1.0e-6) {
+                continue;
+            }
+            float away = min(abs(probe_rays[slot].w), reach);
+            mean += away * weight;
+            squared += away * away * weight;
+            total += weight;
+        }
+        gathered[seat] = total > 1.0e-6
+            ? vec2(mean / total, squared / total)
+            : vec2(reach, reach * reach);
+    }
+
+    barrier();
+
+    ivec2 origin = probe_tile_origin(probe_coords_of(probe), PROBE_DISTANCE_TILE);
+    float keep = push.counts.x == 0u ? 0.0 : clamp(frame.probe_settings.x, 0.0, 0.99);
+    ivec2 source = inside ? tile : probe_border_source(tile, PROBE_DISTANCE_TEXELS);
+    vec2 found = inside
+        ? gathered[seat]
+        : gathered[uint(source.y) * uint(PROBE_DISTANCE_TILE) + uint(source.x)];
+    vec2 had = imageLoad(probe_distance_store, origin + tile).rg;
+    imageStore(probe_distance_store, origin + tile, vec4(mix(found, had, keep), 0.0, 1.0));
+}

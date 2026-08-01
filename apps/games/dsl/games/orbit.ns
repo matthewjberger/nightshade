@@ -1,0 +1,45 @@
+-- A ring of turning blocks, written to be used by another description. It
+-- keeps its own Run, and the description that uses it keeps a different one.
+
+use "turns.ns"
+
+module orbit
+
+shows Ring, Run
+
+component Spin
+
+resource Run
+   turns number = 0
+
+config Ring
+   count number = 10
+   radius number = 5
+   rate number = 0.9
+   size number = 0.7
+   color = (0.45, 0.72, 1.0)
+
+query spot(angle) = (sin(angle) * Ring.radius, 1, cos(angle) * Ring.radius)
+
+system ring.build
+   once
+   in Ring, Turn
+   creates entities
+
+   for each index in 0 .. Ring.count
+      spawn Mesh "Cube", Color Ring.color,
+            Transform spot(index * Turn.full / Ring.count),
+            Scale (Ring.size, Ring.size, Ring.size),
+            Spin index * 0.4
+
+system ring.turn
+   in Time, Ring
+   any order over blocks: in Spin, out Rotation
+
+   Rotation += (0, Ring.rate * Time.dt, 0)
+
+system ring.count
+   in Time, Ring, Run, Turn
+   out Run
+
+   Run.turns += Ring.rate * Time.dt / Turn.full

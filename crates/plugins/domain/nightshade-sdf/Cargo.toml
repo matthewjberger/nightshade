@@ -1,0 +1,26 @@
+[package]
+name = "nightshade-sdf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["contract"] }
+enum2schema = { workspace = true, optional = true }
+fast-surface-nets = { workspace = true, optional = true }
+nalgebra-glm = { workspace = true, optional = true, features = ["serde-serialize"] }
+nightshade = { workspace = true, optional = true }
+nightshade-ecs = { workspace = true, optional = true }
+nightshade-worker = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+
+[features]
+default = ["plugin"]
+contract = ["dep:enum2schema", "dep:nalgebra-glm", "dep:nightshade-ecs", "dep:serde"]
+plugin = [
+    "contract",
+    "dep:fast-surface-nets",
+    "dep:nightshade",
+    "dep:nightshade-worker",
+]

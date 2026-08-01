@@ -1,0 +1,38 @@
+[package]
+name = "fireworks"
+description = "GPU-driven particle fireworks with multiple explosion types and bloom effects"
+version.workspace = true
+authors = ["Matthew Berger <matthewjordanberger@gmail.com>"]
+edition = "2024"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "fireworks-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade-render = { workspace = true }
+nightshade-window.workspace = true
+image.workspace = true
+nightshade-platform.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-ui.workspace = true
+nightshade-text.workspace = true
+nightshade-particles.workspace = true
+rand = "0.9"
+
+[features]
+default = ["wgpu"]
+wgpu = ["nightshade-app/wgpu"]
+vulkan = ["nightshade-app/vulkan"]

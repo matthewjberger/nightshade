@@ -1,0 +1,70 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "particle_common.glsl"
+#include "particle_compute.glsl"
+
+layout(local_size_x = 256) in;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= simulation.max_particles) {
+        return;
+    }
+
+    Particle particle = particles[index];
+    if (particle.size_lifetime.w <= 0.0) {
+        return;
+    }
+
+    float lifetime = particle.size_lifetime.w;
+    float age = particle.size_lifetime.z + simulation.delta_time;
+    if (age >= lifetime) {
+        particle.size_lifetime.w = 0.0;
+        particles[index] = particle;
+        uint slot = atomicAdd(free_count, 1u);
+        free_indices[slot] = index;
+        return;
+    }
+
+    float gravity = particle.physics.x;
+    float drag = particle.physics.y;
+    float turbulence_strength = particle.physics.z;
+    float turbulence_frequency = particle.physics.w;
+
+    vec3 turbulence = vec3(0.0);
+    if (turbulence_strength > 0.0) {
+        turbulence = curl_noise(particle.position.xyz * turbulence_frequency, simulation.time)
+            * turbulence_strength;
+    }
+
+    vec3 velocity = particle.velocity.xyz * (1.0 - drag * simulation.delta_time);
+    velocity += vec3(0.0, gravity, 0.0) * simulation.delta_time;
+    velocity += turbulence * simulation.delta_time;
+    vec3 position = particle.position.xyz + velocity * simulation.delta_time;
+
+    float ratio = age / lifetime;
+    uint emitter_index = uint(particle.velocity.w);
+    EmitterData emitter = emitters[emitter_index];
+
+    float size = mix(particle.size_lifetime.x, particle.size_lifetime.y, ratio);
+    if (emitter.size_curve_count > 0u) {
+        size = sample_curve(emitter.size_curve, emitter.size_curve_count, ratio);
+    }
+
+    vec4 color = mix(particle.color_start, particle.color_end, ratio);
+    if (emitter.opacity_curve_count > 0u) {
+        color.w *= sample_curve(emitter.opacity_curve, emitter.opacity_curve_count, ratio);
+    }
+
+    particle.position = vec4(position, 1.0);
+    particle.velocity = vec4(velocity, float(emitter_index));
+    particle.color = color;
+    particle.size_lifetime.z = age;
+    particle.emitter_data.y = size;
+    particles[index] = particle;
+
+    uint slot = atomicAdd(alive_count, 1u);
+    alive_indices[slot] = index;
+    atomicAdd(draw_command.instance_count, 1u);
+}

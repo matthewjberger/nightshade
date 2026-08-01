@@ -1,0 +1,92 @@
+[package]
+name = "dsl"
+description = "Runs a game written in the description language"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "dsl-run"
+path = "src/main.rs"
+required-features = ["plugin"]
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", optional = true }
+nalgebra-glm = { workspace = true, optional = true }
+nightshade = { workspace = true, optional = true }
+nightshade-audio = { workspace = true, optional = true }
+nightshade-camera = { workspace = true, optional = true }
+nightshade-camera-controller = { workspace = true, optional = true }
+nightshade-decals = { workspace = true, optional = true }
+nightshade-cli = { workspace = true, optional = true }
+nightshade-gamepad = { workspace = true, optional = true }
+nightshade-gltf = { workspace = true, optional = true }
+nightshade-load = { workspace = true, optional = true }
+nightshade-prefab = { workspace = true, optional = true }
+nightshade-graphics = { workspace = true, optional = true }
+nightshade-input = { workspace = true, optional = true }
+nightshade-log = { workspace = true, optional = true }
+nightshade-navmesh = { workspace = true, optional = true }
+nightshade-noise = { workspace = true, optional = true }
+nightshade-particles = { workspace = true, optional = true }
+nightshade-picking = { workspace = true, optional = true }
+nightshade-physics = { workspace = true, optional = true }
+nightshade-platform = { workspace = true, optional = true }
+nightshade-render = { workspace = true, optional = true }
+nightshade-save = { workspace = true, optional = true }
+nightshade-sdf = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+nightshade-random = { workspace = true, optional = true }
+nightshade-scene = { workspace = true, optional = true }
+nightshade-sprite = { workspace = true, optional = true }
+nightshade-text = { workspace = true, optional = true }
+nightshade-ui = { workspace = true, optional = true }
+nightshade-voxels = { workspace = true, optional = true }
+nightshade-window = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = ["plugin"]
+contract = []
+plugin = [
+    "dep:nightshade-app",
+    "contract",
+    "dep:nalgebra-glm",
+    "dep:nightshade",
+    "dep:nightshade-audio",
+    "dep:nightshade-camera",
+    "dep:nightshade-camera-controller",
+    "dep:nightshade-decals",
+    "dep:nightshade-cli",
+    "dep:nightshade-gamepad",
+    "dep:nightshade-gltf",
+    "dep:nightshade-load",
+    "dep:nightshade-prefab",
+    "dep:nightshade-graphics",
+    "dep:nightshade-input",
+    "dep:nightshade-log",
+    "dep:nightshade-navmesh",
+    "dep:nightshade-noise",
+    "dep:nightshade-particles",
+    "dep:nightshade-picking",
+    "dep:nightshade-physics",
+    "dep:nightshade-platform",
+    "dep:nightshade-render",
+    "dep:nightshade-save",
+    "dep:nightshade-sdf",
+    "dep:serde",
+    "dep:nightshade-random",
+    "dep:nightshade-scene",
+    "dep:nightshade-sprite",
+    "dep:nightshade-text",
+    "dep:nightshade-ui",
+    "dep:nightshade-voxels",
+    "dep:nightshade-window",
+]

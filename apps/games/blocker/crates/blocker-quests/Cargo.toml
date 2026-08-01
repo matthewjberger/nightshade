@@ -1,0 +1,14 @@
+[package]
+name = "blocker-quests"
+description = "What the folk of blocker ask for: the quests, the givers, the traders and the record a player keeps of them"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-screen = { path = "../blocker-screen" }
+blocker-pocket = { path = "../blocker-pocket" }
+nalgebra-glm.workspace = true
+nightshade.workspace = true

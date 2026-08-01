@@ -1,14 +1,5 @@
-//! Systems as plain functions whose parameters are `Res`, `ResMut`, and `Query`,
-//! registered on a `Schedule` and run each frame. This is the execution layer
-//! over the storage: no trait to implement, the borrow checker is the access
-//! checker.
-//!
-//! ```sh
-//! cargo run --example systems
-//! ```
-
 use nightshade_ecs::Schedule;
-use nightshade_ecs::dynamic::DynWorld;
+use nightshade_ecs::World;
 use nightshade_ecs::system_param::{Query, Res, ResMut, ScheduleExt};
 
 #[derive(Default, Clone)]
@@ -22,8 +13,6 @@ struct Velocity {
     x: f32,
     y: f32,
 }
-
-nightshade_ecs::impl_component!(Position, Velocity);
 
 struct DeltaTime(f32);
 struct Steps(u32);
@@ -40,12 +29,14 @@ fn count_steps(mut steps: ResMut<Steps>) {
 }
 
 fn main() {
-    let mut world = DynWorld::new();
+    let mut world = World::new();
     world.insert_resources((DeltaTime(0.016), Steps(0)));
     world.spawn((Position::default(), Velocity { x: 10.0, y: 0.0 }));
 
     let mut schedule = Schedule::new();
-    schedule.add_systems((movement, count_steps));
+    schedule
+        .add_system("movement", movement)
+        .add_system("count steps", count_steps);
 
     for _ in 0..3 {
         schedule.run(&mut world);

@@ -1,0 +1,17 @@
+[package]
+name = "nightshade-prefab"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade-scene = { path = "../../describe/nightshade-scene", default-features = false, features = ["plugin"] }
+nightshade-camera = { path = "../../domain/nightshade-camera", default-features = false, features = ["contract"] }
+nightshade-animation = { path = "../../domain/nightshade-animation", default-features = false, features = ["contract"] }
+nalgebra-glm = { workspace = true, features = ["serde-serialize"] }
+nightshade = { workspace = true }
+nightshade-graphics = { path = "../../domain/nightshade-graphics", default-features = false, features = ["contract"] }
+nightshade-render = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,55 @@
+[package]
+name = "blocker"
+description = "A small voxel world: dig and place blocks with tools, drop and pick up items drawn as extruded pixel art, over a block atlas"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "blocker-run"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+blocker-barrow = { path = "crates/blocker-barrow" }
+blocker-beasts = { path = "crates/blocker-beasts" }
+blocker-blocks = { path = "crates/blocker-blocks" }
+blocker-chat = { path = "crates/blocker-chat" }
+blocker-crew = { path = "crates/blocker-crew" }
+blocker-farm = { path = "crates/blocker-farm" }
+blocker-figure = { path = "crates/blocker-figure" }
+blocker-screen = { path = "crates/blocker-screen" }
+blocker-screens = { path = "crates/blocker-screens" }
+blocker-hud = { path = "crates/blocker-hud" }
+blocker-player = { path = "crates/blocker-player" }
+blocker-pocket = { path = "crates/blocker-pocket" }
+blocker-quests = { path = "crates/blocker-quests" }
+blocker-save = { path = "crates/blocker-save" }
+blocker-talk = { path = "crates/blocker-talk" }
+blocker-weather = { path = "crates/blocker-weather" }
+blocker-world = { path = "crates/blocker-world" }
+bytemuck.workspace = true
+nalgebra-glm.workspace = true
+nightshade-health.workspace = true
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app" }
+nightshade-camera.workspace = true
+nightshade-gamepad.workspace = true
+nightshade-gltf.workspace = true
+nightshade-graphics.workspace = true
+nightshade-input.workspace = true
+nightshade-particles.workspace = true
+nightshade-platform.workspace = true
+nightshade-random.workspace = true
+nightshade-render.workspace = true
+nightshade-scene.workspace = true
+nightshade-sprite.workspace = true
+nightshade-state.workspace = true
+nightshade-text.workspace = true
+nightshade-ui.workspace = true
+nightshade-voxels.workspace = true
+nightshade-wgpu = { workspace = true, features = ["debug_render"] }
+nightshade.workspace = true
+tracing.workspace = true

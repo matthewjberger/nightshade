@@ -1,0 +1,45 @@
+#version 460
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0) uniform sampler2D scene;
+layout(std430, set = 0, binding = 1) buffer Settled {
+    float settled_log_luminance;
+    float measured_log_luminance;
+    uint measured;
+    uint padding;
+    uint histogram[256];
+} settled;
+
+layout(push_constant) uniform Push {
+    vec4 rate;
+} push;
+
+shared uint counts[256];
+
+float luminance(vec3 color) {
+    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+
+void main() {
+    uint slot = gl_LocalInvocationIndex;
+    counts[slot] = 0u;
+    barrier();
+
+    ivec2 size = textureSize(scene, 0);
+    ivec2 point = ivec2(gl_GlobalInvocationID.xy) * 2;
+    if (point.x < size.x && point.y < size.y) {
+        vec3 color = texelFetch(scene, point, 0).rgb;
+        color = clamp(mix(vec3(0.0), color, equal(color, color)), vec3(0.0), vec3(65504.0));
+        float darkest = push.rate.z;
+        float brightest = push.rate.w;
+        float reading = clamp(log2(max(luminance(color), 1.0e-4)), darkest, brightest);
+        uint bin = uint((reading - darkest) / max(brightest - darkest, 1.0e-4) * 255.0 + 0.5);
+        atomicAdd(counts[bin], 1u);
+    }
+    barrier();
+
+    if (counts[slot] > 0u) {
+        atomicAdd(settled.histogram[slot], counts[slot]);
+    }
+}

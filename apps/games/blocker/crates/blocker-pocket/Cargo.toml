@@ -1,0 +1,13 @@
+[package]
+name = "blocker-pocket"
+description = "What a player carries: the hotbar, the chests and the rules for stacking into them"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+publish = false
+
+[dependencies]
+blocker-blocks = { path = "../blocker-blocks" }
+blocker-screen = { path = "../blocker-screen" }
+nightshade-inventory.workspace = true
+nightshade.workspace = true

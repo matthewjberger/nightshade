@@ -1,26 +1,45 @@
-//! Nightshade template.
-//!
-//! ## Architecture
-//!
-//! - `src/plugin.rs` — the `TemplatePlugin`: inserts the app resources and
-//!   registers the systems against the `App` builder. Registration only, no
-//!   behavior.
-//! - `src/components.rs` — the game components and the `dynamic_schema!` that
-//!   registers them into the app member world (engine group index `GAME`).
-//! - `src/resources.rs` — the `TemplateResources` aggregate and the resource
-//!   structs for app-wide state.
-//! - `src/systems/` — behavior, one file per concern: `setup::initialize`
-//!   builds the scene and spawns a spinning cube, `example::tick` runs each
-//!   frame. A system is a free function taking `&mut World`, optionally
-//!   preceded by `&mut TemplateResources` for app state.
-//!
-//! Add a system by dropping a file in `src/systems/`, declaring it in
-//! `src/systems.rs`, and registering it on a stage in
-//! `plugin.rs::TemplatePlugin::build`.
+#[cfg(feature = "contract")]
+pub mod contract;
 
+#[cfg(feature = "plugin")]
+pub mod commands;
+#[cfg(feature = "plugin")]
 mod components;
+#[cfg(feature = "plugin")]
+mod data;
+#[cfg(feature = "plugin")]
 mod plugin;
+#[cfg(feature = "plugin")]
+pub mod queries;
+#[cfg(feature = "plugin")]
 mod resources;
+#[cfg(feature = "plugin")]
 mod systems;
 
+#[cfg(feature = "plugin")]
 pub use plugin::TemplatePlugin;
+
+#[cfg(feature = "plugin")]
+use nightshade::prelude::PluginGroup;
+
+#[cfg(feature = "plugin")]
+pub fn launch() -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = nightshade::prelude::App::new();
+    app.add_plugins(
+        nightshade_wgpu::DefaultPlugins::<nightshade_cli::NoArguments>::new().set(
+            nightshade_log::LogPlugin {
+                title: Some("Template".to_string()),
+                ..Default::default()
+            },
+        ),
+    );
+    #[cfg(feature = "vr")]
+    app.add_plugin(nightshade_openxr::OpenXrPlugin::default());
+    app.add_plugin(nightshade_camera_controller::CameraControllerPlugin)
+        .add_plugin(nightshade_ui::UiPlugin::new())
+        .add_plugin(TemplatePlugin)
+        .run()
+}
+
+#[cfg(feature = "plugin")]
+nightshade_platform::android_main!(launch);

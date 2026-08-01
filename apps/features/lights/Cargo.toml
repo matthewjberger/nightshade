@@ -1,0 +1,32 @@
+[package]
+name = "lights"
+description = "1024 dynamic point lights, so the clustered forward path can be watched"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "lights-run"
+path = "src/main.rs"
+
+[dependencies]
+nightshade-window.workspace = true
+nightshade-platform.workspace = true
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-render = { workspace = true }
+nightshade-log.workspace = true
+nightshade-wgpu = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-vulkan = { workspace = true, optional = true, features = ["default-plugins"] }
+
+[features]
+default = ["wgpu"]
+wgpu = ["dep:nightshade-wgpu"]
+vulkan = ["dep:nightshade-vulkan"]

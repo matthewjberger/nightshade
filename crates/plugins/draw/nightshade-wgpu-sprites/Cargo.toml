@@ -1,0 +1,15 @@
+[package]
+name = "nightshade-wgpu-sprites"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nightshade = { workspace = true }
+nightshade-wgpu = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-sprite = { path = "../../domain/nightshade-sprite", default-features = false, features = ["contract"] }
+bytemuck = { workspace = true, features = ["derive"] }
+nalgebra-glm = { workspace = true }
+tracing = { workspace = true }

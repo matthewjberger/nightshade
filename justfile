@@ -1,719 +1,289 @@
-set windows-shell := ["powershell.exe"]
+set shell := ["pwsh", "-NoProfile", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
+export CARGO_INCREMENTAL := "0"
 export RUST_LOG := "info,wgpu_core=off"
 export RUST_BACKTRACE := "1"
+export_apps := "tower_defense hairpin dsl"
 
-template_repo := "https://github.com/matthewjberger/nightshade-template.git"
-template_leptos_repo := "https://github.com/matthewjberger/nightshade-template-leptos.git"
-template_api_leptos_repo := "https://github.com/matthewjberger/nightshade-api-template-leptos.git"
-template_api_repo := "https://github.com/matthewjberger/nightshade-api-template.git"
-
-# Displays the list of available commands
 @just:
     just --list
 
-# Builds the project in release mode
 build:
     cargo build -r
 
-# Runs cargo check and format check
+build-book:
+    trunk build --release --config apps/book/Trunk.toml --dist (Join-Path (Get-Location) 'book')
+
 check:
     cargo check --all --all-targets
-    cargo fmt --all -- --check
+    $ErrorActionPreference = 'Stop'; $names = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages.name; foreach ($name in $names) { cargo fmt -p $name -- --check; if ($LASTEXITCODE -ne 0) { throw "rustfmt failed for $name" } }
 
-# Generates and opens documentation for a specific project
+clean-cache:
+    @$ErrorActionPreference = 'Stop'; foreach ($directory in @('target/debug/incremental','target/release/incremental','target/wasm32-unknown-unknown/debug/incremental','target/wasm32-unknown-unknown/release/incremental')) { if (Test-Path $directory) { Write-Host "removing $directory"; Remove-Item -Recurse -Force $directory } }
+
 docs $project="nightshade":
     cargo doc --open -p {{project}}
 
-# Fixes linting issues automatically
 fix:
     cargo clippy --all --tests --fix
 
-# Formats the code using cargo fmt
 format:
-    cargo fmt --all
+    $ErrorActionPreference = 'Stop'; $names = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages.name; foreach ($name in $names) { cargo fmt -p $name; if ($LASTEXITCODE -ne 0) { throw "rustfmt failed for $name" } }
 
-# Install Debian/Ubuntu dependencies for building
 [linux]
 install-debian-deps:
-    sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libwebkit2gtk-4.1-dev libspeechd-dev
+    sudo apt-get update
+    sudo apt-get install -y libudev-dev libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libwebkit2gtk-4.1-dev libspeechd-dev glslang-tools
 
-# Installs mise and the editor's pinned wasm toolchain (Windows)
-[windows]
 install-deps:
     if (-not (Get-Command mise -ErrorAction SilentlyContinue)) { cargo install mise --locked }
-    just --justfile apps/editor/justfile --working-directory apps/editor install-deps
+    mise install
 
-# Installs mise and the editor's pinned wasm toolchain (Unix)
-[unix]
-install-deps:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    command -v mise >/dev/null || cargo install mise --locked
-    just --justfile apps/editor/justfile --working-directory apps/editor install-deps
-
-# Install development tools
 install-tools:
-    cargo install --locked cargo-license
-    cargo install --locked cargo-about
-    cargo install --locked cargo-deny
     cargo install --locked cargo-machete
-    cargo install --locked git-cliff
 
-# Install git hooks (Windows)
-[windows]
-install-hooks:
-    Copy-Item -Path hooks/pre-commit -Destination .git/hooks/pre-commit -Force
-
-# Install git hooks (Unix)
-[unix]
-install-hooks:
-    cp hooks/pre-commit .git/hooks/pre-commit
-    chmod +x .git/hooks/pre-commit
-
-# Uninstall git hooks (Windows)
-[windows]
-uninstall-hooks:
-    Remove-Item -Path .git/hooks/pre-commit -Force -ErrorAction SilentlyContinue
-
-# Uninstall git hooks (Unix)
-[unix]
-uninstall-hooks:
-    rm -f .git/hooks/pre-commit
-
-# Runs linter and displays warnings
-lint: lint-wasm lint-rendergraph lint-crates-isolated check-feature-forwarding lint-dag
+lint: lint-wasm lint-crates-isolated lint-apps-isolated lint-features check-feature-forwarding lint-dag lint-examples lint-shaders lint-vulkan-shaders
     cargo clippy --all --all-targets -- -D warnings
 
-# Enforces that the engine layer stays a module dependency DAG: the ecs
-# domains, plugins, app, and runner must not form a reference cycle. A domain
-# that reaches back up (say `use crate::plugins::physics` inside a domain)
-# fails here instead of quietly reintroducing a cycle.
 lint-dag:
     cargo run --quiet -p dag-check
 
-# Clippy each publishable crate on its own default features. The workspace
-# lint above unifies features across every crate, so a field or item that only
-# has readers behind an optional feature still looks used and its dead-code
-# warning stays hidden. Building each crate alone reproduces what a downstream
-# consumer that enables only the narrow feature set actually compiles, so those
-# warnings surface here instead of in someone else's build.
-[windows]
-lint-crates-isolated:
-    $ErrorActionPreference = 'Stop'; foreach ($crate in @('nightshade-ecs','nightshade-text','nightshade-paint','nightshade-renderer','nightshade-platform','nightshade-ui','nightshade-leptos','nightshade','nightshade-api','nightshade-audio','nightshade-navmesh','nightshade-gizmos','nightshade-steam')) { Write-Host "clippy (isolated): $crate"; cargo clippy -p $crate --all-targets -- -D warnings; if ($LASTEXITCODE -ne 0) { throw "isolated clippy failed for $crate" } }
+# Show only the numbers the project file states that the tree does not hold
+lint-counts:
+    $ErrorActionPreference = 'Stop'; $report = (cargo run --quiet -p dag-check 2>&1) | Out-String; $lines = @($report -split "`n"); $at = [Array]::FindIndex($lines, [Predicate[string]]{ param($line) $line -match 'states a number the tree does not hold' }); if ($at -ge 0) { $lines[$at..($lines.Count - 1)] | Where-Object { $_ -match 'the file says|states no number' } | ForEach-Object { Write-Host $_.TrimEnd() }; throw 'the project file states a number the tree does not hold' }; Write-Host 'every number the project file states is the number the tree holds'
 
-[unix]
-lint-crates-isolated:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for crate in nightshade-ecs nightshade-text nightshade-paint nightshade-renderer nightshade-platform nightshade-ui nightshade-leptos nightshade nightshade-api nightshade-audio nightshade-navmesh nightshade-gizmos nightshade-steam; do
-        echo "clippy (isolated): ${crate}"
-        cargo clippy -p "${crate}" --all-targets -- -D warnings
-    done
+# Show only the layout faults that name one crate, so a new crate is checked while it is still small
+check-crate name:
+    $ErrorActionPreference = 'Stop'; $report = (cargo run --quiet -p dag-check 2>&1) | Out-String; $hits = @($report -split "`n" | Where-Object { $_ -match [regex]::Escape('{{name}}') }); if ($hits.Count -gt 0) { $hits | ForEach-Object { Write-Host $_.TrimEnd() }; throw '{{name}} does not hold the layout' }; Write-Host '{{name}} holds the layout'
 
-# Runs linter for wasm32 target
-# The meshlet baker links METIS and meshopt, which are C libraries with no
-# wasm target, so the app that bakes is native only and sits out this lint.
-# nightshade-openxr is native only for the same reason: openxr-sys builds the
-# OpenXR SDK with cmake, and there is no wasm libc for it to link against.
+# Write a new plugin crate on the bands of template/, so it cannot start the wrong shape
+new-plugin name level:
+    $ErrorActionPreference = 'Stop'; & ./tools/new-plugin.ps1 -Name '{{name}}' -Level '{{level}}'
+
+# Fail when an example stands in for the crate it shows
+lint-examples:
+    cargo run --quiet -p example-check
+
+# Print a digest of a game's generated world, so one build can be compared with another
+digest game="voxels" *arguments="":
+    cargo run --quiet --release -p world-digest -- {{game}} {{arguments}}
+
+lint-shaders:
+    cargo run --quiet -p shader-check
+
+lint-vulkan-shaders:
+    $ErrorActionPreference = 'Stop'; $stages = '.vert', '.frag', '.comp', '.mesh', '.task', '.geom', '.tesc', '.tese'; $output = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName()); New-Item -ItemType Directory -Force $output | Out-Null; try { foreach ($shader in Get-ChildItem -File -Recurse -Path apps, crates | Where-Object { $_.Extension -in $stages }) { glslangValidator -V --target-env vulkan1.3 -o (Join-Path $output "$($shader.Name).spv") $shader.FullName; if ($LASTEXITCODE -ne 0) { throw "the shader did not compile: $($shader.Name)" } } } finally { Remove-Item -Recurse -Force $output } ; Write-Host 'every vulkan shader compiles' 
+
+lint-apps-isolated:
+    $ErrorActionPreference = 'Stop'; foreach ($directory in @(Get-ChildItem -Directory -Recurse -Depth 1 apps) + @(Get-Item template)) { if (-not (Test-Path (Join-Path $directory.FullName 'Cargo.toml'))) { continue }; $name = $directory.Name; Write-Host "check (isolated): $name"; cargo check -p $name; if ($LASTEXITCODE -ne 0) { throw "isolated check failed for $name" } }
+
+lint-crates-isolated:
+    $ErrorActionPreference = 'Stop'; foreach ($directory in Get-ChildItem -Directory crates, crates/plugins/*/*, crates/framework/*/*) { if (-not (Test-Path (Join-Path $directory.FullName 'Cargo.toml'))) { continue }; $name = $directory.Name; Write-Host "clippy (isolated): $name"; cargo clippy -p $name --lib --bins -- -D warnings; if ($LASTEXITCODE -ne 0) { throw "isolated clippy failed for $name" } }
+
+lint-features:
+    $ErrorActionPreference = 'Stop'; foreach ($directory in @(Get-ChildItem -Directory crates, crates/plugins/*/*, crates/framework/*/*) + @(Get-Item template)) { $manifest = Join-Path $directory.FullName 'Cargo.toml'; if (-not (Test-Path $manifest)) { continue }; if ((Get-Content $manifest -Raw) -notmatch '(?m)^\s*contract\s*=') { continue }; $name = $directory.Name; Write-Host "check (contract): $name"; cargo check -p $name --no-default-features --features contract; if ($LASTEXITCODE -ne 0) { throw "$name does not build with only its contract" } }
+
 lint-wasm:
-    cargo clippy --target wasm32-unknown-unknown --workspace --exclude meshlet --exclude dag-check --exclude nightshade-openxr -- -D warnings
-    cargo clippy --target wasm32-unknown-unknown -p nightshade-api --no-default-features --features leptos,offscreen -- -D warnings
+    $ErrorActionPreference = 'Stop'; $excluded = @('dag-check', 'jarvis', 'multiplayer_sandbox', 'nightshade-openxr', 'nightshade-steam', 'nightshade-vulkan'); foreach ($manifest in Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File) { $body = Get-Content $manifest.FullName -Raw; if ($body -match '(?m)^\s*default\s*=\s*\[[^\]]*"vulkan"') { $excluded += [regex]::Match($body, '(?m)^name = "([^"]*)"').Groups[1].Value } }; $arguments = @('clippy', '--target', 'wasm32-unknown-unknown', '--workspace'); foreach ($name in $excluded) { $arguments += @('--exclude', $name) }; $arguments += @('--', '-D', 'warnings'); cargo @arguments
 
-# Builds the frame graph alone. This is the layering firewall: the rendergraph
-# module must compile with the rest of the renderer absent, so any reach from
-# the graph into renderer code fails here.
-lint-rendergraph:
-    cargo clippy -p nightshade-renderer --no-default-features --features rendergraph -- -D warnings
-
-# Verifies every forwarding feature in nightshade still forwards to the
-# matching nightshade-renderer feature, so a dropped entry fails the gate
-# instead of silently compiling the renderer without it.
-[windows]
 check-feature-forwarding:
-    $ErrorActionPreference = 'Stop'; $manifest = Get-Content crates/nightshade/Cargo.toml -Raw; $missing = @(); foreach ($feature in @('wgpu','hdr','egui','debug_render','screenshot','grass','terrain','browser_yield','meshlet','meshlet_processor')) { if ($manifest -notmatch [regex]::Escape("nightshade-renderer/$feature")) { $missing += "nightshade '$feature' does not forward to nightshade-renderer/$feature" } }; foreach ($target in @('nightshade-platform','nightshade-ui')) { if ($manifest -notmatch [regex]::Escape("$target/gamepad")) { $missing += "nightshade 'gamepad' does not forward to $target/gamepad" } }; if ($missing.Count -gt 0) { $missing | ForEach-Object { Write-Host "missing forwarding: $_" }; throw 'feature forwarding check failed' }
+    $ErrorActionPreference = 'Stop'; $missing = @(); foreach ($directory in Get-ChildItem -Directory crates, crates/plugins/*/*, crates/framework/*/*) { $manifest = Join-Path $directory.FullName 'Cargo.toml'; $source = Join-Path $directory.FullName 'src'; if (-not (Test-Path $manifest) -or -not (Test-Path $source)) { continue }; $text = Get-Content $manifest -Raw; $names = Select-String -Path (Get-ChildItem -Recurse -Filter *.rs $source) -Pattern 'feature = "([a-zA-Z_0-9-]+)"' -AllMatches | ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique; foreach ($name in $names) { if ($text -notmatch "(?m)^\s*$([regex]::Escape($name))\s*=") { $missing += "$($directory.Name) gates on '$name' but declares no such feature" } } }; if ($missing.Count -gt 0) { $missing | ForEach-Object { Write-Host "undeclared feature: $_" }; throw 'feature declaration check failed' }
 
-[unix]
-check-feature-forwarding:
-    #!/usr/bin/env bash
-    status=0
-    for feature in wgpu hdr egui debug_render screenshot grass terrain browser_yield meshlet meshlet_processor; do
-        if ! grep -q "nightshade-renderer/${feature}" crates/nightshade/Cargo.toml; then
-            echo "missing forwarding: nightshade '${feature}' does not forward to nightshade-renderer/${feature}"
-            status=1
-        fi
-    done
-    for target in nightshade-platform nightshade-ui; do
-        if ! grep -q "${target}/gamepad" crates/nightshade/Cargo.toml; then
-            echo "missing forwarding: nightshade 'gamepad' does not forward to ${target}/gamepad"
-            status=1
-        fi
-    done
-    exit ${status}
+search *query:
+    @$ErrorActionPreference = 'Stop'; $esc = [char]27; $dim = "$esc[2m"; $bold = "$esc[1m"; $off = "$esc[0m"; $tab = [char]9; $tint = @{ games = "$esc[38;5;213m"; features = "$esc[38;5;80m"; ui = "$esc[38;5;222m"; rendering = "$esc[38;5;150m"; multiplayer = "$esc[38;5;209m" }; $rows = Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File | ForEach-Object { $body = Get-Content $_.FullName -Raw; $name = [regex]::Match($body, '(?m)^name = "([^"]*)"').Groups[1].Value; $about = [regex]::Match($body, '(?m)^description = "([^"]*)"').Groups[1].Value; [pscustomobject]@{ Group = $_.Directory.Parent.Name; Name = $name; About = $about } } | Sort-Object Group, Name; $width = ($rows | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum; $lines = $rows | ForEach-Object { $tag = $tint[$_.Group]; if (-not $tag) { $tag = "" }; $_.Name + $tab + " " + $tag + $_.Group.PadRight(9) + $off + " " + $bold + $_.Name.PadRight($width) + $off + "  " + $dim + $_.About + $off }; $options = @("--ansi", "--delimiter", $tab, "--with-nth", "2", "--height", "80%", "--layout", "reverse", "--border", "rounded", "--border-label", " nightshade apps ", "--prompt", "run > ", "--pointer", "|>", "--info", "inline", "--header", "enter runs the app, esc cancels", "--header-first", "--color", "border:cyan,label:bold:cyan,prompt:green,pointer:magenta,hl:yellow,hl+:yellow,info:dim"); $seed = "{{query}}"; if ($seed) { $options += @("--query", $seed) }; $picked = $lines | fzf @options; if (-not $picked) { exit 0 }; $app = $picked.Split($tab)[0]; Write-Host "$esc[38;5;80mrunning$esc[0m $app"; cargo run -r -p $app
 
-# Pushes template changes to nightshade-template repo
-push-template:
-    git subtree push --prefix=template {{template_repo}} main
+search-vulkan *query:
+    @$ErrorActionPreference = 'Stop'; $esc = [char]27; $dim = "$esc[2m"; $bold = "$esc[1m"; $off = "$esc[0m"; $tab = [char]9; $tint = @{ games = "$esc[38;5;213m"; features = "$esc[38;5;80m"; ui = "$esc[38;5;222m"; rendering = "$esc[38;5;150m" }; $rows = Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File | ForEach-Object { $body = Get-Content $_.FullName -Raw; if ($body -notmatch '(?m)^\s*vulkan\s*=') { return }; $name = [regex]::Match($body, '(?m)^name = "([^"]*)"').Groups[1].Value; $about = [regex]::Match($body, '(?m)^description = "([^"]*)"').Groups[1].Value; [pscustomobject]@{ Group = $_.Directory.Parent.Name; Name = $name; About = $about } } | Sort-Object Group, Name; if (-not $rows) { throw 'no app declares a vulkan feature' }; $width = ($rows | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum; $lines = $rows | ForEach-Object { $tag = $tint[$_.Group]; if (-not $tag) { $tag = "" }; $_.Name + $tab + " " + $tag + $_.Group.PadRight(9) + $off + " " + $bold + $_.Name.PadRight($width) + $off + "  " + $dim + $_.About + $off }; $options = @("--ansi", "--delimiter", $tab, "--with-nth", "2", "--height", "80%", "--layout", "reverse", "--border", "rounded", "--border-label", " nightshade vulkan apps ", "--prompt", "run > ", "--pointer", "|>", "--info", "inline", "--header", "enter runs the app on vulkan, esc cancels", "--header-first", "--color", "border:cyan,label:bold:cyan,prompt:green,pointer:magenta,hl:yellow,hl+:yellow,info:dim"); $seed = "{{query}}"; if ($seed) { $options += @("--query", $seed) }; $picked = $lines | fzf @options; if (-not $picked) { exit 0 }; $app = $picked.Split($tab)[0]; Write-Host "$esc[38;5;80mrunning$esc[0m $app $esc[2mon vulkan$esc[0m"; cargo run -r -p $app --no-default-features --features vulkan
 
-# Force syncs template to nightshade-template repo (overwrites remote)
-sync-template:
-    git subtree split --prefix=template -b template-branch
-    git push --force {{template_repo}} template-branch:main
-    git branch -D template-branch
+search-wasm *query:
+    @$ErrorActionPreference = 'Stop'; $esc = [char]27; $dim = "$esc[2m"; $bold = "$esc[1m"; $off = "$esc[0m"; $tab = [char]9; $tint = @{ games = "$esc[38;5;213m"; features = "$esc[38;5;80m"; ui = "$esc[38;5;222m"; rendering = "$esc[38;5;150m" }; $rows = Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File | ForEach-Object { $body = Get-Content $_.FullName -Raw; if (-not (Test-Path (Join-Path $_.Directory.FullName 'Trunk.toml'))) { return }; $name = [regex]::Match($body, '(?m)^name = "([^"]*)"').Groups[1].Value; $about = [regex]::Match($body, '(?m)^description = "([^"]*)"').Groups[1].Value; [pscustomobject]@{ Group = $_.Directory.Parent.Name; Name = $name; About = $about } } | Sort-Object Group, Name; if (-not $rows) { throw 'no app carries a Trunk.toml' }; $width = ($rows | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum; $lines = $rows | ForEach-Object { $tag = $tint[$_.Group]; if (-not $tag) { $tag = "" }; $_.Name + $tab + " " + $tag + $_.Group.PadRight(9) + $off + " " + $bold + $_.Name.PadRight($width) + $off + "  " + $dim + $_.About + $off }; $options = @("--ansi", "--delimiter", $tab, "--with-nth", "2", "--height", "80%", "--layout", "reverse", "--border", "rounded", "--border-label", " nightshade web apps ", "--prompt", "run > ", "--pointer", "|>", "--info", "inline", "--header", "enter serves the app in a browser, esc cancels", "--header-first", "--color", "border:cyan,label:bold:cyan,prompt:green,pointer:magenta,hl:yellow,hl+:yellow,info:dim"); $seed = "{{query}}"; if ($seed) { $options += @("--query", $seed) }; $picked = $lines | fzf @options; if (-not $picked) { exit 0 }; $app = $picked.Split($tab)[0]; Write-Host "$esc[38;5;80mrunning$esc[0m $app $esc[2min a browser$esc[0m"; $manifest = (Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Trunk.toml -File | Where-Object { (Get-Content (Join-Path $_.Directory.FullName 'Cargo.toml') -Raw) -match ('(?m)^name = "' + [regex]::Escape($app) + '"') } | Select-Object -First 1); if (-not $manifest) { throw "no trunk configuration for $app" }; trunk serve --release --open --config $manifest.FullName
 
-# Pulls updates from nightshade-template repo
-pull-template:
-    git subtree pull --prefix=template {{template_repo}} main --squash
 
-# Pushes template_leptos changes to nightshade-template-leptos repo
-push-template-leptos:
-    git subtree push --prefix=template_leptos {{template_leptos_repo}} main
+run project="sandbox" *arguments="":
+    cargo run -r -p {{project}} -- {{arguments}}
 
-# Force syncs template_leptos to nightshade-template-leptos repo (overwrites remote)
-sync-template-leptos:
-    git subtree split --prefix=template_leptos -b template-leptos-branch
-    git push --force {{template_leptos_repo}} template-leptos-branch:main
-    git branch -D template-leptos-branch
+run-vulkan $project="boids_gpu" *arguments="":
+    cargo run -r -p {{project}} --no-default-features --features vulkan -- {{arguments}}
 
-# Pulls updates from nightshade-template-leptos repo
-pull-template-leptos:
-    git subtree pull --prefix=template_leptos {{template_leptos_repo}} main --squash
-
-# Pushes template_api_leptos changes to nightshade-api-template-leptos repo
-push-template-api-leptos:
-    git subtree push --prefix=template_api_leptos {{template_api_leptos_repo}} main
-
-# Force syncs template_api_leptos to nightshade-api-template-leptos repo (overwrites remote)
-sync-template-api-leptos:
-    git subtree split --prefix=template_api_leptos -b template-api-leptos-branch
-    git push --force {{template_api_leptos_repo}} template-api-leptos-branch:main
-    git branch -D template-api-leptos-branch
-
-# Pulls updates from nightshade-api-template-leptos repo
-pull-template-api-leptos:
-    git subtree pull --prefix=template_api_leptos {{template_api_leptos_repo}} main --squash
-
-# Pushes template_api changes to nightshade-api-template repo
-push-template-api:
-    git subtree push --prefix=template_api {{template_api_repo}} main
-
-# Force syncs template_api to nightshade-api-template repo (overwrites remote)
-sync-template-api:
-    git subtree split --prefix=template_api -b template-api-branch
-    git push --force {{template_api_repo}} template-api-branch:main
-    git branch -D template-api-branch
-
-# Pulls updates from nightshade-api-template repo
-pull-template-api:
-    git subtree pull --prefix=template_api {{template_api_repo}} main --squash
-
-# Publishes the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade-leptos, nightshade, nightshade-api, and nightshade-steam crates to crates.io
-publish-crate:
-    cargo publish -p nightshade-ecs
-    cargo publish -p nightshade-text
-    cargo publish -p nightshade-paint
-    cargo publish -p nightshade-renderer
-    cargo publish -p nightshade-platform
-    cargo publish -p nightshade-ui
-    cargo publish -p nightshade-leptos
-    cargo publish -p nightshade
-    cargo publish -p nightshade-api
-    cargo publish -p nightshade-audio
-    cargo publish -p nightshade-navmesh
-    cargo publish -p nightshade-gizmos
-    cargo publish -p nightshade-steam
-
-# Dry run of publishing the nightshade-ecs, nightshade-text, nightshade-paint, nightshade-renderer, nightshade-platform, nightshade-ui, nightshade-leptos, nightshade, nightshade-api, and nightshade-steam crates
-publish-crate-dry:
-    cargo publish -p nightshade-ecs --dry-run
-    cargo publish -p nightshade-text --dry-run
-    cargo publish -p nightshade-paint --dry-run
-    cargo publish -p nightshade-renderer --dry-run
-    cargo publish -p nightshade-platform --dry-run
-    cargo publish -p nightshade-ui --dry-run
-    cargo publish -p nightshade-leptos --dry-run
-    cargo publish -p nightshade --dry-run
-    cargo publish -p nightshade-api --dry-run
-    cargo publish -p nightshade-audio --dry-run
-    cargo publish -p nightshade-navmesh --dry-run
-    cargo publish -p nightshade-gizmos --dry-run
-    cargo publish -p nightshade-steam --dry-run
-
-# Opens the editor (with its built-in scripting playground tab), or runs a
-# native app by name (e.g. `just run sandbox`)
-run *project:
-    {{ if project == "" { "just --justfile apps/editor/justfile --working-directory apps/editor run" } else { "cargo run -r -p " + project } }}
-
-# Builds and opens the MCP-driveable editor (agent feature on, endpoint at
-# http://127.0.0.1:8790/mcp)
-run-agent:
-    just --justfile apps/editor/justfile --working-directory apps/editor run-agent
-
-# Builds the editor and serves it in the browser at http://127.0.0.1:8080
 run-web:
-    just --justfile apps/editor/justfile --working-directory apps/editor run-web
+    trunk serve --release --open --config apps/features/fireworks/Trunk.toml
 
-# Runs a native app by name
 run-app $project="sandbox" *arguments="":
     cargo run -r -p {{project}} -- {{arguments}}
 
-# Runs an OpenXR VR example by name (e.g. `just run-vr hands`). Needs a desktop
-# OpenXR runtime and a connected headset.
-run-vr $name="hello_vr":
+run-vr $name="openxr_hello_vr":
     cargo run -r -p nightshade-openxr --example {{name}}
 
-# Runs a nightshade-api example by name (e.g. `just run-example solar_system`)
-run-example $name="spinning_cube":
-    cargo run -r -p nightshade-api --example {{name}}
+# Run the example that sits beside a framework crate
+example name="health":
+    @$ErrorActionPreference = 'Stop'; $found = Get-ChildItem -Path crates/framework -Recurse -Depth 4 -Directory | Where-Object { $_.Name -eq '{{name}}' -and $_.Parent.Name -eq 'examples' } | Select-Object -First 1; if (-not $found) { throw 'no framework crate carries an example named {{name}}' }; $crate = $found.Parent.Parent.Name; Write-Host "running $crate example {{name}}"; cargo run -r -p $crate --example {{name}}
 
-# Serves a nightshade-api example as wasm in the browser via trunk, the same
-# pipeline the apps use (crates/nightshade-api/index.html + Trunk.toml). (Windows)
-[windows]
-run-example-wasm $name="collector":
-    $env:TRUNK_BUILD_EXAMPLE = "{{name}}"; trunk serve --release --open --config crates/nightshade-api/Trunk.toml
+# Pick a framework example from a list of every one
+search-examples *query:
+    @$ErrorActionPreference = 'Stop'; $esc = [char]27; $dim = "$esc[2m"; $bold = "$esc[1m"; $off = "$esc[0m"; $tab = [char]9; $tint = @{ base = "$esc[38;5;80m"; world = "$esc[38;5;150m"; state = "$esc[38;5;222m"; mechanics = "$esc[38;5;213m"; interface = "$esc[38;5;209m"; tools = "$esc[38;5;110m" }; $rows = Get-ChildItem -Path crates/framework -Recurse -Depth 4 -Directory | Where-Object { $_.Parent.Name -eq 'examples' } | ForEach-Object { $crate = $_.Parent.Parent; $group = $crate.Parent.Name; $about = [regex]::Match((Get-Content (Join-Path $crate.FullName 'Cargo.toml') -Raw), '(?m)^description = "([^"]*)"').Groups[1].Value; [pscustomobject]@{ Group = $group; Crate = $crate.Name; Name = $_.Name; About = $about } } | Sort-Object Group, Name; if (-not $rows) { throw 'no framework crate carries an example' }; $width = ($rows | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum; $lines = $rows | ForEach-Object { $tag = $tint[$_.Group]; if (-not $tag) { $tag = "" }; $_.Crate + $tab + $_.Name + $tab + " " + $tag + $_.Group.PadRight(9) + $off + " " + $bold + $_.Name.PadRight($width) + $off + "  " + $dim + $_.About + $off }; $options = @("--ansi", "--delimiter", $tab, "--with-nth", "3", "--height", "80%", "--layout", "reverse", "--border", "rounded", "--border-label", " nightshade framework examples ", "--prompt", "run > ", "--pointer", "|>", "--info", "inline", "--header", "enter runs the example, esc cancels", "--header-first", "--color", "border:cyan,label:bold:cyan,prompt:green,pointer:magenta,hl:yellow,hl+:yellow,info:dim"); $seed = "{{query}}"; if ($seed) { $options += @("--query", $seed) }; $picked = $lines | fzf @options; if (-not $picked) { exit 0 }; $parts = $picked.Split($tab); Write-Host "$esc[38;5;80mrunning$esc[0m $($parts[0]) example $($parts[1])"; cargo run -r -p $parts[0] --example $parts[1]
 
-# Serves a nightshade-api example as wasm in the browser via trunk, the same
-# pipeline the apps use (crates/nightshade-api/index.html + Trunk.toml). (Unix)
-[unix]
-run-example-wasm $name="collector":
-    TRUNK_BUILD_EXAMPLE={{name}} trunk serve --release --open --config crates/nightshade-api/Trunk.toml
+# Serve the example that sits beside a framework crate in a browser
+example-web name="health":
+    @$ErrorActionPreference = 'Stop'; $found = Get-ChildItem -Path crates/framework -Recurse -Depth 4 -Directory | Where-Object { $_.Name -eq '{{name}}' -and $_.Parent.Name -eq 'examples' } | Select-Object -First 1; if (-not $found) { throw 'no framework crate carries an example named {{name}}' }; $crate = $found.Parent.Parent; $manifest = Join-Path $crate.FullName 'Trunk.toml'; if (-not (Test-Path $manifest)) { throw "$($crate.Name) carries no Trunk.toml" }; Write-Host "serving $($crate.Name) example {{name}}"; trunk serve --release --open --example {{name}} --config $manifest
 
-# Lists the nightshade-api examples
-[windows]
-list-examples:
-    Get-ChildItem crates/nightshade-api/examples -Filter *.rs | ForEach-Object { $_.BaseName }
+# Pick a framework example from a list of every one and serve it in a browser
+search-examples-web *query:
+    @$ErrorActionPreference = 'Stop'; $esc = [char]27; $dim = "$esc[2m"; $bold = "$esc[1m"; $off = "$esc[0m"; $tab = [char]9; $tint = @{ base = "$esc[38;5;80m"; world = "$esc[38;5;150m"; state = "$esc[38;5;222m"; mechanics = "$esc[38;5;213m"; interface = "$esc[38;5;209m"; tools = "$esc[38;5;110m" }; $rows = Get-ChildItem -Path crates/framework -Recurse -Depth 4 -Directory | Where-Object { $_.Parent.Name -eq 'examples' } | ForEach-Object { $crate = $_.Parent.Parent; if (-not (Test-Path (Join-Path $crate.FullName 'Trunk.toml'))) { return }; $group = $crate.Parent.Name; $about = [regex]::Match((Get-Content (Join-Path $crate.FullName 'Cargo.toml') -Raw), '(?m)^description = "([^"]*)"').Groups[1].Value; [pscustomobject]@{ Group = $group; Crate = $crate.FullName; Name = $_.Name; About = $about } } | Sort-Object Group, Name; if (-not $rows) { throw 'no framework crate carries an example with a Trunk.toml' }; $width = ($rows | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum; $lines = $rows | ForEach-Object { $tag = $tint[$_.Group]; if (-not $tag) { $tag = "" }; $_.Crate + $tab + $_.Name + $tab + " " + $tag + $_.Group.PadRight(9) + $off + " " + $bold + $_.Name.PadRight($width) + $off + "  " + $dim + $_.About + $off }; $options = @("--ansi", "--delimiter", $tab, "--with-nth", "3", "--height", "80%", "--layout", "reverse", "--border", "rounded", "--border-label", " nightshade framework examples on the web ", "--prompt", "serve > ", "--pointer", "|>", "--info", "inline", "--header", "enter serves the example in a browser, esc cancels", "--header-first", "--color", "border:cyan,label:bold:cyan,prompt:green,pointer:magenta,hl:yellow,hl+:yellow,info:dim"); $seed = "{{query}}"; if ($seed) { $options += @("--query", $seed) }; $picked = $lines | fzf @options; if (-not $picked) { exit 0 }; $parts = $picked.Split($tab); Write-Host "$esc[38;5;80mserving$esc[0m $($parts[1]) $esc[2min a browser$esc[0m"; trunk serve --release --open --example $parts[1] --config (Join-Path $parts[0] 'Trunk.toml')
 
-# Lists the nightshade-api examples
-[unix]
-list-examples:
-    @ls crates/nightshade-api/examples | sed 's/\.rs$//'
+run-wasm $project="fireworks":
+    $ErrorActionPreference = 'Stop'; $config = Get-ChildItem -Path apps -Recurse -Filter Trunk.toml | Where-Object { $_.Directory.Name -eq $env:project } | Select-Object -First 1; if (-not $config) { throw "no app named $env:project under apps" }; trunk serve --release --open --config $config.FullName
 
-# Runs every nightshade-api example for 120 frames as a local smoke gate
-[windows]
-test-examples:
-    $ErrorActionPreference = 'Stop'; Get-ChildItem crates/nightshade-api/examples -Filter *.rs | ForEach-Object { $env:NIGHTSHADE_API_FRAMES = "120"; Write-Host "Running example $($_.BaseName)"; cargo run -r -p nightshade-api --example $_.BaseName; if ($LASTEXITCODE -ne 0) { throw "example $($_.BaseName) failed" } }; Remove-Item Env:\NIGHTSHADE_API_FRAMES
+# A browser refuses an ES module and a wasm fetch from a file:// address, so
+# opening index.html from the disk shows a blank page. The site plays from any
+# HTTP address, GitHub Pages included, and `just serve-export` gives it one
+# here. `--public-url ./` writes relative paths, so the site plays at the root
+# of a domain or in a subdirectory. Trunk clears the directory it writes to.
+#
+# What is in `export/` lands on top of the build, which makes the directory a
+# repository you can push: a README and a Pages workflow that uploads these
+# files and deploys them. The workflow compiles nothing, because the wasm is
+# already there.
+#
+# Builds an app for the web as a static site you can host or send
+export-wasm $project="fireworks" $directory="":
+    $ErrorActionPreference = 'Stop'; $config = Get-ChildItem -Path apps -Recurse -Filter Trunk.toml -File | Where-Object { $_.Directory.Name -eq $env:project } | Select-Object -First 1; if (-not $config) { throw "no app named $env:project under apps" }; $out = if ($env:directory) { $env:directory } else { "web/$env:project" }; if (-not [IO.Path]::IsPathRooted($out)) { $out = Join-Path (Get-Location) $out }; $out = [IO.Path]::GetFullPath($out); trunk build --release --config $config.FullName --dist $out --public-url ./; if ($LASTEXITCODE -ne 0) { throw "the web build failed for $env:project" }; New-Item -ItemType File -Force (Join-Path $out '.nojekyll') | Out-Null; Get-ChildItem -Force (Join-Path (Get-Location) 'export') | Copy-Item -Recurse -Force -Destination $out; Write-Host "the site is at $out"
 
-# Runs every nightshade-api example for 120 frames as a local smoke gate
-[unix]
-test-examples:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for example in crates/nightshade-api/examples/*.rs; do
-        name=$(basename "$example" .rs)
-        echo "Running example $name"
-        NIGHTSHADE_API_FRAMES=120 cargo run -r -p nightshade-api --example "$name"
-    done
+# The whitelist is the `export_apps` variable at the top of this file. Each app
+# lands in web/<name>/ and the landing page at web/index.html links to them,
+# which is the whole tree GitHub Pages wants. This recipe owns web/ and clears
+# it first, so the page lists what is there and nothing else.
+#
+# GitHub reads a workflow only from the root of a repository, so the README and
+# the Pages workflow land at web/ and are taken back out of each app folder.
+#
+# Builds every app on the whitelist into one static site
+export-wasm-all:
+    $ErrorActionPreference = 'Stop'; $names = '{{export_apps}}'.Split(' ', [StringSplitOptions]::RemoveEmptyEntries); $root = [IO.Path]::GetFullPath((Join-Path (Get-Location) 'web')); if (Test-Path $root) { Remove-Item -Recurse -Force $root }; New-Item -ItemType Directory -Force $root | Out-Null; $cards = @(); foreach ($name in $names) { just export-wasm $name; if ($LASTEXITCODE -ne 0) { throw "the export failed for $name" }; $manifest = Get-ChildItem -Path apps -Recurse -Depth 2 -Filter Cargo.toml -File | Where-Object { (Get-Content $_.FullName -Raw) -match ('(?m)^name = "' + [regex]::Escape($name) + '"') } | Select-Object -First 1; $about = if ($manifest) { [regex]::Match((Get-Content $manifest.FullName -Raw), '(?m)^description = "([^"]*)"').Groups[1].Value } else { '' }; $cards += '<a class="card" href="' + $name + '/"><h2>' + $name + '</h2><p>' + $about + '</p></a>' }; $style = 'html { color-scheme: dark } body { margin: 0; padding: 4rem 2rem; background: #0d0c11; color: #e8e6ef; font: 16px/1.6 system-ui, sans-serif } h1 { margin: 0 0 2.5rem; font-size: 2rem; letter-spacing: -0.02em } .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); max-width: 62rem } .card { display: block; padding: 1.25rem 1.5rem; border: 1px solid #262433; border-radius: 12px; background: #15131c; color: inherit; text-decoration: none } .card:hover { border-color: #7c5cff; background: #191627 } .card h2 { margin: 0 0 0.4rem; font-size: 1.1rem } .card p { margin: 0; color: #9a95ad; font-size: 0.9rem }'; $page = @('<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8" />', '<meta name="viewport" content="width=device-width, initial-scale=1" />', '<title>nightshade</title>', '<style>' + $style + '</style>', '</head>', '<body>', '<h1>nightshade</h1>', '<div class="grid">') + $cards + @('</div>', '</body>', '</html>'); [IO.File]::WriteAllText((Join-Path $root 'index.html'), ($page -join "`n")); New-Item -ItemType File -Force (Join-Path $root '.nojekyll') | Out-Null; foreach ($name in $names) { foreach ($extra in @('.github', 'README.md')) { $path = Join-Path $root (Join-Path $name $extra); if (Test-Path $path) { Remove-Item -Recurse -Force $path } } }; Get-ChildItem -Force (Join-Path (Get-Location) 'export') | Copy-Item -Recurse -Force -Destination $root; Write-Host "the site is at $root"
 
-# Serves an app in the browser by name (e.g. `just run-wasm sandbox`)
-run-wasm $project="sandbox":
-    trunk serve --release --open --config apps/{{project}}/Trunk.toml
+# The media type of a .wasm file must be application/wasm, or
+# WebAssembly.instantiateStreaming refuses it, which is why this is a listener
+# with its own table and not a one-line file share.
+#
+# Serves an exported site on localhost so a browser will play it
+serve-export $directory="web" $port="8080":
+    $ErrorActionPreference = 'Stop'; $root = $env:directory; if (-not [IO.Path]::IsPathRooted($root)) { $root = Join-Path (Get-Location) $root }; $root = [IO.Path]::GetFullPath($root); if (-not (Test-Path $root)) { throw "no directory at $root, run 'just export-wasm' first" }; $types = @{ '.html' = 'text/html'; '.js' = 'text/javascript'; '.mjs' = 'text/javascript'; '.wasm' = 'application/wasm'; '.css' = 'text/css'; '.json' = 'application/json'; '.png' = 'image/png'; '.jpg' = 'image/jpeg'; '.svg' = 'image/svg+xml'; '.ico' = 'image/x-icon'; '.ogg' = 'audio/ogg'; '.wav' = 'audio/wav'; '.glb' = 'model/gltf-binary'; '.hdr' = 'image/vnd.radiance'; '.ttf' = 'font/ttf' }; $listener = New-Object Net.HttpListener; $address = "http://127.0.0.1:$env:port/"; $listener.Prefixes.Add($address); $listener.Start(); Write-Host "serving $root at $address"; Start-Process $address; try { while ($listener.IsListening) { $context = $listener.GetContext(); $path = [Uri]::UnescapeDataString($context.Request.Url.AbsolutePath).TrimStart('/'); if (-not $path) { $path = 'index.html' }; $file = [IO.Path]::GetFullPath((Join-Path $root $path)); if (Test-Path $file -PathType Container) { $file = Join-Path $file 'index.html' }; if (-not $file.StartsWith($root)) { $context.Response.StatusCode = 403 } elseif (Test-Path $file -PathType Leaf) { $bytes = [IO.File]::ReadAllBytes($file); $type = $types[[IO.Path]::GetExtension($file).ToLower()]; if (-not $type) { $type = 'application/octet-stream' }; $context.Response.ContentType = $type; $context.Response.OutputStream.Write($bytes, 0, $bytes.Length) } else { $context.Response.StatusCode = 404 }; $context.Response.Close() } } finally { $listener.Stop() }
 
-# Opens the UI test harness in preview mode (no automated tests, just the UI)
-[windows]
-preview-ui-test-harness:
-    $env:UI_HARNESS_PREVIEW = "1"; cargo run -r -p ui_test_harness
+serve-book:
+    trunk serve --release --open --config apps/book/Trunk.toml --dist (Join-Path (Get-Location) 'book')
 
-# Opens the UI test harness in preview mode (no automated tests, just the UI)
-[unix]
-preview-ui-test-harness:
-    UI_HARNESS_PREVIEW=1 cargo run -r -p ui_test_harness
-
-# Builds the browser editor (worker wasm plus Leptos bundle)
-build-editor:
-    just --justfile apps/editor/justfile --working-directory apps/editor build
-
-# Installs the standalone editor as the global nightshade command
-install-editor:
-    just --justfile apps/editor/justfile --working-directory apps/editor install
-
-# Uploads the editor web bundle to the GitHub release and publishes the crate
-publish-editor:
-    just --justfile apps/editor/justfile --working-directory apps/editor publish-editor
-
-# Runs all tests
 test:
     cargo test --all -- --nocapture
 
-# Checks for unused dependencies
 udeps:
     cargo machete
 
-# Prints a table of all dependencies and their licenses
-licenses:
-    cargo license
-
-# Checks for problematic licenses in dependencies
-licenses-check:
-    cargo deny check licenses
-
-# Generates third-party license attribution document
-licenses-html:
-    cargo about generate about.hbs -o THIRD_PARTY_LICENSES.html
-
-# Checks dependencies for known security advisories (RustSec)
-audit:
-    cargo deny check advisories
-
-# Runs all cargo-deny checks (licenses, advisories, bans, sources)
-deny-check:
-    cargo deny check all
-
-# Vendors all dependencies into the vendor directory
 vendor:
     cargo vendor
 
-# Displays version information for Rust tools
 @versions:
     rustc --version
     cargo fmt -- --version
     cargo clippy -- --version
 
-# Watches for changes and runs the specified project
 watch $project="sandbox":
     cargo watch -x 'run -r -p {{project}}'
 
-# Generates changelog using git-cliff
-changelog:
-    git cliff -o CHANGELOG.md
+sync-toolchain:
+    $ErrorActionPreference = 'Stop'; $channel = (Select-String -Path 'rust-toolchain' -Pattern '^channel = "(.+)"').Matches.Groups[1].Value; Write-Host "Pinning the templates to Rust $channel"; foreach ($t in 'template') { $path = Join-Path (Get-Location) "$t/rust-toolchain"; $body = (Get-Content $path -Raw) -replace '(?m)^channel = ".*"', "channel = `"$channel`""; [IO.File]::WriteAllText($path, $body.Replace("`r`n", "`n")) }
 
-# Shows the last tagged commit
-show-tag:
-    git describe --tags --abbrev=0
-
-# Shows the current version from Cargo.toml (Windows)
-[windows]
-show-version:
-    "v" + (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
-
-# Shows the current version from Cargo.toml (Unix)
-[unix]
-show-version:
-    @echo "v$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
-
-# Deletes a git tag locally and remotely
-strip-tag tag:
-    git tag -d {{tag}}
-    git push origin :refs/tags/{{tag}}
-
-# Pushes a version tag and commits (Windows)
-[windows]
-push-version:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; git push origin "v$version"; git push
-
-# Pushes a version tag and commits (Unix)
-[unix]
-push-version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    git push origin "v$VERSION"
-    git push
-
-# Creates a GitHub release for the current version with the editor web bundle
-# attached. Immutable releases only accept assets at creation, so the bundle
-# must be built and attached here, never uploaded afterward. (Windows)
-[windows]
-publish-release:
-    just --justfile apps/editor/justfile --working-directory apps/editor bundle
-    $ErrorActionPreference = 'Stop'; $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; if (git status --porcelain apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock) { git add apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock; git commit -m "chore: update editor bundle for v$version"; git push }; git cliff --latest | gh release create "v$version" --title "nightshade-v$version" --notes-file - apps/editor/target/nightshade-editor-web.tar.gz; if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
-
-# Creates a GitHub release for the current version with the editor web bundle
-# attached. Immutable releases only accept assets at creation, so the bundle
-# must be built and attached here, never uploaded afterward. (Unix)
-[unix]
-publish-release:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    just --justfile apps/editor/justfile --working-directory apps/editor bundle
-    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    if [ -n "$(git status --porcelain apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock)" ]; then
-        git add apps/editor/desktop/bundle.sha256 apps/editor/Cargo.lock
-        git commit -m "chore: update editor bundle for v$VERSION"
-        git push
-    fi
-    git cliff --latest | gh release create "v$VERSION" --title "nightshade-v$VERSION" --notes-file - apps/editor/target/nightshade-editor-web.tar.gz
-
-# Shows the GitHub release for the current version (Windows)
-[windows]
-show-release:
-    $version = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; gh release view "v$version"
-
-# Shows the GitHub release for the current version (Unix)
-[unix]
-show-release:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    gh release view "v$VERSION"
-
-# Deletes a GitHub release (by tag, e.g. v0.1.11) (Windows)
-[windows]
-strip-release tag:
-    gh release delete {{tag}} --yes
-    Write-Host ""
-    Write-Host "To delete the git tag as well, run:" -ForegroundColor Green
-    Write-Host "  just strip-tag {{tag}}" -ForegroundColor Green
-
-# Deletes a GitHub release (by tag, e.g. v0.1.11) (Unix)
-[unix]
-strip-release tag:
-    gh release delete {{tag}} --yes
-    @echo ""
-    @echo "To delete the git tag as well, run:"
-    @echo "  just strip-tag {{tag}}"
-
-# Bumps the minor version, updates changelog, and creates a git tag (Windows)
-[windows]
-bump-minor-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMinor = [int]$parts[1] + 1; $newVersion = "$($parts[0]).$newMinor.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$($parts[0]).$newMinor"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "version = `"$currentVersion`", path = `"crates/", "version = `"$newVersion`", path = `"crates/" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = `"$currentVersion`"", "nightshade-renderer = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = \{ version = `"$currentVersion`"", "nightshade-renderer = { version = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-ecs/README.md') -replace "nightshade-ecs = `"$currentVersion`"", "nightshade-ecs = `"$newVersion`"" | Set-Content 'crates/nightshade-ecs/README.md'; (Get-Content 'crates/nightshade-platform/README.md') -replace "nightshade-platform = `"$currentVersion`"", "nightshade-platform = `"$newVersion`"" | Set-Content 'crates/nightshade-platform/README.md'; (Get-Content 'crates/nightshade-text/README.md') -replace "nightshade-text = `"$currentVersion`"", "nightshade-text = `"$newVersion`"" | Set-Content 'crates/nightshade-text/README.md'; (Get-Content 'crates/nightshade-paint/README.md') -replace "nightshade-paint = `"$currentVersion`"", "nightshade-paint = `"$newVersion`"" | Set-Content 'crates/nightshade-paint/README.md';(Get-Content 'crates/nightshade-ui/README.md') -replace "nightshade-ui = `"$currentVersion`"", "nightshade-ui = `"$newVersion`"" | Set-Content 'crates/nightshade-ui/README.md';(Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md'; (Get-Content 'template_api/Cargo.toml') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'template_api/Cargo.toml'; (Get-Content 'crates/nightshade-api/src/lib.rs') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'crates/nightshade-api/src/lib.rs'; (Get-Content 'docs/book/src/api-overview.md') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'docs/book/src/api-overview.md'; (Get-Content 'docs/book/src/installation.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'docs/book/src/installation.md';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade-api = \{ version = "[0-9.]+"', "nightshade-api = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md crates/nightshade-api/src/lib.rs docs/book/src/api-overview.md docs/book/src/installation.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
-
-# Bumps the minor version, updates changelog, and creates a git tag (Unix)
-[unix]
-bump-minor-version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
-    NEW_MINOR=$((PARTS[1] + 1))
-    NEW_VERSION="${PARTS[0]}.$NEW_MINOR.0"
-    CURRENT_MM="${PARTS[0]}.${PARTS[1]}"
-    NEW_MM="${PARTS[0]}.$NEW_MINOR"
-    echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-    sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
-    sed -i "s|version = \"$CURRENT_VERSION\", path = \"crates/|version = \"$NEW_VERSION\", path = \"crates/|g" Cargo.toml
-    sed -i "s/nightshade-renderer = \"$CURRENT_VERSION\"/nightshade-renderer = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-renderer = { version = \"$CURRENT_VERSION\"/nightshade-renderer = { version = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-ecs = \"$CURRENT_VERSION\"/nightshade-ecs = \"$NEW_VERSION\"/" crates/nightshade-ecs/README.md
-    sed -i "s/nightshade-platform = \"$CURRENT_VERSION\"/nightshade-platform = \"$NEW_VERSION\"/" crates/nightshade-platform/README.md
-    sed -i "s/nightshade-text = \"$CURRENT_VERSION\"/nightshade-text = \"$NEW_VERSION\"/" crates/nightshade-text/README.md
-    sed -i "s/nightshade-paint = \"$CURRENT_VERSION\"/nightshade-paint = \"$NEW_VERSION\"/" crates/nightshade-paint/README.md
-    sed -i "s/nightshade-ui = \"$CURRENT_VERSION\"/nightshade-ui = \"$NEW_VERSION\"/" crates/nightshade-ui/README.md
-    sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" template_api/Cargo.toml
-    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" crates/nightshade-api/src/lib.rs
-    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" docs/book/src/api-overview.md
-    sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" docs/book/src/installation.md
-    sed -i "s/nightshade = \"$CURRENT_MM\"/nightshade = \"$NEW_MM\"/" crates/nightshade/src/lib.rs
-    sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" template/README.md
-    sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/Cargo.toml
-    sed -i "s/nightshade = { version = \"[0-9.]*\"/nightshade = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"[0-9.]*\"/nightshade-api = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md crates/nightshade-api/src/lib.rs docs/book/src/api-overview.md docs/book/src/installation.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml
-    git commit -m "chore: bump version to v$NEW_VERSION"
-    git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
-    git add CHANGELOG.md
-    git commit -m "chore: update changelog for v$NEW_VERSION"
-    git tag "v$NEW_VERSION"
-    echo ""
-    echo "Version bumped and tagged! To push, run:"
-    echo "  just push-version"
-
-# Bumps the major version, updates changelog, and creates a git tag (Windows)
-[windows]
-bump-major-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newMajor = [int]$parts[0] + 1; $newVersion = "$newMajor.0.0"; $currentMajorMinor = "$($parts[0]).$($parts[1])"; $newMajorMinor = "$newMajor.0"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "version = `"$currentVersion`", path = `"crates/", "version = `"$newVersion`", path = `"crates/" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = `"$currentVersion`"", "nightshade-renderer = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = \{ version = `"$currentVersion`"", "nightshade-renderer = { version = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-ecs/README.md') -replace "nightshade-ecs = `"$currentVersion`"", "nightshade-ecs = `"$newVersion`"" | Set-Content 'crates/nightshade-ecs/README.md'; (Get-Content 'crates/nightshade-platform/README.md') -replace "nightshade-platform = `"$currentVersion`"", "nightshade-platform = `"$newVersion`"" | Set-Content 'crates/nightshade-platform/README.md'; (Get-Content 'crates/nightshade-text/README.md') -replace "nightshade-text = `"$currentVersion`"", "nightshade-text = `"$newVersion`"" | Set-Content 'crates/nightshade-text/README.md'; (Get-Content 'crates/nightshade-paint/README.md') -replace "nightshade-paint = `"$currentVersion`"", "nightshade-paint = `"$newVersion`"" | Set-Content 'crates/nightshade-paint/README.md';(Get-Content 'crates/nightshade-ui/README.md') -replace "nightshade-ui = `"$currentVersion`"", "nightshade-ui = `"$newVersion`"" | Set-Content 'crates/nightshade-ui/README.md';(Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md'; (Get-Content 'template_api/Cargo.toml') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'template_api/Cargo.toml'; (Get-Content 'crates/nightshade-api/src/lib.rs') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'crates/nightshade-api/src/lib.rs'; (Get-Content 'docs/book/src/api-overview.md') -replace "nightshade-api = `"$currentMajorMinor`"", "nightshade-api = `"$newMajorMinor`"" | Set-Content 'docs/book/src/api-overview.md'; (Get-Content 'docs/book/src/installation.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'docs/book/src/installation.md';(Get-Content 'crates/nightshade/src/lib.rs') -replace "nightshade = `"$currentMajorMinor`"", "nightshade = `"$newMajorMinor`"" | Set-Content 'crates/nightshade/src/lib.rs'; (Get-Content 'template/README.md') -replace "nightshade = \{ version = `"$currentMajorMinor`"", "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'template/README.md'; (Get-Content 'apps/editor/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade = \{ version = "[0-9.]+"', "nightshade = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; (Get-Content 'apps/editor/desktop/Cargo.toml') -replace 'nightshade-api = \{ version = "[0-9.]+"', "nightshade-api = { version = `"$newMajorMinor`"" | Set-Content 'apps/editor/desktop/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md crates/nightshade-api/src/lib.rs docs/book/src/api-overview.md docs/book/src/installation.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
-
-# Bumps the major version, updates changelog, and creates a git tag (Unix)
-[unix]
-bump-major-version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
-    NEW_MAJOR=$((PARTS[0] + 1))
-    NEW_VERSION="$NEW_MAJOR.0.0"
-    CURRENT_MM="${PARTS[0]}.${PARTS[1]}"
-    NEW_MM="$NEW_MAJOR.0"
-    echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-    sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
-    sed -i "s|version = \"$CURRENT_VERSION\", path = \"crates/|version = \"$NEW_VERSION\", path = \"crates/|g" Cargo.toml
-    sed -i "s/nightshade-renderer = \"$CURRENT_VERSION\"/nightshade-renderer = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-renderer = { version = \"$CURRENT_VERSION\"/nightshade-renderer = { version = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-ecs = \"$CURRENT_VERSION\"/nightshade-ecs = \"$NEW_VERSION\"/" crates/nightshade-ecs/README.md
-    sed -i "s/nightshade-platform = \"$CURRENT_VERSION\"/nightshade-platform = \"$NEW_VERSION\"/" crates/nightshade-platform/README.md
-    sed -i "s/nightshade-text = \"$CURRENT_VERSION\"/nightshade-text = \"$NEW_VERSION\"/" crates/nightshade-text/README.md
-    sed -i "s/nightshade-paint = \"$CURRENT_VERSION\"/nightshade-paint = \"$NEW_VERSION\"/" crates/nightshade-paint/README.md
-    sed -i "s/nightshade-ui = \"$CURRENT_VERSION\"/nightshade-ui = \"$NEW_VERSION\"/" crates/nightshade-ui/README.md
-    sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" template_api/Cargo.toml
-    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" crates/nightshade-api/src/lib.rs
-    sed -i "s/nightshade-api = \"$CURRENT_MM\"/nightshade-api = \"$NEW_MM\"/" docs/book/src/api-overview.md
-    sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" docs/book/src/installation.md
-    sed -i "s/nightshade = \"$CURRENT_MM\"/nightshade = \"$NEW_MM\"/" crates/nightshade/src/lib.rs
-    sed -i "s/nightshade = { version = \"$CURRENT_MM\"/nightshade = { version = \"$NEW_MM\"/" template/README.md
-    sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/Cargo.toml
-    sed -i "s/nightshade = { version = \"[0-9.]*\"/nightshade = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"[0-9.]*\"/nightshade-api = { version = \"$NEW_MM\"/" apps/editor/desktop/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md crates/nightshade-api/src/lib.rs docs/book/src/api-overview.md docs/book/src/installation.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml crates/nightshade/src/lib.rs template/README.md apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml
-    git commit -m "chore: bump version to v$NEW_VERSION"
-    git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
-    git add CHANGELOG.md
-    git commit -m "chore: update changelog for v$NEW_VERSION"
-    git tag "v$NEW_VERSION"
-    echo ""
-    echo "Version bumped and tagged! To push, run:"
-    echo "  just push-version"
-
-# Bumps the patch version, updates changelog, and creates a git tag (Windows)
-[windows]
-bump-patch-version:
-    $ErrorActionPreference = 'Stop'; $currentVersion = (Select-String -Path 'Cargo.toml' -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value; $parts = $currentVersion.Split('.'); $newPatch = [int]$parts[2] + 1; $newVersion = "$($parts[0]).$($parts[1]).$newPatch"; Write-Host "Bumping version from $currentVersion to $newVersion"; (Get-Content 'Cargo.toml') -replace "^version = `"$currentVersion`"", "version = `"$newVersion`"" | Set-Content 'Cargo.toml'; (Get-Content 'Cargo.toml') -replace "version = `"$currentVersion`", path = `"crates/", "version = `"$newVersion`", path = `"crates/" | Set-Content 'Cargo.toml'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = `"$currentVersion`"", "nightshade-renderer = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-renderer/README.md') -replace "nightshade-renderer = \{ version = `"$currentVersion`"", "nightshade-renderer = { version = `"$newVersion`"" | Set-Content 'crates/nightshade-renderer/README.md'; (Get-Content 'crates/nightshade-ecs/README.md') -replace "nightshade-ecs = `"$currentVersion`"", "nightshade-ecs = `"$newVersion`"" | Set-Content 'crates/nightshade-ecs/README.md'; (Get-Content 'crates/nightshade-platform/README.md') -replace "nightshade-platform = `"$currentVersion`"", "nightshade-platform = `"$newVersion`"" | Set-Content 'crates/nightshade-platform/README.md'; (Get-Content 'crates/nightshade-text/README.md') -replace "nightshade-text = `"$currentVersion`"", "nightshade-text = `"$newVersion`"" | Set-Content 'crates/nightshade-text/README.md'; (Get-Content 'crates/nightshade-paint/README.md') -replace "nightshade-paint = `"$currentVersion`"", "nightshade-paint = `"$newVersion`"" | Set-Content 'crates/nightshade-paint/README.md';(Get-Content 'crates/nightshade-ui/README.md') -replace "nightshade-ui = `"$currentVersion`"", "nightshade-ui = `"$newVersion`"" | Set-Content 'crates/nightshade-ui/README.md';(Get-Content 'crates/nightshade/README.md') -replace "nightshade = `"$currentVersion`"", "nightshade = `"$newVersion`"" | Set-Content 'crates/nightshade/README.md'; (Get-Content 'template/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade = \{ version = `"$currentVersion`"", "nightshade = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/worker/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_api_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_api_leptos/Cargo.toml'; (Get-Content 'template_leptos/worker/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/worker/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-api = \{ version = `"$currentVersion`"", "nightshade-api = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'template_leptos/Cargo.toml') -replace "nightshade-leptos = \{ version = `"$currentVersion`"", "nightshade-leptos = { version = `"$newVersion`"" | Set-Content 'template_leptos/Cargo.toml'; (Get-Content 'crates/nightshade-api/README.md') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'crates/nightshade-api/README.md'; (Get-Content 'template_api/Cargo.toml') -replace "nightshade-api = `"$currentVersion`"", "nightshade-api = `"$newVersion`"" | Set-Content 'template_api/Cargo.toml';(Get-Content 'apps/editor/Cargo.toml') -replace '^version = ".+"', "version = `"$newVersion`"" | Set-Content 'apps/editor/Cargo.toml'; git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml; git commit -m "chore: bump version to v$newVersion"; git cliff --tag "v$newVersion" -o CHANGELOG.md; git add CHANGELOG.md; git commit -m "chore: update changelog for v$newVersion"; git tag "v$newVersion"; Write-Host ""; Write-Host "Version bumped and tagged! To push, run:" -ForegroundColor Green; Write-Host "  just push-version" -ForegroundColor Green
-
-# Bumps the patch version, updates changelog, and creates a git tag (Unix)
-[unix]
-bump-patch-version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-    IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
-    NEW_PATCH=$((PARTS[2] + 1))
-    NEW_VERSION="${PARTS[0]}.${PARTS[1]}.$NEW_PATCH"
-    echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-    sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
-    sed -i "s|version = \"$CURRENT_VERSION\", path = \"crates/|version = \"$NEW_VERSION\", path = \"crates/|g" Cargo.toml
-    sed -i "s/nightshade-renderer = \"$CURRENT_VERSION\"/nightshade-renderer = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-renderer = { version = \"$CURRENT_VERSION\"/nightshade-renderer = { version = \"$NEW_VERSION\"/" crates/nightshade-renderer/README.md
-    sed -i "s/nightshade-ecs = \"$CURRENT_VERSION\"/nightshade-ecs = \"$NEW_VERSION\"/" crates/nightshade-ecs/README.md
-    sed -i "s/nightshade-platform = \"$CURRENT_VERSION\"/nightshade-platform = \"$NEW_VERSION\"/" crates/nightshade-platform/README.md
-    sed -i "s/nightshade-text = \"$CURRENT_VERSION\"/nightshade-text = \"$NEW_VERSION\"/" crates/nightshade-text/README.md
-    sed -i "s/nightshade-paint = \"$CURRENT_VERSION\"/nightshade-paint = \"$NEW_VERSION\"/" crates/nightshade-paint/README.md
-    sed -i "s/nightshade-ui = \"$CURRENT_VERSION\"/nightshade-ui = \"$NEW_VERSION\"/" crates/nightshade-ui/README.md
-    sed -i "s/nightshade = \"$CURRENT_VERSION\"/nightshade = \"$NEW_VERSION\"/" crates/nightshade/README.md
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade = { version = \"$CURRENT_VERSION\"/nightshade = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_api_leptos/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/worker/Cargo.toml
-    sed -i "s/nightshade-api = { version = \"$CURRENT_VERSION\"/nightshade-api = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-leptos = { version = \"$CURRENT_VERSION\"/nightshade-leptos = { version = \"$NEW_VERSION\"/" template_leptos/Cargo.toml
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" crates/nightshade-api/README.md
-    sed -i "s/nightshade-api = \"$CURRENT_VERSION\"/nightshade-api = \"$NEW_VERSION\"/" template_api/Cargo.toml
-    sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" apps/editor/Cargo.toml
-    git add Cargo.toml crates/nightshade/README.md crates/nightshade-api/README.md crates/nightshade-renderer/README.md crates/nightshade-ecs/README.md crates/nightshade-platform/README.md crates/nightshade-text/README.md crates/nightshade-paint/README.md crates/nightshade-ui/README.md template/Cargo.toml template_leptos/Cargo.toml template_leptos/worker/Cargo.toml template_api_leptos/Cargo.toml template_api_leptos/worker/Cargo.toml apps/editor/Cargo.toml apps/editor/desktop/Cargo.toml template_api/Cargo.toml
-    git commit -m "chore: bump version to v$NEW_VERSION"
-    git cliff --tag "v$NEW_VERSION" -o CHANGELOG.md
-    git add CHANGELOG.md
-    git commit -m "chore: update changelog for v$NEW_VERSION"
-    git tag "v$NEW_VERSION"
-    echo ""
-    echo "Version bumped and tagged! To push, run:"
-    echo "  just push-version"
-
-# Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
-[windows]
-publish-patch:
-    just bump-patch-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Bumps patch version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
-[unix]
-publish-patch:
-    just bump-patch-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
-[windows]
-publish-minor:
-    just bump-minor-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Bumps minor version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
-[unix]
-publish-minor:
-    just bump-minor-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Windows)
-[windows]
-publish-major:
-    just bump-major-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Bumps major version, pushes, publishes to crates.io, creates the GitHub release, and publishes the editor (Unix)
-[unix]
-publish-major:
-    just bump-major-version
-    just push-version
-    just publish-crate
-    just publish-release
-    just publish-editor
-    just push-template
-    just push-template-leptos
-    just push-template-api-leptos
-    just push-template-api
-
-# Builds the project for Steam Deck using cross
 build-steamdeck $project="sandbox":
     cross build --release --target x86_64-unknown-linux-gnu -p {{project}}
 
-# Builds and deploys the project to Steam Deck
 deploy-steamdeck $project="sandbox":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads
 
-# Builds and deploys the project to Steam Deck as ~/Downloads/game
 deploy-steamdeck-quick $project="sandbox":
     just build-steamdeck {{project}}
     scp ./target/x86_64-unknown-linux-gnu/release/{{project}} deck@steamdeck.local:~/Downloads/game
     ssh deck@steamdeck.local "chmod +x ~/Downloads/game"
 
-# SSH into Steam Deck
 steamdeck-ssh:
     ssh deck@steamdeck.local
 
+# The packager brings its own ndk, so the machine needs only a jdk, clang, and
+# the platform tools, which `x doctor` reports on.
+#
+# Installs the Android toolchain
+init-android:
+    rustup target add aarch64-linux-android
+    cargo install --git https://github.com/rust-mobile/xbuild --bin x --locked
+    x doctor
+
+# basis-universal and anything else in the graph that compiles C or C++ goes
+# through the `cc` crate, and a host clang carries no android headers, so it
+# needs a sysroot. ANDROID_NDK_SYSROOT wins if set, then a full
+# ANDROID_NDK_ROOT install, then the one the packager bundles. Missing entirely
+# is reported here rather than as a header cc cannot find.
+[private]
+android-sysroot:
+    @$ErrorActionPreference = 'Stop'; $s = if ($env:ANDROID_NDK_SYSROOT) { $env:ANDROID_NDK_SYSROOT } elseif ($env:ANDROID_NDK_ROOT) { Join-Path $env:ANDROID_NDK_ROOT 'toolchains\llvm\prebuilt\windows-x86_64\sysroot' } else { Join-Path $env:LOCALAPPDATA 'x\Android.ndk' }; if (-not (Test-Path $s)) { throw "no android sysroot at $s, run 'just init-android'" }; Write-Output $s
+
+# An app carries an X.toml and a manifest.yaml beside its Cargo.toml, builds a
+# cdylib as well as a binary, and declares its entry point with
+# `nightshade_platform::android_main!`. The template shows all three.
+#
+# Builds an app as an Android apk into target/x/release/android/
+build-android $project="template":
+    $ErrorActionPreference = 'Stop'; $s = just android-sysroot; $env:CC_aarch64_linux_android = 'clang'; $env:CXX_aarch64_linux_android = 'clang++'; $env:AR_aarch64_linux_android = 'llvm-ar'; $env:CFLAGS_aarch64_linux_android = "--sysroot=$s"; $env:CXXFLAGS_aarch64_linux_android = "--sysroot=$s"; $crate = @(Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File) + @(Get-Item template/Cargo.toml) | Where-Object { (Get-Content $_.FullName -Raw) -match ('(?m)^name = "' + [regex]::Escape($env:project) + '"') } | Select-Object -First 1; if (-not $crate) { throw "no crate named $env:project under apps or template" }; foreach ($file in 'X.toml', 'manifest.yaml') { if (-not (Test-Path (Join-Path $crate.Directory.FullName $file))) { throw "$env:project has no $file, so the packager has nothing to describe an apk with" } }; x build --release --platform android --arch arm64 --manifest-path $crate.FullName
+
+# Installs an already built apk on a connected device
+install-android $project="template":
+    adb install -r target/x/release/android/{{project}}.apk
+
+# Builds, installs, and starts an app on a connected device
+run-android $project="template":
+    just build-android {{project}}
+    just install-android {{project}}
+    adb shell monkey -p com.nightshade.{{project}} -c android.intent.category.LAUNCHER 1
+
+# The tag is the window title the app composed, which is what reaches logcat.
+#
+# Follows the running app's log
+logcat-android $tag="Template":
+    adb logcat -s {{tag}}
+
+# A phone on wireless debugging shows under the services until it is connected
+# and under the devices after. Nothing under the services means the phone is on
+# a different network, or its Wireless debugging screen is closed, or the
+# network carries no mdns. Then read the address off the phone and give it to
+# `just connect-android`.
+#
+# Lists connected Android devices, and the wireless ones this machine can see
+list-android:
+    adb devices -l
+    adb mdns services
+
+# The phone's Wireless debugging screen has a "Pair device with pairing code"
+# button, which shows an address and a six digit code. Both go here. A phone
+# stays paired, so this is one time for each machine, and a phone that is
+# already paired needs `just connect-android` alone.
+#
+# Pairs with a phone over wireless debugging
+pair-android $address $code:
+    adb pair {{address}} {{code}}
+
+# The address at the top of the phone's Wireless debugging screen, which is on
+# a different port from the pairing one and changes whenever the phone turns
+# wireless debugging off and on again.
+#
+# Connects to a paired phone over wireless debugging
+connect-android $address:
+    adb connect {{address}}
+
+# The two host tools compile for the machine that runs them, openxr and steam
+# link libraries built for the host, and the vulkan backend has no android
+# surface.
+#
+# Runs clippy for the Android target
+lint-android:
+    $ErrorActionPreference = 'Stop'; $s = just android-sysroot; $env:CC_aarch64_linux_android = 'clang'; $env:CXX_aarch64_linux_android = 'clang++'; $env:AR_aarch64_linux_android = 'llvm-ar'; $env:CFLAGS_aarch64_linux_android = "--sysroot=$s"; $env:CXXFLAGS_aarch64_linux_android = "--sysroot=$s"; $excluded = @('dag-check', 'shader-check', 'jarvis', 'nightshade-openxr', 'nightshade-steam', 'nightshade-vulkan'); foreach ($manifest in Get-ChildItem -Path apps -Recurse -Depth 3 -Filter Cargo.toml -File) { $body = Get-Content $manifest.FullName -Raw; if ($body -match '(?m)^\s*default\s*=\s*\[[^\]]*"vulkan"') { $excluded += [regex]::Match($body, '(?m)^name = "([^"]*)"').Groups[1].Value } }; $arguments = @('clippy', '--target', 'aarch64-linux-android', '--workspace'); foreach ($name in $excluded) { $arguments += @('--exclude', $name) }; $arguments += @('--', '-D', 'warnings'); cargo @arguments
+
+# Compile every GLSL shader in the workspace to SPIR-V
+compile-vulkan-shaders:
+    $ErrorActionPreference = 'Stop'; $stages = '.vert', '.frag', '.comp', '.mesh', '.task', '.geom', '.tesc', '.tese'; foreach ($shader in Get-ChildItem -File -Recurse -Path apps, crates | Where-Object { $_.Extension -in $stages }) { Write-Host "compiling: $($shader.Name)"; glslangValidator -V --target-env vulkan1.3 -o "$($shader.FullName).spv" $shader.FullName; if ($LASTEXITCODE -ne 0) { throw "the shader did not compile: $($shader.Name)" } }

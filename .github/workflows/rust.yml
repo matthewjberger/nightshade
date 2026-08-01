@@ -95,9 +95,6 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just install-debian-deps
       - run: cargo clippy -- -D warnings
-      - name: Clippy editor desktop crate
-        working-directory: apps/editor
-        run: cargo clippy -p nightshade-editor -- -D warnings
 
   clippy_wasm:
     name: Clippy wasm32
@@ -120,18 +117,49 @@ jobs:
       - uses: mozilla-actions/sccache-action@v0.0.10
       - uses: extractions/setup-just@v2
       - run: just lint-wasm
-      - name: Clippy editor wasm crates
-        working-directory: apps/editor
-        run: cargo clippy -p worker -p page --target wasm32-unknown-unknown -- -D warnings
 
-  deny:
-    name: cargo-deny
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@v5
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          command: check all
+          targets: wasm32-unknown-unknown
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: lint
+          cache-targets: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: mozilla-actions/sccache-action@v0.0.10
+      - uses: extractions/setup-just@v2
+      - run: just install-debian-deps
+      - run: just lint
+
+  features:
+    name: Capability features
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: features
+          cache-targets: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: mozilla-actions/sccache-action@v0.0.10
+      - uses: extractions/setup-just@v2
+      - run: just install-debian-deps
+      - run: just lint-features
 
   trunk:
     name: trunk
@@ -150,18 +178,16 @@ jobs:
           shared-key: wasm
           cache-targets: false
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          workspaces: |
-            . -> target
-            apps/editor -> target
+          workspaces: . -> target
       - uses: mozilla-actions/sccache-action@v0.0.10
       - uses: extractions/setup-just@v2
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- && mv trunk ~/.cargo/bin/
       - name: Download and install wasm-bindgen binary
-        run: wget -qO- https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.115/wasm-bindgen-0.2.115-x86_64-unknown-linux-musl.tar.gz | tar -xzf- && mv wasm-bindgen-0.2.115-x86_64-unknown-linux-musl/wasm-bindgen ~/.cargo/bin/
+        run: wget -qO- https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.127/wasm-bindgen-0.2.127-x86_64-unknown-linux-musl.tar.gz | tar -xzf- && mv wasm-bindgen-0.2.127-x86_64-unknown-linux-musl/wasm-bindgen ~/.cargo/bin/
       - name: Download and install wasm-opt binary
-        run: wget -qO- https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz | tar -xzf- && mv binaryen-version_123/bin/wasm-opt ~/.cargo/bin/
-      - name: Build editor worker
-        run: just --justfile apps/editor/justfile --working-directory apps/editor worker
-      - name: Build
-        run: trunk build --release --config apps/editor/Trunk.toml
+        run: wget -qO- https://github.com/WebAssembly/binaryen/releases/download/version_132/binaryen-version_132-x86_64-linux.tar.gz | tar -xzf- && mv binaryen-version_132/bin/wasm-opt ~/.cargo/bin/
+      - name: Build a wasm app bundle
+        run: |
+          ulimit -s 65536
+          trunk build --release --config apps/features/fireworks/Trunk.toml

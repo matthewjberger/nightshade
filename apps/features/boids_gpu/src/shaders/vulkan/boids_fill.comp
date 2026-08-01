@@ -1,0 +1,19 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout(local_size_x = 256) in;
+
+#include "boids_common.glsl"
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uniforms.counts.x) {
+        return;
+    }
+    uint cell = cell_of(positions_in[index].xyz);
+    uint slot = atomicAdd(cell_counts[cell], 1u);
+    uint capacity = uniforms.counts.w;
+    if (slot < capacity) {
+        cell_items[cell * capacity + slot] = index;
+    }
+}

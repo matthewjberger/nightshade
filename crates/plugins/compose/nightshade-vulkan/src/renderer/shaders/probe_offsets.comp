@@ -1,0 +1,73 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define PROBE_WRITE
+
+#include "scene_common.glsl"
+#include "scene_probes.glsl"
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+    uvec2 counts;
+} push;
+
+#define PROBE_BURIED 0.25
+
+#define PROBE_TOO_NEAR 0.35
+#define PROBE_FURTHEST 0.45
+
+void main() {
+    uint probe = gl_GlobalInvocationID.x;
+    if (probe >= push.counts.y) {
+        return;
+    }
+    vec3 spacing = max(frame.probe_spacing.xyz, vec3(1.0e-4));
+    float nearest = min(min(spacing.x, spacing.y), spacing.z);
+
+    float closest_back = 1.0e30;
+    vec3 back_way = vec3(0.0);
+    float closest_front = 1.0e30;
+    float furthest_front = 0.0;
+    vec3 open_way = vec3(0.0);
+    uint buried = 0u;
+
+    for (uint ray = 0u; ray < uint(PROBE_RAYS); ++ray) {
+        uint slot = probe_ray_slot(probe, ray);
+        vec4 answer = probe_rays[slot];
+        vec3 way = probe_rays[slot + 1u].xyz;
+        if (dot(way, way) < 0.5) {
+            continue;
+        }
+        if (answer.w < 0.0) {
+            buried += 1u;
+            float away = -answer.w * 5.0;
+            if (away < closest_back) {
+                closest_back = away;
+                back_way = way;
+            }
+            continue;
+        }
+        closest_front = min(closest_front, answer.w);
+        if (answer.w > furthest_front) {
+            furthest_front = answer.w;
+            open_way = way;
+        }
+    }
+
+    vec3 offset = probe_offsets[probe].xyz;
+    if (float(buried) > float(PROBE_RAYS) * PROBE_BURIED && closest_back < 1.0e29) {
+        offset += back_way * (closest_back + nearest * 0.05);
+    } else if (closest_front < nearest * PROBE_TOO_NEAR && dot(open_way, open_way) > 0.5) {
+        offset += open_way * min(furthest_front * 0.25, nearest * PROBE_TOO_NEAR);
+    } else {
+        offset *= 0.98;
+    }
+
+    float furthest = nearest * PROBE_FURTHEST;
+    float reached = length(offset);
+    if (reached > furthest) {
+        offset *= furthest / reached;
+    }
+    probe_offsets[probe] = vec4(offset, 0.0);
+}

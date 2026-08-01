@@ -1,0 +1,26 @@
+﻿[package]
+name = "meshlets"
+description = "One mesh at whichever detail its size on the screen asks for, three thousand times over"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[dependencies]
+nightshade-app = { path = "../../../crates/plugins/draw/nightshade-app", default-features = false }
+nightshade.workspace = true
+nightshade-cli.workspace = true
+nightshade-camera.workspace = true
+nightshade-camera-controller.workspace = true
+nightshade-graphics.workspace = true
+nightshade-log.workspace = true
+nightshade-platform.workspace = true
+nightshade-load = { workspace = true }
+nightshade-gltf.workspace = true
+nightshade-prefab.workspace = true
+nightshade-vulkan = { workspace = true, optional = true, features = ["default-plugins"] }
+nightshade-window.workspace = true
+tracing = { workspace = true }
+[features]
+default = ["vulkan"]
+vulkan = ["dep:nightshade-vulkan", "nightshade-app/vulkan"]
+wgpu = ["nightshade-app/wgpu"]

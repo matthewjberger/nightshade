@@ -1,0 +1,78 @@
+[package]
+name = "nightshade-kit"
+description = "The shared model, sound and icon kit that a game draws its world from"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = [
+    "arena",
+    "blocky",
+    "camp",
+    "castle",
+    "defense",
+    "dungeon",
+    "folk",
+    "food",
+    "furniture",
+    "grave",
+    "holiday",
+    "market",
+    "nature",
+    "pirate",
+    "proto",
+    "retro",
+    "town",
+    "watercraft",
+]
+arena = []
+block = []
+blocky = []
+camp = []
+car = []
+castle = []
+commercial = []
+defense = []
+dungeon = []
+folk = []
+food = []
+furniture = []
+grave = []
+holiday = []
+industrial = []
+market = []
+modular = []
+nature = []
+pirate = []
+proto = []
+retro = []
+roads = []
+suburban = []
+town = []
+urban = []
+watercraft = []
+
+[dev-dependencies]
+nalgebra-glm = { workspace = true }
+nightshade = { workspace = true }
+nightshade-app = { path = "../../../plugins/draw/nightshade-app" }
+nightshade-camera = { workspace = true }
+nightshade-camera-controller = { workspace = true }
+nightshade-config = { workspace = true }
+nightshade-gltf = { workspace = true }
+nightshade-graphics = { workspace = true }
+nightshade-load = { workspace = true }
+nightshade-platform = { workspace = true }
+nightshade-prefab = { workspace = true }
+nightshade-readout = { workspace = true }
+nightshade-render = { workspace = true }
+nightshade-random = { workspace = true }
+nightshade-scene = { workspace = true }
+nightshade-ui = { workspace = true }
+nightshade-ui-config = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

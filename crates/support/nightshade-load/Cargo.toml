@@ -1,0 +1,14 @@
+[package]
+name = "nightshade-load"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = []
+fetch = ["dep:ehttp"]
+
+[dependencies]
+ehttp = { workspace = true, optional = true }
+nightshade-worker = { workspace = true }

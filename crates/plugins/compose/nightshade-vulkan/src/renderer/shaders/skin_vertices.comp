@@ -1,0 +1,41 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "scene_common.glsl"
+
+layout(local_size_x = 64) in;
+
+void main() {
+    uint instance_index = gl_WorkGroupID.y;
+    if (instance_index >= frame.skin_counts.z) {
+        return;
+    }
+    SkinInstance instance = skin_instances[instance_index];
+    uint vertex_index = gl_GlobalInvocationID.x;
+    if (vertex_index >= instance.vertex_count) {
+        return;
+    }
+
+    Vertex source = vertices[instance.source_vertex_offset + vertex_index];
+    SkinVertex bound = skin_vertices[instance.skin_vertex_offset + vertex_index];
+
+    mat4 skin = mat4(0.0);
+    float total = 0.0;
+    for (uint slot = 0u; slot < 4u; ++slot) {
+        float weight = bound.joint_weights[slot];
+        if (weight <= 0.0) {
+            continue;
+        }
+        skin += joint_matrices[instance.joint_offset + bound.joint_indices[slot]] * weight;
+        total += weight;
+    }
+    if (total <= 0.0) {
+        skin = mat4(1.0);
+    }
+
+    Vertex posed = source;
+    posed.position = (skin * vec4(source.position, 1.0)).xyz;
+    posed.normal = normalize(mat3(skin) * source.normal);
+    posed.tangent = vec4(normalize(mat3(skin) * source.tangent.xyz), source.tangent.w);
+    posed_vertices[instance.posed_vertex_offset + vertex_index] = posed;
+}
